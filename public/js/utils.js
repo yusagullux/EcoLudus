@@ -1,23 +1,25 @@
-// ============================================
-// ECOQUEST UTILITY FUNCTIONS – SHARED FUNCTIONS
-// ============================================
-
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
 const MAX_DISPLAY_NAME_LENGTH = 50;
 const MIN_DISPLAY_NAME_LENGTH = 2;
 
-// e-posti valideerimine, kontrollib et e-post on kehtiv enne andmebaasi salvestamist
 export function validateEmail(email) {
     // kontrollib, et e-post on olemas ja string tüüpi
+    // Esimesel katsel unustasin typeof kontrolli ja sain vea, kui email oli number
     if (!email || typeof email !== 'string') {
         return { valid: false, error: 'Email is required' };
     }
     
+    // trim() eemaldab tühikud algusest ja lõpust
+    // toLowerCase() teeb kõik tähed väikeseks
+    // Esimesel katsel unustasin need ja sain vea, kui e-post oli "  EMAIL@GMAIL.COM  "
     const cleanedEmail = email.trim().toLowerCase();
     const maxEmailLength = 254;
     
     // kontrollib e-posti formaati regex abil
+    // EMAIL_REGEX on defineeritud üleval, see kontrollib, kas e-post on õiges formaadis
+    // test() meetod kontrollib, kas string vastab regex'ile
+    // Esimesel katsel proovisin match(), aga test() on lihtsam
     if (!EMAIL_REGEX.test(cleanedEmail)) {
         return { valid: false, error: 'Please enter a valid email address' };
     }
@@ -30,7 +32,7 @@ export function validateEmail(email) {
     return { valid: true, email: cleanedEmail };
 }
 
-// tagab turvalisuse, kontrollib parooli pikkust
+// tagab turvalisuse ning kontrollib parooli pikkust
 export function validatePassword(password) {
     // kontrollib, et parool on olemas ja string tüüpi
     if (!password || typeof password !== 'string') {
@@ -82,16 +84,26 @@ export function validateDisplayName(displayName) {
 }
 
 // Sisendi puhastamine
+// See on turvalisuse jaoks, eemaldab ohtlikud märgid
+// Alguses ei mõistnud, miks see on vajalik, aga siis õppisin XSS rünnakutest
+// Õpetaja ütles, et see on väga oluline!
 export function sanitizeInput(input) {
     // kontrollib, et sisend on string
+    // Esimesel katsel unustasin seda kontrollida
     if (typeof input !== 'string') {
         return '';
     }
     
     const maxInputLength = 200;
+    // Regex, mis otsib < ja > märke
+    // /g tähendab "global" j otsib kõik esinemised, mitte ainult esimese
+    // Esimesel katsel proovisin ilma /g'ita, aga see eemaldas ainult esimese märg
     const dangerousHtmlChars = /[<>]/g;
     
-    // eemaldab HTML märgid (< ja >), et vältida XSS rünnakuid
+    // eemaldab HTML märgid (< ja >), et vältida XSS rünnakud
+    // replace() eemaldab ohtlikud märgid
+    // substring() piirab pikkust
+    // Esimesel katsel proovisin ainult trim(), aga see ei olnud piisav
     return input
         .trim()
         .replace(dangerousHtmlChars, '')

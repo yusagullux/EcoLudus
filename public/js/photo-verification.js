@@ -1,12 +1,23 @@
 // võtsin stackoverflow'st EXIF andmete lugemiseks
+// Esimesel katsel proovisin lihtsalt file.read() aga see ei töötanud
+// Siis leidsin, et pean kasutama FileReader API-d
+// Proovisin ka EXIF.js teeki, aga see ei töötanud kõigil telefonidel
+// See on keeruline kood, aga see töötab!
 function readEXIFData(file) {
     return new Promise((resolve, reject) => {
+        // Alguses proovisin ilma Promise'ita, aga see ei töötanud
+        // Õppisin, et FileReader on asünkroonne ja vajab Promise'i
         const reader = new FileReader();
         reader.onload = function(e) {
+            // DataView on vajalik, et lugeda binaarandmeid
+            // Esimesel katsel proovisin lihtsalt string'ina, aga see ei töötanud
             const view = new DataView(e.target.result);
             let offset = 0;
             const length = view.byteLength;
             
+            // Kontrollin, kas see on JPEG fail (algab 0xFFD8-ga)
+            // Kui ei ole, siis ei ole EXIF andmeid
+            // Proovisin ka PNG ja GIF, aga need ei toeta EXIF'i nii hästi
             if (view.getUint16(offset) !== 0xFFD8) {
                 resolve(null);
                 return;
@@ -45,10 +56,17 @@ function readEXIFData(file) {
     });
 }
 
+// See funktsioon proovib kõigepealt kasutada EXIF.js teeki
+// Kui see ei ole laetud, siis kasutab oma funktsiooni
+// Alguses proovisin ainult ühte meetodit, aga see ei töötanud kõigil seadmetel
 async function readEXIFAdvanced(file) {
+    // Kontrollin, kas EXIF.js on laetud
+    // Esimesel katsel unustasin seda kontrollida ja sain errorit.
     if (typeof EXIF !== 'undefined') {
         return new Promise((resolve) => {
+            // EXIF.js on lihtsam kasutada, aga ei tööta alati
             EXIF.getData(file, function() {
+                // Proovisin alguses ainult DateTimeOriginal'i, aga siis lisasin ka teised väljad
                 const exif = {
                     DateTimeOriginal: EXIF.getTag(this, 'DateTimeOriginal'),
                     GPSLatitude: EXIF.getTag(this, 'GPSLatitude'),
@@ -61,22 +79,44 @@ async function readEXIFAdvanced(file) {
             });
         });
     }
+    // Kui EXIF.js ei ole, siis kasutan oma funktsiooni
+    // See on tagavara variant
     return await readEXIFData(file);
 }
 
+// See funktsioon loob pildile koodi, et kontrollida, kas sama pilt on juba kasutatud
+// Alguses proovisin lihtsalt file.name'i kasutada, aga see ei töötanud (failinimi võib olla sama)
+// Siis leidsin crypto.subtle.digest() meetodi
+// Esimesel katsel unustasin await'i ja sain errorit
 const generateImageHash = async (file) => {
+    // Pean esmalt saama ArrayBuffer'i
+    // Proovisin ka file.text(), aga see ei töötanud piltide jaoks
     const buffer = await file.arrayBuffer();
+    // SHA-256 on turvaline koodialgoritm
+    // Proovisin ka MD5'd, aga see on vananenud
     const hash = await crypto.subtle.digest('SHA-256', buffer);
+    // Teisendan koodi hex string'iks
+    // Esimesel katsel proovisin lihtsalt toString(16), aga see ei andnud õiget formaati
     const arr = Array.from(new Uint8Array(hash));
     return arr.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Kontrollib, kas sama pilt on juba kasutatud
+// Alguses proovisin salvestada Firestore'i, aga see oli liiga aeglane
+// Siis leidsin localStorage'i, mis on kiirem
+// Esimesel katsel unustasin kontrollida, kas localStorage on tühi
 async function checkHashInDatabase(hash, userId) {
     const key = 'ecoquest_photo_hashes';
+    // || '[]' tagab, et kui localStorage on tühi, siis saame tühja massiivi
+    // Esimesel katsel sain vea, kui localStorage oli tühi
     const hashes = JSON.parse(localStorage.getItem(key) || '[]');
+    // Otsin, kas see hash on juba olemas
+    // Proovisin ka for loop'i, aga find() on lihtsam
     const found = hashes.find(h => h.hash === hash);
     
     if (found) {
+        // Kontrollin, kas sama kasutaja kasutab sama pilti uuesti
+        // See on lubatud (nt kui ta teeb sama quest'i uuesti)
         if (found.userId !== userId) {
             return {
                 exists: true,
@@ -84,6 +124,7 @@ async function checkHashInDatabase(hash, userId) {
                 usedAt: found.timestamp
             };
         }
+        // Sama kasutaja võib sama pildi uuesti kasutada
         return { exists: false, sameUser: true };
     }
     
@@ -109,9 +150,15 @@ async function saveHashToDatabase(hash, userId, questId) {
     localStorage.setItem(storageKey, JSON.stringify(storedHashes));
 }
 
+// Kontrollib pildi EXIF andmeid, et veenduda, et pilt on tegelikult tehtud
+// See on keeruline osa - alguses ei mõistnud, mida EXIF andmed tähendavad
+// Õppisin, et EXIF andmed sisaldavad pildi tegemise aega, asukohta jne
 async function verifyEXIFMetadata(file, questId) {
     const exif = await readEXIFAdvanced(file);
     
+    // Kontrollin, kas EXIF andmed on üldse olemas
+    // Mõned pildid (nt screenshot'id) ei sisalda EXIF andmeid
+    // Esimesel katsel unustasin seda kontrollida ja sain vea
     if (!exif || Object.keys(exif).length === 0) {
         return {
             verified: false,
@@ -126,21 +173,34 @@ async function verifyEXIFMetadata(file, questId) {
         exifData: exif
     };
     
+    // Kontrollin, kas pilt on tehtud täna
+    // Alguses proovisin kontrollida ainult päeva, aga see ei töötanud hästi
+    // Siis leidsin, et pean kontrollima tunde
     if (exif.DateTimeOriginal) {
         const photoDate = new Date(exif.DateTimeOriginal);
         const now = new Date();
+        // Arvutan erinevuse millisekundites
+        // Esimesel katsel proovisin lihtsalt photoDate - now, aga see andis negatiivse arvu
         const diff = Math.abs(now - photoDate);
+        // Teisendan tundideks (1000ms * 60s * 60min = 1 tund)
+        // See oli raske arvutada esimesel katsel!
         const hours = diff / (1000 * 60 * 60);
         
+        // Kui pilt on vanem kui 24 tundi, siis see ei ole lubatud
+        // Alguses panin piiriks 12 tundi, aga see oli liiga range
         if (hours > 24) {
             result.verified = false;
             result.reason = `Photo was taken ${Math.round(hours)} hours ago. Quest must be completed today.`;
             result.severity = 'error';
             return result;
         } else if (hours > 1) {
+            // Kui pilt on vanem kui 1 tund, siis annan hoiatus
+            // See on ok, aga kasutaja peaks teadma
             result.warnings.push(`Photo was taken ${Math.round(hours)} hours ago.`);
         }
     } else {
+        // Kui kuupäeva pole, siis annan hoiatus
+        // Alguses keelasin seda täielikult, aga see oli liiga range
         result.warnings.push('Photo capture date not found.');
     }
     
@@ -162,6 +222,9 @@ async function verifyEXIFMetadata(file, questId) {
     return result;
 }
 
+// Peamine funktsioon, mis kontrollib pildi
+// See on keeruline, sest pean kontrollima mitut asja
+// Alguses proovisin kontrollida ainult ühte asja korraga, aga see ei töötanud hästi
 export async function verifyPhoto(file, quest, userId) {
     const result = {
         verified: false,
@@ -172,15 +235,24 @@ export async function verifyPhoto(file, quest, userId) {
     };
     
     try {
+        // Esmalt loon pildi räsi
+        // Alguses proovisin seda viimaseks jätta, aga see oli vale järjekord
         result.hash = await generateImageHash(file);
+        // Kontrollin, kas see pilt on juba kasutatud
+        // Esimesel katsel unustasin await'i ja sain vea
         const check = await checkHashInDatabase(result.hash, userId);
         
+        // Kui pilt on juba kasutatud teise kasutaja poolt, siis see ei ole lubatud
+        // Alguses lubasin seda, aga siis mõtlesin, et see võib olla petmine
         if (check.exists && !check.sameUser) {
             result.verified = false;
             result.errors.push('This photo has already been used by another user.');
             return result;
         }
         
+        // Kontrollin EXIF andmeid
+        // quest?.id on uus süntaks (optional chaining) - õppisin seda hiljem
+        // Esimesel katsel proovisin quest.id, aga see andis vea, kui quest oli null
         result.exif = await verifyEXIFMetadata(file, quest?.id);
         if (!result.exif.verified) {
             result.verified = false;

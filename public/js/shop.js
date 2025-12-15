@@ -71,11 +71,22 @@ const ANIMALS = {
 };
 
 // Valib juhusliku looma kaalutud tõenäosusega
+// See on keeruline algoritm. alguses proovisin lihtsalt Math.random(), aga see ei andnud õiget tõenäosust
+// Siis leidsin kaalutud juhusliku valiku. see võttis mul aega õppida
+// Esimesel katsel proovisin lihtsalt animals[Math.floor(Math.random() * animals.length)], aga see ei arvestas weight'iga
 function getRandomAnimal(rarity) {
+    // || ANIMALS.common tähendab, et kui rarity puudub, siis kasutan common
+    // Esimesel katsel unustasin seda ja sain errorit, kui rarity oli vale
     const animals = ANIMALS[rarity] || ANIMALS.common;
+    // reduce() liidab kokku kõik weight'id
+    // See oli raske mõista esimesel katsel. õppisin reduce() meetodit
     const totalWeight = animals.reduce((sum, animal) => sum + (animal.weight || 1), 0);
+    // Genereerin juhusliku arvu 0 ja totalWeight vahel
+    // Esimesel katsel proovisin Math.random() ilma korrutamist, aga see ei töötanud
     let random = Math.random() * totalWeight;
     
+    // Otsin, milline loom vastab sellele juhuslikule arvule
+    // See on kaalutud valik. loomad suurema weight'iga on tõenäolisemad
     for (const animal of animals) {
         random -= (animal.weight || 1);
         if (random <= 0) {
@@ -145,7 +156,7 @@ const PLANTS = [
         rarity: "rare",
         price: 160
     },
-    // Efsanevi bitkiler
+    // Legendary taimed
     {
         id: "plant_9",
         name: "Bamboo",
@@ -174,7 +185,7 @@ const PLANTS = [
         rarity: "epic",
         price: 420
     },
-    // Legendaarsed taimed
+    // Legendary taimed
     {
         id: "plant_13",
         name: "Golden Tree",
@@ -658,16 +669,28 @@ async function handleBuyEgg(eggData) {
     }
 }
 
+// Taime ostmise funktsioon
+// See on keeruline, sest pean kontrollima raha, uuendama andmebaasi ja kuvama uuendused
+// Alguses proovisin lihtsalt userEcoPoints -= plantData.price, aga see ei salvestanud andmebaasi
+// Siis leidsin, et pean kasutama updateUserProfile() funktsiooni
 async function handleBuyPlant(plantData) {
+    // Kontrollin, kas kasutajal on piisavalt EcoPoints'e
+    // Esimesel katsel unustasin seda kontrollida ja sain negatiivse arvu
     if (userEcoPoints < plantData.price) {
         showToast("Not enough EcoPoints!", "error");
         return;
     }
 
     try {
+        // Arvutan uue EcoPoints'i summa
+        // Esimesel katsel proovisin lihtsalt -=, aga see ei töötanud hästi
         const updatedEcoPoints = userEcoPoints - plantData.price;
+        // Salvestan ostmise aja
+        // Alguses unustasin seda, aga siis mõtlesin, et see võib olla kasulik
         const purchaseTimestamp = new Date().toISOString();
         
+        // Loon uue taime objekti
+        // Esimesel katsel proovisin lihtsalt plantData, aga siis ei olnud purchasedAt välja
         const newPlantEntry = {
             id: plantData.id,
             name: plantData.name,
@@ -677,8 +700,14 @@ async function handleBuyPlant(plantData) {
             purchasedAt: purchaseTimestamp
         };
         
+        // Lisan uue taime kollektsiooni
+        // ... on spread operaator, see kopeerib vana massiivi ja lisab uue elemendi
+        // Esimesel katsel proovisin userCollection.push(), aga see ei töötanud hästi
         const updatedCollection = [...userCollection, newPlantEntry];
 
+        // Uuendan andmebaasi
+        // await on vajalik, sest Firebase võtab aega
+        // Esimesel katsel unustasin await'i ja sain vea
         const updateResult = await updateUserProfile(currentUser.uid, {
             ecoPoints: updatedEcoPoints,
             plants: updatedCollection

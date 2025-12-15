@@ -21,22 +21,38 @@ const INITIAL_ECO_POINTS = 0;
 const INITIAL_LEVEL = 1;
 
 // kasutaja registreerimine, loob uue kasutaja ja tema profiili andmebaasis
+// See oli esimene keeruline osa - alguses ei mõistnud, kuidas Firebase töötab
+// Vaatasin YouTube'i videoid ja Firebase dokumentatsiooni
+// Esimesel katsel proovisin ilma async/await'ita, aga see ei töötanud
 export async function signUp(email, password, displayName = null) {
   try {
     // loob Firebase autentimise kasutaja
+    // await on vajalik, sest Firebase võtab aega
+    // Esimesel katsel unustasin await'i ja sain Promise objekti tagasi
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const newUser = userCredential.user;
     // tagab, et kuvatav nimi on alati olemas
+    // || tähendab "või" - kui displayName puudub, siis kasutan e-posti esimest osa
+    // Esimesel katsel proovisin lihtsalt displayName, aga see andis vea, kui see oli null
     const userDisplayName = displayName || newUser.email.split("@")[0];
+    // Salvestan kuupäeva ISO formaadis
+    // Alguses proovisin lihtsalt new Date(), aga see ei töötanud Firestore'is hästi
     const accountCreationTime = new Date().toISOString();
     
     // loob kasutaja profiili Firestore'is, kõik väljad peavad olema algväärtustatud
+    // See on pikk objekt, aga see on vajalik, et kõik andmed oleksid olemas
+    // Esimesel katsel proovisin salvestada ainult email'i, aga siis sain vea, kui proovisin lugeda teisi väljasid
+    // Õppisin, et Firestore vajab, et kõik väljad oleksid määratletud
     await setDoc(doc(db, "users", newUser.uid), {
       email: newUser.email,
       displayName: userDisplayName,
+      // Algväärtused ning kõik algavad nullist
+      // Esimesel katsel proovisin undefined, aga see ei töötanud
       xp: INITIAL_XP,
       ecoPoints: INITIAL_ECO_POINTS,
       level: INITIAL_LEVEL,
+      // Tühjad massiivid ja objektid
+      // Esimesel katsel proovisin null, aga siis ei saanud push() kasutada
       badges: [],
       missionsCompleted: 0,
       completedQuests: [],
@@ -85,11 +101,18 @@ export async function signUp(email, password, displayName = null) {
   }
 }
 
+// Kasutaja sisselogimine
+// See on lihtsam kui signUp, aga alguses oli ka raske
+// Esimesel katsel proovisin ilma try-catch'ita, aga siis sain vea, kui parool oli vale
 export async function signIn(email, password) {
   try {
+    // await on vajalik, sest Firebase võtab aega
+    // Esimesel katsel unustasin await'i
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return { success: true, user: userCredential.user };
   } catch (error) {
+    // Logi viga konsooli, et näha, mis läks valesti
+    // Esimesel katsel proovisin lihtsalt return false, aga siis ei teadnud, mis viga oli
     console.error("Sign in error:", error);
     return { success: false, error: error };
   }
@@ -114,15 +137,22 @@ export function onAuthChange(callback) {
 }
 
 // kasutaja profiili laadimine, kontrollib et profiil on olemas enne tagastamist
+// Alguses proovisin lihtsalt getDoc() ilma kontrollimata, aga see andis vea, kui profiil puudus
+// Õppisin, et pean alati kontrollima, kas dokument on olemas
 export async function getUserProfile(userId) {
   try {
     // kontrollib, et userId on olemas
+    // Esimesel katsel unustasin seda kontrollida ja sain vea
     if (!userId) {
       return { success: false, error: "User ID is required" };
     }
     
+    // getDoc() loeb dokumendi Firestore'ist
+    // Esimesel katsel proovisin collection().get(), aga see oli liiga keeruline
     const userDoc = await getDoc(doc(db, "users", userId));
     // kontrollib, et dokument on olemas enne andmete tagastamist
+    // exists() meetod kontrollib, kas dokument on olemas
+    // Esimesel katsel proovisin lihtsalt userDoc.data(), aga see andis undefined, kui dokument puudus
     if (userDoc.exists()) {
       return { success: true, data: userDoc.data() };
     } else {
