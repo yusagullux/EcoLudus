@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EcoQuest Leaderboard - See top eco-friendly users ranked by XP" />
+    <meta name="keywords" content="ecoquest, leaderboard, ranking, top users, competition" />
+    <link rel="icon" type="image/png" href="../images/logo.png" />
+    <title>EcoQuest | Leaderboard</title>
+    <link rel="stylesheet" href="../css/dashboard.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Mobile-first */
+        .leaderboard-container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 var(--spacing-xs) var(--spacing-md);
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .leaderboard-container {
+                padding: 0 var(--spacing-md) var(--spacing-xl);
+            }
+        }
+
+        .leaderboard-header {
+            background: var(--color-white);
+            padding: var(--spacing-md);
+            border-radius: 12px;
+            box-shadow: var(--shadow-light);
+            margin-bottom: var(--spacing-md);
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            .leaderboard-header {
+                padding: var(--spacing-lg);
+                border-radius: var(--border-radius);
+                margin-bottom: var(--spacing-lg);
+            }
+        }
+
+        .leaderboard-header h1 {
+            margin: 0 0 var(--spacing-xs) 0;
+            color: var(--color-accent);
+            font-size: 22px;
+            line-height: 1.3;
+        }
+
+        @media (min-width: 480px) {
+            .leaderboard-header h1 {
+                font-size: 26px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .leaderboard-header h1 {
+                font-size: 36px;
+                margin-bottom: var(--spacing-sm);
+            }
+        }
+
+        .leaderboard-header p {
+            margin: 0;
+            color: var(--color-text);
+            opacity: 0.7;
+            font-size: 12px;
+        }
+
+        @media (min-width: 768px) {
+            .leaderboard-header p {
+                font-size: 14px;
+            }
+        }
+
+        .leaderboard-card {
+            background: var(--color-white);
+            border-radius: 12px;
+            box-shadow: var(--shadow-light);
+            overflow: hidden;
+        }
+
+        @media (min-width: 768px) {
+            .leaderboard-card {
+                border-radius: var(--border-radius);
+            }
+        }
+
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--color-bg-light);
+            transition: var(--transition);
+            gap: 6px;
+            flex-wrap: nowrap; 
+        }
+
+        @media (min-width: 480px) {
+            .leaderboard-item {
+                padding: 12px 14px;
+                gap: 10px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .leaderboard-item {
+                padding: var(--spacing-md);
+                gap: var(--spacing-md);
+            }
+        }
+
+        /* Viimane Rida(Viimane Rida ei ole piirangutel) */
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+
+        .leaderboard-item:hover {
+            background: var(--color-bg-light);
+        }
+
+        .leaderboard-item.current-user {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(129, 212, 250, 0.1));
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .rank-number {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--color-primary);
+            min-width: 35px;
+            text-align: center;
+            font-family: var(--font-main);
+        }
+
+        @media (min-width: 480px) {
+            .rank-number {
+                font-size: 22px;
+                min-width: 45px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .rank-number {
+                font-size: 28px;
+                min-width: 60px;
+            }
+        }
+
+        .rank-number.top-1 {
+            color: #FFD700;
+            font-size: 24px;
+        }
+
+        @media (min-width: 480px) {
+            .rank-number.top-1 {
+                font-size: 28px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .rank-number.top-1 {
+                font-size: 32px;
+            }
+        }
+
+        .rank-number.top-2 {
+            color: #C0C0C0;
+            font-size: 22px;
+        }
+
+        @media (min-width: 480px) {
+            .rank-number.top-2 {
+                font-size: 26px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .rank-number.top-2 {
+                font-size: 30px;
+            }
+        }
+
+        .rank-number.top-3 {
+            color: #CD7F32;
+            font-size: 20px;
+        }
+
+        @media (min-width: 480px) {
+            .rank-number.top-3 {
+                font-size: 24px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .rank-number.top-3 {
+                font-size: 28px;
+            }
+        }
+
+        .user-badge-small {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        @media (min-width: 480px) {
+            .user-badge-small {
+                width: 50px;
+                height: 50px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .user-badge-small {
+                width: 60px;
+                height: 60px;
+            }
+        }
+
+        .user-info-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        @media (min-width: 480px) {
+            .user-info-section {
+                gap: var(--spacing-xs);
+            }
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text);
+            font-family: var(--font-main);
+            margin: 0;
+            word-break: break-word;
+        }
+
+        .clickable-item {
+            transition: var(--transition);
+        }
+
+        .clickable-item:hover {
+            background: var(--color-bg-light) !important;
+            transform: translateX(5px);
+        }
+
+        .clickable-item.current-user:hover {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(129, 212, 250, 0.15)) !important;
+        }
+
+        @media (min-width: 480px) {
+            .user-name {
+                font-size: 16px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .user-name {
+                font-size: 18px;
+            }
+        }
+
+        .user-badge-name {
+            font-size: 11px;
+            color: var(--color-text);
+            opacity: 0.7;
+            text-transform: capitalize;
+            margin: 0;
+        }
+
+        @media (min-width: 480px) {
+            .user-badge-name {
+                font-size: 12px;
+            }
+        }
+
+        .user-stats-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media (min-width: 480px) {
+            .user-stats-section {
+                gap: 12px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .user-stats-section {
+                gap: var(--spacing-md);
+            }
+        }
+
+        .xp-display {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: var(--spacing-xs);
+        }
+
+        @media (max-width: 640px) {
+            .xp-display {
+                flex-direction: row;
+                align-items: center;
+                gap: 2px;
+            }
+        }
+
+        .xp-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--color-primary);
+            font-family: var(--font-main);
+        }
+
+        @media (min-width: 480px) {
+            .xp-value {
+                font-size: 20px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .xp-value {
+                font-size: 24px;
+            }
+        }
+
+        .xp-label {
+            font-size: 10px;
+            color: var(--color-text);
+            opacity: 0.6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (min-width: 480px) {
+            .xp-label {
+                font-size: 11px;
+            }
+        }
+
+        .level-display {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: var(--spacing-xs);
+        }
+
+        @media (max-width: 640px) {
+            .level-display {
+                flex-direction: row;
+                align-items: center;
+                gap: 2px;
+            }
+        }
+
+        .level-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-accent);
+            font-family: var(--font-main);
+        }
+
+        @media (min-width: 480px) {
+            .level-value {
+                font-size: 16px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .level-value {
+                font-size: 18px;
+            }
+        }
+
+        .level-label {
+            font-size: 11px;
+            color: var(--color-text);
+            opacity: 0.6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--color-text);
+            opacity: 0.7;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: #d32f2f;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--color-text);
+            opacity: 0.7;
+        }
+
+        .medal-icon {
+            font-size: 24px;
+            margin-right: var(--spacing-xs);
+        }
+
+        /* Mobile optimizations - Single line compact layout */
+        @media (max-width: 479px) {
+            .leaderboard-item {
+                flex-wrap: nowrap;
+                padding: 6px 8px;
+                gap: 4px;
+                min-height: 50px;
+            }
+
+            .rank-number {
+                min-width: 32px;
+                font-size: 18px;
+            }
+
+            .rank-number.top-1 {
+                font-size: 20px;
+            }
+
+            .rank-number.top-2 {
+                font-size: 19px;
+            }
+
+            .rank-number.top-3 {
+                font-size: 18px;
+            }
+
+            .user-badge-small {
+                width: 36px;
+                height: 36px;
+                flex-shrink: 0;
+            }
+
+            .user-info-section {
+                flex: 1;
+                min-width: 0;
+                gap: 2px;
+                overflow: hidden;
+            }
+
+            .user-name {
+                font-size: 15px;
+                line-height: 1.3;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .user-badge-name {
+                display: none; /* Hide badge name on very small screens */
+            }
+
+            .user-stats-section {
+                flex-shrink: 0;
+                gap: 4px;
+                margin-left: auto;
+                flex-wrap: nowrap;
+                display: flex;
+                align-items: center;
+            }
+
+            .level-display {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 3px;
+            }
+
+            .level-value {
+                font-size: 13px;
+                line-height: 1.2;
+                white-space: nowrap;
+                font-weight: 600;
+            }
+
+            .level-label {
+                display: none;
+            }
+
+            .xp-display {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 3px;
+            }
+
+            .xp-value {
+                font-size: 14px;
+                line-height: 1.2;
+                white-space: nowrap;
+                font-weight: 700;
+            }
+
+            .xp-label {
+                font-size: 10px;
+                line-height: 1;
+            }
+        }
+
+        @media (min-width: 480px) and (max-width: 640px) {
+            .leaderboard-item {
+                padding: 10px 12px;
+                gap: 8px;
+                flex-wrap: nowrap;
+            }
+
+            .user-badge-name {
+                font-size: 11px;
+            }
+
+            .user-stats-section {
+                flex-wrap: nowrap;
+            }
+
+            .level-display {
+                flex-direction: row;
+                gap: 3px;
+                align-items: center;
+            }
+
+            .level-value {
+                font-size: 14px;
+                white-space: nowrap;
+            }
+
+            .level-label {
+                font-size: 10px;
+            }
+
+            .xp-display {
+                flex-direction: row;
+                gap: 3px;
+                align-items: center;
+            }
+
+            .xp-value {
+                font-size: 16px;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;" />
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul id="mobileMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="shop.html">Shop</a></li>
+                <li><a href="collection.html">Collection</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><button id="logoutButtonMobile" class="logout-button-mobile">Sign Out</button></li>
+            </ul>
+            <button id="logoutButton" class="logout-button">Sign Out</button>
+        </nav>
+    </header>
+    
+    <main class="leaderboard-container" role="main">
+        <div class="leaderboard-header">
+            <h1>🏆 Leaderboard</h1>
+            <p>Top EcoQuest players ranked by XP</p>
+        </div>
+
+        <div class="leaderboard-card">
+            <ul class="leaderboard-list" id="leaderboardList">
+                <li class="loading-state">Loading leaderboard...</li>
+            </ul>
+        </div>
+    </main>
+
+    <!-- Leaderboard JavaScript -->
+    <script type="module">
+        import { requireAuth } from "../js/auth-guard.js";
+        import { logOut, getAllUsers } from "../js/auth.js";
+
+        // helkuri piltide loetelu, tagab et iga taseme jaoks on õige pilt
+        function getBadgeImageForLevel(level) {
+            const badgeImages = {
+                1: "../images/ecoquests-badges/cat-badge-removedbg.png", // Level 1 Helkuri Pilt
+                2: "../images/ecoquests-badges/fox-badge-removedbg.png", // Level 2 Helkuri Pilt
+                3: "../images/ecoquests-badges/rabbit-badge-removedbg.png", // Level 3 Helkuri Pilt
+                4: "../images/ecoquests-badges/deer-badge-removedbg.png", // Level 4 Helkuri Pilt
+                5: "../images/ecoquests-badges/wolf-badge-removedbg.png", // Level 5 Helkuri Pilt
+                6: "../images/ecoquests-badges/bear-badge-removedbg.png", // Level 6 Helkuri Pilt
+                7: "../images/ecoquests-badges/eagle-badge-removedbg.png", // Level 7 Helkuri Pilt
+                8: "../images/ecoquests-badges/tiger-badge-removedbg.png", // Level 8 Helkuri Pilt
+                9: "../images/ecoquests-badges/lion-badge-removedbg.png" // Level 9 Helkuri Pilt
+            };
+            // kui tase on kehtetu, tagastab vaikimisi Level 1 pildi
+            return badgeImages[level] || badgeImages[1];
+        }
+
+        // helkuri nimede loetelu, tagab et iga taseme jaoks on õige nimi
+        function getBadgeNameForLevel(level) {
+            const badgeNames = {
+                1: "Cat", // Level 1 Helkuri Nimi
+                2: "Fox", // Level 2 Helkuri Nimi
+                3: "Rabbit", // Level 3 Helkuri Nimi
+                4: "Deer", // Level 4 Helkuri Nimi
+                5: "Wolf", // Level 5 Helkuri Nimi
+                6: "Bear", // Level 6 Helkuri Nimi
+                7: "Eagle", // Level 7 Helkuri Nimi
+                8: "Tiger", // Level 8 Helkuri Nimi
+                9: "Lion" // Level 9 Helkuri Nimi
+            };
+            // kui tase on kehtetu, tagastab vaikimisi Level 1 nime
+            return badgeNames[level] || badgeNames[1];
+        }
+
+        // tasemete arvutamine XP põhjal
+        function calculateLevel(xp) {
+            const LEVEL_MILESTONES = [
+                0,      // Level 1: 0 XP
+                100,    // Level 2: 100 XP
+                250,    // Level 3: 250 XP
+                500,    // Level 4: 500 XP
+                1000,   // Level 5: 1,000 XP
+                2500,   // Level 6: 2,500 XP
+                5000,   // Level 7: 5,000 XP
+                10000,  // Level 8: 10,000 XP
+                50000   // Level 9: 50,000 XP
+            ];
+
+            // kontrollib, et XP on positiivne
+            if (xp < 0) return 1;
+            
+            // Kontrollib tagurpidi, et leida kõrgeim saavutatud tase
+            for (let i = LEVEL_MILESTONES.length - 1; i >= 0; i--) {
+                if (xp >= LEVEL_MILESTONES[i]) {
+                    return i + 1;
+                }
+            }
+            return 1; // Vaikimisi tase 1, kui XP on väga väike
+        }
+
+        // Medali Emoji Loetelu(Top 3 Medali Emojid)
+        function getMedalEmoji(rank) {
+            if (rank === 1) return "🥇";
+            if (rank === 2) return "🥈";
+            if (rank === 3) return "🥉";
+            return "";
+        }
+
+        // leaderboard renderimine, kontrollib andmete kehtivust enne kuvamist
+        async function renderLeaderboard(currentUserId) {
+            const leaderboardList = document.getElementById("leaderboardList");
+            // kontrollib, et element on olemas
+            if (!leaderboardList) return;
+
+            try {
+                // laadib kõikide kasutajate loetelu Firestore'ist, võib ebaõnnestuda õiguste tõttu
+                const result = await getAllUsers();
+                
+                // kontrollib, et päring õnnestus
+                if (!result.success) {
+                    const errorMessage = result.error || "Unknown error";
+                    let userMessage = "Error loading leaderboard.";
+                    // kontrollib, kas probleem on õigustes
+                    if (errorMessage.includes("permission") || errorMessage.includes("Permission")) {
+                        userMessage = `
+                            <p style="margin-bottom: 10px;"><strong>Permission Error</strong></p>
+                            <p style="font-size: 14px; margin-bottom: 10px;">
+                                Please update Firebase Security Rules to allow reading user profiles.
+                            </p>
+                            <p style="font-size: 12px; opacity: 0.8;">
+                                Go to Firebase Console → Firestore Database → Rules and update the rules.
+                            </p>
+                        `;
+                    } else {
+                        userMessage = `Error: ${errorMessage}`;
+                    }
+                    
+                    leaderboardList.innerHTML = `
+                        <li class="error-state">
+                            ${userMessage}
+                        </li>
+                    `;
+                    return;
+                }
+
+                const users = result.data || [];
+                
+                // kontrollib, et kasutajaid on olemas
+                if (users.length === 0) {
+                    leaderboardList.innerHTML = `
+                        <li class="empty-state">
+                            <p>No users found. Be the first to join!</p>
+                        </li>
+                    `;
+                    return;
+                }
+
+                // sorteerib kasutajad XP järgi kahanevalt
+                users.sort((a, b) => (b.xp || 0) - (a.xp || 0));
+
+                leaderboardList.innerHTML = "";
+
+                // renderib kõikide kasutajate loetelu, kontrollib andmete kehtivust
+                users.forEach((userData, index) => {
+                    const userRank = index + 1;
+                    // tagab, et XP on alati arv
+                    const userXp = userData.xp || 0;
+                    // arvutab taseme, kui see puudub profiilist
+                    const userLevel = userData.level || calculateLevel(userXp);
+                    // tagab, et kuvatakse alati mõni nimi
+                    const userName = userData.displayName || userData.email?.split("@")[0] || "Anonymous";
+                    const userBadgeImage = getBadgeImageForLevel(userLevel);
+                    const userBadgeName = getBadgeNameForLevel(userLevel);
+                    const isCurrentUser = userData.id === currentUserId;
+                    const rankMedalEmoji = getMedalEmoji(userRank);
+
+                    const listItem = document.createElement("li");
+                    const itemClassNames = `leaderboard-item ${isCurrentUser ? "current-user" : ""} clickable-item`;
+                    listItem.className = itemClassNames;
+                    listItem.style.cursor = "pointer";
+                    listItem.setAttribute("data-user-id", userData.id);
+                    
+                    const isTopThree = userRank <= 3;
+                    const rankDisplay = isTopThree ? `${rankMedalEmoji}${userRank}` : userRank;
+                    
+                    listItem.innerHTML = `
+                        <div class="rank-number ${isTopThree ? `top-${userRank}` : ""}">
+                            ${rankDisplay}
+                        </div>
+                        <img src="${userBadgeImage}" alt="${userBadgeName} Badge" class="user-badge-small" />
+                        <div class="user-info-section">
+                            <h3 class="user-name">${userName}${isCurrentUser ? " (You)" : ""}</h3>
+                            <p class="user-badge-name">${userBadgeName} Badge</p>
+                        </div>
+                        <div class="user-stats-section">
+                            <div class="level-display">
+                                <span class="level-value">L${userLevel}</span>
+                                <span class="level-label">Level</span>
+                            </div>
+                            <div class="xp-display">
+                                <span class="xp-value">${userXp.toLocaleString()}</span>
+                                <span class="xp-label">XP</span>
+                            </div>
+                        </div>
+                    `;
+
+                    // muudab kogu rea vajutavaks, avab kasutaja profiili
+                    listItem.addEventListener("click", () => {
+                        // kontrollib, et user.id on olemas enne navigeerimist
+                        if (userData.id) {
+                            window.location.href = `profile.html?userId=${userData.id}`;
+                        }
+                    });
+
+                    leaderboardList.appendChild(listItem);
+                });
+            } catch (error) {
+                // logib vea ja kuvab kasutajale sõbraliku teate
+                console.error("Error rendering leaderboard:", error);
+                leaderboardList.innerHTML = `
+                    <li class="error-state">
+                        <p>An error occurred while loading the leaderboard. Please refresh the page.</p>
+                    </li>
+                `;
+            }
+        }
+
+        // autentimise kontroll ja leaderboard laadimine, tagab et ainult sisselogitud kasutajad näevad lehte
+        requireAuth().then(async (user) => {
+            // kontrollib, et user.uid on olemas
+            if (user && user.uid) {
+                await renderLeaderboard(user.uid);
+            } else {
+                window.location.href = "login.html";
+            }
+        }).catch((error) => {
+            // kui autentimine ebaõnnestub, suunab kasutaja sisselogimise lehele
+            console.error("Auth error:", error);
+            window.location.href = "login.html";
+        });
+
+        // Väljalogimise nupp - oluline: kontrollib, et nupp on olemas enne event listeneri lisamist
+        const logoutButton = document.getElementById("logoutButton");
+        if (logoutButton) {
+            logoutButton.addEventListener("click", async () => {
+                try {
+                    const result = await logOut();
+                    // Oluline: kontrollib, et väljalogimine õnnestus enne suunamist
+                    if (result.success) {
+                        window.location.href = "login.html";
+                    } else {
+                        alert("Logout failed: " + (result.error || "Unknown error"));
+                    }
+                } catch (error) {
+                    // Oluline: logib vea, et arendaja saaks selle tuvastada
+                    console.error("Logout error:", error);
+                    alert("An error occurred during logout. Please try again.");
+                }
+            });
+        }
+
+        // Mobiilse menüü lüliti - oluline: kontrollib, et elemendid on olemas
+        const mobileMenuToggle = document.getElementById("mobileMenuToggle");
+        const mobileMenu = document.getElementById("mobileMenu");
+        const logoutButtonMobile = document.getElementById("logoutButtonMobile");
+
+        if (mobileMenuToggle && mobileMenu) {
+            mobileMenuToggle.addEventListener("click", () => {
+                const isActive = mobileMenu.classList.contains("active");
+                mobileMenu.classList.toggle("active");
+                mobileMenuToggle.classList.toggle("active");
+                mobileMenuToggle.setAttribute("aria-expanded", !isActive);
+                
+                // Oluline: takistab tausta kerimist, kui menüü on avatud - parandab kasutajakogemust
+                if (!isActive) {
+                    document.body.style.overflow = "hidden";
+                } else {
+                    document.body.style.overflow = "";
+                }
+            });
+
+            // Sulgeb menüü, kui lingile vajutatakse
+            const menuLinks = mobileMenu.querySelectorAll("a");
+            menuLinks.forEach(link => {
+                link.addEventListener("click", () => {
+                    mobileMenu.classList.remove("active");
+                    mobileMenuToggle.classList.remove("active");
+                    mobileMenuToggle.setAttribute("aria-expanded", "false");
+                    document.body.style.overflow = "";
+                });
+            });
+
+            // Sulgeb menüü, kui klikk toimub menüüst väljas 
+            document.addEventListener("click", (e) => {
+                if (mobileMenu.classList.contains("active") && 
+                    !mobileMenu.contains(e.target) && 
+                    !mobileMenuToggle.contains(e.target)) {
+                    mobileMenu.classList.remove("active");
+                    mobileMenuToggle.classList.remove("active");
+                    mobileMenuToggle.setAttribute("aria-expanded", "false");
+                    document.body.style.overflow = "";
+                }
+            });
+        }
+
+        // Mobiilne väljalogimise nupp
+        if (logoutButtonMobile) {
+            logoutButtonMobile.addEventListener("click", async () => {
+                try {
+                    const result = await logOut();
+                    // Oluline: kontrollib, et väljalogimine õnnestus
+                    if (result.success) {
+                        window.location.href = "login.html";
+                    } else {
+                        alert("Logout failed: " + (result.error || "Unknown error"));
+                    }
+                } catch (error) {
+                    // Oluline: logib vea, et arendaja saaks selle tuvastada
+                    console.error("Logout error:", error);
+                    alert("An error occurred during logout. Please try again.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+

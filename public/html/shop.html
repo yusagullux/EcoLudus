@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EcoQuest Shop - Buy plants with EcoPoints and grow your collection" />
+    <meta name="keywords" content="ecoquest, shop, plants, ecopoints, collection" />
+    <link rel="icon" type="image/png" href="../images/logo.png" />
+    <title>EcoQuest | Shop</title>
+    <link rel="stylesheet" href="../css/shop.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav>
+            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;" />
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul id="mobileMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="shop.html">Shop</a></li>
+                <li><a href="collection.html">Collection</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><button id="logoutButtonMobile" class="logout-button-mobile">Sign Out</button></li>
+            </ul>
+            <button id="logoutButton" class="logout-button">Sign Out</button>
+        </nav>
+    </header>
+    
+    <main class="shop-container" role="main">
+        <div class="shop-header">
+            <h1>🌱 Plant Shop</h1>
+            <div class="ecopoints-display">
+                <span class="ecopoints-label">Your EcoPoints:</span>
+                <span class="ecopoints-value" id="ecopointsValue">0</span>
+            </div>
+        </div>
+
+        <!-- Shop Mode Toggle -->
+        <div class="shop-mode-section">
+            <button class="shop-mode-btn active" data-mode="plants">🌱 Plants</button>
+            <button class="shop-mode-btn" data-mode="eggs">🥚 Eggs</button>
+        </div>
+
+        <div class="filter-section">
+            <button class="filter-btn active" data-rarity="all">All</button>
+            <button class="filter-btn" data-rarity="common">Common</button>
+            <button class="filter-btn" data-rarity="rare">Rare</button>
+            <button class="filter-btn" data-rarity="epic">Epic</button>
+            <button class="filter-btn" data-rarity="legendary">Legendary</button>
+        </div>
+
+        <!-- Hatching Section -->
+        <div class="hatching-section" id="hatchingSection">
+            <h2>🥚 Hatching Chamber</h2>
+            <div class="hatching-grid" id="hatchingGrid">
+                <div class="empty-hatching">
+                    <p>No eggs hatching. Buy an egg to start!</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadingState" class="loading-state" role="status" aria-live="polite">
+            <div class="spinner"></div>
+            <p>Loading plants...</p>
+        </div>
+
+        <div id="errorState" class="error-state" role="alert" aria-live="assertive" style="display: none;">
+            <p>Error loading shop. Please try again later.</p>
+        </div>
+
+        <div class="plants-grid" id="plantsGrid"></div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+    <script type="module" src="../js/shop.js"></script>
+</body>
+</html>
+

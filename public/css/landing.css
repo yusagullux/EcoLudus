@@ -1,0 +1,312 @@
+:root {
+  --color-primary: #4caf50;
+  --color-secondary: #81d4fa;
+  --color-accent: #2e7d32;
+  --color-bg-light: #f5f5f5;
+  --color-bg-dark: #1b1b1b;
+  --color-text: #424242;
+  --color-white: #ffffff;
+  --font-main: "Poppins", sans-serif;
+  --font-secondary: "Inter", sans-serif;
+  --max-width: 1200px;
+  --border-radius: 15px;
+  --section-padding: 60px;
+  --shadow-light: 0 5px 15px rgba(0, 0, 0, 0.1);
+  --shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.2);
+  --transition: all 0.3s ease;
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-secondary);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-main);
+}
+
+p,
+button {
+  font-family: var(--font-secondary);
+}
+
+header {
+  background: var(--color-white);
+  padding: 20px 40px;
+  box-shadow: var(--shadow-light);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-radius: 0 0 20px 20px;
+  margin-bottom: 70px;
+  transition: var(--transition);
+}
+
+header:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+}
+
+nav img {
+  height: 80px;
+  width: 200px;
+  border-radius: 10px;
+  object-fit: cover;
+  object-position: center;
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+}
+
+nav ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  font-family: var(--font-secondary);
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: var(--color-text);
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+nav ul li a:hover {
+  color: var(--color-primary);
+}
+
+.top-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.top-buttons .login-button {
+  border: 2px solid var(--color-accent);
+  height: 48px;
+  width: 100px;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--color-accent);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.top-buttons .login-button:hover {
+  background: var(--color-accent);
+  color: white;
+}
+
+.top-buttons .signup-button {
+  border: none;
+  height: 48px;
+  width: 100px;
+  border-radius: 20px;
+  background: var(--color-primary);
+  color: white;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.top-buttons .signup-button:hover {
+  background: var(--color-secondary);
+}
+
+section {
+  padding: var(--section-padding) 20px;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  text-align: center;
+}
+
+#hero {
+  background: url("https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1470&q=80")
+    no-repeat center center/cover;
+  color: var(--color-white);
+  padding: 100px 20px;
+  border-radius: 20px 20px 0 0;
+  height: 200px;
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+}
+
+#hero:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.hero-buttons {
+  margin-top: 20px;
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+#hero .signup-button,
+#hero .login-button {
+  height: 50px;
+  width: 150px;
+  border-radius: 25px;
+  font-weight: 600;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+#hero .signup-button {
+  background: var(--color-secondary);
+  border: none;
+  color: white;
+}
+
+#hero .signup-button:hover {
+  background: var(--color-primary);
+  transform: scale(1.05);
+}
+
+#hero .login-button {
+  background: var(--color-bg-light);
+  border: 2px solid var(--color-white);
+  color: var(--color-text);
+}
+
+#hero .login-button:hover {
+  background: var(--color-white);
+  color: var(--color-primary);
+  transform: scale(1.05);
+}
+
+#about {
+  background: var(--color-white);
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+}
+
+#about:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+#about p {
+  max-width: 800px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+#features {
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+}
+
+#features:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.containers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.feature-card {
+  background: var(--color-white);
+  padding: 20px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+}
+
+#call-to-action {
+  background: url("../images/mountains.png") no-repeat center center/cover;
+  color: white;
+  box-shadow: var(--shadow-light);
+  transition: var(--transition);
+}
+
+#call-to-action:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+#call-to-action .signup-button {
+  border: none;
+  height: 48px;
+  width: 150px;
+  font-weight: 600;
+  border-radius: 25px;
+  background: var(--color-primary);
+  color: white;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+#call-to-action .signup-button:hover {
+  background: var(--color-secondary);
+  transform: scale(1.05);
+}
+
+#call-to-action p {
+  max-width: 600px;
+  margin: 0 auto 20px;
+  font-size: 1.2em;
+}
+
+footer {
+  background: var(--color-bg-dark);
+  color: var(--color-white);
+  text-align: center;
+  padding: 20px;
+  font-size: 0.9em;
+}
+
+footer a {
+  color: var(--color-secondary);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+footer a:hover {
+  color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .containers {
+    grid-template-columns: 1fr;
+  }
+
+  nav {
+    gap: 15px;
+  }
+}
+
+@media (max-width: 520px) {
+  nav ul,
+  .top-buttons {
+    display: none;
+  }
+
+  nav {
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    gap: 0;
+    padding: 8px 16px;
+  }
+
+  header {
+    padding: 10px 16px;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+}

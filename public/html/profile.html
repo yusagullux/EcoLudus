@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EcoQuest Profile - View your stats, collection, and achievements" />
+    <meta name="keywords" content="ecoquest, profile, stats, achievements, collection" />
+    <link rel="icon" type="image/png" href="../images/logo.png" />
+    <title>EcoQuest | Profile</title>
+    <link rel="stylesheet" href="../css/shop.css" />
+    <link rel="stylesheet" href="../css/profile.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav>
+            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;" />
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul id="mobileMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="shop.html">Shop</a></li>
+                <li><a href="collection.html">Collection</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><button id="logoutButtonMobile" class="logout-button-mobile">Sign Out</button></li>
+            </ul>
+            <button id="logoutButton" class="logout-button">Sign Out</button>
+        </nav>
+    </header>
+    
+    <main class="profile-container" role="main">
+        <div id="loadingState" class="loading-state" role="status" aria-live="polite">
+            <div class="spinner"></div>
+            <p>Loading profile...</p>
+        </div>
+
+        <div id="errorState" class="error-state" role="alert" aria-live="assertive" style="display: none;">
+            <p>Error loading profile. Please try again later.</p>
+        </div>
+
+        <div id="profileContent" style="display: none;">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <img id="profileBadge" src="" alt="User Badge" class="profile-badge-image" />
+                </div>
+                <div class="profile-info">
+                    <h1 id="profileName">User</h1>
+                    <p id="profileEmail" class="profile-email">Loading...</p>
+                </div>
+            </div>
+
+            <!-- Profile Stats -->
+            <div class="profile-stats-grid">
+                <div class="profile-stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-content">
+                        <span class="stat-label">Current Rank</span>
+                        <span class="stat-value" id="currentRank">-</span>
+                    </div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-content">
+                        <span class="stat-label">Best Rank</span>
+                        <span class="stat-value" id="bestRank">-</span>
+                    </div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-content">
+                        <span class="stat-label">Level</span>
+                        <span class="stat-value" id="profileLevel">-</span>
+                    </div>
+                </div>
+                <div class="profile-stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-content">
+                        <span class="stat-label">Missions Completed</span>
+                        <span class="stat-value" id="missionsCompleted">-</span>
+                    </div>
+                </div>
+                <div class="profile-stat-card carbon-reduction-card">
+                    <div class="stat-icon">🌍</div>
+                    <div class="stat-content">
+                        <span class="stat-label">CO₂ Reduced</span>
+                        <span class="stat-value" id="totalCarbonReduced">-</span>
+                        <span class="stat-subtitle" style="font-size: 11px; opacity: 0.8;">kg CO₂</span>
+                    </div>
+                </div>
+                <div class="profile-stat-card" id="teamInfoCard" style="display: none;">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-content">
+                        <span class="stat-label">Team</span>
+                        <span class="stat-value" id="teamNameDisplay">-</span>
+                        <span class="stat-subtitle" id="teamRoleDisplay" style="font-size: 11px; opacity: 0.8;">-</span>
+                    </div>
+                </div>
+                <div class="profile-stat-card" id="replayModeCard" style="display: none;">
+                    <div class="stat-icon">🔄</div>
+                    <div class="stat-content">
+                        <span class="stat-label">Replay Mode</span>
+                        <span class="stat-value" id="replayModeCount">0</span>
+                        <span class="stat-subtitle" style="font-size: 11px; opacity: 0.8;">times completed</span>
+                    </div>
+                </div>
+                <div class="profile-stat-card" id="activePetCard" style="display: none;">
+                    <div id="activePetDisplay" class="active-pet-display-stat">
+                        <img id="activePetImage" src="" alt="Active Pet" class="active-pet-image-stat" />
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-label">Active Pet</span>
+                        <span class="stat-value" id="activePetName">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quest Category Progress Section -->
+            <div class="quest-progress-section">
+                <h2>📋 Quest Category Progress</h2>
+                <div id="questCategoryProgressList" class="category-progress-list"></div>
+            </div>
+
+            <!-- Collection Book Section -->
+            <div class="collection-section">
+                <h2>📚 Collection Book</h2>
+                <div class="collection-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Total Plants</span>
+                        <span class="stat-value" id="totalPlants">0</span>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <button class="filter-btn active" data-rarity="all">All</button>
+                    <button class="filter-btn" data-rarity="common">Common</button>
+                    <button class="filter-btn" data-rarity="rare">Rare</button>
+                    <button class="filter-btn" data-rarity="epic">Epic</button>
+                    <button class="filter-btn" data-rarity="legendary">Legendary</button>
+                </div>
+
+                <div id="emptyCollection" class="empty-collection" style="display: none;">
+                    <div class="empty-state-content">
+                        <h3>No plants in collection yet</h3>
+                        <p>Visit the shop to start collecting!</p>
+                    </div>
+                </div>
+
+                <div class="plants-grid" id="plantsGrid"></div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="../js/profile.js"></script>
+</body>
+</html>
+

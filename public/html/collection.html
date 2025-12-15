@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EcoQuest Collection - View and manage your plant collection" />
+    <meta name="keywords" content="ecoquest, collection, plants, profile" />
+    <link rel="icon" type="image/png" href="../images/logo.png" />
+    <title>EcoQuest | Collection</title>
+    <link rel="stylesheet" href="../css/shop.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav>
+            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;" />
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul id="mobileMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="shop.html">Shop</a></li>
+                <li><a href="collection.html">Collection</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><button id="logoutButtonMobile" class="logout-button-mobile">Sign Out</button></li>
+            </ul>
+            <button id="logoutButton" class="logout-button">Sign Out</button>
+        </nav>
+    </header>
+    
+    <main class="shop-container collection-container" role="main">
+        <div class="shop-header">
+            <h1>📚 My Collection</h1>
+            <div class="ecopoints-display">
+                <span class="ecopoints-label">Your EcoPoints:</span>
+                <span class="ecopoints-value" id="ecopointsValue">0</span>
+            </div>
+        </div>
+
+        <div class="collection-stats">
+            <div class="stat-item">
+                <span class="stat-label">Total Plants</span>
+                <span class="stat-value" id="totalPlants">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total Animals</span>
+                <span class="stat-value" id="totalAnimals">0</span>
+            </div>
+        </div>
+
+        <!-- Collection Mode Toggle -->
+        <div class="collection-mode-section">
+            <button class="collection-mode-btn active" data-mode="plants">🌱 Plants</button>
+            <button class="collection-mode-btn" data-mode="animals">🐾 Animals</button>
+        </div>
+
+        <div class="filter-section">
+            <button class="filter-btn active" data-rarity="all">All</button>
+            <button class="filter-btn" data-rarity="common">Common</button>
+            <button class="filter-btn" data-rarity="rare">Rare</button>
+            <button class="filter-btn" data-rarity="epic">Epic</button>
+            <button class="filter-btn" data-rarity="legendary">Legendary</button>
+        </div>
+
+        <div id="loadingState" class="loading-state" role="status" aria-live="polite">
+            <div class="spinner"></div>
+            <p>Loading collection...</p>
+        </div>
+
+        <div id="errorState" class="error-state" role="alert" aria-live="assertive" style="display: none;">
+            <p>Error loading collection. Please try again later.</p>
+        </div>
+
+        <div id="emptyCollection" class="empty-collection" style="display: none;">
+            <div class="empty-state-content">
+                <h2>Your collection is empty</h2>
+                <p>Visit the shop to start collecting plants!</p>
+                <a href="shop.html" class="shop-link-btn">Go to Shop</a>
+            </div>
+        </div>
+
+        <div class="plants-grid" id="plantsGrid"></div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+    <script type="module" src="../js/collection.js"></script>
+</body>
+</html>
+

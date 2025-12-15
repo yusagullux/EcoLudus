@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EcoQuest Team - Collaborate on eco-friendly missions" />
+    <meta name="keywords" content="ecoquest, team, collaboration, missions" />
+    <link rel="icon" type="image/png" href="../images/logo.png" />
+    <title>EcoQuest | Team</title>
+    <link rel="stylesheet" href="../css/dashboard.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav>
+            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;" />
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul id="mobileMenu">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="team.html">Team</a></li>
+                <li><a href="insights.html">Insights</a></li>
+                <li><a href="shop.html">Shop</a></li>
+                <li><a href="collection.html">Collection</a></li>
+                <li><a href="profile.html">Profile</a></li>
+                <li><a href="leaderboard.html">Leaderboard</a></li>
+                <li><button id="logoutButtonMobile" class="logout-button-mobile">Sign Out</button></li>
+            </ul>
+            <button id="logoutButton" class="logout-button">Sign Out</button>
+        </nav>
+    </header>
+    
+    <main id="teamPage" role="main">
+        <div class="dashboard-cards">
+            <div class="dashboard-card team-overview-card">
+                <div class="team-card-header">
+                    <div>
+                        <h2>Team Hub</h2>
+                        <p class="team-subtitle" id="teamSubtitle">Collaborate on gentle-yet-impactful eco goals.</p>
+                    </div>
+                    <div class="team-actions">
+                        <button class="team-btn" id="teamCreateBtn">Create Team</button>
+                        <button class="team-btn outline" id="teamJoinBtn">Join via Code</button>
+                        <button class="team-btn ghost" id="teamLeaveBtn" style="display: none;">Leave Team</button>
+                    </div>
+                </div>
+                <div class="team-empty-state" id="teamEmptyState">
+                    <p>You are not part of a team yet. Create a cozy squad or join an existing one with a 6-character code.</p>
+                    <div class="team-empty-actions">
+                        <button class="team-btn" id="teamQuickCreateBtn">Start a Team</button>
+                        <button class="team-btn outline" id="teamQuickJoinBtn">Have a Code?</button>
+                    </div>
+                </div>
+                <div class="team-details" id="teamDetails" style="display: none;">
+                    <div class="team-meta">
+                        <div>
+                            <h3 id="teamNameDisplay">Team Name</h3>
+                            <p class="team-code" id="teamCodeDisplay">Code: -</p>
+                            <p class="team-role-pill" id="teamRoleDisplay">Role: member</p>
+                        </div>
+                        <div class="team-meta-actions">
+                            <button class="team-btn secondary" id="teamCopyCodeBtn">Copy Code</button>
+                            <button class="team-btn ghost" id="teamManageBtn">Manage</button>
+                        </div>
+                    </div>
+                    <div class="team-stats-grid" id="teamStatsGrid">
+                        <div class="team-stat">
+                            <span>XP shared</span>
+                            <strong id="teamXpStat">0</strong>
+                        </div>
+                        <div class="team-stat">
+                            <span>EcoPoints shared</span>
+                            <strong id="teamEcoStat">0</strong>
+                        </div>
+                        <div class="team-stat">
+                            <span>Missions cleared</span>
+                            <strong id="teamMissionStat">0</strong>
+                        </div>
+                        <div class="team-stat">
+                            <span>Active members</span>
+                            <strong id="teamMemberCount">1</strong>
+                        </div>
+                    </div>
+                    <div class="team-members" id="teamMembersContainer">
+                        <h4>Members</h4>
+                        <ul id="teamMembersList"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card team-missions-card">
+                <div class="team-card-header">
+                    <div>
+                        <h2>Team Missions</h2>
+                        <p class="team-subtitle" id="teamMissionHint">Complete cooperative tasks for extra XP.</p>
+                    </div>
+                    <div class="team-actions">
+                        <button class="team-btn" id="assignMissionBtn">Assign New Mission</button>
+                    </div>
+                </div>
+                <div class="team-missions-wrapper">
+                    <div class="team-mission-list" id="activeTeamMissions">
+                        <p class="team-muted">No active missions yet. Assign one to get started.</p>
+                    </div>
+                    <div class="team-library" id="teamMissionLibrary">
+                        <!-- Mission templates injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card team-leaderboard-card">
+                <div class="team-card-header">
+                    <div>
+                        <h2>Team Leaderboard</h2>
+                        <p class="team-subtitle">See how your team members are performing.</p>
+                    </div>
+                </div>
+                <div class="team-leaderboard-wrapper" id="teamLeaderboardContainer">
+                    <p class="team-muted">Join a team to see the leaderboard.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Team Management Modal -->
+    <div id="teamManagerModal" class="team-modal" style="display: none;">
+        <div class="team-modal-content">
+            <div class="team-modal-header">
+                <h3 id="teamModalTitle">Create a Team</h3>
+                <button class="team-modal-close" id="teamModalCloseBtn">&times;</button>
+            </div>
+            <div class="team-modal-body">
+                <p id="teamModalDescription">Name your squad so friends can recognize it.</p>
+                <input type="text" id="teamModalInput" placeholder="Team Name" maxlength="40">
+            </div>
+            <div class="team-modal-actions">
+                <button class="team-btn ghost" id="teamModalCancel">Cancel</button>
+                <button class="team-btn" id="teamModalSubmit">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Mission Submission Modal -->
+    <div id="teamSubmissionModal" class="team-modal" style="display: none;">
+        <div class="team-modal-content">
+            <div class="team-modal-header">
+                <h3 id="teamSubmissionTitle">Mission Update</h3>
+                <button class="team-modal-close" id="teamSubmissionClose">&times;</button>
+            </div>
+            <div class="team-modal-body">
+                <p class="team-muted" id="teamSubmissionDescription">Share a quick note on what your team accomplished.</p>
+                <textarea id="teamSubmissionNote" rows="4" placeholder="Example: Collected 5 plastic bottles from the park."></textarea>
+            </div>
+            <div class="team-modal-actions">
+                <button class="team-btn ghost" id="teamSubmissionCancel">Cancel</button>
+                <button class="team-btn" id="teamSubmissionSubmit">Submit Proof</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../js/team.js"></script>
+</body>
+</html>
+

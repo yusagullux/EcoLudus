@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Join EcoQuest - Complete eco-friendly missions, earn points, and compete on leaderboards." />
+    <meta name="keywords" content="ecoquest, environmental, sustainability, gamification, green, eco-friendly" />
+    <meta name="author" content="EcoQuest" />
+    <meta property="og:title" content="EcoQuest | Sign Up" />
+    <meta property="og:description" content="Join EcoQuest and start your eco-friendly journey" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/png" href="../images/logo.png" />
+    <title>EcoQuest | Sign Up</title>
+    <link rel="stylesheet" href="../css/forms.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <form id="signupForm">
+      <h2>Welcome To EcoQuest!</h2>
+      <h3>Create Your Account</h3>
+      <div id="errorMessage" style="color: red; display: none; margin-bottom: 10px;"></div>
+      <div id="successMessage" style="color: green; display: none; margin-bottom: 10px;"></div>
+      <div class="email-box">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required />
+      </div>
+      <div class="password-box">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required minlength="6" />
+        <small style="color: #666; font-size: 12px;">Password must be at least 6 characters</small>
+      </div>
+      <button type="submit">Sign Up</button>
+      <a href="login.html">I already have an account</a>
+    </form>
+
+    <script type="module">
+      import { signUp, onAuthChange } from "../js/auth.js";
+      import { validateEmail, validatePassword, formatErrorMessage, checkOnlineStatus } from "../js/utils.js";
+      
+      // Kontrollib kas kasutaja on juba sees – jah-korral suunab töölauale
+      onAuthChange((user) => {
+        if (user) {
+          window.location.href = "dashboard.html";
+        }
+      });
+      
+      const signupForm = document.getElementById("signupForm");
+      const errorMessage = document.getElementById("errorMessage");
+      const successMessage = document.getElementById("successMessage");
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+      
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = "block";
+        successMessage.style.display = "none";
+      }
+      
+      function showSuccess(message) {
+        successMessage.textContent = message;
+        successMessage.style.display = "block";
+        errorMessage.style.display = "none";
+      }
+      
+      function hideMessages() {
+        errorMessage.style.display = "none";
+        successMessage.style.display = "none";
+      }
+      
+      function setLoadingState(isLoading) {
+        const submitButton = signupForm.querySelector("button[type='submit']");
+        submitButton.disabled = isLoading;
+        submitButton.textContent = isLoading ? "Creating account..." : "Sign Up";
+      }
+      
+      signupForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hideMessages();
+        
+        if (!checkOnlineStatus()) {
+          showError("You are offline. Please check your internet connection.");
+          return;
+        }
+        
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        
+        const emailValidation = validateEmail(email);
+        if (!emailValidation.valid) {
+          showError(emailValidation.error);
+          return;
+        }
+        
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+          showError(passwordValidation.error);
+          return;
+        }
+        
+        setLoadingState(true);
+        
+        try {
+          const result = await signUp(emailValidation.email, password);
+          
+          if (result.success) {
+            showSuccess("Account created successfully! Redirecting...");
+            setTimeout(() => {
+              window.location.href = "dashboard.html";
+            }, 1000);
+          } else {
+            showError(formatErrorMessage(result.error || new Error("Sign up failed")));
+            setLoadingState(false);
+          }
+        } catch (error) {
+          showError(formatErrorMessage(error));
+          setLoadingState(false);
+        }
+      });
+    </script>
+  </body>
+</html>
+
