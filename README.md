@@ -90,54 +90,6 @@ Our mission is to inspire millions of people to adopt eco-friendly habits throug
 
 ---
 
-
-
-## 📁 Project Structure
-
-```
-EcoQuest/
-│
-├── public/
-│   ├── html/              # HTML pages
-│   │   ├── landing.html   # Landing page
-│   │   ├── login.html     # Login page
-│   │   ├── signup.html    # Registration page
-│   │   ├── dashboard.html # Main dashboard (missions, progress)
-│   │   ├── profile.html   # User profile
-│   │   ├── shop.html      # Plant shop
-│   │   ├── collection.html # Plant collection
-│   │   └── leaderboard.html # Global rankings
-│   │
-│   ├── css/               # Stylesheets
-│   │   ├── dashboard.css  # Dashboard styles
-│   │   ├── landing.css    # Landing page styles
-│   │   ├── profile.css    # Profile styles
-│   │   ├── shop.css       # Shop styles
-│   │   └── forms.css      # Form styles
-│   │
-│   ├── js/                # JavaScript modules
-│   │   ├── firebase-config.js # Firebase initialization
-│   │   ├── auth.js        # Authentication functions
-│   │   ├── auth-guard.js  # Route protection
-│   │   ├── profile.js     # Profile management
-│   │   ├── shop.js        # Shop functionality
-│   │   ├── collection.js  # Collection management
-│   │   └── utils.js       # Utility functions
-│   │
-│   ├── images/            # Assets
-│   │   ├── logo.png
-│   │   ├── ecoquests-badges/ # Badge images (9 levels)
-│   │   └── plants/        # Plant images (14 plants)
-│   │
-│   ├── quests.json        # Quest definitions
-│   └── quests.md          # Quest documentation
-│
-├── firestore.rules        # Firestore security rules
-└── readme.md             # This file
-```
-
----
-
 ## 🎮 How It Works
 
 ### Quest System
