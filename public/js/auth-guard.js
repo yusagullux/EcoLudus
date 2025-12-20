@@ -1,6 +1,6 @@
 /**
- * Authentication guard
- * Automatically redirects to login page if user is not authenticated
+ * Autentimise kontroll
+ * Suunab automaatselt sisselogimislehele, kui kasutaja pole sisse logitud
  */
 import { onAuthChange } from "./auth.js";
 
@@ -10,7 +10,7 @@ export function requireAuth() {
       if (user) {
         resolve(user);
       } else {
-        // Redirect to login page if user is not authenticated
+        // Suunab sisselogimislehele, kui kasutaja pole autenditud
         window.location.href = "login.html";
         reject(new Error("User not authenticated"));
       }

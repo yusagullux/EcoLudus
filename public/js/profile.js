@@ -1,5 +1,6 @@
 import { requireAuth } from "./auth-guard.js";
 import { logOut, getUserProfile, getAllUsers, updateUserProfile } from "./auth.js";
+import { calculateLevel, getBadgeImageForLevel } from "./levels.js";
 
 const DEFAULT_FILTER = "all";
 const DEFAULT_LEVEL = 1;
@@ -12,30 +13,7 @@ let currentFilter = DEFAULT_FILTER;
 let allUsers = [];
 
 
-function getBadgeImageForLevel(level) {
-    const badgeImages = {
-        1: "../images/ecoquests-badges/cat-badge-removedbg.png",
-        2: "../images/ecoquests-badges/fox-badge-removedbg.png",
-        3: "../images/ecoquests-badges/rabbit-badge-removedbg.png",
-        4: "../images/ecoquests-badges/deer-badge-removedbg.png",
-        5: "../images/ecoquests-badges/wolf-badge-removedbg.png",
-        6: "../images/ecoquests-badges/bear-badge-removedbg.png",
-        7: "../images/ecoquests-badges/eagle-badge-removedbg.png",
-        8: "../images/ecoquests-badges/tiger-badge-removedbg.png",
-        9: "../images/ecoquests-badges/lion-badge-removedbg.png"
-    };
-    return badgeImages[level] || badgeImages[1];
-}
 
-function calculateLevel(xp) {
-    const LEVEL_MILESTONES = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 50000];
-    for (let i = LEVEL_MILESTONES.length - 1; i >= 0; i--) {
-        if (xp >= LEVEL_MILESTONES[i]) {
-            return i + 1;
-        }
-    }
-    return DEFAULT_LEVEL;
-}
 
 function getAnimalEmojiForProfile(name) {
     const emojiMap = {
@@ -60,13 +38,13 @@ async function calculateRanking(userId) {
 
         const userIndex = users.findIndex(u => u.id === userId);
         const currentRank = userIndex >= 0 ? userIndex + 1 : null;
-        
+
         const profileResult = await getUserProfile(userId);
         const bestRank = profileResult.success ? (profileResult.data.bestRank || null) : null;
 
-        return { 
-            current: currentRank, 
-            best: bestRank 
+        return {
+            current: currentRank,
+            best: bestRank
         };
     } catch (error) {
         console.error("Error calculating ranking:", error);
@@ -134,7 +112,7 @@ function groupPlantsByType(plants) {
 function renderCollection(plants) {
     const plantsGrid = document.getElementById("plantsGrid");
     const emptyCollection = document.getElementById("emptyCollection");
-    
+
     if (!plantsGrid) return;
 
     if (plants.length === 0) {
@@ -150,7 +128,7 @@ function renderCollection(plants) {
     }
 
     const groupedPlants = groupPlantsByType(plants);
-    
+
     let filteredPlants = groupedPlants;
     if (currentFilter !== DEFAULT_FILTER) {
         filteredPlants = groupedPlants.filter(plant => plant.rarity === currentFilter);
@@ -197,7 +175,7 @@ function createCollectionCard(plantGroup) {
 
 function filterCollection(rarity) {
     currentFilter = rarity;
-    
+
     document.querySelectorAll(".filter-btn").forEach(btn => {
         btn.classList.remove("active");
         if (btn.dataset.rarity === rarity) {
@@ -255,7 +233,7 @@ function mapCompletedQuestIds(completedQuestIds) {
         "24": { jsonIds: ["energy_7"] },
         "25": { jsonIds: ["gardening_2"] }
     };
-    
+
     const mappedIds = new Set();
     completedQuestIds.forEach(id => {
         const mapped = QUEST_ID_MAPPING[id];
@@ -278,7 +256,7 @@ async function calculateTotalCarbonReduction(completedQuestIds) {
 
         questsData.categories.forEach(category => {
             if (!category || !category.quests) return;
-            
+
             category.quests.forEach(quest => {
                 if (quest && mappedCompletedIds.includes(quest.id)) {
                     totalCarbon += quest.carbonFootprintReduction || 0;
@@ -302,10 +280,10 @@ function calculateQuestProgress(questsData, completedQuestIds) {
 
     const categoryStats = questsData.categories.map(category => {
         const totalQuests = category.quests.length;
-        const completedQuests = category.quests.filter(quest => 
+        const completedQuests = category.quests.filter(quest =>
             mappedCompletedIds.includes(quest.id)
         ).length;
-        
+
         const totalCarbonReduction = category.quests.reduce((sum, quest) => {
             if (mappedCompletedIds.includes(quest.id)) {
                 return sum + quest.carbonFootprintReduction;
@@ -313,13 +291,13 @@ function calculateQuestProgress(questsData, completedQuestIds) {
             return sum;
         }, 0);
 
-        const maxCarbonReduction = category.quests.reduce((sum, quest) => 
+        const maxCarbonReduction = category.quests.reduce((sum, quest) =>
             sum + quest.carbonFootprintReduction, 0
         );
 
         return {
             id: category.id,
-            name: category.name,  
+            name: category.name,
             icon: category.icon,
             color: category.color,
             badgeName: category.badgeName,
@@ -436,7 +414,7 @@ async function loadProfileData() {
             profileBadge.src = getBadgeImageForLevel(level);
             profileBadge.alt = `Level ${level} Badge`;
         }
-        
+
         // Kuvab aktiivse lemmiku statistikute kaardil
         const activePetCard = document.getElementById("activePetCard");
         const activePetDisplay = document.getElementById("activePetDisplay");
@@ -447,7 +425,7 @@ async function loadProfileData() {
                 activePetImage.src = activePet.image;
                 activePetImage.alt = activePet.name || "Active Pet";
                 activePetName.textContent = activePet.name || "-";
-                activePetImage.onerror = function() {
+                activePetImage.onerror = function () {
                     // Kasutab emoji kohatäit kui pilt ebaõnnestub
                     this.style.display = "none";
                     activePetDisplay.innerHTML = `
@@ -462,16 +440,16 @@ async function loadProfileData() {
         if (profileLevel) profileLevel.textContent = level;
         if (missionsCompletedEl) missionsCompletedEl.textContent = missionsCompleted;
         if (totalPlantsEl) totalPlantsEl.textContent = userCollection.length;
-        
+
         const completedQuests = profile.completedQuests || [];
         const totalCarbon = await calculateTotalCarbonReduction(completedQuests);
         if (totalCarbonReducedEl) {
             totalCarbonReducedEl.textContent = totalCarbon.toFixed(1);
         }
-        
+
         // Render quest category progress
         await renderQuestCategoryProgress(completedQuests);
-        
+
         if (replayModeCard && replayModeCount) {
             if (allQuestsCompleted && allQuestsCompletedCount > 0) {
                 replayModeCard.style.display = "flex";
@@ -512,9 +490,9 @@ async function loadProfileData() {
         if (currentRankEl) {
             currentRankEl.textContent = ranking.current ? `#${ranking.current}` : "-";
         }
-        
+
         let bestRankFromProfile = profile.bestRank;
-        
+
         if (profileUserId === currentUser.uid && ranking.current) {
             await updateBestRank(profileUserId, ranking.current);
             const updatedProfileResult = await getUserProfile(profileUserId);
@@ -522,7 +500,7 @@ async function loadProfileData() {
                 bestRankFromProfile = updatedProfileResult.data.bestRank;
             }
         }
-        
+
         if (bestRankEl) {
             if (bestRankFromProfile !== null && bestRankFromProfile !== undefined && bestRankFromProfile > 0) {
                 bestRankEl.textContent = `#${bestRankFromProfile}`;
@@ -586,7 +564,7 @@ function initializeProfile() {
                 mobileMenu.classList.toggle("active");
                 mobileMenuToggle.classList.toggle("active");
                 mobileMenuToggle.setAttribute("aria-expanded", !isActive);
-                
+
                 if (!isActive) {
                     document.body.style.overflow = "hidden";
                 } else {
@@ -611,7 +589,7 @@ function initializeProfile() {
 
         if (logoutButton) logoutButton.style.display = "none";
         if (logoutButtonMobile) logoutButtonMobile.style.display = "none";
-        
+
         if (mobileMenu) {
             const logoutLi = mobileMenu.querySelector("li:has(.logout-button-mobile)");
             if (logoutLi) logoutLi.remove();
@@ -636,7 +614,7 @@ function initializeProfile() {
                     backButton.addEventListener("mouseleave", () => {
                         backButton.style.background = "var(--color-primary)";
                     });
-                    
+
                     const logo = nav.querySelector("img");
                     const mobileToggle = nav.querySelector("#mobileMenuToggle");
                     if (logo && mobileToggle) {
@@ -655,7 +633,7 @@ function initializeProfile() {
 
 requireAuth().then(async (user) => {
     currentUser = user;
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     profileUserId = urlParams.get("userId") || user.uid;
 

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,14 +16,18 @@
     <link rel="stylesheet" href="../css/shop.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <header>
         <nav>
-            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;" />
-            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu" aria-expanded="false">
+            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'"
+                style="cursor: pointer;" />
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu"
+                aria-expanded="false">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -40,10 +45,11 @@
             <button id="logoutButton" class="logout-button">Sign Out</button>
         </nav>
     </header>
-    
+
     <main id="dashboard" role="main">
         <div class="user-info" role="region" aria-label="User Information">
-            <h2>Welcome, <span id="userDisplayName">User</span>! <span id="userBadge" class="badge-display" aria-label="Current Badge"></span></h2>
+            <h2>Welcome, <span id="userDisplayName">User</span>! <span id="userBadge" class="badge-display"
+                    aria-label="Current Badge"></span></h2>
             <div class="user-level-info">
                 <span class="level-badge">Level <span id="userLevel">1</span></span>
                 <p>Email: <span id="userEmail" class="user-email" aria-label="User Email">Loading...</span></p>
@@ -55,7 +61,8 @@
                 <h3>XP</h3>
                 <p class="stat-value" id="userXP" aria-live="polite">0</p>
                 <div class="level-progress-container">
-                    <div class="level-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Level Progress">
+                    <div class="level-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0"
+                        aria-valuemax="100" aria-label="Level Progress">
                         <div class="level-progress-fill" id="levelProgressFill"></div>
                     </div>
                     <div class="level-progress-text">
@@ -114,7 +121,7 @@
                     </div>
                 </div>
                 <div class="category-progress-list" id="categoryProgressList">
-                    
+
                 </div>
             </div>
         </div>
@@ -129,17 +136,21 @@
                 <button class="photo-modal-close" id="photoModalClose">&times;</button>
             </div>
             <div class="photo-modal-body">
-                <p class="photo-instruction" id="photoInstruction">Choose how you want to prove you completed this quest.</p>
-                
-                <div class="completion-type-selector" style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;">
-                    <button id="selectPhotoBtn" class="completion-type-btn active" style="flex: 1; padding: 12px; border: 2px solid var(--color-primary); background: var(--color-primary); color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                <p class="photo-instruction" id="photoInstruction">Choose how you want to prove you completed this
+                    quest.</p>
+
+                <div class="completion-type-selector"
+                    style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;">
+                    <button id="selectPhotoBtn" class="completion-type-btn active"
+                        style="flex: 1; padding: 12px; border: 2px solid var(--color-primary); background: var(--color-primary); color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
                         📷 Take Photo
                     </button>
-                    <button id="selectDescriptionBtn" class="completion-type-btn" style="flex: 1; padding: 12px; border: 2px solid #ddd; background: white; color: #333; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <button id="selectDescriptionBtn" class="completion-type-btn"
+                        style="flex: 1; padding: 12px; border: 2px solid #ddd; background: white; color: #333; border-radius: 8px; cursor: pointer; font-weight: 600;">
                         ✍️ Write Description
                     </button>
                 </div>
-                
+
                 <div class="photo-upload-area" id="photoUploadArea" style="display: block;">
                     <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;">
                     <label for="photoInput" class="photo-upload-label">
@@ -155,12 +166,14 @@
                         <button type="button" id="photoRemoveBtn" class="photo-remove-btn">Remove</button>
                     </div>
                 </div>
-                
+
                 <div id="descriptionArea" class="description-area" style="display: none;">
-                    <textarea id="questDescription" placeholder="Describe what you did to complete this quest (minimum 20 characters)..." style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                    <textarea id="questDescription"
+                        placeholder="Describe what you did to complete this quest (minimum 20 characters)..."
+                        style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
                     <p style="font-size: 12px; color: #666; margin-top: 8px;">Minimum 20 characters required</p>
                 </div>
-                
+
                 <div class="photo-modal-actions">
                     <button id="photoCancelBtn" class="photo-btn photo-btn-cancel">Cancel</button>
                     <button id="photoUploadBtn" class="photo-btn photo-btn-upload" disabled>Continue</button>
@@ -195,8 +208,10 @@
                 <button class="team-modal-close" id="teamSubmissionClose">&times;</button>
             </div>
             <div class="team-modal-body">
-                <p class="team-muted" id="teamSubmissionDescription">Share a quick note on what your team accomplished.</p>
-                <textarea id="teamSubmissionNote" rows="4" placeholder="Example: Collected 5 plastic bottles from the park."></textarea>
+                <p class="team-muted" id="teamSubmissionDescription">Share a quick note on what your team accomplished.
+                </p>
+                <textarea id="teamSubmissionNote" rows="4"
+                    placeholder="Example: Collected 5 plastic bottles from the park."></textarea>
             </div>
             <div class="team-modal-actions">
                 <button class="team-btn ghost" id="teamSubmissionCancel">Cancel</button>
@@ -213,7 +228,8 @@
                 <button class="team-modal-close" id="reflectionCloseBtn">&times;</button>
             </div>
             <div class="team-modal-body">
-                <p class="team-muted">For private quests without photos, write at least 20 characters describing what you did.</p>
+                <p class="team-muted">For private quests without photos, write at least 20 characters describing what
+                    you did.</p>
                 <div id="reflectionList"></div>
             </div>
             <div class="team-modal-actions">
@@ -230,7 +246,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
     <script>
-        // Mobilenet'in global erişilebilir olmasını sağla
+        // Mobilenet'i globaalseks muutujaks seadmine
         if (typeof mobilenet !== 'undefined' && typeof window.mobilenet === 'undefined') {
             window.mobilenet = mobilenet;
         }
@@ -241,8 +257,15 @@
         import { logOut, getUserProfile, updateUserProfile, getAllUsers } from "../js/auth.js";
         import { getErrorMessage } from "../js/utils.js";
         import { verifyPhoto, getVerificationMessage } from "../js/photo-verification.js";
-        import { 
-            doc, 
+        import {
+            calculateLevel,
+            getXPProgress,
+            getBadgeImageForLevel,
+            getBadgeNameForLevel,
+            calculateEcoPoints
+        } from "../js/levels.js";
+        import {
+            doc,
             setDoc,
             getDoc,
             updateDoc,
@@ -257,57 +280,28 @@
             increment
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { db } from "../js/firebase-config.js";
-        function getBadgeImageForLevel(level) {
-            const badgeImages = {
-                1: "../images/ecoquests-badges/cat-badge-removedbg.png", // Level 1 Helkuri Pilt
-                2: "../images/ecoquests-badges/fox-badge-removedbg.png", // Level 2 Helkuri Pilt
-                3: "../images/ecoquests-badges/rabbit-badge-removedbg.png", // Level 3 Helkuri Pilt
-                4: "../images/ecoquests-badges/deer-badge-removedbg.png", // Level 4 Helkuri Pilt
-                5: "../images/ecoquests-badges/wolf-badge-removedbg.png", // Level 5 Helkuri Pilt
-                6: "../images/ecoquests-badges/bear-badge-removedbg.png", // Level 6 Helkuri Pilt
-                7: "../images/ecoquests-badges/eagle-badge-removedbg.png", // Level 7 Helkuri Pilt
-                8: "../images/ecoquests-badges/tiger-badge-removedbg.png", // Level 8 Helkuri Pilt
-                9: "../images/ecoquests-badges/lion-badge-removedbg.png" // Level 9 Helkuri Pilt
-            };
-            return badgeImages[level] || badgeImages[1];
-        }
-
-        function getBadgeNameForLevel(level) {
-            const badgeNames = {
-                1: "Cat", // Level 1 Badge Name
-                2: "Fox", // Level 2 Badge Name
-                3: "Rabbit", // Level 3 Badge Name
-                4: "Deer", // Level 4 Badge Name
-                5: "Wolf", // Level 5 Badge Name
-                6: "Bear", // Level 6 Badge Name
-                7: "Eagle", // Level 7 Badge Name
-                8: "Tiger", // Level 8 Badge Name
-                9: "Lion" // Level 9 Badge Name
-            };
-            return badgeNames[level] || badgeNames[1];
-        }
 
         // Helkuri kuvamise funktsioon, kontrollib taseme põhjal õige pildi ja näitab seda
         function displayBadge(badgeElement, level, animate = false) {
             // kontrollib, et level oleks kehtiv (1-9), muidu võib tekkida bug
             const badgeImage = getBadgeImageForLevel(level);
             const badgeName = getBadgeNameForLevel(level);
-            
+
             // eemaldab eelneva animatsiooni, et vältida konflikte
             badgeElement.classList.remove('badge-unlock');
             // tühjendab elemendi, et vältida topeltkuvamist
             badgeElement.innerHTML = '';
-            
+
             // loob uue pildi elemendi ja määrab selle atribuudid
             const img = document.createElement('img');
             img.src = badgeImage;
             img.alt = `${badgeName} Badge`;
             img.title = `${badgeName} Badge`;
             img.className = 'badge-image';
-            
+
             badgeElement.appendChild(img);
             badgeElement.title = `${badgeName} Badge`;
-            
+
             // animatsioon uue helkuri avamisel, void offsetWidth sunnib brauserit uuesti renderdama
             if (animate) {
                 void badgeElement.offsetWidth; // tagab, et animatsioon töötab korrektselt
@@ -329,9 +323,9 @@
         };
 
         const TEAM_REWARD_RULES = {
-            ecoRatio: 0.6, 
+            ecoRatio: 0.6,
             streakBonusPercent: 10, // Streak Bonus Protsent
-            minReflectionLength: 20 
+            minReflectionLength: 20
         };
 
         // Team Missionide Loetelu
@@ -416,23 +410,271 @@
             cooldown: (missionTitle) => `Cooldown active for "${missionTitle}". Try a different mission for now.`
         };
 
+        const QUEST_ID_MAPPING = {
+            "1": {
+                jsonIds: ["recycling_1", "cleanup_1"],
+                category: "recycling",
+                categoryName: "Recycling",
+                categoryIcon: "♻️",
+                categoryColor: "#4CAF50"
+            },
+            "2": {
+                jsonIds: ["energy_1"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "3": {
+                jsonIds: ["recycling_2"],
+                category: "recycling",
+                categoryName: "Recycling",
+                categoryIcon: "♻️",
+                categoryColor: "#4CAF50"
+            },
+            "4": {
+                jsonIds: ["transportation_1"],
+                category: "transportation",
+                categoryName: "Transportation",
+                categoryIcon: "🚶",
+                categoryColor: "#2196F3"
+            },
+            "5": {
+                jsonIds: ["water_1"],
+                category: "water_saving",
+                categoryName: "Water Saving",
+                categoryIcon: "💧",
+                categoryColor: "#00BCD4"
+            },
+            "6": {
+                jsonIds: ["recycling_3", "cleanup_2"],
+                category: "cleanup_missions",
+                categoryName: "Clean-Up",
+                categoryIcon: "🧹",
+                categoryColor: "#9C27B0"
+            },
+            "7": {
+                jsonIds: ["recycling_4"],
+                category: "recycling",
+                categoryName: "Recycling",
+                categoryIcon: "♻️",
+                categoryColor: "#4CAF50"
+            },
+            "8": {
+                jsonIds: ["water_2"],
+                category: "water_saving",
+                categoryName: "Water Saving",
+                categoryIcon: "💧",
+                categoryColor: "#00BCD4"
+            },
+            "9": {
+                jsonIds: ["recycling_5"],
+                category: "recycling",
+                categoryName: "Recycling",
+                categoryIcon: "♻️",
+                categoryColor: "#4CAF50"
+            },
+            "10": {
+                jsonIds: ["energy_2"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "11": {
+                jsonIds: ["energy_3"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "12": {
+                jsonIds: ["gardening_1"],
+                category: "gardening",
+                categoryName: "Gardening & Nature",
+                categoryIcon: "🌱",
+                categoryColor: "#66BB6A"
+            },
+            "13": {
+                jsonIds: ["transportation_2"],
+                category: "transportation",
+                categoryName: "Transportation",
+                categoryIcon: "🚶",
+                categoryColor: "#2196F3"
+            },
+            "14": {
+                jsonIds: ["sustainable_1"],
+                category: "sustainable_living",
+                categoryName: "Sustainable Living",
+                categoryIcon: "♻️",
+                categoryColor: "#8BC34A"
+            },
+            "15": {
+                jsonIds: ["sustainable_2"],
+                category: "sustainable_living",
+                categoryName: "Sustainable Living",
+                categoryIcon: "♻️",
+                categoryColor: "#8BC34A"
+            },
+            "16": {
+                jsonIds: ["energy_4"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "17": {
+                jsonIds: ["sustainable_3"],
+                category: "sustainable_living",
+                categoryName: "Sustainable Living",
+                categoryIcon: "♻️",
+                categoryColor: "#8BC34A"
+            },
+            "18": {
+                jsonIds: ["energy_5"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "19": {
+                jsonIds: ["recycling_6"],
+                category: "recycling",
+                categoryName: "Recycling",
+                categoryIcon: "♻️",
+                categoryColor: "#4CAF50"
+            },
+            "20": {
+                jsonIds: ["cleanup_3"],
+                category: "cleanup_missions",
+                categoryName: "Clean-Up",
+                categoryIcon: "🧹",
+                categoryColor: "#9C27B0"
+            },
+            "21": {
+                jsonIds: ["energy_6"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "22": {
+                jsonIds: ["transportation_3"],
+                category: "transportation",
+                categoryName: "Transportation",
+                categoryIcon: "🚶",
+                categoryColor: "#2196F3"
+            },
+            "23": {
+                jsonIds: ["sustainable_4"],
+                category: "sustainable_living",
+                categoryName: "Sustainable Living",
+                categoryIcon: "♻️",
+                categoryColor: "#8BC34A"
+            },
+            "24": {
+                jsonIds: ["energy_7"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "25": {
+                jsonIds: ["gardening_2"],
+                category: "gardening",
+                categoryName: "Gardening & Nature",
+                categoryIcon: "🌱",
+                categoryColor: "#66BB6A"
+            },
+            "26": {
+                jsonIds: ["recycling_7"],
+                category: "recycling",
+                categoryName: "Recycling",
+                categoryIcon: "♻️",
+                categoryColor: "#4CAF50"
+            },
+            "27": {
+                jsonIds: ["recycling_8"],
+                category: "recycling",
+                categoryName: "Recycling",
+                categoryIcon: "♻️",
+                categoryColor: "#4CAF50"
+            },
+            "28": {
+                jsonIds: ["energy_8"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "29": {
+                jsonIds: ["energy_9"],
+                category: "energy_saving",
+                categoryName: "Energy Saving",
+                categoryIcon: "💡",
+                categoryColor: "#FFC107"
+            },
+            "30": {
+                jsonIds: ["transportation_4"],
+                category: "transportation",
+                categoryName: "Transportation",
+                categoryIcon: "🚶",
+                categoryColor: "#2196F3"
+            },
+            "31": {
+                jsonIds: ["water_3"],
+                category: "water_saving",
+                categoryName: "Water Saving",
+                categoryIcon: "💧",
+                categoryColor: "#00BCD4"
+            },
+            "32": {
+                jsonIds: ["cleanup_4"],
+                category: "cleanup_missions",
+                categoryName: "Clean-Up",
+                categoryIcon: "🧹",
+                categoryColor: "#9C27B0"
+            },
+            "33": {
+                jsonIds: ["gardening_3"],
+                category: "gardening",
+                categoryName: "Gardening & Nature",
+                categoryIcon: "🌱",
+                categoryColor: "#66BB6A"
+            },
+            "34": {
+                jsonIds: ["sustainable_5"],
+                category: "sustainable_living",
+                categoryName: "Sustainable Living",
+                categoryIcon: "♻️",
+                categoryColor: "#8BC34A"
+            },
+            "35": {
+                jsonIds: ["sustainable_6"],
+                category: "sustainable_living",
+                categoryName: "Sustainable Living",
+                categoryIcon: "♻️",
+                categoryColor: "#8BC34A"
+            }
+        };
+
         // Helkuri Näitamise Funktsioon 2
         function displayBadgeShowcase(level, animate = false) {
             const badgeImage = getBadgeImageForLevel(level);
             const badgeName = getBadgeNameForLevel(level);
             const showcaseElement = document.getElementById("badgeShowcase");
             const badgeNameElement = document.getElementById("badgeName");
-            
+
             if (showcaseElement) {
                 showcaseElement.classList.remove('badge-showcase-unlock');
                 showcaseElement.innerHTML = '';
-                
+
                 const img = document.createElement('img');
                 img.src = badgeImage;
                 img.alt = `${badgeName} Badge`;
                 img.className = 'badge-showcase-image';
                 showcaseElement.appendChild(img);
-                
+
                 if (animate) {
                     void showcaseElement.offsetWidth;
                     showcaseElement.classList.add('badge-showcase-unlock');
@@ -441,7 +683,7 @@
                     }, 2500);
                 }
             }
-            
+
             if (badgeNameElement) {
                 badgeNameElement.textContent = badgeName;
             }
@@ -452,28 +694,28 @@
             if (newLevel > oldLevel && newLevel <= 9) {
                 const profileResult = await getUserProfile(user.uid);
                 if (!profileResult.success) return;
-                
+
                 const profile = profileResult.data;
                 const newBadge = getBadgeNameForLevel(newLevel);
-                
+
                 const badgeElement = document.getElementById("userBadge");
                 if (badgeElement) {
                     displayBadge(badgeElement, newLevel, true);
                 }
-                
+
                 displayBadgeShowcase(newLevel, false);
-                
+
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         const badgeShowcaseCard = document.querySelector('.badge-showcase-card');
                         if (badgeShowcaseCard) {
                             const rect = badgeShowcaseCard.getBoundingClientRect();
                             const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
-                            
+
                             if (!isVisible) {
-                                badgeShowcaseCard.scrollIntoView({ 
-                                    behavior: 'smooth', 
-                                    block: 'center' 
+                                badgeShowcaseCard.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center'
                                 });
                                 setTimeout(() => {
                                     displayBadgeShowcase(newLevel, true);
@@ -488,95 +730,12 @@
                         }
                     });
                 });
-                
+
                 await updateUserProfile(user.uid, {
                     activeBadge: newBadge,
                     badges: [...new Set([...(profile.badges || []), newBadge])]
                 });
             }
-        }
-
-        const LEVEL_MILESTONES = [
-            0, // Level 1
-            100, // Level 2
-            250, // Level 3
-            500, // Level 4
-            1000, // Level 5
-            2500, // Level 6
-            5000, // Level 7
-            10000, // Level 8
-            50000 // Level 9
-        ];
-
-        function getXPRequiredForLevel(level) {
-            if (level <= 1) return LEVEL_MILESTONES[1] - LEVEL_MILESTONES[0];
-            if (level > LEVEL_MILESTONES.length) return Infinity;
-            if (level === LEVEL_MILESTONES.length) return Infinity;
-            return LEVEL_MILESTONES[level] - LEVEL_MILESTONES[level - 1];
-        }
-
-        function getTotalXPForLevel(level) {
-            if (level <= 1) return 0;
-            if (level > LEVEL_MILESTONES.length) return LEVEL_MILESTONES[LEVEL_MILESTONES.length - 1];
-            return LEVEL_MILESTONES[level - 1];
-        }
-
-        // arvutab taseme XP põhjal, tagab et tase on alati 1-9 vahemikus
-        function calculateLevel(xp) {
-            // kui xp on negatiivne, tagastab 1
-            if (xp < 0) return 1;
-            for (let i = LEVEL_MILESTONES.length - 1; i >= 0; i--) {
-                if (xp >= LEVEL_MILESTONES[i]) {
-                    return i + 1;
-                }
-            }
-            return 1; // vaikimisi tase 1, kui XP on väga väike
-        }
-
-        function getXPForNextLevel(xp, currentLevel) {
-            const totalXPForCurrentLevel = getTotalXPForLevel(currentLevel);
-            const xpInCurrentLevel = xp - totalXPForCurrentLevel;
-            const requiredXP = getXPRequiredForLevel(currentLevel + 1);
-            return Math.max(0, requiredXP - xpInCurrentLevel);
-        }
-
-        function getXPProgress(xp, currentLevel) {
-            const totalXPForCurrentLevel = getTotalXPForLevel(currentLevel);
-            const xpInCurrentLevel = xp - totalXPForCurrentLevel;
-            const requiredXP = getXPRequiredForLevel(currentLevel + 1);
-            const progress = requiredXP > 0 ? (xpInCurrentLevel / requiredXP) * 100 : 100;
-            return {
-                current: xpInCurrentLevel,
-                required: requiredXP,
-                percentage: Math.min(100, Math.max(0, progress))
-            };
-        }
-
-        // arvutab EcoPoints XP ja taseme põhjal, kontrollib et tulemused oleksid alati positiivsed
-        function calculateEcoPoints(xp, level, badgesCount = 0) {
-            // kontrollib, et sisendid oleksid kehtivad
-            if (xp < 0 || level < 1 || badgesCount < 0) {
-                console.warn("Invalid input for calculateEcoPoints:", { xp, level, badgesCount });
-                return 0;
-            }
-            
-            let basePoints = 0;
-            
-            // mida kõrgem tase, seda vähem EcoPoints XP kohta
-            if (level <= 3) {
-                basePoints = Math.floor(xp / 10);
-            } else if (level <= 5) {
-                basePoints = Math.floor(xp / 15);
-            } else if (level <= 7) {
-                basePoints = Math.floor(xp / 25);
-            } else {
-                basePoints = Math.floor(xp / 50);
-            }
-            
-            // helkuri boonus, iga helkuri eest +10 punkti
-            const badgeBonus = badgesCount * 10;
-            
-            return Math.max(0, basePoints + badgeBonus); // tagab, et tulemus on alati positiivne
         }
 
         function getTodayDateString() {
@@ -594,22 +753,22 @@
             const hoursInMilliseconds = 24 * 60 * 60 * 1000;
             const nextResetTimestamp = lastResetTimestamp + hoursInMilliseconds;
             const timeRemaining = nextResetTimestamp - now;
-            
+
             return Math.max(0, timeRemaining);
         }
 
         function formatTimeRemaining(milliseconds) {
             if (milliseconds <= 0) return "00:00:00";
-            
+
             const secondsInMillisecond = 1000;
             const minutesInSecond = 60;
             const hoursInMinute = 60;
-            
+
             const totalSeconds = Math.floor(milliseconds / secondsInMillisecond);
             const hours = Math.floor(totalSeconds / (hoursInMinute * minutesInSecond));
             const minutes = Math.floor((totalSeconds % (hoursInMinute * minutesInSecond)) / minutesInSecond);
             const seconds = totalSeconds % minutesInSecond;
-            
+
             const formatNumber = (num) => String(num).padStart(2, '0');
             return `${formatNumber(hours)}:${formatNumber(minutes)}:${formatNumber(seconds)}`;
         }
@@ -627,7 +786,7 @@
                 clearInterval(countdownInterval);
                 countdownInterval = null;
             }
-            
+
             if (!lastResetTime) {
                 const countdownElement = document.getElementById("countdownTimer");
                 if (countdownElement) {
@@ -635,11 +794,11 @@
                 }
                 return;
             }
-            
+
             const updateCountdown = () => {
                 const timeRemaining = getTimeUntilNextReset(lastResetTime);
                 const countdownElement = document.getElementById("countdownTimer");
-                
+
                 if (!countdownElement) {
                     if (countdownInterval) {
                         clearInterval(countdownInterval);
@@ -647,7 +806,7 @@
                     }
                     return;
                 }
-                
+
                 if (timeRemaining <= 0) {
                     countdownElement.textContent = "Resetting...";
                     if (countdownInterval) {
@@ -659,10 +818,10 @@
                     }
                     return;
                 }
-                
+
                 countdownElement.textContent = `Next reset: ${formatTimeRemaining(timeRemaining)}`;
             };
-            
+
             updateCountdown();
             countdownInterval = setInterval(updateCountdown, 1000);
         }
@@ -696,7 +855,7 @@
         function parseQuests(markdown) {
             const quests = [];
             const lines = markdown.split('\n');
-            
+
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (line.startsWith('### ')) {
@@ -704,21 +863,21 @@
                     if (titleMatch) {
                         let xp = 0;
                         let rewardText = "";
-                        
+
                         for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
                             const nextLine = lines[j].trim();
-                            
+
                             const xpMatch = nextLine.match(/\*\*XP Score:\*\* (\d+)\s*XP/);
                             if (xpMatch) {
                                 xp = parseInt(xpMatch[1]);
                             }
-                            
+
                             const rewardMatch = nextLine.match(/\*\*Reward:\*\* (.+)/);
                             if (rewardMatch) {
                                 rewardText = rewardMatch[1].trim();
                             }
                         }
-                        
+
                         if (xp > 0) {
                             const questId = titleMatch[1];
                             const questMapping = QUEST_ID_MAPPING[questId];
@@ -744,7 +903,7 @@
             const BASE_MULTIPLIER = 1.0;
             const BONUS_PER_COMPLETION = 0.2;
             const MAX_MULTIPLIER = 3.0;
-            
+
             if (timesCompleted <= 0) return BASE_MULTIPLIER;
             const calculatedBonus = BASE_MULTIPLIER + (timesCompleted * BONUS_PER_COMPLETION);
             return Math.min(calculatedBonus, MAX_MULTIPLIER);
@@ -757,7 +916,7 @@
         let reflectionResolver = null;
         let reflectionPendingIds = [];
         let currentProfileData = null;
-        
+
         // Privaatsete Questide Loetelu(privaatne)
         const QUESTS_WITHOUT_PHOTO = [
             'water_1',      // Turn off water while brushing (privaatne)
@@ -767,22 +926,22 @@
             'sustainable_4' // Unplug unused chargers (privaatne)
         ];
         let cachedQuestsDataForPhoto = null;
-        
+
         // First check manually marked IDs
         async function questRequiresPhoto(questId) {
             const mappedQuest = QUEST_ID_MAPPING[questId];
             const jsonQuestIds = mappedQuest?.jsonIds || [];
-            
+
             for (const jsonId of jsonQuestIds) {
                 if (QUESTS_WITHOUT_PHOTO.includes(jsonId)) {
                     return false;
                 }
             }
-            
+
             if (!cachedQuestsDataForPhoto) {
                 cachedQuestsDataForPhoto = await loadQuestsData();
             }
-            
+
             if (cachedQuestsDataForPhoto && cachedQuestsDataForPhoto.categories) {
                 for (const jsonId of jsonQuestIds) {
                     for (const category of cachedQuestsDataForPhoto.categories) {
@@ -795,7 +954,7 @@
                     }
                 }
             }
-            
+
             return true;
         }
 
@@ -868,9 +1027,9 @@
             const cancelBtn = document.getElementById('reflectionCancelBtn');
             const closeBtn = document.getElementById('reflectionCloseBtn');
             const modal = document.getElementById('reflectionModal');
-            
+
             const handleClose = () => closeReflectionModal(false);
-            
+
             if (cancelBtn) {
                 cancelBtn.addEventListener('click', handleClose);
             }
@@ -1053,7 +1212,7 @@
             if (emptyState) emptyState.style.display = 'none';
             if (details) details.style.display = 'block';
             if (leaveBtn) leaveBtn.style.display = 'inline-flex';
-            
+
             const role = profile.teamRole || (currentTeamData.leaderId === currentUser.uid ? "leader" : "member");
             if (document.getElementById('teamNameDisplay')) {
                 document.getElementById('teamNameDisplay').textContent = currentTeamData.name || "Unnamed Team";
@@ -1463,7 +1622,7 @@
                 status: ready ? "ready_for_review" : "active",
                 lastUpdatedAt: new Date().toISOString()
             });
-            activeTeamMissions = activeTeamMissions.map(m => 
+            activeTeamMissions = activeTeamMissions.map(m =>
                 m.id === missionId ? { ...m, submissions: newSubmissions, status: ready ? "ready_for_review" : "active" } : m
             );
             renderActiveTeamMissions(profile);
@@ -1495,7 +1654,7 @@
             const participants = submissions;
             const xpPerUser = Math.max(10, Math.floor(mission.xpReward / participants.length));
             const ecoPerUser = Math.max(5, Math.floor(mission.ecoReward / participants.length));
-            
+
             for (const participant of participants) {
                 try {
                     const profileResult = await getUserProfile(participant.userId);
@@ -1521,7 +1680,7 @@
                     console.error("Error rewarding participant:", error);
                 }
             }
-            
+
             await updateDoc(doc(db, "teams", profile.teamId), {
                 "stats.missionsCompleted": increment(1),
                 "stats.xpEarned": increment(mission.xpReward || 0),
@@ -1531,7 +1690,7 @@
                 [`dailyMissionCounter.${getTodayDateString()}`]: increment(1),
                 lastMissionCompletedAt: new Date().toISOString()
             });
-            
+
             if (currentTeamData && currentTeamData.id === profile.teamId) {
                 currentTeamData.stats = {
                     missionsCompleted: (currentTeamData.stats?.missionsCompleted || 0) + 1,
@@ -1543,7 +1702,7 @@
                 currentTeamData.dailyMissionCounter = currentTeamData.dailyMissionCounter || {};
                 currentTeamData.dailyMissionCounter[todayKey] = (currentTeamData.dailyMissionCounter[todayKey] || 0) + 1;
             }
-            
+
             await logQuestAudits(participants.map(participant => ({
                 userId: participant.userId,
                 questId: mission.missionTemplateId || missionId,
@@ -1555,7 +1714,7 @@
                 teamId: profile.teamId,
                 teamMissionId: missionId
             })));
-            
+
             try {
                 await addDoc(collection(db, "teams", profile.teamId, "missionLogs"), {
                     missionId,
@@ -1568,7 +1727,7 @@
             } catch (error) {
                 console.warn("Unable to write team mission log:", error);
             }
-            
+
             if (profile.teamStats) {
                 await updateUserProfile(currentUser.uid, {
                     teamStats: {
@@ -1581,7 +1740,7 @@
                 });
                 profile.teamStats.approvalsGiven = (profile.teamStats.approvalsGiven || 0) + 1;
             }
-            
+
             await deleteDoc(missionRef);
             activeTeamMissions = activeTeamMissions.filter(m => m.id !== missionId);
             await refreshTeamData(profile);
@@ -1598,7 +1757,7 @@
                 if (!btn) return;
                 btn.addEventListener('click', () => openTeamManagerModal('create'));
             });
-            
+
             const joinButtons = [
                 document.getElementById('teamJoinBtn'),
                 document.getElementById('teamQuickJoinBtn')
@@ -1607,7 +1766,7 @@
                 if (!btn) return;
                 btn.addEventListener('click', () => openTeamManagerModal('join'));
             });
-            
+
             const leaveBtn = document.getElementById('teamLeaveBtn');
             if (leaveBtn) {
                 leaveBtn.addEventListener('click', async () => {
@@ -1623,7 +1782,7 @@
                     }
                 });
             }
-            
+
             const copyBtn = document.getElementById('teamCopyCodeBtn');
             if (copyBtn) {
                 copyBtn.addEventListener('click', async () => {
@@ -1639,7 +1798,7 @@
                     }
                 });
             }
-            
+
             const manageBtn = document.getElementById('teamManageBtn');
             if (manageBtn) {
                 manageBtn.addEventListener('click', () => {
@@ -1650,7 +1809,7 @@
                     alert(`Share this code with teammates:\n\n${currentTeamData.joinCode}`);
                 });
             }
-            
+
             const assignBtn = document.getElementById('assignMissionBtn');
             if (assignBtn) {
                 assignBtn.addEventListener('click', () => {
@@ -1660,7 +1819,7 @@
                     }
                 });
             }
-            
+
             const modalSubmit = document.getElementById('teamModalSubmit');
             const modalCancel = document.getElementById('teamModalCancel');
             const modalClose = document.getElementById('teamModalCloseBtn');
@@ -1690,7 +1849,7 @@
                     }
                 });
             }
-            
+
             const managerModal = document.getElementById('teamManagerModal');
             if (managerModal) {
                 managerModal.addEventListener('click', (event) => {
@@ -1699,7 +1858,7 @@
                     }
                 });
             }
-            
+
             const submissionCancel = document.getElementById('teamSubmissionCancel');
             const submissionClose = document.getElementById('teamSubmissionClose');
             const submissionSubmit = document.getElementById('teamSubmissionSubmit');
@@ -1721,7 +1880,7 @@
                     }
                 });
             }
-            
+
             const submissionModal = document.getElementById('teamSubmissionModal');
             if (submissionModal) {
                 submissionModal.addEventListener('click', (event) => {
@@ -1730,7 +1889,7 @@
                     }
                 });
             }
-            
+
             const missionContainer = document.getElementById('activeTeamMissions');
             if (missionContainer) {
                 missionContainer.addEventListener('click', (event) => {
@@ -1746,7 +1905,7 @@
                     }
                 });
             }
-            
+
             const missionLibrary = document.getElementById('teamMissionLibrary');
             if (missionLibrary) {
                 missionLibrary.addEventListener('click', (event) => {
@@ -1975,7 +2134,7 @@
                 const quests = Array.isArray(dailyCompletions[dateKey]) ? dailyCompletions[dateKey].length : 0;
                 questData.push(quests);
             }
-            
+
             const questTrendCtx = document.getElementById('questTrendChart');
             if (questTrendCtx && window.Chart) {
                 new Chart(questTrendCtx, {
@@ -2064,7 +2223,7 @@
                 });
             }
         }
-        
+
         let lastQuestCompletionTime = 0;
         const MIN_QUEST_COMPLETION_INTERVAL = 1000;
         // Arvutab värske koha pingereas ja salvestab parema rekordi.
@@ -2103,7 +2262,7 @@
                 console.error("Error calculating/updating best rank:", error);
             }
         }
-        
+
         function showSuccessAnimation(message, duration = 3000) {
             const successDiv = document.createElement('div');
             successDiv.className = 'success-animation';
@@ -2113,7 +2272,7 @@
                 <p>${message}</p>
             `;
             document.body.appendChild(successDiv);
-            
+
             setTimeout(() => {
                 successDiv.style.animation = 'successFadeIn 0.3s ease-out reverse';
                 setTimeout(() => {
@@ -2123,32 +2282,32 @@
                 }, 300);
             }, duration);
         }
-        
-        
+
+
         // Avab foto modali ja käivitab järjestikuse kinnitamise voo.
         function showPhotoUploadModal(questIds, completionData) {
             currentQuestIndex = 0;
             verifiedPhotos = {};
-            pendingQuestCompletion = { 
-                questIds, 
+            pendingQuestCompletion = {
+                questIds,
                 completionData,
                 reflections: { ...questReflectionNotes }
             };
             showQuestPhotoUpload(0);
         }
-        
+
         // Kuvab ühe missiooni fotojuhise ja hoiab modali oleku korras.
         function showQuestPhotoUpload(index) {
             if (!pendingQuestCompletion || !pendingQuestCompletion.questIds) {
                 console.error('pendingQuestCompletion is null or invalid');
                 return;
             }
-            
+
             if (index >= pendingQuestCompletion.questIds.length) {
                 completeAllQuestsWithPhotos();
                 return;
             }
-            
+
             const modal = document.getElementById('photoUploadModal');
             const photoInput = document.getElementById('photoInput');
             const photoPreview = document.getElementById('photoPreview');
@@ -2164,7 +2323,7 @@
             const photoUploadArea = document.getElementById('photoUploadArea');
             const descriptionArea = document.getElementById('descriptionArea');
             const questDescription = document.getElementById('questDescription');
-            
+
             if (!modal || !photoInput || !photoInstruction) {
                 console.error('Required modal elements not found', {
                     modal: !!modal,
@@ -2173,18 +2332,18 @@
                 });
                 return;
             }
-            
+
             currentQuestIndex = index;
             const questId = pendingQuestCompletion.questIds[index];
-            
+
             if (verifiedPhotos[questId]) {
                 showQuestPhotoUpload(index + 1);
                 return;
             }
-            
+
             const quest = pendingQuestCompletion.completionData.quests.find(q => q.id === questId);
             const questTitle = quest ? quest.title : `Quest ${index + 1}`;
-            
+
             if (photoInput) {
                 photoInput.value = '';
             }
@@ -2197,16 +2356,16 @@
             if (photoUploadBtn) {
                 photoUploadBtn.disabled = true;
             }
-            
+
             photoInstruction.textContent = `Complete: "${questTitle}" (${index + 1} of ${pendingQuestCompletion.questIds.length})`;
-            
+
             if (modal) {
                 modal.style.display = 'flex';
             }
-            
+
             let selectedFile = null;
             let completionType = 'photo';
-            
+
             if (selectPhotoBtn && selectDescriptionBtn && photoUploadArea && descriptionArea) {
                 selectPhotoBtn.classList.add('active');
                 selectPhotoBtn.style.background = 'var(--color-primary)';
@@ -2218,7 +2377,7 @@
                 selectDescriptionBtn.style.border = '2px solid #ddd';
                 photoUploadArea.style.display = 'block';
                 descriptionArea.style.display = 'none';
-                
+
                 selectPhotoBtn.onclick = () => {
                     completionType = 'photo';
                     selectPhotoBtn.classList.add('active');
@@ -2233,7 +2392,7 @@
                     if (descriptionArea) descriptionArea.style.display = 'none';
                     if (photoUploadBtn) photoUploadBtn.disabled = !selectedFile;
                 };
-                
+
                 selectDescriptionBtn.onclick = () => {
                     completionType = 'description';
                     selectDescriptionBtn.classList.add('active');
@@ -2252,7 +2411,7 @@
                     }
                 };
             }
-            
+
             if (questDescription) {
                 questDescription.oninput = () => {
                     const desc = questDescription.value.trim();
@@ -2261,25 +2420,25 @@
                     }
                 };
             }
-            
+
             photoInput.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
-            // Check file type
+
+                // Check file type
                 if (!file.type.startsWith('image/')) {
                     alert('Please select an image file.');
                     photoInput.value = '';
                     return;
                 }
-                
-            // Check file size (max 10MB)
+
+                // Check file size (max 10MB)
                 if (file.size > 10 * 1024 * 1024) {
                     alert('Image is too large. Please select an image smaller than 10MB.');
                     photoInput.value = '';
                     return;
                 }
-                
+
                 try {
                     if (photoLoadingIndicator) {
                         photoLoadingIndicator.style.display = 'flex';
@@ -2290,7 +2449,7 @@
                     if (photoUploadBtn) {
                         photoUploadBtn.disabled = true;
                     }
-                    
+
                     // Kinnitab ainult foto olemasolu, tihendust pole vaja
                     selectedFile = file;
                     const reader = new FileReader();
@@ -2326,7 +2485,7 @@
                     selectedFile = null;
                 }
             };
-            
+
             photoRemoveBtn.onclick = () => {
                 if (photoInput) {
                     photoInput.value = '';
@@ -2339,13 +2498,13 @@
                 }
                 selectedFile = null;
             };
-            
+
             photoUploadBtn.onclick = async () => {
                 if (completionType === 'photo' && !selectedFile) {
                     alert('Please take a photo first.');
                     return;
                 }
-                
+
                 if (completionType === 'description') {
                     const desc = questDescription ? questDescription.value.trim() : '';
                     if (desc.length < 20) {
@@ -2357,45 +2516,45 @@
                     showQuestPhotoUpload(index + 1);
                     return;
                 }
-                
+
                 if (photoUploadBtn) {
                     photoUploadBtn.disabled = true;
                     photoUploadBtn.textContent = 'Verifying...';
                 }
-                
+
                 if (photoLoadingIndicator) {
                     photoLoadingIndicator.style.display = 'flex';
                 }
-                
+
                 try {
                     const quest = pendingQuestCompletion.completionData.quests.find(q => q.id === questId);
                     const userId = currentUser?.uid;
-                    
+
                     if (!userId) {
                         throw new Error('User not authenticated');
                     }
-                    
+
                     const verificationResult = await verifyPhoto(selectedFile, quest, userId);
-                    
+
                     if (photoLoadingIndicator) {
                         photoLoadingIndicator.style.display = 'none';
                     }
-                    
+
                     if (!verificationResult.verified) {
                         // Doğrulama başarısız
                         const errorMessage = getVerificationMessage(verificationResult);
                         alert(errorMessage);
-                        
+
                         if (photoUploadBtn) {
                             photoUploadBtn.disabled = false;
                             photoUploadBtn.textContent = 'Verify & Continue';
                         }
                         return;
                     }
-                    
+
                     // Doğrulama başarılı
                     const successMessage = getVerificationMessage(verificationResult);
-                    
+
                     // Kullanıcıya bilgi göster (opsiyonel - sadece uyarılar varsa)
                     if (verificationResult.warnings.length > 0) {
                         const showDetails = confirm(successMessage + '\n\nDevam etmek istiyor musunuz?');
@@ -2412,36 +2571,36 @@
                             alert(successMessage);
                         }
                     }
-                    
+
                     // Märgib foto kinnitatuks
                     verifiedPhotos[questId] = true;
-                    
+
                     // Sulgeb modali korraks enne järgmise missiooni kuvamist
                     if (modal) {
                         modal.style.display = 'none';
                     }
-                    
+
                     // Liigub järgmise missiooni juurde
                     setTimeout(() => {
                         showQuestPhotoUpload(index + 1);
                     }, 100);
-                    
+
                 } catch (error) {
                     console.error('Fotoğraf doğrulama hatası:', error);
-                    
+
                     if (photoLoadingIndicator) {
                         photoLoadingIndicator.style.display = 'none';
                     }
-                    
+
                     alert('Fotoğraf doğrulama sırasında bir hata oluştu: ' + error.message);
-                    
+
                     if (photoUploadBtn) {
                         photoUploadBtn.disabled = false;
                         photoUploadBtn.textContent = 'Verify & Continue';
                     }
                 }
             };
-            
+
             const closeModal = () => {
                 const completionData = pendingQuestCompletion?.completionData;
                 if (modal) {
@@ -2455,24 +2614,24 @@
                     completionData.completeButton.textContent = "Complete Selected Missions";
                 }
             };
-            
+
             photoCancelBtn.onclick = closeModal;
             photoModalClose.onclick = closeModal;
             modal.onclick = (e) => { if (e.target === modal) closeModal(); };
         }
-        
-        
+
+
         // kontrollib, et kõik vajalikud fotod on olemas ja alustab missioonide lõpetamise protsessi
         async function completeAllQuestsWithPhotos() {
             const modal = document.getElementById('photoUploadModal');
             const completionData = pendingQuestCompletion?.completionData;
             const questIds = pendingQuestCompletion?.questIds || [];
             const reflections = pendingQuestCompletion?.reflections || {};
-            
+
             if (modal) {
                 modal.style.display = 'none';
             }
-            
+
             // kontrollib, et kõik vajalikud andmed on olemas
             if (!completionData || questIds.length === 0) {
                 console.error('Missing completion data or quest IDs');
@@ -2487,7 +2646,7 @@
                 verifiedPhotos = {};
                 return;
             }
-            
+
             try {
                 await completeQuestsWithPhoto(questIds, completionData, verifiedPhotos, reflections);
                 questIds.forEach(questId => {
@@ -2502,55 +2661,55 @@
                 verifiedPhotos = {};
             }
         }
-        
+
         // lisab XP, uuendab profiili ja vältib topeltmissioonide lõpetamist
         async function completeQuestsWithPhoto(questIds, completionData, questPhotoMap, questReflections = {}) {
             const { currentUser, profile, quests, checkboxes } = completionData;
-            
+
             try {
                 // kontrollib, et profiil on olemas
                 if (!profile || !currentUser) {
                     throw new Error("Missing user or profile data");
                 }
-                
+
                 const currentQuestCompletionCount = profile.questCompletionCount || {};
                 const allQuestsCompleted = profile.allQuestsCompleted || false;
-            
+
                 let totalXpEarned = 0;
                 const xpRewardsByQuest = {};
                 const validQuestIds = [];
-                
+
                 // kontrollib iga missiooni kehtivust ja fotode olemasolu
                 for (const questId of questIds) {
                     const quest = quests.find(q => q.id === questId);
                     if (!quest) {
                         continue;
                     }
-                    
+
                     const needsPhoto = await questRequiresPhoto(questId);
-                    
+
                     // kontrollib, et fotoga missioonidel on foto olemas
                     if (needsPhoto && !questPhotoMap[questId]) {
                         continue;
                     }
-                    
+
                     // kontrollib, et XP on positiivne arv
                     const baseXpReward = Number(quest.xp) || 0;
                     if (baseXpReward < 0) continue;
-                    
+
                     const timesCompleted = Number(currentQuestCompletionCount[questId]) || 0;
                     const bonusMultiplier = getQuestBonusMultiplier(timesCompleted);
                     const finalXpReward = Math.floor(baseXpReward * bonusMultiplier);
-                    
+
                     // kontrollib, et arvutused on kehtivad
                     if (isNaN(finalXpReward) || finalXpReward < 0) continue;
-                    
+
                     totalXpEarned += finalXpReward;
                     xpRewardsByQuest[questId] = finalXpReward;
                     validQuestIds.push(questId);
                     currentQuestCompletionCount[questId] = timesCompleted + 1;
                 }
-                
+
                 // kontrollib, et vähemalt üks missioon on kehtiv
                 if (validQuestIds.length === 0) {
                     console.error("No valid quests to complete", {
@@ -2561,9 +2720,9 @@
                     });
                     throw new Error("No valid quests to complete. Please make sure you took photos for all selected quests.");
                 }
-                
+
                 const uniqueCompletedQuestIds = [...new Set(validQuestIds)];
-                
+
                 // arvutab XP, taseme ja ökoloogilised punktid
                 const userCurrentXp = profile.xp || 0;
                 const userCurrentEcoPoints = profile.ecoPoints || 0;
@@ -2572,15 +2731,15 @@
                 const userCompletedQuests = profile.completedQuests || [];
                 const userDailyCompletedQuests = profile.dailyQuestsCompleted || [];
                 const userBadgesCount = (profile.badges || []).length;
-                
+
                 const userNewXp = userCurrentXp + totalXpEarned;
                 const userNewLevel = calculateLevel(userNewXp);
-                
+
                 const ecoPointsAtNewLevel = calculateEcoPoints(userNewXp, userNewLevel, userBadgesCount);
                 const ecoPointsAtCurrentLevel = calculateEcoPoints(userCurrentXp, userCurrentLevel, userBadgesCount);
-                
+
                 let baseEcoPointsEarned = ecoPointsAtNewLevel - ecoPointsAtCurrentLevel;
-                
+
                 let replayBonusEcoPoints = 0;
                 if (allQuestsCompleted) {
                     uniqueCompletedQuestIds.forEach(questId => {
@@ -2593,29 +2752,29 @@
                         }
                     });
                 }
-                
+
                 const userNewEcoPoints = userCurrentEcoPoints + baseEcoPointsEarned + replayBonusEcoPoints;
                 const userNewMissions = userCurrentMissions + uniqueCompletedQuestIds.length;
-                const updatedCompletedQuests = Array.isArray(userCompletedQuests) 
+                const updatedCompletedQuests = Array.isArray(userCompletedQuests)
                     ? [...new Set([...userCompletedQuests, ...uniqueCompletedQuestIds])]
                     : uniqueCompletedQuestIds;
                 const updatedDailyCompleted = Array.isArray(userDailyCompletedQuests)
                     ? [...new Set([...userDailyCompletedQuests, ...uniqueCompletedQuestIds])]
                     : uniqueCompletedQuestIds;
-                
+
                 const completionStatus = await checkAllQuestsCompleted(updatedCompletedQuests);
                 const isFirstTimeCompletingAll = completionStatus.allCompleted && !allQuestsCompleted;
-                
+
                 const currentAllQuestsCompletedCount = profile.allQuestsCompletedCount || 0;
                 let newAllQuestsCompletedCount = currentAllQuestsCompletedCount;
-                
+
                 const completedAllDailyQuests = updatedDailyCompleted.length >= quests.length && quests.length > 0;
                 const hadCompletedAllDailyQuests = userDailyCompletedQuests.length >= quests.length && quests.length > 0;
-                
+
                 if (allQuestsCompleted && completedAllDailyQuests && !hadCompletedAllDailyQuests) {
                     newAllQuestsCompletedCount = currentAllQuestsCompletedCount + 1;
                 }
-                
+
                 if (isFirstTimeCompletingAll) {
                     newAllQuestsCompletedCount = 1;
                     // esimene kord kui kõik questi on tehtud - näitab erilist animatsiooni
@@ -2623,17 +2782,17 @@
                         showReplayModeUnlockAnimation();
                     }, 500);
                 }
-                
+
                 const today = getTodayDateString();
                 let dailyCompletions = profile.dailyQuestCompletions || {};
                 if (typeof dailyCompletions !== 'object') {
                     dailyCompletions = {};
                 }
-                const todayCompletions = Array.isArray(dailyCompletions[today]) 
-                    ? [...new Set(dailyCompletions[today])] 
+                const todayCompletions = Array.isArray(dailyCompletions[today])
+                    ? [...new Set(dailyCompletions[today])]
                     : [];
                 dailyCompletions[today] = [...new Set([...todayCompletions, ...uniqueCompletedQuestIds])];
-                
+
                 const updateResult = await updateUserProfile(currentUser.uid, {
                     xp: userNewXp,
                     ecoPoints: userNewEcoPoints,
@@ -2647,67 +2806,67 @@
                     lastQuestCompletionTime: new Date().toISOString(),
                     dailyQuestCompletions: dailyCompletions
                 });
-                
+
                 if (updateResult.success) {
                     const xpProgress = getXPProgress(userNewXp, userNewLevel);
                     const totalEcoPointsEarned = userNewEcoPoints - userCurrentEcoPoints;
                     const didLevelUp = userNewLevel > userCurrentLevel;
-                    
+
                     await updateUI(userNewXp, userNewLevel, userNewMissions, userNewEcoPoints, currentUser, userCurrentLevel, updatedCompletedQuests);
                     await updateQuestCharts(updatedCompletedQuests);
-                    
+
                     await calculateAndUpdateBestRank(currentUser.uid);
-                    
+
                     const hasReplayBonus = allQuestsCompleted && uniqueCompletedQuestIds.some(id => {
                         const count = currentQuestCompletionCount[id] || 0;
                         return count > 0;
                     });
                     const bonusText = hasReplayBonus ? " (with bonus)" : "";
-                    
+
                     let successMessage = `Completed ${uniqueCompletedQuestIds.length} mission(s)!`;
                     successMessage += `\n✨ +${totalXpEarned} XP${bonusText}`;
                     successMessage += `\n💰 +${totalEcoPointsEarned} EcoPoints`;
-                    
+
                     if (didLevelUp) {
                         successMessage += `\n🎉 ${getBadgeNameForLevel(userNewLevel)} Badge Unlocked!`;
                     }
-                    
+
                     showSuccessAnimation(successMessage, 4000);
-                    
+
                     await logQuestAudits(uniqueCompletedQuestIds.map(questId => ({
                         userId: currentUser.uid,
                         questId: questId,
                         questTitle: getQuestTitleById(questId),
                         reflection: questReflections[questId] || null,
                         xpEarned: xpRewardsByQuest[questId] || 0,
-                        ecoEarned: uniqueCompletedQuestIds.length > 0 
+                        ecoEarned: uniqueCompletedQuestIds.length > 0
                             ? Math.max(0, Math.round(totalEcoPointsEarned / uniqueCompletedQuestIds.length))
                             : 0,
                         type: "solo"
                     })));
-                    
+
                     setTimeout(() => {
                         let alertMessage = `Great job! You completed ${uniqueCompletedQuestIds.length} mission(s)!\n\n`;
                         alertMessage += `✨ Earned: ${totalXpEarned} XP${bonusText}\n`;
                         alertMessage += `💰 Earned: ${totalEcoPointsEarned} EcoPoints\n`;
                         alertMessage += `📸 Photo proof verified!\n\n`;
                         alertMessage += `Level ${userNewLevel} - ${xpProgress.current} / ${xpProgress.required} XP to next level`;
-                        
+
                         if (didLevelUp) {
                             alertMessage += `\n\n🎉 New Badge Unlocked: ${getBadgeNameForLevel(userNewLevel)} Badge!`;
                         }
-                        
+
                         if (!completionStatus.allCompleted && completionStatus.totalQuests > 0) {
                             alertMessage += `\n\n📊 Quest Progress: ${completionStatus.completedCount} / ${completionStatus.totalQuests} quests completed`;
                         } else if (allQuestsCompleted) {
                             alertMessage += `\n\n🔄 Replay Mode: Repeat quests to earn even more rewards!`;
                         }
-                        
+
                         alert(alertMessage);
                     }, 1000);
-                    
+
                     await renderQuests(quests, currentUser, updatedCompletedQuests, updatedDailyCompleted);
-                    
+
                     if (completionData.completeButton) {
                         completionData.completeButton.disabled = false;
                         completionData.completeButton.textContent = "Complete Selected Missions";
@@ -2735,27 +2894,27 @@
                 if (!profile || typeof profile !== 'object') {
                     return [];
                 }
-                
+
                 // kontrollib, et questIds on massiiv
                 if (!questIds || !Array.isArray(questIds) || questIds.length === 0) {
                     return [];
                 }
-                
+
                 const warnings = [];
-                
+
                 // kontrollib ainult päevast limiiti (5 missiooni päevas)
                 const today = getTodayDateString();
                 const dailyCompletions = profile.dailyQuestCompletions || {};
                 // eemaldab duplikaadid, et vältida topeltarvutamist
-                const todayCompletions = Array.isArray(dailyCompletions[today]) 
+                const todayCompletions = Array.isArray(dailyCompletions[today])
                     ? [...new Set(dailyCompletions[today])]
                     : [];
                 const uniqueQuestIds = [...new Set(questIds)];
-                
+
                 // eemaldab questi, mis on juba täna tehtud (et vältida topeltarvutamist)
                 const newQuestIds = uniqueQuestIds.filter(id => !todayCompletions.includes(id));
                 const newTotal = todayCompletions.length + newQuestIds.length;
-                
+
                 // maksimaalne limiit päevas
                 const MAX_DAILY_QUESTS = 5;
                 if (newTotal > MAX_DAILY_QUESTS) {
@@ -2764,7 +2923,7 @@
                         message: `You can only complete ${MAX_DAILY_QUESTS} quests per day. You have already completed ${todayCompletions.length} quests today.`
                     });
                 }
-                
+
                 return warnings;
             } catch (error) {
                 // logib vea, aga ei katkesta rakendust
@@ -2779,7 +2938,7 @@
                 const shuffled = [...quests].sort(() => 0.5 - Math.random());
                 return shuffled.slice(0, Math.min(count, shuffled.length));
             }
-            
+
             const availableQuests = quests.filter(q => !completedQuestIds.includes(q.id));
             if (availableQuests.length === 0) {
                 return quests.slice(0, Math.min(count, quests.length));
@@ -2792,13 +2951,13 @@
             try {
                 const newResetTime = getCurrentTimestamp();
                 const newQuests = getRandomQuests(allQuests, completedQuests, allQuestsCompleted, 5);
-                
+
                 await updateUserProfile(user.uid, {
                     lastQuestResetTime: newResetTime,
                     currentDailyQuests: newQuests.map(q => q.id),
                     dailyQuestsCompleted: []
                 });
-                
+
                 return newQuests;
             } catch (error) {
                 console.error("Error resetting daily quests:", error);
@@ -2812,13 +2971,13 @@
                 if (!profileResult.success) {
                     throw new Error("Failed to load profile");
                 }
-                
+
                 const profile = profileResult.data;
                 const lastResetTime = profile.lastQuestResetTime;
                 const currentDailyQuestIds = profile.currentDailyQuests || [];
                 const dailyQuestsCompleted = profile.dailyQuestsCompleted || [];
                 const allQuestsCompleted = profile.allQuestsCompleted || false;
-                
+
                 if (shouldResetQuests(lastResetTime)) {
                     const newQuests = await resetDailyQuests(user, allQuests, completedQuests, allQuestsCompleted);
                     startCountdown(getCurrentTimestamp(), () => {
@@ -2829,13 +2988,13 @@
                     // filtreerib allQuests, et leida päevased questi
                     // kui quest on currentDailyQuestIds'is, siis on see saadaval (isegi kui on varem tehtud)
                     const currentQuests = allQuests.filter(q => currentDailyQuestIds.includes(q.id));
-                    
+
                     // kui leitud questi on vähem kui oodatud, proovib täiendada
                     if (currentQuests.length < currentDailyQuestIds.length) {
                         // laeb quests.json, et saada õiged quest andmed
                         const questsData = await loadQuestsData();
                         const missingQuestIds = currentDailyQuestIds.filter(id => !currentQuests.some(q => q.id === id));
-                        
+
                         for (const questId of missingQuestIds) {
                             const questMapping = QUEST_ID_MAPPING[questId];
                             if (questMapping && questsData) {
@@ -2844,7 +3003,7 @@
                                 let questShortName = '';
                                 let questDescription = '';
                                 let questXP = 35;
-                                
+
                                 for (const jsonId of questMapping.jsonIds || []) {
                                     for (const category of questsData.categories || []) {
                                         const quest = category.quests?.find(q => q.id === jsonId);
@@ -2858,7 +3017,7 @@
                                     }
                                     if (questTitle !== `Quest ${questId}`) break;
                                 }
-                                
+
                                 // loob quest objekti õigete andmetega
                                 currentQuests.push({
                                     id: questId,
@@ -2887,14 +3046,19 @@
                             }
                         }
                     }
-                    
+
                     // Eğer currentDailyQuestIds'de 5'ten az quest varsa veya hiç quest yoksa, reset yap
                     if (currentQuests.length === 0 || currentDailyQuestIds.length < 5) {
                         const newQuests = await resetDailyQuests(user, allQuests, completedQuests, allQuestsCompleted);
-                        startCountdown(getCurrentTimestamp(), () => {
-                            location.reload();
-                        });
-                        return { quests: newQuests, resetTime: getCurrentTimestamp() };
+                        // Funktsioon taseme arvutamiseks XP põhjal
+                        function getCurrentLevel(xp) {
+                            let level = 1;
+                            while (xp >= getTotalXPForLevel(level)) {
+                                level++;
+                            }
+                            return level - 1; // Tagastab eelmise täielikult täidetud taseme
+                        }
+
                     }
                     startCountdown(lastResetTime, () => {
                         location.reload();
@@ -2933,10 +3097,10 @@
                 const isInDailyQuests = currentDailyQuestIds.includes(quest.id);
                 // kui quest on päevastes questides, siis ei keela seda (lubab uuesti täita)
                 // Replay mode'da: ega quest on täna juba tehtud, siis keela uuesti täitmine
-                const isCompleted = allQuestsCompleted 
+                const isCompleted = allQuestsCompleted
                     ? isCompletedToday  // Replay mode'da: kui täna juba tehtud, siis disabled
                     : (isCompletedToday || (wasEverCompleted && !isInDailyQuests));
-                
+
                 const completionCount = questCompletionCount[quest.id] || 0;
                 const bonusMultiplier = getQuestBonusMultiplier(completionCount);
                 const bonusXP = Math.floor(quest.xp * bonusMultiplier);
@@ -2948,7 +3112,7 @@
                 missionItem.dataset.questIndex = index;
                 missionItem.dataset.questId = quest.id;
                 missionItem.dataset.category = quest.category;
-                
+
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
                 checkbox.id = `mission-${index + 1}`;
@@ -2956,15 +3120,15 @@
                 // replay mode'is või kui quest on päevastes questides, ei keela checkbox'i
                 checkbox.disabled = isCompleted;
                 checkbox.checked = visualCompleted;
-                
+
                 const questContent = document.createElement("div");
                 questContent.className = "quest-content";
-                
+
                 const categoryInfo = categoryStats?.find(cat => cat.id === quest.category);
                 const categoryBadge = document.createElement("div");
                 categoryBadge.className = "quest-category-badge";
                 categoryBadge.style.borderLeft = `4px solid ${quest.categoryColor || "#999"}`;
-                
+
                 const categoryHeader = document.createElement("div");
                 categoryHeader.className = "category-header";
                 categoryHeader.innerHTML = `
@@ -2977,7 +3141,7 @@
                         </span>
                     ` : ''}
                 `;
-                
+
                 let categoryProgressHTML = '';
                 if (categoryInfo) {
                     const progressPercent = categoryInfo.completionPercentage;
@@ -2990,12 +3154,12 @@
                         </div>
                     `;
                 }
-                
+
                 categoryBadge.innerHTML = categoryHeader.outerHTML + categoryProgressHTML;
-                
+
                 const questDetails = document.createElement("div");
                 questDetails.className = "quest-details";
-                
+
                 const label = document.createElement("label");
                 label.htmlFor = `mission-${index + 1}`;
                 label.className = "quest-title";
@@ -3004,10 +3168,10 @@
                     label.style.textDecoration = "line-through";
                     label.style.opacity = "0.6";
                 }
-                
+
                 const questStats = document.createElement("div");
                 questStats.className = "quest-stats";
-                
+
                 let carbonReduction = 0;
                 if (questsData) {
                     const category = questsData.categories.find(cat => cat.id === quest.category);
@@ -3021,13 +3185,13 @@
                         }
                     }
                 }
-                
+
                 const badgeInfo = categoryInfo && categoryInfo.completedQuests === categoryInfo.totalQuests && categoryInfo.totalQuests > 0
                     ? `<span class="badge-unlocked-indicator">🏆 ${categoryInfo.badgeName} Unlocked!</span>`
                     : categoryInfo && categoryInfo.totalQuests > 0
-                    ? `<span class="badge-next-indicator">Next: ${categoryInfo.badgeName} (${categoryInfo.totalQuests - categoryInfo.completedQuests} quests left)</span>`
-                    : '';
-                
+                        ? `<span class="badge-next-indicator">Next: ${categoryInfo.badgeName} (${categoryInfo.totalQuests - categoryInfo.completedQuests} quests left)</span>`
+                        : '';
+
                 let bonusInfo = '';
                 if (completionCount > 0 && allQuestsCompleted) {
                     const bonusPercent = Math.round((bonusMultiplier - 1) * 100);
@@ -3042,7 +3206,7 @@
                         display: inline-block;
                     ">🔄 Repeat ${completionCount + 1}: +${bonusPercent}% Bonus XP!</div>`;
                 }
-                
+
                 questStats.innerHTML = `
                     <div class="quest-rewards">
                         <span class="reward-xp">+${bonusXP} XP${completionCount > 0 && allQuestsCompleted ? ` <span style="color: #ffd700; font-weight: 600;">(+${bonusXP - quest.xp})</span>` : ''}</span>
@@ -3051,17 +3215,17 @@
                     ${bonusInfo}
                     ${badgeInfo ? `<div class="quest-badge-info">${badgeInfo}</div>` : ''}
                 `;
-                
+
                 questDetails.appendChild(label);
                 questDetails.appendChild(questStats);
-                
+
                 questContent.appendChild(categoryBadge);
                 questContent.appendChild(questDetails);
-                
+
                 missionItem.appendChild(checkbox);
                 missionItem.appendChild(questContent);
                 missionList.appendChild(missionItem);
-                
+
                 // Quest start tracking is disabled - no additional verification needed
             });
 
@@ -3070,63 +3234,63 @@
             completeButton.id = "completeMissionsButton";
             completeButton.textContent = "Complete Selected Missions";
             completeButton.disabled = false;
-            
+
             completeButton.addEventListener("click", async () => {
                 // Turvakontrollid
                 if (!currentUser || !currentUser.uid) {
                     alert("User information not found. Please refresh the page.");
                     return;
                 }
-                
+
                 // Päringupiirangu (rate limit) kontroll
                 const now = Date.now();
                 if (now - lastQuestCompletionTime < MIN_QUEST_COMPLETION_INTERVAL) {
                     alert("Please wait a moment before completing more quests.");
                     return;
                 }
-                
+
                 const checkboxes = document.querySelectorAll('.mission-item input[type="checkbox"]:checked:not(:disabled)');
                 if (checkboxes.length === 0) {
                     alert("Please select at least one mission to complete!");
                     return;
                 }
-                
+
                 // Check number of selected missions
                 if (checkboxes.length > 10) {
                     alert("You can only complete up to 10 quests at once.");
                     return;
                 }
-                
+
                 completeButton.disabled = true;
                 completeButton.textContent = "Processing...";
                 lastQuestCompletionTime = now;
-                
+
                 try {
                     const profileResult = await getUserProfile(currentUser.uid);
                     if (!profileResult || !profileResult.success) {
                         throw new Error("Error loading profile: " + (profileResult?.error || "Unknown error"));
                     }
-                    
+
                     const profile = profileResult.data;
                     currentProfileData = profile;
                     if (!profile || typeof profile !== 'object') {
                         throw new Error("Invalid profile data");
                     }
-                    
+
                     // Replay mode'da: Kontrollib, et valitud questid pole juba täna tehtud
                     const allQuestsCompleted = profile.allQuestsCompleted || false;
                     const dailyCompletedQuests = profile.dailyQuestsCompleted || [];
-                    
+
                     if (allQuestsCompleted) {
                         const selectedQuestIds = Array.from(checkboxes).map(cb => {
                             const missionItem = cb.closest('.mission-item');
                             return missionItem?.dataset?.questId;
                         }).filter(Boolean);
-                        
-                        const alreadyCompletedToday = selectedQuestIds.filter(questId => 
+
+                        const alreadyCompletedToday = selectedQuestIds.filter(questId =>
                             dailyCompletedQuests.includes(questId)
                         );
-                        
+
                         if (alreadyCompletedToday.length > 0) {
                             completeButton.disabled = false;
                             completeButton.textContent = "Complete Selected Missions";
@@ -3134,43 +3298,43 @@
                             return;
                         }
                     }
-                    
+
                     // Check only daily limit (5 missions per day) - no other verification needed
                     const selectedQuestIds = [];
                     checkboxes.forEach(checkbox => {
                         if (!checkbox) return;
                         const missionItem = checkbox.closest('.mission-item');
                         if (missionItem) {
-                        const questId = missionItem.dataset.questId;
+                            const questId = missionItem.dataset.questId;
                             if (questId && typeof questId === 'string') {
                                 selectedQuestIds.push(questId);
                             }
                         }
                     });
-                    
+
                     const uniqueQuestIds = [...new Set(selectedQuestIds)];
-                    
+
                     if (uniqueQuestIds.length > 0) {
                         const warnings = await detectAbnormalPattern(profile, uniqueQuestIds);
-                        
+
                         if (!Array.isArray(warnings)) {
                             console.error("detectAbnormalPattern returned invalid result");
                         }
-                        
+
                         // Peatab kui päevalimiit on ületatud
-                        const dailyLimitWarnings = warnings.filter(w => 
+                        const dailyLimitWarnings = warnings.filter(w =>
                             w && w.type && w.type === "daily_limit"
                         );
-                    
+
                         if (dailyLimitWarnings.length > 0) {
-                        completeButton.disabled = false;
-                        completeButton.textContent = "Complete Selected Missions";
+                            completeButton.disabled = false;
+                            completeButton.textContent = "Complete Selected Missions";
                             const errorMessages = dailyLimitWarnings.map(w => w.message || "Daily limit exceeded").join('\n\n');
                             alert(`⚠️ Daily Quest Limit\n\n${errorMessages}`);
-                        return;
+                            return;
+                        }
                     }
-                    }
-                    
+
                     // Split missions into groups with and without photos
                     const photoChecks = await Promise.all(
                         uniqueQuestIds.map(async questId => ({
@@ -3180,7 +3344,7 @@
                     );
                     const questsRequiringPhoto = photoChecks.filter(c => c.requiresPhoto).map(c => c.questId);
                     const questsWithoutPhoto = photoChecks.filter(c => !c.requiresPhoto).map(c => c.questId);
-                    
+
                     const completionData = {
                         currentUser: currentUser,
                         profile: profile,
@@ -3188,7 +3352,7 @@
                         checkboxes: checkboxes,
                         completeButton: completeButton
                     };
-                    
+
                     // Complete missions without photo requirements directly
                     if (questsWithoutPhoto.length > 0) {
                         const reflectionsProvided = await ensureReflectionNotes(questsWithoutPhoto);
@@ -3207,7 +3371,7 @@
                         });
                         verifiedPhotos = {};
                     }
-                    
+
                     if (questsRequiringPhoto.length > 0) {
                         showPhotoUploadModal(questsRequiringPhoto, completionData);
                     } else {
@@ -3224,260 +3388,14 @@
                     completeButton.textContent = "Complete Selected Missions";
                 }
             });
-            
+
             missionList.appendChild(completeButton);
         }
 
         let categoryChartInstance = null;
         let carbonChartInstance = null;
 
-        const QUEST_ID_MAPPING = {
-            "1": { 
-                jsonIds: ["recycling_1", "cleanup_1"], 
-                category: "recycling",
-                categoryName: "Recycling",
-                categoryIcon: "♻️",
-                categoryColor: "#4CAF50"
-            },
-            "2": { 
-                jsonIds: ["energy_1"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "3": { 
-                jsonIds: ["recycling_2"], 
-                category: "recycling",
-                categoryName: "Recycling",
-                categoryIcon: "♻️",
-                categoryColor: "#4CAF50"
-            },
-            "4": { 
-                jsonIds: ["transportation_1"], 
-                category: "transportation",
-                categoryName: "Transportation",
-                categoryIcon: "🚶",
-                categoryColor: "#2196F3"
-            },
-            "5": { 
-                jsonIds: ["water_1"], 
-                category: "water_saving",
-                categoryName: "Water Saving",
-                categoryIcon: "💧",
-                categoryColor: "#00BCD4"
-            },
-            "6": { 
-                jsonIds: ["recycling_3", "cleanup_2"], 
-                category: "cleanup_missions",
-                categoryName: "Clean-Up",
-                categoryIcon: "🧹",
-                categoryColor: "#9C27B0"
-            },
-            "7": { 
-                jsonIds: ["recycling_4"], 
-                category: "recycling",
-                categoryName: "Recycling",
-                categoryIcon: "♻️",
-                categoryColor: "#4CAF50"
-            },
-            "8": { 
-                jsonIds: ["water_2"], 
-                category: "water_saving",
-                categoryName: "Water Saving",
-                categoryIcon: "💧",
-                categoryColor: "#00BCD4"
-            },
-            "9": { 
-                jsonIds: ["recycling_5"], 
-                category: "recycling",
-                categoryName: "Recycling",
-                categoryIcon: "♻️",
-                categoryColor: "#4CAF50"
-            },
-            "10": { 
-                jsonIds: ["energy_2"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "11": { 
-                jsonIds: ["energy_3"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "12": { 
-                jsonIds: ["gardening_1"], 
-                category: "gardening",
-                categoryName: "Gardening & Nature",
-                categoryIcon: "🌱",
-                categoryColor: "#66BB6A"
-            },
-            "13": { 
-                jsonIds: ["transportation_2"], 
-                category: "transportation",
-                categoryName: "Transportation",
-                categoryIcon: "🚶",
-                categoryColor: "#2196F3"
-            },
-            "14": { 
-                jsonIds: ["sustainable_1"], 
-                category: "sustainable_living",
-                categoryName: "Sustainable Living",
-                categoryIcon: "♻️",
-                categoryColor: "#8BC34A"
-            },
-            "15": { 
-                jsonIds: ["sustainable_2"], 
-                category: "sustainable_living",
-                categoryName: "Sustainable Living",
-                categoryIcon: "♻️",
-                categoryColor: "#8BC34A"
-            },
-            "16": { 
-                jsonIds: ["energy_4"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "17": { 
-                jsonIds: ["sustainable_3"], 
-                category: "sustainable_living",
-                categoryName: "Sustainable Living",
-                categoryIcon: "♻️",
-                categoryColor: "#8BC34A"
-            },
-            "18": { 
-                jsonIds: ["energy_5"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "19": { 
-                jsonIds: ["recycling_6"], 
-                category: "recycling",
-                categoryName: "Recycling",
-                categoryIcon: "♻️",
-                categoryColor: "#4CAF50"
-            },
-            "20": { 
-                jsonIds: ["cleanup_3"], 
-                category: "cleanup_missions",
-                categoryName: "Clean-Up",
-                categoryIcon: "🧹",
-                categoryColor: "#9C27B0"
-            },
-            "21": { 
-                jsonIds: ["energy_6"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "22": { 
-                jsonIds: ["transportation_3"], 
-                category: "transportation",
-                categoryName: "Transportation",
-                categoryIcon: "🚶",
-                categoryColor: "#2196F3"
-            },
-            "23": { 
-                jsonIds: ["sustainable_4"], 
-                category: "sustainable_living",
-                categoryName: "Sustainable Living",
-                categoryIcon: "♻️",
-                categoryColor: "#8BC34A"
-            },
-            "24": { 
-                jsonIds: ["energy_7"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "25": { 
-                jsonIds: ["gardening_2"], 
-                category: "gardening",
-                categoryName: "Gardening & Nature",
-                categoryIcon: "🌱",
-                categoryColor: "#66BB6A"
-            },
-            "26": { 
-                jsonIds: ["recycling_7"], 
-                category: "recycling",
-                categoryName: "Recycling",
-                categoryIcon: "♻️",
-                categoryColor: "#4CAF50"
-            },
-            "27": { 
-                jsonIds: ["recycling_8"], 
-                category: "recycling",
-                categoryName: "Recycling",
-                categoryIcon: "♻️",
-                categoryColor: "#4CAF50"
-            },
-            "28": { 
-                jsonIds: ["energy_8"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "29": { 
-                jsonIds: ["energy_9"], 
-                category: "energy_saving",
-                categoryName: "Energy Saving",
-                categoryIcon: "💡",
-                categoryColor: "#FFC107"
-            },
-            "30": { 
-                jsonIds: ["transportation_4"], 
-                category: "transportation",
-                categoryName: "Transportation",
-                categoryIcon: "🚶",
-                categoryColor: "#2196F3"
-            },
-            "31": { 
-                jsonIds: ["water_3"], 
-                category: "water_saving",
-                categoryName: "Water Saving",
-                categoryIcon: "💧",
-                categoryColor: "#00BCD4"
-            },
-            "32": { 
-                jsonIds: ["cleanup_4"], 
-                category: "cleanup_missions",
-                categoryName: "Clean-Up",
-                categoryIcon: "🧹",
-                categoryColor: "#9C27B0"
-            },
-            "33": { 
-                jsonIds: ["gardening_3"], 
-                category: "gardening",
-                categoryName: "Gardening & Nature",
-                categoryIcon: "🌱",
-                categoryColor: "#66BB6A"
-            },
-            "34": { 
-                jsonIds: ["sustainable_5"], 
-                category: "sustainable_living",
-                categoryName: "Sustainable Living",
-                categoryIcon: "♻️",
-                categoryColor: "#8BC34A"
-            },
-            "35": { 
-                jsonIds: ["sustainable_6"], 
-                category: "sustainable_living",
-                categoryName: "Sustainable Living",
-                categoryIcon: "♻️",
-                categoryColor: "#8BC34A"
-            }
-        };
+
 
         // Laeb quests.json faili ja tagastab sisu turvaliselt.
         async function loadQuestsData() {
@@ -3574,7 +3492,7 @@
                     Keep playing to earn bonus rewards by repeating quests!
                 </p>
             `;
-            
+
             // lisab sädelevad tähed
             const sparklesContainer = document.createElement('div');
             sparklesContainer.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; border-radius: 15px;';
@@ -3612,7 +3530,7 @@
                 z-index: 9999;
                 animation: fadeIn 0.4s ease-out;
             `;
-            
+
             const animationContainer = document.createElement('div');
             animationContainer.id = 'replayModeUnlockAnimation';
             animationContainer.style.cssText = `
@@ -3627,7 +3545,7 @@
                 align-items: center;
                 justify-content: center;
             `;
-            
+
             const celebrationText = document.createElement('div');
             celebrationText.style.cssText = `
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
@@ -3644,7 +3562,7 @@
                 position: relative;
                 overflow: hidden;
             `;
-            
+
             // lisab sädelevad tähed taustale
             const sparkles = document.createElement('div');
             sparkles.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none;';
@@ -3664,18 +3582,18 @@
                 sparkles.appendChild(sparkle);
             }
             celebrationText.appendChild(sparkles);
-            
+
             celebrationText.innerHTML += `
                 <div style="font-size: 80px; margin-bottom: 25px; animation: rotateReplay 2s linear infinite; position: relative; z-index: 1;">🔄</div>
                 <div style="font-size: 42px; margin-bottom: 15px; position: relative; z-index: 1; animation: slideInReplay 0.8s ease-out 0.2s both;">🎉 Replay Mode Unlocked! 🎉</div>
                 <div style="font-size: 20px; opacity: 0.95; margin-top: 15px; position: relative; z-index: 1; animation: slideInReplay 0.8s ease-out 0.4s both;">Keep playing to earn bonus rewards!</div>
                 <div style="font-size: 16px; opacity: 0.8; margin-top: 20px; position: relative; z-index: 1; animation: slideInReplay 0.8s ease-out 0.6s both;">✨ Repeat quests for up to 3x XP bonus! ✨</div>
             `;
-            
+
             animationContainer.appendChild(celebrationText);
             document.body.appendChild(overlay);
             document.body.appendChild(animationContainer);
-            
+
             // eemaldab animatsiooni pärast 4 sekundit
             setTimeout(() => {
                 celebrationText.style.animation = 'slideInReplay 0.6s ease-out reverse';
@@ -3805,15 +3723,15 @@
                     }
                     profile = profileResult.data;
                 }
-                
+
                 const currentXP = profile.xp || 0;
                 const currentEcoPoints = profile.ecoPoints || 0;
                 const currentBadges = profile.badges || [];
                 const currentLevel = profile.level || calculateLevel(currentXP);
 
                 const masterBadge = "Master Eco Warrior";
-                const updatedBadges = currentBadges.includes(masterBadge) 
-                    ? currentBadges 
+                const updatedBadges = currentBadges.includes(masterBadge)
+                    ? currentBadges
                     : [...currentBadges, masterBadge];
 
                 const newXP = currentXP + bonusXP;
@@ -3859,7 +3777,7 @@
 
                 questsData.categories.forEach(category => {
                     if (!category || !category.quests) return;
-                    
+
                     category.quests.forEach(quest => {
                         if (quest && mappedCompletedIds.includes(quest.id)) {
                             totalCarbon += quest.carbonFootprintReduction || 0;
@@ -3883,10 +3801,10 @@
 
             const categoryStats = questsData.categories.map(category => {
                 const totalQuests = category.quests.length;
-                const completedQuests = category.quests.filter(quest => 
+                const completedQuests = category.quests.filter(quest =>
                     mappedCompletedIds.includes(quest.id)
                 ).length;
-                
+
                 const totalCarbonReduction = category.quests.reduce((sum, quest) => {
                     if (mappedCompletedIds.includes(quest.id)) {
                         return sum + quest.carbonFootprintReduction;
@@ -3894,13 +3812,13 @@
                     return sum;
                 }, 0);
 
-                const maxCarbonReduction = category.quests.reduce((sum, quest) => 
+                const maxCarbonReduction = category.quests.reduce((sum, quest) =>
                     sum + quest.carbonFootprintReduction, 0
                 );
 
                 return {
                     id: category.id,
-                    name: category.name,  
+                    name: category.name,
                     icon: category.icon,
                     color: category.color,
                     badgeName: category.badgeName,
@@ -4039,7 +3957,7 @@
                             right: window.innerWidth < 640 ? 5 : 10
                         }
                     },
-                    onResize: function(chart, size) {
+                    onResize: function (chart, size) {
                         if (size.height < 200) {
                             chart.options.aspectRatio = 1.2;
                         }
@@ -4070,7 +3988,7 @@
                                 size: 12
                             },
                             callbacks: {
-                                label: function(context) {
+                                label: function (context) {
                                     const label = context.label.replace(/^\S+\s/, '') || '';
                                     const value = context.parsed || 0;
                                     const category = categoryStats[context.dataIndex];
@@ -4088,7 +4006,7 @@
 
             const totalCarbonReduced = categoryStats.reduce((sum, cat) => sum + cat.totalCarbonReduction, 0);
             const totalCarbonPotential = categoryStats.reduce((sum, cat) => sum + cat.maxCarbonReduction, 0);
-            
+
             carbonChartInstance = new Chart(carbonCtx, {
                 type: 'bar',
                 data: {
@@ -4131,7 +4049,7 @@
                             right: window.innerWidth < 640 ? 5 : 10
                         }
                     },
-                    onResize: function(chart, size) {
+                    onResize: function (chart, size) {
                         if (size.height < 200) {
                             chart.options.aspectRatio = 1.3;
                         }
@@ -4154,7 +4072,7 @@
                                 font: {
                                     size: window.innerWidth < 640 ? 9 : 11
                                 },
-                                callback: function(value) {
+                                callback: function (value) {
                                     return value.toFixed(window.innerWidth < 640 ? 0 : 1);
                                 },
                                 maxTicksLimit: window.innerWidth < 640 ? 5 : 8
@@ -4212,14 +4130,14 @@
                             cornerRadius: 8,
                             displayColors: true,
                             callbacks: {
-                                title: function(context) {
+                                title: function (context) {
                                     return categoryStats[context[0].dataIndex].name;
                                 },
-                                label: function(context) {
+                                label: function (context) {
                                     const label = context.dataset.label || '';
                                     const value = context.parsed.y.toFixed(2);
                                     const category = categoryStats[context.dataIndex];
-                                    
+
                                     if (context.datasetIndex === 0) {
                                         const percentage = category.carbonPercentage.toFixed(0);
                                         return [
@@ -4234,7 +4152,7 @@
                                         ];
                                     }
                                 },
-                                footer: function(tooltipItems) {
+                                footer: function (tooltipItems) {
                                     if (tooltipItems.length > 0) {
                                         const category = categoryStats[tooltipItems[0].dataIndex];
                                         if (category.completedQuests === category.totalQuests && category.totalQuests > 0) {
@@ -4279,7 +4197,7 @@
 
                 const categoryCtx = document.getElementById("categoryChart");
                 const carbonCtx = document.getElementById("carbonChart");
-                
+
                 if (!categoryCtx || !carbonCtx) {
                     setTimeout(() => updateQuestCharts(completedQuestIds), 200);
                     return;
@@ -4295,31 +4213,41 @@
         async function updateUI(xp, level, missionsCompleted, ecoPoints, user = null, oldLevel = null, completedQuests = null) {
             const userXPElement = document.getElementById("userXP");
             const ecoPointsElement = document.getElementById("ecoPoints");
-            
-            if (userXPElement) userXPElement.textContent = xp || 0;
-            
-            const progress = getXPProgress(xp || 0, level || 1);
+
+            // Ensure xp is a number and non-negative
+            const currentXP = Math.max(0, typeof xp === 'number' ? xp : parseInt(xp) || 0);
+
+            // Calculate level based on XP if not provided
+            const currentLevel = level || calculateLevel(currentXP);
+
+            // Update XP display
+            if (userXPElement) userXPElement.textContent = currentXP;
+
+            // Get progress information
+            const progress = getXPProgress(currentXP, currentLevel);
             const progressFill = document.getElementById("levelProgressFill");
             const progressCurrent = document.getElementById("levelProgressCurrent");
             const progressNext = document.getElementById("levelProgressNext");
-            
-            if (progressFill) {
-                const percentage = Math.min(100, Math.max(0, progress.percentage));
+
+            // Get the XP progress for the current level
+            const xpProgress = getXPProgress(currentXP, currentLevel);
+
+            // Update progress bar
+            if (progressFill && progressCurrent && progressNext) {
+                const percentage = xpProgress.percentage;
                 progressFill.style.width = `${percentage}%`;
+                progressCurrent.textContent = xpProgress.current;
+                progressNext.textContent = xpProgress.required;
+
                 const progressBar = progressFill.closest('.level-progress-bar');
                 if (progressBar) {
                     progressBar.setAttribute('aria-valuenow', Math.round(percentage));
                 }
             }
-            if (progressCurrent) {
-                progressCurrent.textContent = progress.current;
-            }
-            if (progressNext) {
-                progressNext.textContent = progress.required;
-            }
-            
+
+            // Update other UI elements
             if (ecoPointsElement) ecoPointsElement.textContent = ecoPoints || 0;
-            
+
             if (completedQuests && Array.isArray(completedQuests)) {
                 const totalCarbon = await calculateTotalCarbonReduction(completedQuests);
                 const carbonElement = document.getElementById("totalCarbonReduced");
@@ -4327,26 +4255,27 @@
                     carbonElement.textContent = totalCarbon.toFixed(1);
                 }
             }
-            
+
+            // Update badge with current level
             const badgeElement = document.getElementById("userBadge");
             if (badgeElement) {
-                displayBadge(badgeElement, level || 1, false);
+                displayBadge(badgeElement, currentLevel, false);
             }
-            
+
             displayBadgeShowcase(level || 1, false);
-            
+
             if (user && oldLevel && level > oldLevel) {
                 checkAndUnlockBadge(user, oldLevel, level);
             }
         }
 
         let currentUser = null;
-        
+
         initializeReflectionModal();
-        
+
         requireAuth().then(async (user) => {
             currentUser = user;
-            
+
             // Kontrolli koorumisi ja näita animatsioone enne muude andmete laadimist
             try {
                 const { checkAndProcessHatchings, showHatchingAnimationsSequentially } = await import("../js/hatching-utils.js");
@@ -4358,10 +4287,10 @@
                         dashboard.style.opacity = "0";
                         dashboard.style.pointerEvents = "none";
                     }
-                    
+
                     // Näita animatsioonid järjestikku enne muude andmete laadimist
                     await showHatchingAnimationsSequentially(hatchingResult.newAnimals);
-                    
+
                     // Näita dashboard sisu pärast animatsioone
                     if (dashboard) {
                         dashboard.style.opacity = "1";
@@ -4372,37 +4301,37 @@
             } catch (error) {
                 console.error("Error checking hatchings on login:", error);
             }
-            
+
             try {
                 const profileResult = await getUserProfile(user.uid);
-                
+
                 if (profileResult.success) {
                     const profile = profileResult.data;
                     const displayName = profile.displayName || user.email.split("@")[0];
                     const xp = profile.xp || 0;
                     const ecoPoints = profile.ecoPoints || calculateEcoPoints(xp, profile.level || 1, (profile.badges || []).length);
                     const missionsCompleted = profile.missionsCompleted || 0;
-                    
+
                     const calculatedLevel = calculateLevel(xp);
                     const storedLevel = profile.level;
                     const level = calculatedLevel;
                     const completedQuests = profile.completedQuests || [];
-                    
+
                     const userDisplayNameElement = document.getElementById("userDisplayName");
                     const userEmailElement = document.getElementById("userEmail");
                     const userLevelElement = document.getElementById("userLevel");
                     if (userDisplayNameElement) userDisplayNameElement.textContent = displayName || "User";
                     if (userEmailElement) userEmailElement.textContent = user.email || "Unknown";
                     if (userLevelElement) userLevelElement.textContent = level || 1;
-                    
+
                     const badgeElement = document.getElementById("userBadge");
                     if (badgeElement) {
                         const expectedBadge = getBadgeNameForLevel(level);
                         const activeBadge = profile.activeBadge;
-                        
+
                         displayBadge(badgeElement, level, false);
                         displayBadgeShowcase(level, false);
-                        
+
                         const updates = {};
                         if (storedLevel !== calculatedLevel) {
                             updates.level = calculatedLevel;
@@ -4417,14 +4346,14 @@
                         if (!profile.xp || profile.xp !== xp) {
                             updates.xp = xp;
                         }
-                        
+
                         if (Object.keys(updates).length > 0) {
                             await updateUserProfile(user.uid, updates);
                         }
                     }
-                    
+
                     await updateUI(xp, level, missionsCompleted, ecoPoints, user, null, completedQuests);
-                    
+
                     const allQuestsCheck = await checkAllQuestsCompleted(completedQuests);
                     if (allQuestsCheck.allCompleted && profile.allQuestsCompleted) {
                         await showAllQuestsCompletedInfoCard(user);
@@ -4436,11 +4365,11 @@
                             replayCard.style.animation = 'slideInReplay 0.6s ease-out, pulseReplay 2s ease-in-out infinite, gradientShift 3s ease infinite';
                         }
                     }
-                    
+
                     setTimeout(async () => {
                         await updateQuestCharts(completedQuests);
                     }, 300);
-                    
+
                     const allQuests = await loadQuests();
                     const missionListElement = document.getElementById("missionList");
                     if (allQuests.length === 0) {
@@ -4449,14 +4378,14 @@
                         }
                     } else {
                         try {
-                        const dailyQuestsData = await loadUserDailyQuests(user, allQuests, completedQuests);
-                        window.currentQuests = dailyQuestsData.quests;
-                        await renderQuests(
-                            dailyQuestsData.quests, 
-                            user, 
-                            completedQuests, 
-                            dailyQuestsData.dailyCompleted || []
-                        );
+                            const dailyQuestsData = await loadUserDailyQuests(user, allQuests, completedQuests);
+                            window.currentQuests = dailyQuestsData.quests;
+                            await renderQuests(
+                                dailyQuestsData.quests,
+                                user,
+                                completedQuests,
+                                dailyQuestsData.dailyCompleted || []
+                            );
                         } catch (error) {
                             console.error('Error loading/rendering quests:', error);
                             if (missionListElement) {
@@ -4464,11 +4393,11 @@
                             }
                         }
                     }
-                    
+
                 } else {
                     const defaultDisplayName = user.email ? user.email.split("@")[0] : "User";
                     const currentTimestamp = new Date().toISOString();
-                    
+
                     try {
                         // Kasutab setDoc'i uue profiili loomiseks (updateDoc toimib ainult olemasoleval dokil)
                         await setDoc(doc(db, "users", user.uid), {
@@ -4512,7 +4441,7 @@
                             insightSnapshots: [],
                             createdAt: currentTimestamp
                         });
-                        
+
                         setTimeout(() => {
                             location.reload();
                         }, 500);
@@ -4524,18 +4453,18 @@
                             message: createError.message,
                             stack: createError.stack
                         });
-                        
-                    const userDisplayNameElement = document.getElementById("userDisplayName");
-                    const userEmailElement = document.getElementById("userEmail");
-                    const missionListElement = document.getElementById("missionList");
-                    
-                    if (userDisplayNameElement) {
-                        userDisplayNameElement.textContent = user.email ? user.email.split("@")[0] : "User";
-                    }
-                    if (userEmailElement) {
-                        userEmailElement.textContent = user.email || "Unknown";
-                    }
-                    if (missionListElement) {
+
+                        const userDisplayNameElement = document.getElementById("userDisplayName");
+                        const userEmailElement = document.getElementById("userEmail");
+                        const missionListElement = document.getElementById("missionList");
+
+                        if (userDisplayNameElement) {
+                            userDisplayNameElement.textContent = user.email ? user.email.split("@")[0] : "User";
+                        }
+                        if (userEmailElement) {
+                            userEmailElement.textContent = user.email || "Unknown";
+                        }
+                        if (missionListElement) {
                             let errorMsg = "Error creating profile. ";
                             if (createError.code === 'permission-denied') {
                                 errorMsg += "Please check Firebase Firestore rules. Make sure 'allow create' is enabled for users collection.";
@@ -4554,14 +4483,14 @@
                     stack: error.stack,
                     name: error.name
                 });
-                
+
                 const missionListElement = document.getElementById("missionList");
                 const userDisplayNameElement = document.getElementById("userDisplayName");
                 const userEmailElement = document.getElementById("userEmail");
-                
+
                 let errorMessage = "Error loading data. ";
                 let userFriendlyMessage = "";
-                
+
                 // kontrollib konkreetseid veatüüpe ja annab kasutajasõbraliku vastuse
                 if (error.code === 'permission-denied') {
                     // see võib tähendada, et Firestore reeglid on valed
@@ -4575,9 +4504,9 @@
                     // tundmatu viga, logib konsooli
                     userFriendlyMessage = "Unknown error. Please check console for details.";
                 }
-                
+
                 errorMessage += userFriendlyMessage;
-                
+
                 if (missionListElement) {
                     missionListElement.innerHTML = `
                         <div style='color: #d32f2f; text-align: center; padding: 20px;'>
@@ -4598,7 +4527,7 @@
                 if (userEmailElement) {
                     userEmailElement.textContent = "Unable to load";
                 }
-                
+
                 alert(`Error loading dashboard:\n\n${userFriendlyMessage}\n\nPlease check the browser console (F12) for more details.`);
             }
         }).catch((error) => {
@@ -4636,7 +4565,7 @@
                 mobileMenu.classList.toggle("active");
                 mobileMenuToggle.classList.toggle("active");
                 mobileMenuToggle.setAttribute("aria-expanded", !isActive);
-                
+
                 if (!isActive) {
                     document.body.style.overflow = "hidden";
                 } else {
@@ -4655,8 +4584,8 @@
             });
 
             document.addEventListener("click", (e) => {
-                if (mobileMenu.classList.contains("active") && 
-                    !mobileMenu.contains(e.target) && 
+                if (mobileMenu.classList.contains("active") &&
+                    !mobileMenu.contains(e.target) &&
                     !mobileMenuToggle.contains(e.target)) {
                     mobileMenu.classList.remove("active");
                     mobileMenuToggle.classList.remove("active");
@@ -4696,7 +4625,8 @@
                 carbonChartInstance = null;
             }
         });
-        
+
     </script>
 </body>
+
 </html>
