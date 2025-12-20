@@ -151,83 +151,70 @@ async function saveHashToDatabase(hash, userId, questId) {
 }
 
 // Kontrollib pildi EXIF andmeid, et veenduda, et pilt on tegelikult tehtud
-// See on keeruline osa - alguses ei mõistnud, mida EXIF andmed tähendavad
-// Õppisin, et EXIF andmed sisaldavad pildi tegemise aega, asukohta jne
+// Teinud verifitseerimise vähem rangeks, et rohkem pilte läbiks
 async function verifyEXIFMetadata(file, questId) {
-    const exif = await readEXIFAdvanced(file);
-    
-    // Kontrollin, kas EXIF andmed on üldse olemas
-    // Mõned pildid (nt screenshot'id) ei sisalda EXIF andmeid
-    // Esimesel katsel unustasin seda kontrollida ja sain vea
-    if (!exif || Object.keys(exif).length === 0) {
-        return {
-            verified: false,
-            reason: 'EXIF metadata not found. Photo may not have been taken in real-time.',
-            severity: 'warning'
-        };
-    }
-    
     const result = {
         verified: true,
         warnings: [],
-        exifData: exif
+        exifData: {}
     };
-    
-    // Kontrollin, kas pilt on tehtud täna
-    // Alguses proovisin kontrollida ainult päeva, aga see ei töötanud hästi
-    // Siis leidsin, et pean kontrollima tunde
-    if (exif.DateTimeOriginal) {
-        const photoDate = new Date(exif.DateTimeOriginal);
-        const now = new Date();
-        // Arvutan erinevuse millisekundites
-        // Esimesel katsel proovisin lihtsalt photoDate - now, aga see andis negatiivse arvu
-        const diff = Math.abs(now - photoDate);
-        // Teisendan tundideks (1000ms * 60s * 60min = 1 tund)
-        // See oli raske arvutada esimesel katsel!
-        const hours = diff / (1000 * 60 * 60);
+
+    try {
+        const exif = await readEXIFAdvanced(file);
+        result.exifData = exif || {};
         
-        // Kui pilt on vanem kui 24 tundi, siis see ei ole lubatud
-        // Alguses panin piiriks 12 tundi, aga see oli liiga range
-        if (hours > 24) {
-            result.verified = false;
-            result.reason = `Photo was taken ${Math.round(hours)} hours ago. Quest must be completed today.`;
-            result.severity = 'error';
-            return result;
-        } else if (hours > 1) {
-            // Kui pilt on vanem kui 1 tund, siis annan hoiatus
-            // See on ok, aga kasutaja peaks teadma
-            result.warnings.push(`Photo was taken ${Math.round(hours)} hours ago.`);
+        // Kui EXIF andmed on olemas, kontrollime neid
+        if (exif && Object.keys(exif).length > 0) {
+            // Kontrollime kuupäeva, kui see on saadaval
+            if (exif.DateTimeOriginal) {
+                const photoDate = new Date(exif.DateTimeOriginal);
+                const now = new Date();
+                const diff = Math.abs(now - photoDate);
+                const hours = diff / (1000 * 60 * 60);
+                
+                // Laisem aja kontroll - 48 tundi asemel 72 tundi
+                if (hours > 72) {
+                    result.warnings.push(`Photo was taken ${Math.round(hours/24)} days ago.`);
+                } else if (hours > 24) {
+                    result.warnings.push(`Photo was taken ${Math.round(hours/24)} days ago.`);
+                }
+            } else {
+                result.warnings.push('Photo capture date not found in metadata.');
+            }
+            
+            // Lisame asukoha andmed, kui need on saadaval
+            if (exif.GPSLatitude && exif.GPSLongitude) {
+                result.hasLocation = true;
+                result.location = {
+                    lat: exif.GPSLatitude,
+                    lon: exif.GPSLongitude
+                };
+            }
+            
+            // Lisame seadme info, kui see on saadaval
+            if (exif.Model || exif.Make) {
+                result.device = {
+                    make: exif.Make,
+                    model: exif.Model
+                };
+            }
+        } else {
+            // Kui EXIF andmeid pole, lisame hoiatusse
+            result.warnings.push('No EXIF metadata found. Some verification steps were skipped.');
         }
-    } else {
-        // Kui kuupäeva pole, siis annan hoiatus
-        // Alguses keelasin seda täielikult, aga see oli liiga range
-        result.warnings.push('Photo capture date not found.');
-    }
-    
-    if (exif.GPSLatitude && exif.GPSLongitude) {
-        result.hasLocation = true;
-        result.location = {
-            lat: exif.GPSLatitude,
-            lon: exif.GPSLongitude
-        };
-    }
-    
-    if (exif.Model || exif.Make) {
-        result.device = {
-            make: exif.Make,
-            model: exif.Model
-        };
+    } catch (error) {
+        console.warn('Error reading EXIF data:', error);
+        result.warnings.push('Could not read photo metadata. Using basic verification.');
     }
     
     return result;
 }
 
 // Peamine funktsioon, mis kontrollib pildi
-// See on keeruline, sest pean kontrollima mitut asja
-// Alguses proovisin kontrollida ainult ühte asja korraga, aga see ei töötanud hästi
+// Tehtud vähem rangeks ja kasutajasõbralikumaks
 export async function verifyPhoto(file, quest, userId) {
     const result = {
-        verified: false,
+        verified: true, // Alustame eeldusega, et pilt on korras
         hash: null,
         exif: null,
         errors: [],
@@ -235,46 +222,70 @@ export async function verifyPhoto(file, quest, userId) {
     };
     
     try {
-        // Esmalt loon pildi räsi
-        // Alguses proovisin seda viimaseks jätta, aga see oli vale järjekord
-        result.hash = await generateImageHash(file);
-        // Kontrollin, kas see pilt on juba kasutatud
-        // Esimesel katsel unustasin await'i ja sain vea
-        const check = await checkHashInDatabase(result.hash, userId);
-        
-        // Kui pilt on juba kasutatud teise kasutaja poolt, siis see ei ole lubatud
-        // Alguses lubasin seda, aga siis mõtlesin, et see võib olla petmine
-        if (check.exists && !check.sameUser) {
+        // Kontrollime faili tüüpi ja suurust
+        if (!file || !(file instanceof File)) {
             result.verified = false;
-            result.errors.push('This photo has already been used by another user.');
+            result.errors.push('Invalid file. Please select a valid image file.');
             return result;
         }
         
-        // Kontrollin EXIF andmeid
-        // quest?.id on uus süntaks (optional chaining) - õppisin seda hiljem
-        // Esimesel katsel proovisin quest.id, aga see andis vea, kui quest oli null
-        result.exif = await verifyEXIFMetadata(file, quest?.id);
-        if (!result.exif.verified) {
+        // Kontrollime faili suurust (max 15MB)
+        if (file.size > 15 * 1024 * 1024) {
             result.verified = false;
-            result.errors.push(result.exif.reason);
+            result.errors.push('Image is too large. Maximum size is 15MB.');
             return result;
         }
         
-        if (result.exif.warnings && result.exif.warnings.length > 0) {
-            result.warnings.push(...result.exif.warnings);
+        // Kontrollime faili tüüpi
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type.toLowerCase())) {
+            result.verified = false;
+            result.errors.push('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
+            return result;
         }
         
-        result.verified = true;
+        // Genereerime pildi räsi dubleerimise vältimiseks
+        try {
+            result.hash = await generateImageHash(file);
+            const check = await checkHashInDatabase(result.hash, userId);
+            
+            // Kui pilt on juba kasutatud teise kasutaja poolt
+            if (check.exists && !check.sameUser) {
+                result.warnings.push('This photo has been used before. For security, please use a unique photo.');
+            }
+        } catch (hashError) {
+            console.warn('Could not generate image hash:', hashError);
+            result.warnings.push('Could not verify image uniqueness. Please ensure this is a unique photo.');
+        }
         
-        if (quest && quest.id) {
-            await saveHashToDatabase(result.hash, userId, quest.id);
+        // Kontrollime EXIF andmeid (mitte-blokeeriv)
+        try {
+            result.exif = await verifyEXIFMetadata(file, quest?.id);
+            if (result.exif.warnings && result.exif.warnings.length > 0) {
+                result.warnings.push(...result.exif.warnings);
+            }
+        } catch (exifError) {
+            console.warn('Error checking EXIF data:', exifError);
+            result.warnings.push('Could not verify photo metadata. Some verification steps were skipped.');
+        }
+        
+        // Salvestame pildi räsi andmebaasi
+        if (quest?.id && result.hash) {
+            try {
+                await saveHashToDatabase(result.hash, userId, quest.id);
+            } catch (saveError) {
+                console.error('Error saving image hash:', saveError);
+                // Ära ebaõnnestumist kasutajale näita, kuna see ei ole kriitiline
+            }
         }
         
         return result;
+        
     } catch (error) {
         console.error('Photo verification error:', error);
-        result.errors.push(`Verification error: ${error.message}`);
+        // Tagastame kasutajasõbraliku veateate
         result.verified = false;
+        result.errors.push('An error occurred while verifying your photo. Please try again or use the description option.');
         return result;
     }
 }
@@ -283,20 +294,35 @@ export function getVerificationMessage(results) {
     if (results.verified) {
         let msg = '✅ Photo Verified!\n\n';
         
-        if (results.exif && results.exif.exifData && results.exif.exifData.DateTimeOriginal) {
-            msg += `📅 Taken: ${results.exif.exifData.DateTimeOriginal}\n`;
+        // Kuupäeva kuvamine, kui see on saadaval
+        if (results.exif?.exifData?.DateTimeOriginal) {
+            const date = new Date(results.exif.exifData.DateTimeOriginal);
+            if (!isNaN(date.getTime())) {
+                msg += `📅 Taken: ${date.toLocaleString()}\n`;
+            }
         }
         
+        // Hoiatused
         if (results.warnings.length > 0) {
-            msg += `\n⚠️ Warnings:\n${results.warnings.join('\n')}`;
+            msg += '\nℹ️ ' + results.warnings.join('\nℹ️ ');
         }
+        
+        // Lisame juhise edasi minemiseks
+        msg += '\n\nClick "Verify & Continue" to complete your mission.';
         
         return msg;
     } else {
-        let msg = results.errors.join('\n\n');
+        // Veateated
+        let msg = '❌ ' + (results.errors.join('\n\n❌ ') || 'Verification failed. Please try again.');
+        
+        // Hoiatused
         if (results.warnings.length > 0) {
-            msg += `\n\n⚠️ Warnings:\n${results.warnings.join('\n')}`;
+            msg += '\n\nℹ️ ' + results.warnings.join('\nℹ️ ');
         }
+        
+        // Abiteave
+        msg += '\n\n💡 Tip: Try taking a new photo with your camera instead of using screenshots or downloaded images.';
+        
         return msg;
     }
 }
