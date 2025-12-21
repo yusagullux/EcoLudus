@@ -24,7 +24,7 @@ export function calculateLevel(xp) {
 
 export function getXPRequiredForLevel(level) {
     if (level <= 1) return LEVEL_MILESTONES[1] - LEVEL_MILESTONES[0]; // 100
-    if (level >= MAX_LEVEL) return Infinity; // Max level reached
+    if (level >= MAX_LEVEL) return Infinity; // Maksimumtase saavutatud
     return LEVEL_MILESTONES[level] - LEVEL_MILESTONES[level - 1];
 }
 
@@ -38,7 +38,7 @@ export function getXPProgress(xp, currentLevel = null) {
     const safeXP = Math.max(0, parseInt(xp) || 0);
     const level = currentLevel || calculateLevel(safeXP);
 
-    // If max level, show full bar or handle gracefully
+    // Maksimumtaseme korral kuva täisriba
     if (level >= MAX_LEVEL) {
         return {
             current: safeXP - LEVEL_MILESTONES[MAX_LEVEL - 1],

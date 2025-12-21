@@ -281,18 +281,18 @@
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { db } from "../js/firebase-config.js";
 
-        // Helkuri kuvamise funktsioon, kontrollib taseme põhjal õige pildi ja näitab seda
+        // Kuvab kasutaja tasemele vastava märgi (badge)
         function displayBadge(badgeElement, level, animate = false) {
-            // kontrollib, et level oleks kehtiv (1-9), muidu võib tekkida bug
+            // Kontrollib taseme kehtivust
             const badgeImage = getBadgeImageForLevel(level);
             const badgeName = getBadgeNameForLevel(level);
 
-            // eemaldab eelneva animatsiooni, et vältida konflikte
+            // Eemaldab eelmise animatsiooni
             badgeElement.classList.remove('badge-unlock');
-            // tühjendab elemendi, et vältida topeltkuvamist
+            // Tühjendab konteineri
             badgeElement.innerHTML = '';
 
-            // loob uue pildi elemendi ja määrab selle atribuudid
+            // Loob ja seadistab pildi elemendi
             const img = document.createElement('img');
             img.src = badgeImage;
             img.alt = `${badgeName} Badge`;
@@ -302,7 +302,7 @@
             badgeElement.appendChild(img);
             badgeElement.title = `${badgeName} Badge`;
 
-            // animatsioon uue helkuri avamisel, void offsetWidth sunnib brauserit uuesti renderdama
+            // Käivitab animatsiooni (vajalik reflow)
             if (animate) {
                 void badgeElement.offsetWidth; // tagab, et animatsioon töötab korrektselt
                 badgeElement.classList.add('badge-unlock');
@@ -2556,19 +2556,14 @@
                     const successMessage = getVerificationMessage(verificationResult);
 
                     // Kullanıcıya bilgi göster (opsiyonel - sadece uyarılar varsa)
-                    if (verificationResult.warnings.length > 0) {
-                        const showDetails = confirm(successMessage + '\n\nDevam etmek istiyor musunuz?');
+                    if (verificationResult.warnings && verificationResult.warnings.length > 0) {
+                        const showDetails = confirm(successMessage + '\n\nDo you want to continue?');
                         if (!showDetails) {
                             if (photoUploadBtn) {
                                 photoUploadBtn.disabled = false;
                                 photoUploadBtn.textContent = 'Verify & Continue';
                             }
                             return;
-                        }
-                    } else {
-                        // Sadece başarı mesajı göster
-                        if (verificationResult.messages.length > 0) {
-                            alert(successMessage);
                         }
                     }
 
@@ -2586,13 +2581,13 @@
                     }, 100);
 
                 } catch (error) {
-                    console.error('Fotoğraf doğrulama hatası:', error);
+                    console.error('Photo verification error:', error);
 
                     if (photoLoadingIndicator) {
                         photoLoadingIndicator.style.display = 'none';
                     }
 
-                    alert('Fotoğraf doğrulama sırasında bir hata oluştu: ' + error.message);
+                    alert('An error occurred during photo verification: ' + error.message);
 
                     if (photoUploadBtn) {
                         photoUploadBtn.disabled = false;

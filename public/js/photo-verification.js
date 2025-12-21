@@ -1,24 +1,14 @@
-// võtsin stackoverflow'st EXIF andmete lugemiseks
-// Esimesel katsel proovisin lihtsalt file.read() aga see ei töötanud
-// Siis leidsin, et pean kasutama FileReader API-d
-// Proovisin ka EXIF.js teeki, aga see ei töötanud kõigil telefonidel
-// See on keeruline kood, aga see töötab
+// EXIF andmete lugemine failist
 function readEXIFData(file) {
     return new Promise((resolve, reject) => {
-        // Alguses proovisin ilma Promise'ita, aga see ei töötanud
-        // Õppisin, et FileReader on asünkroonne ja vajab Promise'i
         const reader = new FileReader();
         reader.onload = function (e) {
-            // DataView on vajalik, et lugeda binaarandmeid
-            // Esimesel katsel proovisin lihtsalt string'ina, aga see ei töötanud
             try {
                 const view = new DataView(e.target.result);
                 let offset = 0;
                 const length = view.byteLength;
 
-                // Kontrollin, kas see on JPEG fail (algab 0xFFD8-ga)
-                // Kui ei ole, siis ei ole EXIF andmeid
-                // Proovisin ka PNG ja GIF, aga need ei toeta EXIF'i nii hästi
+                // Kontrolli, kas fail on JPEG (algab 0xFFD8)
                 if (view.getUint16(offset) !== 0xFFD8) {
                     resolve(null);
                     return;
@@ -61,18 +51,12 @@ function readEXIFData(file) {
     });
 }
 
-// See funktsioon proovib kõigepealt kasutada EXIF.js teeki
-// Kui see ei ole laetud, siis kasutab oma funktsiooni
-// Alguses proovisin ainult ühte meetodit, aga see ei töötanud kõigil seadmetel
+// Proovib kasutada EXIF.js teeki, kui saadaval, muidu kasutab readEXIFData
 async function readEXIFAdvanced(file) {
-    // Kontrollin, kas EXIF.js on laetud
-    // Esimesel katsel unustasin seda kontrollida ja sain errorit.
     if (typeof EXIF !== 'undefined') {
         return new Promise((resolve) => {
-            // EXIF.js on lihtsam kasutada, aga ei tööta alati
             try {
                 EXIF.getData(file, function () {
-                    // Proovisin alguses ainult DateTimeOriginal'i, aga siis lisasin ka teised väljad
                     try {
                         const exif = {
                             DateTimeOriginal: EXIF.getTag(this, 'DateTimeOriginal'),
@@ -92,25 +76,14 @@ async function readEXIFAdvanced(file) {
             }
         });
     }
-    // Kui EXIF.js ei ole, siis kasutan oma funktsiooni
-    // See on tagavara variant
     return await readEXIFData(file);
 }
 
-// See funktsioon loob pildile koodi, et kontrollida, kas sama pilt on juba kasutatud
-// Alguses proovisin lihtsalt file.name'i kasutada, aga see ei töötanud (failinimi võib olla sama)
-// Siis leidsin crypto.subtle.digest() meetodi
-// Esimesel katsel unustasin await'i ja sain errorit
+// Genereerib pildi SHA-256 räsi duplikaatide tuvastamiseks
 const generateImageHash = async (file) => {
     try {
-        // Pean esmalt saama ArrayBuffer'i
-        // Proovisin ka file.text(), aga see ei töötanud piltide jaoks
         const buffer = await file.arrayBuffer();
-        // SHA-256 on turvaline koodialgoritm
-        // Proovisin ka MD5'd, aga see on vananenud
         const hash = await crypto.subtle.digest('SHA-256', buffer);
-        // Teisendan koodi hex string'iks
-        // Esimesel katsel proovisin lihtsalt toString(16), aga see ei andnud õiget formaati
         const arr = Array.from(new Uint8Array(hash));
         return arr.map(b => b.toString(16).padStart(2, '0')).join('');
     } catch (e) {
@@ -119,23 +92,14 @@ const generateImageHash = async (file) => {
     }
 }
 
-// Kontrollib, kas sama pilt on juba kasutatud
-// Alguses proovisin salvestada Firestore'i, aga see oli liiga aeglane
-// Siis leidsin localStorage'i, mis on kiirem
-// Esimesel katsel unustasin kontrollida, kas localStorage on tühi
+// Kontrollib, kas pilt on juba kasutatud
 async function checkHashInDatabase(hash, userId) {
     try {
         const key = 'ecoquest_photo_hashes';
-        // || '[]' tagab, et kui localStorage on tühi, siis saame tühja massiivi
-        // Esimesel katsel sain vea, kui localStorage oli tühi
         const hashes = JSON.parse(localStorage.getItem(key) || '[]');
-        // Otsin, kas see hash on juba olemas
-        // Proovisin ka for loop'i, aga find() on lihtsam
         const found = hashes.find(h => h.hash === hash);
 
         if (found) {
-            // Kontrollin, kas sama kasutaja kasutab sama pilti uuesti
-            // See on lubatud (nt kui ta teeb sama quest'i uuesti)
             if (found.userId !== userId) {
                 return {
                     exists: true,
@@ -143,7 +107,6 @@ async function checkHashInDatabase(hash, userId) {
                     usedAt: found.timestamp
                 };
             }
-            // Sama kasutaja võib sama pildi uuesti kasutada
             return { exists: false, sameUser: true };
         }
 
@@ -153,6 +116,7 @@ async function checkHashInDatabase(hash, userId) {
     }
 }
 
+// Salvestab pildi räsi andmebaasi
 async function saveHashToDatabase(hash, userId, questId) {
     try {
         const storageKey = 'ecoquest_photo_hashes';
@@ -165,7 +129,7 @@ async function saveHashToDatabase(hash, userId, questId) {
             timestamp: new Date().toISOString()
         });
 
-        // hoia alles viimased 1000
+        // Hoia alles viimased 1000
         if (storedHashes.length > 1000) {
             storedHashes = storedHashes.slice(-1000);
         }
@@ -176,8 +140,7 @@ async function saveHashToDatabase(hash, userId, questId) {
     }
 }
 
-// Kontrollib pildi EXIF andmeid, et veenduda, et pilt on tegelikult tehtud
-// Teinud verifitseerimise vähem rangeks, et rohkem pilte läbiks
+// Kontrollib pildi EXIF metaandmeid
 async function verifyEXIFMetadata(file, questId) {
     const result = {
         verified: true,
@@ -189,9 +152,8 @@ async function verifyEXIFMetadata(file, questId) {
         const exif = await readEXIFAdvanced(file);
         result.exifData = exif || {};
 
-        // Kui EXIF andmed on olemas, kontrollime neid
         if (exif && Object.keys(exif).length > 0) {
-            // Kontrollime kuupäeva, kui see on saadaval
+            // Kontrolli kuupäeva
             if (exif.DateTimeOriginal) {
                 const photoDate = new Date(exif.DateTimeOriginal);
                 const now = new Date();
@@ -200,7 +162,6 @@ async function verifyEXIFMetadata(file, questId) {
                     const diff = Math.abs(now - photoDate);
                     const hours = diff / (1000 * 60 * 60);
 
-                    // Laisem aja kontroll - 72 tundi (3 päeva)
                     if (hours > 168) { // 7 päeva
                         result.warnings.push(`Photo was taken ${Math.round(hours / 24)} days ago.`);
                     }
@@ -209,7 +170,7 @@ async function verifyEXIFMetadata(file, questId) {
                 result.warnings.push('Photo capture date not found in metadata.');
             }
 
-            // Lisame asukoha andmed, kui need on saadaval
+            // Lisa asukoha andmed
             if (exif.GPSLatitude && exif.GPSLongitude) {
                 result.hasLocation = true;
                 result.location = {
@@ -218,7 +179,7 @@ async function verifyEXIFMetadata(file, questId) {
                 };
             }
 
-            // Lisame seadme info, kui see on saadaval
+            // Lisa seadme info
             if (exif.Model || exif.Make) {
                 result.device = {
                     make: exif.Make,
@@ -226,8 +187,6 @@ async function verifyEXIFMetadata(file, questId) {
                 };
             }
         } else {
-            // Kui EXIF andmeid pole, lisame hoiatusse, aga EI BLOKEERI
-            // See on oluline muudatus, et toetada mobiile
             result.warnings.push('No EXIF metadata found. Some verification steps were skipped.');
         }
     } catch (error) {
@@ -238,11 +197,10 @@ async function verifyEXIFMetadata(file, questId) {
     return result;
 }
 
-// Peamine funktsioon, mis kontrollib pildi
-// Tehtud vähem rangeks ja kasutajasõbralikumaks
+// Peamine foto kontrollimise funktsioon
 export async function verifyPhoto(file, quest, userId) {
     const result = {
-        verified: true, // Alustame eeldusega, et pilt on korras
+        verified: true,
         hash: null,
         exif: null,
         errors: [],
@@ -250,22 +208,21 @@ export async function verifyPhoto(file, quest, userId) {
     };
 
     try {
-        // Kontrollime faili tüüpi ja suurust
+        // Kontrolli faili olemasolu
         if (!file || !(file instanceof File)) {
             result.verified = false;
             result.errors.push('Invalid file. Please select a valid image file.');
             return result;
         }
 
-        // Kontrollime faili suurust (max 15MB)
+        // Kontrolli faili suurust (max 15MB)
         if (file.size > 15 * 1024 * 1024) {
             result.verified = false;
             result.errors.push('Image is too large. Maximum size is 15MB.');
             return result;
         }
 
-        // Kontrollime faili tüüpi
-        // Laiendasime toetatud failitüüpe
+        // Kontrolli faili tüüpi
         const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
         if (!validTypes.includes(file.type.toLowerCase()) && !file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/)) {
             result.verified = false;
@@ -273,12 +230,11 @@ export async function verifyPhoto(file, quest, userId) {
             return result;
         }
 
-        // Genereerime pildi räsi dubleerimise vältimiseks
+        // Genereeri räsi
         try {
             result.hash = await generateImageHash(file);
             const check = await checkHashInDatabase(result.hash, userId);
 
-            // Kui pilt on juba kasutatud teise kasutaja poolt
             if (check.exists && !check.sameUser) {
                 result.warnings.push('This photo has been used before. For security, please use a unique photo.');
             }
@@ -287,7 +243,7 @@ export async function verifyPhoto(file, quest, userId) {
             result.warnings.push('Could not verify image uniqueness. Please ensure this is a unique photo.');
         }
 
-        // Kontrollime EXIF andmeid (mitte-blokeeriv)
+        // Kontrolli EXIF andmeid
         try {
             result.exif = await verifyEXIFMetadata(file, quest?.id);
             if (result.exif.warnings && result.exif.warnings.length > 0) {
@@ -298,13 +254,12 @@ export async function verifyPhoto(file, quest, userId) {
             result.warnings.push('Could not verify photo metadata. Some verification steps were skipped.');
         }
 
-        // Salvestame pildi räsi andmebaasi
+        // Salvesta räsi
         if (quest?.id && result.hash) {
             try {
                 await saveHashToDatabase(result.hash, userId, quest.id);
             } catch (saveError) {
                 console.error('Error saving image hash:', saveError);
-                // Ära ebaõnnestumist kasutajale näita, kuna see ei ole kriitiline
             }
         }
 
@@ -312,18 +267,17 @@ export async function verifyPhoto(file, quest, userId) {
 
     } catch (error) {
         console.error('Photo verification error:', error);
-        // Tagastame kasutajasõbraliku veateate
         result.verified = false;
         result.errors.push('An error occurred while verifying your photo. Please try again or use the description option.');
         return result;
     }
 }
 
+// Genereerib kasutajale kuvatava teate
 export function getVerificationMessage(results) {
     if (results.verified) {
         let msg = '✅ Photo Verified!\n\n';
 
-        // Kuupäeva kuvamine, kui see on saadaval
         if (results.exif?.exifData?.DateTimeOriginal) {
             const date = new Date(results.exif.exifData.DateTimeOriginal);
             if (!isNaN(date.getTime())) {
@@ -331,25 +285,20 @@ export function getVerificationMessage(results) {
             }
         }
 
-        // Hoiatused
         if (results.warnings.length > 0) {
             msg += '\nℹ️ ' + results.warnings.join('\nℹ️ ');
         }
 
-        // Lisame juhise edasi minemiseks
         msg += '\n\nClick "Verify & Continue" to complete your mission.';
 
         return msg;
     } else {
-        // Veateated
         let msg = '❌ ' + (results.errors.join('\n\n❌ ') || 'Verification failed. Please try again.');
 
-        // Hoiatused
         if (results.warnings.length > 0) {
             msg += '\n\nℹ️ ' + results.warnings.join('\nℹ️ ');
         }
 
-        // Abiteave
         msg += '\n\n💡 Tip: Try taking a new photo with your camera instead of using screenshots or downloaded images.';
 
         return msg;
