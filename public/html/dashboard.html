@@ -836,18 +836,84 @@
         // laadib missioonide loendi, tagab et vead ei katkesta rakendust
         async function loadQuests() {
             try {
-                const response = await fetch('../quests.md');
-                // kontrollib HTTP staatust enne teksti lugemist
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                let quests = [];
+                try {
+                    const response = await fetch('../quests.md');
+                    if (response.ok) {
+                        const text = await response.text();
+                        quests = parseQuests(text);
+                    }
+                } catch (e) {
+                    console.warn("quests.md fetch failed, attempting fallback to JSON");
                 }
-                const text = await response.text();
-                const quests = parseQuests(text);
-                // tagab, et tagastatakse alati massiiv, isegi kui parsing ebaõnnestub
+
+                if (!quests || quests.length === 0) {
+                    console.log("Using quests.json fallback");
+                    return await loadQuestsFromJSONMapping();
+                }
+
                 return Array.isArray(quests) ? quests : [];
             } catch (error) {
-                // logib vea, aga ei katkesta rakendust, tagastab tühja massiivi
                 console.error("Error loading quests:", error);
+                // Last resort fallback
+                return await loadQuestsFromJSONMapping();
+            }
+        }
+
+        async function loadQuestsFromJSONMapping() {
+            try {
+                const questsData = await loadQuestsData();
+                if (!questsData || !questsData.categories) return [];
+
+                const mappedQuests = [];
+                for (const [id, mapping] of Object.entries(QUEST_ID_MAPPING)) {
+                    let questData = null;
+
+                    if (mapping.jsonIds) {
+                        for (const jsonId of mapping.jsonIds) {
+                            for (const category of questsData.categories) {
+                                if (category.quests) {
+                                    const found = category.quests.find(q => q.id === jsonId);
+                                    if (found) {
+                                        questData = found;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (questData) break;
+                        }
+                    }
+
+                    if (questData) {
+                        mappedQuests.push({
+                            id: id,
+                            title: questData.shortName || questData.description || `Mission ${id}`,
+                            description: questData.description || "",
+                            reward: `${questData.xp || 35} XP`,
+                            xp: questData.xp || 35,
+                            category: mapping.category || "unknown",
+                            categoryName: mapping.categoryName || "Unknown",
+                            categoryIcon: mapping.categoryIcon || "📋",
+                            categoryColor: mapping.categoryColor || "#999999"
+                        });
+                    } else {
+                        // Fallback placeholder if specific JSON quest not found
+                        mappedQuests.push({
+                            id: id,
+                            title: `Mission ${id}`,
+                            description: "Complete this eco-friendly task.",
+                            reward: "35 XP",
+                            xp: 35,
+                            category: mapping.category || "unknown",
+                            categoryName: mapping.categoryName || "Unknown",
+                            categoryIcon: mapping.categoryIcon || "📋",
+                            categoryColor: mapping.categoryColor || "#999999"
+                        });
+                    }
+                }
+                return mappedQuests;
+            } catch (err) {
+                console.error("Error generating fallback quests:", err);
                 return [];
             }
         }
@@ -4369,7 +4435,7 @@
                     const missionListElement = document.getElementById("missionList");
                     if (allQuests.length === 0) {
                         if (missionListElement) {
-                            missionListElement.innerHTML = "<p style='color: #999; text-align: center; padding: 20px;'>No missions available. Please check quests.md file.</p>";
+                            missionListElement.innerHTML = "<p style='color: #999; text-align: center; padding: 20px;'>No missions available. Please check quests.json or quests.md file.</p>";
                         }
                     } else {
                         try {
