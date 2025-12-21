@@ -82,7 +82,7 @@ function groupAnimalsByType(animals) {
 function renderCollection(items) {
     const plantsGrid = document.getElementById("plantsGrid");
     const emptyCollection = document.getElementById("emptyCollection");
-    
+
     if (!plantsGrid) return;
 
     if (items.length === 0) {
@@ -113,12 +113,12 @@ function renderCollection(items) {
         emptyCollection.style.display = "none";
     }
 
-    // Grupeeri üksused tüübi järgi
-    const groupedItems = collectionMode === "plants" 
+    // Grupeerib üksused tüübi järgi
+    const groupedItems = collectionMode === "plants"
         ? groupPlantsByType(items)
         : groupAnimalsByType(items);
-    
-    // Filtreeri harulduse järgi kui vaja
+
+    // Filtreerib harulduse järgi (vajadusel)
     let filteredItems = groupedItems;
     if (currentFilter !== "all") {
         filteredItems = groupedItems.filter(item => item.rarity === currentFilter);
@@ -136,7 +136,7 @@ function renderCollection(items) {
     }
 
     filteredItems.forEach(itemGroup => {
-        const card = collectionMode === "plants" 
+        const card = collectionMode === "plants"
             ? createCollectionCard(itemGroup)
             : createAnimalCard(itemGroup);
         plantsGrid.appendChild(card);
@@ -148,7 +148,7 @@ let userActivePet = null;
 function createAnimalCard(animalGroup) {
     const card = document.createElement("div");
     card.className = `plant-card ${animalGroup.rarity} collection-card animal-card`;
-    
+
     const isActivePet = userActivePet && userActivePet.id === animalGroup.id;
 
     const placeholderImageUrl = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23f5f5f5%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-family=%22Arial%22 font-size=%2214%22%3E🐾%3C/text%3E%3C/svg%3E';
@@ -213,7 +213,7 @@ async function handleSetActivePet(animalGroup) {
         };
 
         showToast(`⭐ ${animalGroup.name} is now your active pet!`, "success");
-        
+
         filterCollection(currentFilter);
 
     } catch (error) {
@@ -268,7 +268,7 @@ function createCollectionCard(plantGroup) {
 
 function filterCollection(selectedRarity) {
     currentFilter = selectedRarity;
-    
+
     const filterButtons = document.querySelectorAll(".filter-btn");
     filterButtons.forEach(button => {
         button.classList.remove("active");
@@ -278,8 +278,8 @@ function filterCollection(selectedRarity) {
     });
 
     const itemsToFilter = collectionMode === "plants" ? userCollection : userAnimals;
-    const filteredList = selectedRarity === DEFAULT_FILTER 
-        ? itemsToFilter 
+    const filteredList = selectedRarity === DEFAULT_FILTER
+        ? itemsToFilter
         : itemsToFilter.filter(item => item.rarity === selectedRarity);
 
     renderCollection(filteredList);
@@ -294,7 +294,7 @@ function switchCollectionMode(mode) {
             btn.classList.add("active");
         }
     });
-    
+
     filterCollection(currentFilter);
 }
 
@@ -304,7 +304,7 @@ async function loadUserData() {
         loadingMessage.textContent = "Loading your collection...";
         loadingMessage.style.display = "block";
     }
-    
+
     try {
         const profileResult = await getUserProfile(currentUser.uid);
         if (!profileResult.success) {
@@ -379,9 +379,9 @@ async function checkHatchings() {
     const updatedHatchings = [];
     const newAnimals = [];
 
-        for (const hatching of userHatchings) {
-            if (hatching.endTime <= now) {
-                const animal = getRandomAnimal(hatching.rarity);
+    for (const hatching of userHatchings) {
+        if (hatching.endTime <= now) {
+            const animal = getRandomAnimal(hatching.rarity);
             newAnimals.push({
                 ...animal,
                 hatchedAt: new Date().toISOString(),
@@ -400,12 +400,12 @@ async function checkHatchings() {
         });
         userHatchings = updatedHatchings;
         userAnimals = updatedAnimals;
-        
+
         for (const animal of newAnimals) {
             await showHatchingAnimation(animal);
             showToast(`🎉 ${animal.name} hatched from your egg!`, "success");
         }
-        
+
         updateCollectionStats();
     } else if (updatedHatchings.length !== userHatchings.length) {
         await updateUserProfile(currentUser.uid, {
@@ -439,20 +439,20 @@ async function showHatchingAnimation(animal) {
             <div class="sparkle sparkle-3"></div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     setTimeout(() => {
         modal.querySelector(".egg-crack-animation").classList.add("cracking");
     }, 500);
-    
+
     setTimeout(() => {
         modal.querySelector(".egg-crack-animation").style.display = "none";
         const animalReveal = modal.querySelector(".animal-reveal");
         animalReveal.style.display = "block";
         animalReveal.classList.add("revealed");
     }, 2000);
-    
+
     setTimeout(() => {
         modal.classList.add("fade-out");
         setTimeout(() => {
@@ -510,18 +510,18 @@ function getRandomAnimal(rarity) {
             { id: "animal_legendary_6", name: "Octapus", image: "../images/pets/octapus.png", rarity: "legendary", weight: 1 }
         ]
     };
-    
+
     const animals = ANIMALS[rarity] || ANIMALS.common;
     const totalWeight = animals.reduce((sum, animal) => sum + (animal.weight || 1), 0);
     let random = Math.random() * totalWeight;
-    
+
     for (const animal of animals) {
         random -= (animal.weight || 1);
         if (random <= 0) {
             return animal;
         }
     }
-    
+
     return animals[0];
 }
 
@@ -570,7 +570,7 @@ function initializeCollection() {
             mobileMenu.classList.toggle("active");
             mobileMenuToggle.classList.toggle("active");
             mobileMenuToggle.setAttribute("aria-expanded", !isActive);
-            
+
             if (!isActive) {
                 document.body.style.overflow = "hidden";
             } else {

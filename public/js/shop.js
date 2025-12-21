@@ -71,29 +71,20 @@ const ANIMALS = {
 };
 
 // Valib juhusliku looma kaalutud tõenäosusega
-// See on keeruline algoritm. alguses proovisin lihtsalt Math.random(), aga see ei andnud õiget tõenäosust
-// Siis leidsin kaalutud juhusliku valiku. see võttis mul aega õppida
-// Esimesel katsel proovisin lihtsalt animals[Math.floor(Math.random() * animals.length)], aga see ei arvestas weight'iga
 function getRandomAnimal(rarity) {
-    // || ANIMALS.common tähendab, et kui rarity puudub, siis kasutan common
-    // Esimesel katsel unustasin seda ja sain errorit, kui rarity oli vale
     const animals = ANIMALS[rarity] || ANIMALS.common;
-    // reduce() liidab kokku kõik weight'id
-    // See oli raske mõista esimesel katsel. õppisin reduce() meetodit
     const totalWeight = animals.reduce((sum, animal) => sum + (animal.weight || 1), 0);
-    // Genereerin juhusliku arvu 0 ja totalWeight vahel
-    // Esimesel katsel proovisin Math.random() ilma korrutamist, aga see ei töötanud
+    // Genereerib juhusliku arvu vahemikus 0 kuni totalWeight
     let random = Math.random() * totalWeight;
-    
-    // Otsin, milline loom vastab sellele juhuslikule arvule
-    // See on kaalutud valik. loomad suurema weight'iga on tõenäolisemad
+
+    // Leiab looma vastavalt kaalule
     for (const animal of animals) {
         random -= (animal.weight || 1);
         if (random <= 0) {
             return animal;
         }
     }
-    
+
     return animals[0];
 }
 
@@ -156,7 +147,7 @@ const PLANTS = [
         rarity: "rare",
         price: 160
     },
-    // Legendary taimed
+    // Eepilised taimed
     {
         id: "plant_9",
         name: "Bamboo",
@@ -185,7 +176,7 @@ const PLANTS = [
         rarity: "epic",
         price: 420
     },
-    // Legendary taimed
+    // Legendaarsed taimed
     {
         id: "plant_13",
         name: "Golden Tree",
@@ -269,7 +260,7 @@ function createEggCard(eggData) {
     const canAffordEgg = userEcoPoints >= eggData.price;
 
     const placeholderImageUrl = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23f5f5f5%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-family=%22Arial%22 font-size=%2214%22%3E🥚%3C/text%3E%3C/svg%3E';
-    
+
     cardElement.innerHTML = `
         <div class="rarity-badge ${eggData.rarity}">${eggData.rarity}</div>
         <div class="plant-image-container egg-image-container">
@@ -309,7 +300,7 @@ function createPlantCard(plantData) {
     const ownedCount = userCollection.filter(ownedPlant => ownedPlant.id === plantData.id).length;
 
     const placeholderImageUrl = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23f5f5f5%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-family=%22Arial%22 font-size=%2214%22%3E🌱%3C/text%3E%3C/svg%3E';
-    
+
     cardElement.innerHTML = `
         <div class="rarity-badge ${plantData.rarity}">${plantData.rarity}</div>
         <div class="plant-image-container">
@@ -341,7 +332,7 @@ function createPlantCard(plantData) {
 
 function filterPlants(selectedRarity) {
     currentFilter = selectedRarity;
-    
+
     const filterButtons = document.querySelectorAll(".filter-btn");
     filterButtons.forEach(button => {
         button.classList.remove("active");
@@ -351,8 +342,8 @@ function filterPlants(selectedRarity) {
     });
 
     const itemsToFilter = shopMode === "eggs" ? EGGS : PLANTS;
-    const filteredList = selectedRarity === DEFAULT_FILTER 
-        ? itemsToFilter 
+    const filteredList = selectedRarity === DEFAULT_FILTER
+        ? itemsToFilter
         : itemsToFilter.filter(item => item.rarity === selectedRarity);
 
     renderPlants(filteredList);
@@ -367,18 +358,18 @@ function switchShopMode(mode) {
             btn.classList.add("active");
         }
     });
-    
+
     const headerTitle = document.querySelector(".shop-header h1");
     if (headerTitle) {
         headerTitle.textContent = mode === "eggs" ? "🥚 Egg Shop" : "🌱 Plant Shop";
     }
-    
+
     filterPlants(currentFilter);
 }
 
 async function loadUserData() {
     showLoadingState(true);
-    
+
     try {
         const profileResult = await getUserProfile(currentUser.uid);
         if (!profileResult.success) {
@@ -438,7 +429,7 @@ function createHatchingCard(hatching, index) {
     const hours = Math.floor(remaining / 3600000);
     const minutes = Math.floor((remaining % 3600000) / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
-    
+
     let timeDisplay = "";
     if (hours > 0) {
         timeDisplay = `${hours}h ${minutes}m`;
@@ -488,12 +479,12 @@ function startHatchingTimer() {
         userHatchings.forEach((hatching, index) => {
             const remaining = Math.max(0, hatching.endTime - now);
             const timerElement = document.getElementById(`timer-${index}`);
-            
+
             if (timerElement && remaining > 0) {
                 const hours = Math.floor(remaining / 3600000);
                 const minutes = Math.floor((remaining % 3600000) / 60000);
                 const seconds = Math.floor((remaining % 60000) / 1000);
-                
+
                 let timeDisplay = "";
                 if (hours > 0) {
                     timeDisplay = `${hours}h ${minutes}m`;
@@ -502,9 +493,9 @@ function startHatchingTimer() {
                 } else {
                     timeDisplay = `${seconds}s`;
                 }
-                
+
                 timerElement.textContent = timeDisplay;
-                
+
                 const total = hatching.endTime - hatching.startTime;
                 const progress = Math.min(100, ((total - remaining) / total) * 100);
                 const progressFill = timerElement.closest('.hatching-card')?.querySelector('.progress-fill');
@@ -547,20 +538,20 @@ async function showHatchingAnimation(animal) {
             <div class="sparkle sparkle-3"></div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     setTimeout(() => {
         modal.querySelector(".egg-crack-animation").classList.add("cracking");
     }, 500);
-    
+
     setTimeout(() => {
         modal.querySelector(".egg-crack-animation").style.display = "none";
         const animalReveal = modal.querySelector(".animal-reveal");
         animalReveal.style.display = "block";
         animalReveal.classList.add("revealed");
     }, 2000);
-    
+
     setTimeout(() => {
         modal.classList.add("fade-out");
         setTimeout(() => {
@@ -587,9 +578,9 @@ async function checkHatchings() {
     const updatedHatchings = [];
     const newAnimals = [];
 
-        for (const hatching of userHatchings) {
-            if (hatching.endTime <= now) {
-                const animal = getRandomAnimal(hatching.rarity);
+    for (const hatching of userHatchings) {
+        if (hatching.endTime <= now) {
+            const animal = getRandomAnimal(hatching.rarity);
             newAnimals.push({
                 ...animal,
                 hatchedAt: new Date().toISOString(),
@@ -608,12 +599,12 @@ async function checkHatchings() {
         });
         userHatchings = updatedHatchings;
         userAnimals = updatedAnimals;
-        
+
         for (const animal of newAnimals) {
             await showHatchingAnimation(animal);
             showToast(`🎉 ${animal.name} hatched from your egg!`, "success");
         }
-        
+
         renderHatchings();
     } else if (updatedHatchings.length !== userHatchings.length) {
         await updateUserProfile(currentUser.uid, {
@@ -633,7 +624,7 @@ async function handleBuyEgg(eggData) {
     try {
         const updatedEcoPoints = userEcoPoints - eggData.price;
         const now = Date.now();
-        
+
         const newHatching = {
             eggId: eggData.id,
             rarity: eggData.rarity,
@@ -641,7 +632,7 @@ async function handleBuyEgg(eggData) {
             endTime: now + eggData.hatchingTime,
             eggName: eggData.name
         };
-        
+
         const updatedHatchings = [...userHatchings, newHatching];
 
         const updateResult = await updateUserProfile(currentUser.uid, {
@@ -669,28 +660,20 @@ async function handleBuyEgg(eggData) {
     }
 }
 
-// Taime ostmise funktsioon
-// See on keeruline, sest pean kontrollima raha, uuendama andmebaasi ja kuvama uuendused
-// Alguses proovisin lihtsalt userEcoPoints -= plantData.price, aga see ei salvestanud andmebaasi
-// Siis leidsin, et pean kasutama updateUserProfile() funktsiooni
+// Taime ostmise loogika
 async function handleBuyPlant(plantData) {
-    // Kontrollin, kas kasutajal on piisavalt EcoPoints'e
-    // Esimesel katsel unustasin seda kontrollida ja sain negatiivse arvu
+    // Kontrollib, kas kasutajal on piisavalt EcoPoints'e
     if (userEcoPoints < plantData.price) {
         showToast("Not enough EcoPoints!", "error");
         return;
     }
 
     try {
-        // Arvutan uue EcoPoints'i summa
-        // Esimesel katsel proovisin lihtsalt -=, aga see ei töötanud hästi
+        // Arvutab uue EcoPoints'i summa
         const updatedEcoPoints = userEcoPoints - plantData.price;
-        // Salvestan ostmise aja
-        // Alguses unustasin seda, aga siis mõtlesin, et see võib olla kasulik
         const purchaseTimestamp = new Date().toISOString();
-        
-        // Loon uue taime objekti
-        // Esimesel katsel proovisin lihtsalt plantData, aga siis ei olnud purchasedAt välja
+
+        // Loob uue taime objekti
         const newPlantEntry = {
             id: plantData.id,
             name: plantData.name,
@@ -699,15 +682,11 @@ async function handleBuyPlant(plantData) {
             price: plantData.price,
             purchasedAt: purchaseTimestamp
         };
-        
-        // Lisan uue taime kollektsiooni
-        // ... on spread operaator, see kopeerib vana massiivi ja lisab uue elemendi
-        // Esimesel katsel proovisin userCollection.push(), aga see ei töötanud hästi
+
+        // Lisab uue taime kollektsiooni
         const updatedCollection = [...userCollection, newPlantEntry];
 
-        // Uuendan andmebaasi
-        // await on vajalik, sest Firebase võtab aega
-        // Esimesel katsel unustasin await'i ja sain vea
+        // Uuendab andmebaasi
         const updateResult = await updateUserProfile(currentUser.uid, {
             ecoPoints: updatedEcoPoints,
             plants: updatedCollection
@@ -730,7 +709,6 @@ async function handleBuyPlant(plantData) {
         showToast("Error purchasing plant. Please try again.", "error");
     }
 }
-
 
 function initializeShop() {
     document.querySelectorAll(".shop-mode-btn").forEach(btn => {
@@ -775,7 +753,7 @@ function initializeShop() {
             mobileMenu.classList.toggle("active");
             mobileMenuToggle.classList.toggle("active");
             mobileMenuToggle.setAttribute("aria-expanded", !isActive);
-            
+
             if (!isActive) {
                 document.body.style.overflow = "hidden";
             } else {
@@ -806,9 +784,8 @@ requireAuth().then(async (user) => {
     initializeShop();
 }).catch((error) => {
     console.error("Auth error:", error);
-    const loadingState = document.getElementById("loadingState");
-    const errorState = document.getElementById("errorState");
-    if (loadingState) loadingState.style.display = "none";
-    if (errorState) errorState.style.display = "block";
+    const loadingMessage = document.querySelector(".loading-message");
+    if (loadingMessage) {
+        loadingMessage.textContent = "Please log in to access the shop.";
+    }
 });
-
