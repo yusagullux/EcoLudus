@@ -95,7 +95,7 @@ const generateImageHash = async (file) => {
 // Kontrollib, kas pilt on juba kasutatud
 async function checkHashInDatabase(hash, userId) {
     try {
-        const key = 'ecoquest_photo_hashes';
+        const key = 'ecoludus_photo_hashes';
         const hashes = JSON.parse(localStorage.getItem(key) || '[]');
         const found = hashes.find(h => h.hash === hash);
 
@@ -119,7 +119,7 @@ async function checkHashInDatabase(hash, userId) {
 // Salvestab pildi räsi andmebaasi
 async function saveHashToDatabase(hash, userId, questId) {
     try {
-        const storageKey = 'ecoquest_photo_hashes';
+        const storageKey = 'ecoludus_photo_hashes';
         let storedHashes = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
         storedHashes.push({

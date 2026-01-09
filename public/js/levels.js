@@ -64,15 +64,15 @@ export function getXPProgress(xp, currentLevel = null) {
 
 export function getBadgeImageForLevel(level) {
     const badgeImages = {
-        1: "../images/ecoquests-badges/cat-badge-removedbg.png",
-        2: "../images/ecoquests-badges/fox-badge-removedbg.png",
-        3: "../images/ecoquests-badges/rabbit-badge-removedbg.png",
-        4: "../images/ecoquests-badges/deer-badge-removedbg.png",
-        5: "../images/ecoquests-badges/wolf-badge-removedbg.png",
-        6: "../images/ecoquests-badges/bear-badge-removedbg.png",
-        7: "../images/ecoquests-badges/eagle-badge-removedbg.png",
-        8: "../images/ecoquests-badges/tiger-badge-removedbg.png",
-        9: "../images/ecoquests-badges/lion-badge-removedbg.png"
+        1: "../images/ecoludus-badges/cat-badge-removedbg.png",
+        2: "../images/ecoludus-badges/fox-badge-removedbg.png",
+        3: "../images/ecoludus-badges/rabbit-badge-removedbg.png",
+        4: "../images/ecoludus-badges/deer-badge-removedbg.png",
+        5: "../images/ecoludus-badges/wolf-badge-removedbg.png",
+        6: "../images/ecoludus-badges/bear-badge-removedbg.png",
+        7: "../images/ecoludus-badges/eagle-badge-removedbg.png",
+        8: "../images/ecoludus-badges/tiger-badge-removedbg.png",
+        9: "../images/ecoludus-badges/lion-badge-removedbg.png"
     };
     return badgeImages[level] || badgeImages[1];
 }

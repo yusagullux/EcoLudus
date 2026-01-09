@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="EcoQuest Dashboard - Track your eco-friendly missions, XP, and progress" />
-    <meta name="keywords" content="ecoquest, dashboard, missions, eco-friendly, sustainability" />
-    <meta name="author" content="EcoQuest" />
-    <meta property="og:title" content="EcoQuest | Dashboard" />
+    <meta name="description" content="EcoLudus Dashboard - Track your eco-friendly missions, XP, and progress" />
+    <meta name="keywords" content="ecoludus, dashboard, missions, eco-friendly, sustainability" />
+    <meta name="author" content="EcoLudus" />
+    <meta property="og:title" content="EcoLudus | Dashboard" />
     <meta property="og:description" content="Track your eco-friendly progress and complete daily missions" />
     <meta property="og:type" content="website" />
     <link rel="icon" type="image/png" href="../images/logo.png" />
-    <title>EcoQuest | Dashboard</title>
+    <title>EcoLudus | Dashboard</title>
     <link rel="stylesheet" href="../css/dashboard.css" />
     <link rel="stylesheet" href="../css/shop.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +24,7 @@
 <body>
     <header>
         <nav>
-            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'"
+            <img src="../images/logo.png" alt="EcoLudus logo" onclick="window.location.href='dashboard.html'"
                 style="cursor: pointer;" />
             <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu"
                 aria-expanded="false">
@@ -2019,7 +2019,7 @@
             pushNotification(message, "reminder");
             if ("Notification" in window && Notification.permission === "granted") {
                 try {
-                    new Notification("EcoQuest Reminder", {
+                    new Notification("EcoLudus Reminder", {
                         body: message,
                         icon: "../images/logo.png"
                     });
