@@ -1,6 +1,6 @@
-# EcoQuest - System Schemas
+# EcoLudus - System Schemas
 
-Simple, easy-to-understand schemas for each section of the EcoQuest application.
+Simple, easy-to-understand schemas for each section of the EcoLudus application.
 
 ---
 

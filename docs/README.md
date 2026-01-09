@@ -1,4 +1,4 @@
-# 🌍 EcoQuest
+# 🌍 EcoLudus
 
 <div align="center">
 
@@ -9,7 +9,7 @@
 
 ## 📖 About
 
-EcoQuest is a modern, gamified web application designed to raise awareness about environmental sustainability. Users complete eco-friendly missions, track their carbon footprint reduction, earn XP and EcoPoints, unlock badges, collect virtual plants, and compete on global leaderboards. By turning environmental actions into a game, EcoQuest makes sustainability engaging and rewarding.
+EcoLudus is a modern, gamified web application designed to raise awareness about environmental sustainability. Users complete eco-friendly missions, track their carbon footprint reduction, earn XP and EcoPoints, unlock badges, collect virtual plants, and compete on global leaderboards. By turning environmental actions into a game, EcoLudus makes sustainability engaging and rewarding.
 
 ### 🎯 Mission
 
@@ -95,7 +95,7 @@ Our mission is to inspire millions of people to adopt eco-friendly habits throug
 ## 📁 Project Structure
 
 ```
-EcoQuest/
+EcoLudus/
 │
 ├── public/
 │   ├── html/              # HTML pages
@@ -126,7 +126,7 @@ EcoQuest/
 │   │
 │   ├── images/            # Assets
 │   │   ├── logo.png
-│   │   ├── ecoquests-badges/ # Badge images (9 levels)
+│   │   ├── ecoludus-badges/ # Badge images (9 levels)
 │   │   └── plants/        # Plant images (14 plants)
 │   │
 │   ├── quests.json        # Quest definitions
@@ -198,7 +198,7 @@ EcoPoints are earned based on:
 
 ## 👥 Team Collaboration System
 
-EcoQuest features a comprehensive team system that allows users to collaborate on larger environmental challenges:
+EcoLudus features a comprehensive team system that allows users to collaborate on larger environmental challenges:
 
 ### Team Features
 - **Team Creation & Management**

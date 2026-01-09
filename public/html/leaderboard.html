@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="EcoQuest Leaderboard - See top eco-friendly users ranked by XP" />
-    <meta name="keywords" content="ecoquest, leaderboard, ranking, top users, competition" />
+    <meta name="description" content="EcoLudus Leaderboard - See top eco-friendly users ranked by XP" />
+    <meta name="keywords" content="ecoludus, leaderboard, ranking, top users, competition" />
     <link rel="icon" type="image/png" href="../images/logo.png" />
-    <title>EcoQuest | Leaderboard</title>
+    <title>EcoLudus | Leaderboard</title>
     <link rel="stylesheet" href="../css/dashboard.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -568,7 +568,7 @@
 <body>
     <header>
         <nav>
-            <img src="../images/logo.png" alt="EcoQuest logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;" />
+            <img src="../images/logo.png" alt="EcoLudus logo" onclick="window.location.href='dashboard.html'" style="cursor: pointer;" />
             <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle mobile menu" aria-expanded="false">
                 <span></span>
                 <span></span>
@@ -588,7 +588,7 @@
     <main class="leaderboard-container" role="main">
         <div class="leaderboard-header">
             <h1>🏆 Leaderboard</h1>
-            <p>Top EcoQuest players ranked by XP</p>
+            <p>Top EcoLudus players ranked by XP</p>
         </div>
 
         <div class="leaderboard-card">
@@ -606,15 +606,15 @@
         // helkuri piltide loetelu, tagab et iga taseme jaoks on õige pilt
         function getBadgeImageForLevel(level) {
             const badgeImages = {
-                1: "../images/ecoquests-badges/cat-badge-removedbg.png", // Level 1 Helkuri Pilt
-                2: "../images/ecoquests-badges/fox-badge-removedbg.png", // Level 2 Helkuri Pilt
-                3: "../images/ecoquests-badges/rabbit-badge-removedbg.png", // Level 3 Helkuri Pilt
-                4: "../images/ecoquests-badges/deer-badge-removedbg.png", // Level 4 Helkuri Pilt
-                5: "../images/ecoquests-badges/wolf-badge-removedbg.png", // Level 5 Helkuri Pilt
-                6: "../images/ecoquests-badges/bear-badge-removedbg.png", // Level 6 Helkuri Pilt
-                7: "../images/ecoquests-badges/eagle-badge-removedbg.png", // Level 7 Helkuri Pilt
-                8: "../images/ecoquests-badges/tiger-badge-removedbg.png", // Level 8 Helkuri Pilt
-                9: "../images/ecoquests-badges/lion-badge-removedbg.png" // Level 9 Helkuri Pilt
+                1: "../images/ecoluduss-badges/cat-badge-removedbg.png", // Level 1 Helkuri Pilt
+                2: "../images/ecoluduss-badges/fox-badge-removedbg.png", // Level 2 Helkuri Pilt
+                3: "../images/ecoluduss-badges/rabbit-badge-removedbg.png", // Level 3 Helkuri Pilt
+                4: "../images/ecoluduss-badges/deer-badge-removedbg.png", // Level 4 Helkuri Pilt
+                5: "../images/ecoluduss-badges/wolf-badge-removedbg.png", // Level 5 Helkuri Pilt
+                6: "../images/ecoluduss-badges/bear-badge-removedbg.png", // Level 6 Helkuri Pilt
+                7: "../images/ecoluduss-badges/eagle-badge-removedbg.png", // Level 7 Helkuri Pilt
+                8: "../images/ecoluduss-badges/tiger-badge-removedbg.png", // Level 8 Helkuri Pilt
+                9: "../images/ecoluduss-badges/lion-badge-removedbg.png" // Level 9 Helkuri Pilt
             };
             // kui tase on kehtetu, tagastab vaikimisi Level 1 pildi
             return badgeImages[level] || badgeImages[1];
