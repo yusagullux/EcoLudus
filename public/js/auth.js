@@ -11,9 +11,7 @@ import {
   getDoc,
   updateDoc,
   collection,
-  getDocs,
-  query,
-  orderBy
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const INITIAL_XP = 0;
@@ -157,9 +155,8 @@ export async function updateUserProfile(userId, updates) {
 export async function getAllUsers() {
   try {
     const usersRef = collection(db, "users");
-    // Sorteerib kasutajad XP järgi
-    const q = query(usersRef, orderBy("xp", "desc"));
-    const querySnapshot = await getDocs(q);
+    // Laeb kõik kasutajad ilma sorteerimiseta (sorteeritakse hiljem JavaScript'is)
+    const querySnapshot = await getDocs(usersRef);
 
     const users = [];
     querySnapshot.forEach((doc) => {
