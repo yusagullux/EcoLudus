@@ -647,10 +647,8 @@ async function handleBuyEgg(eggData) {
         userEcoPoints = updatedEcoPoints;
         userHatchings = updatedHatchings;
 
-        updateEcoPointsDisplay(userEcoPoints);
-        filterPlants(currentFilter);
-        renderHatchings();
-        startHatchingTimer();
+        // Laeb kasutaja andmed uuesti, et tagada profiili uuendamine
+        await loadUserData();
 
         showToast(`${eggData.name} added to hatching chamber! 🥚`, "success");
 
@@ -699,8 +697,8 @@ async function handleBuyPlant(plantData) {
         userEcoPoints = updatedEcoPoints;
         userCollection = updatedCollection;
 
-        updateEcoPointsDisplay(userEcoPoints);
-        filterPlants(currentFilter);
+        // Laeb kasutaja andmed uuesti, et tagada profiili uuendamine
+        await loadUserData();
 
         showToast(`Successfully purchased ${plantData.name}! 🌱`, "success");
 
