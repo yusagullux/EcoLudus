@@ -1,0 +1,180 @@
+:root {
+  --color-primary: #3f7c47 !important;
+  --color-secondary: #8db995 !important;
+  --color-accent: #1e4a28 !important;
+  --color-bg-light: #f7f3ea !important;
+  --color-bg-dark: #102114 !important;
+  --color-text: #243528 !important;
+  --color-white: #fffdf8 !important;
+  --shadow-light: 0 18px 44px rgba(16, 33, 20, 0.08) !important;
+  --shadow-hover: 0 28px 70px rgba(16, 33, 20, 0.14) !important;
+  --border-radius: 24px !important;
+}
+
+body {
+  background:
+    radial-gradient(circle at top, rgba(132, 173, 129, 0.2), transparent 24%),
+    linear-gradient(180deg, #f8f4ec 0%, #edf2e7 46%, #e7edde 100%) !important;
+  color: var(--color-text) !important;
+}
+
+header {
+  background: rgba(255, 253, 248, 0.86) !important;
+  border: 1px solid rgba(30, 74, 40, 0.08);
+  box-shadow: 0 20px 54px rgba(16, 33, 20, 0.08) !important;
+  backdrop-filter: blur(16px);
+}
+
+nav img {
+  border-radius: 18px !important;
+  box-shadow: 0 14px 32px rgba(16, 33, 20, 0.12) !important;
+}
+
+nav ul li a {
+  color: rgba(36, 53, 40, 0.78) !important;
+  font-weight: 600 !important;
+}
+
+nav ul li a:hover {
+  color: var(--color-accent) !important;
+}
+
+.logout-button,
+.logout-button-mobile,
+.team-btn,
+.complete-button,
+.buy-button,
+.sell-button,
+.shop-mode-btn.active,
+.filter-btn.active,
+.collection-mode-btn.active {
+  background: linear-gradient(135deg, #1f4c29 0%, #3f7c47 100%) !important;
+  border-color: transparent !important;
+  box-shadow: 0 16px 32px rgba(31, 76, 41, 0.2) !important;
+}
+
+.logout-button:hover,
+.logout-button-mobile:hover,
+.team-btn:hover:not(:disabled),
+.complete-button:hover:not(:disabled),
+.buy-button:hover:not(:disabled),
+.sell-button:hover:not(:disabled),
+.shop-mode-btn:hover,
+.filter-btn:hover,
+.collection-mode-btn:hover {
+  transform: translateY(-2px);
+}
+
+.team-btn.outline,
+.team-btn.ghost,
+.filter-btn,
+.shop-mode-btn:not(.active),
+.collection-mode-btn:not(.active) {
+  background: rgba(255, 253, 248, 0.9) !important;
+  border: 1px solid rgba(30, 74, 40, 0.12) !important;
+  color: var(--color-accent) !important;
+}
+
+.user-info,
+.stat-card,
+.dashboard-card,
+.profile-header,
+.profile-stat-card,
+.collection-section,
+.shop-header,
+.plant-card,
+.hatching-section,
+.team-modal-content,
+.photo-modal-content,
+.error-state,
+.loading-state,
+.insight-chart-wrapper,
+.leaderboard-header,
+.leaderboard-card,
+.leaderboard-item,
+.badge-showcase-card,
+.collection-stats,
+.shop-mode-section,
+.filter-section,
+.collection-mode-section {
+  background: rgba(255, 253, 248, 0.84) !important;
+  border: 1px solid rgba(30, 74, 40, 0.08) !important;
+  box-shadow: 0 22px 56px rgba(16, 33, 20, 0.08) !important;
+  backdrop-filter: blur(14px);
+}
+
+.dashboard-card:hover,
+.stat-card:hover,
+.plant-card:hover,
+.profile-stat-card:hover {
+  box-shadow: 0 28px 80px rgba(16, 33, 20, 0.12) !important;
+}
+
+.user-info,
+.shop-header,
+.profile-header {
+  background:
+    linear-gradient(135deg, rgba(30, 74, 40, 0.96), rgba(63, 124, 71, 0.9)),
+    rgba(30, 74, 40, 0.95) !important;
+  color: #fffdf8 !important;
+}
+
+.user-info p,
+.user-info h2,
+.shop-header h1,
+.profile-header h1,
+.profile-header p {
+  color: inherit !important;
+}
+
+.level-progress-fill,
+.progress-fill,
+.category-progress-fill,
+.hatching-progress-fill {
+  background: linear-gradient(90deg, #1f4c29 0%, #9ac495 100%) !important;
+}
+
+.countdown-timer,
+.ecopoints-display,
+.team-role-pill,
+.count-badge,
+.rarity-badge {
+  border-radius: 999px !important;
+}
+
+.mission-item,
+.category-progress-item,
+.team-stat,
+.team-mission-template,
+.team-mission-card,
+.hatching-card,
+.collection-card,
+.team-members,
+.team-leaderboard-wrapper {
+  background: rgba(248, 244, 236, 0.8) !important;
+  border: 1px solid rgba(30, 74, 40, 0.08) !important;
+  border-radius: 22px !important;
+}
+
+.mission-item:hover,
+.team-mission-template:hover,
+.team-mission-card:hover {
+  border-color: rgba(63, 124, 71, 0.28) !important;
+}
+
+.plants-grid,
+.dashboard-cards,
+.profile-stats-grid,
+.charts-container,
+.insights-grid,
+.insights-charts {
+  gap: 1.5rem !important;
+}
+
+.stat-value,
+.ecopoints-value,
+#userXP,
+#ecoPoints,
+#totalCarbonReduced {
+  color: var(--color-accent) !important;
+}

@@ -14,7 +14,7 @@ import {
     deleteDoc,
     deleteField,
     increment
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "./firestore-compat.js";
 import { db } from "./firebase-config.js";
 
 let currentUser = null;
@@ -835,7 +835,7 @@ async function assignTeamMission(profile, templateId) {
         throw new Error("Mission template not found.");
     }
     
-    // Fetch fresh missions from Firestore to check for duplicates and limits
+    // Fetch fresh missions from the backend to check for duplicates and limits
     const currentMissions = await fetchTeamMissions(profile.teamId);
     const existingMission = currentMissions.find(m => 
         m.missionTemplateId === templateId && 

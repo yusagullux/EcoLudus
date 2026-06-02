@@ -38,12 +38,17 @@ yarn-error.log*
 dist/
 build/
 .cache/
+.next/
+ecoquest/.next/
 
 # Temporary files
 *.tmp
 *.temp
 *.bak
 *.backup
+
+# Local app data
+data/
 
 
 

@@ -1,0 +1,69 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { setSessionCookie, verifyPassword } from "@/lib/auth";
+import { sql } from "@/lib/db";
+
+const loginSchema = z.object({
+  email: z.email(),
+  password: z.string().min(6).max(128)
+});
+
+export async function POST(request: Request) {
+  try {
+    const payload = loginSchema.parse(await request.json());
+    const email = payload.email.trim().toLowerCase();
+
+    const result = await sql<{
+      id: string;
+      email: string;
+      password_hash: string;
+      payload: Record<string, unknown>;
+    }>(
+      "select id, email, password_hash, payload from users where email = $1 limit 1",
+      [email]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return NextResponse.json(
+        { error: { code: "auth/user-not-found" } },
+        { status: 401 }
+      );
+    }
+
+    const isValidPassword = await verifyPassword(payload.password, user.password_hash);
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { error: { code: "auth/wrong-password" } },
+        { status: 401 }
+      );
+    }
+
+    await setSessionCookie({
+      sub: user.id,
+      email: user.email
+    });
+
+    return NextResponse.json({
+      user: {
+        uid: user.id,
+        email: user.email,
+        displayName: String(user.payload.displayName ?? user.email.split("@")[0])
+      }
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: { code: "auth/invalid-input", details: error.flatten() } },
+        { status: 400 }
+      );
+    }
+
+    console.error("Login error", error);
+    return NextResponse.json(
+      { error: { code: "auth/internal-error" } },
+      { status: 500 }
+    );
+  }
+}
