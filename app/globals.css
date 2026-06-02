@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@theme {
+  --color-forest-50: #f4f7f5;
+  --color-forest-100: #eef3e8;
+  --color-forest-200: #dce7dc;
+  --color-forest-300: #b8d0bb;
+  --color-forest-400: #8cb291;
+  --color-forest-500: #629168;
+  --color-forest-600: #4a754f;
+  --color-forest-700: #2d5a3f;
+  --color-forest-800: #1b3a24;
+  --color-forest-900: #16301d;
+  --color-forest-950: #102114;
+
+  --color-cream-50: #fffdfc;
+  --color-cream-100: #fcf9f2;
+  --color-cream-200: #f5f2eb;
+  --color-cream-300: #eff3e8;
+
+  --color-moss-50: #f2f7f2;
+  --color-moss-100: #e2edd9;
+  --color-moss-200: #c9dba9;
+  --color-moss-300: #a7c484;
+  --color-moss-400: #88ad62;
+  --color-moss-500: #698e43;
+  --color-moss-600: #517031;
+  --color-moss-700: #3b5224;
+  --color-moss-800: #283719;
+  --color-moss-900: #1a2410;
+
+  --color-earth-50: #faf7f2;
+  --color-earth-100: #f2e9db;
+  --color-earth-200: #e2cfb5;
+  --color-earth-300: #cbb08b;
+  --color-earth-400: #b08d60;
+  --color-earth-500: #967040;
+  --color-earth-600: #7b5832;
+  --color-earth-700: #604225;
+  --color-earth-800: #462f1a;
+  --color-earth-900: #2e1d10;
+
+  --animate-wiggle: wiggle 0.5s ease-in-out infinite;
+  --animate-float-up: floatUp 1.2s ease-out forwards;
+
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(10px); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translateY(-40px); opacity: 0; }
+  }
+}
+
+/* design tokens moved into :root for compatibility with LightningCSS/Turbopack */
+
+:root {
+  color-scheme: light;
+  --page-bg:
+    radial-gradient(circle at top, rgba(94, 142, 101, 0.18), transparent 32%),
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(180, 211, 169, 0.22),
+      transparent 28%
+    ),
+    linear-gradient(180deg, #f8f4ec 0%, #eef2e6 48%, #e7edde 100%);
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  padding: 0;
+}
+
+body {
+  background: var(--page-bg);
+  color: #1a281d;
+  font-family: var(
+    --font-sans,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial
+  );
+  line-height: 1.5;
+}
+
+/* Normalize box sizing and responsive media */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+picture,
+video,
+svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Helpful wrapper class for consistent page padding */
+.site-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+a,
+button,
+input,
+textarea,
+select {
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    opacity 180ms ease;
+}
+
+::selection {
+  background: rgba(63, 124, 71, 0.2);
+}

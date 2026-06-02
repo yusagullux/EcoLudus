@@ -34,7 +34,7 @@ export function validatePassword(password) {
 
     const maxPasswordLength = 128;
 
-    // Kontrollib minimaalset pikkust (Firebase nõue: vähemalt 6 sümbolit)
+    // Kontrollib minimaalset pikkust (rakenduse nõue: vähemalt 6 sümbolit)
     if (password.length < MIN_PASSWORD_LENGTH) {
         return {
             valid: false,
@@ -102,16 +102,16 @@ export function formatErrorMessage(error) {
     const errorMessage = error.message || error.toString();
 
     const userFriendlyMessages = {
-        'auth/email-already-in-use': 'This email is already registered. Please sign in instead.',
+        'auth/email-already-in-use': 'This email is already registered. Please log in instead.',
         'auth/invalid-email': 'Please enter a valid email address.',
         'auth/weak-password': 'Password is too weak. Please choose a stronger password.',
-        'auth/user-not-found': 'No account found with this email address.',
+        'auth/user-not-found': 'No profile found with this email address.',
         'auth/wrong-password': 'Incorrect password. Please try again.',
         'auth/invalid-credential': 'Invalid email or password. Please check your credentials and try again.',
         'auth/invalid-login-credentials': 'Invalid email or password. Please check your credentials and try again.',
         'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
         'auth/network-request-failed': 'Network error. Please check your connection and try again.',
-        'auth/user-disabled': 'This account has been disabled. Please contact support.',
+        'auth/user-disabled': 'This profile has been disabled. Please contact support.',
         'auth/operation-not-allowed': 'This sign-in method is not enabled.',
         'permission-denied': 'You do not have permission to perform this action.',
         'unavailable': 'Service is temporarily unavailable. Please try again later.'

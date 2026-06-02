@@ -1,103 +1,137 @@
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { auth, db } from "./firebase-config.js";
-import {
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  collection,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, getDoc, updateDoc, collection, getDocs } from "./firestore-compat.js";
+import { db } from "./firebase-config.js";
 
-const INITIAL_XP = 0;
-const INITIAL_ECO_POINTS = 0;
-const INITIAL_LEVEL = 1;
+let cachedUser = null;
+let authBootstrapPromise = null;
+const authListeners = new Set();
 
-// Registreerib uue kasutaja ja loob andmebaasi profiili
+async function readJson(response) {
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(payload?.error?.code || payload?.message || "Request failed");
+    error.code = payload?.error?.code || "unknown";
+    error.details = payload?.error?.details;
+    throw error;
+  }
+
+  return payload;
+}
+
+function normalizeUser(user) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    uid: user.uid,
+    email: user.email,
+    displayName: user.displayName || (user.email ? user.email.split("@")[0] : "User")
+  };
+}
+
+function notifyAuthListeners() {
+  authListeners.forEach((callback) => {
+    try {
+      callback(cachedUser);
+    } catch (error) {
+      console.error("Auth listener error:", error);
+    }
+  });
+}
+
+async function bootstrapAuthState() {
+  const response = await fetch("/api/auth/me", {
+    credentials: "include",
+    cache: "no-store"
+  });
+  const payload = await readJson(response);
+  cachedUser = normalizeUser(payload.user);
+  notifyAuthListeners();
+  return cachedUser;
+}
+
+function ensureAuthBootstrap() {
+  if (!authBootstrapPromise) {
+    authBootstrapPromise = bootstrapAuthState().catch((error) => {
+      cachedUser = null;
+      notifyAuthListeners();
+      throw error;
+    });
+  }
+
+  return authBootstrapPromise;
+}
+
 export async function signUp(email, password, displayName = null) {
   try {
-    // Loob Firebase autentimise kasutaja
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const newUser = userCredential.user;
+    const requestBody = {
+      email,
+      password
+    };
 
-    // Tagab kuvatava nime olemasolu
-    const userDisplayName = displayName || newUser.email.split("@")[0];
-    const accountCreationTime = new Date().toISOString();
+    if (typeof displayName === "string" && displayName.trim()) {
+      requestBody.displayName = displayName.trim();
+    }
 
-    // Loob Firestore profiili algväärtustega
-    await setDoc(doc(db, "users", newUser.uid), {
-      email: newUser.email,
-      displayName: userDisplayName,
-      xp: INITIAL_XP,
-      ecoPoints: INITIAL_ECO_POINTS,
-      level: INITIAL_LEVEL,
-      badges: [],
-      missionsCompleted: 0,
-      completedQuests: [],
-      lastQuestResetTime: accountCreationTime,
-      currentDailyQuests: [],
-      dailyQuestsCompleted: [],
-      questCompletionCount: {},
-      dailyQuestCompletions: {},
-      lastQuestCompletionTime: null,
-      plants: [],
-      hatchings: [],
-      animals: [],
-      activePet: null,
-      bestRank: null,
-      allQuestsCompleted: false,
-      allQuestsCompletedCount: 0,
-      allQuestsCompletedDate: null,
-      teamId: null,
-      teamRole: null,
-      teamStats: {
-        missionsCompleted: 0,
-        xpEarned: 0,
-        ecoEarned: 0,
-        approvalsGiven: 0
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
       },
-      notificationPreferences: {
-        dailyReminderEnabled: true,
-        reminderHour: 9,
-        teamUpdates: true,
-        questTips: true
-      },
-      reminderMetadata: {
-        lastReminderDate: null,
-        pendingReminderId: null
-      },
-      insightSnapshots: [],
-      createdAt: accountCreationTime
+      credentials: "include",
+      body: JSON.stringify(requestBody)
     });
 
-    return { success: true, user: newUser };
+    const payload = await readJson(response);
+    cachedUser = normalizeUser(payload.user);
+    notifyAuthListeners();
+
+    return { success: true, user: cachedUser };
   } catch (error) {
     console.error("Sign up error:", error);
-    const errorMessage = error.code || error.message || "Failed to create account";
+    const errorMessage = error.code || error.message || "Failed to create profile";
     return { success: false, error: errorMessage };
   }
 }
 
-// Kasutaja sisselogimine
 export async function signIn(email, password) {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return { success: true, user: userCredential.user };
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        email,
+        password
+      })
+    });
+
+    const payload = await readJson(response);
+    cachedUser = normalizeUser(payload.user);
+    notifyAuthListeners();
+
+    return { success: true, user: cachedUser };
   } catch (error) {
     console.error("Sign in error:", error);
-    return { success: false, error: error };
+    return { success: false, error };
   }
 }
 
-// Kasutaja väljalogimine
 export async function logOut() {
   try {
-    await signOut(auth);
+    const response = await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    await readJson(response);
+    cachedUser = null;
+    authBootstrapPromise = Promise.resolve(null);
+    notifyAuthListeners();
+
     return { success: true };
   } catch (error) {
     console.error("Sign out error:", error);
@@ -106,43 +140,50 @@ export async function logOut() {
 }
 
 export function getCurrentUser() {
-  return auth.currentUser;
+  return cachedUser;
 }
 
 export function onAuthChange(callback) {
-  return onAuthStateChanged(auth, callback);
+  authListeners.add(callback);
+  ensureAuthBootstrap()
+    .then(() => callback(cachedUser))
+    .catch(() => callback(null));
+
+  return () => {
+    authListeners.delete(callback);
+  };
 }
 
-// Laeb kasutaja profiili
 export async function getUserProfile(userId) {
   try {
     if (!userId) {
       return { success: false, error: "User ID is required" };
     }
 
+    await ensureAuthBootstrap();
     const userDoc = await getDoc(doc(db, "users", userId));
 
     if (userDoc.exists()) {
       return { success: true, data: userDoc.data() };
-    } else {
-      return { success: false, error: "User profile not found" };
     }
+
+    return { success: false, error: "User profile not found" };
   } catch (error) {
     console.error("Get user profile error:", error);
     return { success: false, error: error.message };
   }
 }
 
-// Uuendab kasutaja profiili
 export async function updateUserProfile(userId, updates) {
   try {
     if (!userId) {
       return { success: false, error: "User ID is required" };
     }
-    if (!updates || typeof updates !== 'object') {
+    if (!updates || typeof updates !== "object") {
       return { success: false, error: "Updates must be an object" };
     }
 
+    await ensureAuthBootstrap();
     await updateDoc(doc(db, "users", userId), updates);
     return { success: true };
   } catch (error) {
@@ -151,18 +192,17 @@ export async function updateUserProfile(userId, updates) {
   }
 }
 
-// Laeb kõik kasutajad (nt edetabeli jaoks)
 export async function getAllUsers() {
   try {
+    await ensureAuthBootstrap();
     const usersRef = collection(db, "users");
-    // Laeb kõik kasutajad ilma sorteerimiseta (sorteeritakse hiljem JavaScript'is)
     const querySnapshot = await getDocs(usersRef);
 
     const users = [];
-    querySnapshot.forEach((doc) => {
-      const userData = doc.data();
+    querySnapshot.forEach((entry) => {
+      const userData = entry.data();
       users.push({
-        id: doc.id,
+        id: entry.id,
         ...userData
       });
     });

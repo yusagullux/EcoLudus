@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="../images/logo.png" />
     <title>EcoLudus | Leaderboard</title>
     <link rel="stylesheet" href="../css/dashboard.css" />
+    <link rel="stylesheet" href="../css/forest-theme.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -678,7 +679,7 @@
             if (!leaderboardList) return;
 
             try {
-                // laadib kõikide kasutajate loetelu Firestore'ist, võib ebaõnnestuda õiguste tõttu
+                // laadib kõikide kasutajate loetelu serverist, võib ebaõnnestuda õiguste tõttu
                 const result = await getAllUsers();
                 
                 // kontrollib, et päring õnnestus
@@ -690,10 +691,10 @@
                         userMessage = `
                             <p style="margin-bottom: 10px;"><strong>Permission Error</strong></p>
                             <p style="font-size: 14px; margin-bottom: 10px;">
-                                Please update Firebase Security Rules to allow reading user profiles.
+                                Please check the server-side access rules for reading user profiles.
                             </p>
                             <p style="font-size: 12px; opacity: 0.8;">
-                                Go to Firebase Console → Firestore Database → Rules and update the rules.
+                                Review your backend permission configuration and try again.
                             </p>
                         `;
                     } else {

@@ -461,7 +461,7 @@ async function loadProfileData() {
 
         if (profile.teamId && profile.teamId !== null) {
             try {
-                const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                const { doc, getDoc } = await import("./firestore-compat.js");
                 const { db } = await import("./firebase-config.js");
                 const teamDoc = await getDoc(doc(db, "teams", profile.teamId));
                 if (teamDoc.exists()) {

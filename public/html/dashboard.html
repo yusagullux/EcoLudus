@@ -14,6 +14,7 @@
     <title>EcoLudus | Dashboard</title>
     <link rel="stylesheet" href="../css/dashboard.css" />
     <link rel="stylesheet" href="../css/shop.css" />
+    <link rel="stylesheet" href="../css/forest-theme.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -278,7 +279,7 @@
             deleteDoc,
             deleteField,
             increment
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        } from "../js/firestore-compat.js";
         import { db } from "../js/firebase-config.js";
 
         // Kuvab kasutaja tasemele vastava märgi (badge)
@@ -2101,7 +2102,7 @@
                 return;
             }
             try {
-                const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                const { doc, getDoc } = await import("../js/firestore-compat.js");
                 const { db } = await import("../js/firebase-config.js");
                 const teamDoc = await getDoc(doc(db, "teams", profile.teamId));
                 if (!teamDoc.exists()) {
@@ -4528,7 +4529,7 @@
                         if (missionListElement) {
                             let errorMsg = "Error creating profile. ";
                             if (createError.code === 'permission-denied') {
-                                errorMsg += "Please check Firebase Firestore rules. Make sure 'allow create' is enabled for users collection.";
+                                errorMsg += "Please check database permissions and make sure the user profile can be created.";
                             } else {
                                 errorMsg += createError.message || 'Unknown error';
                             }
@@ -4554,8 +4555,8 @@
 
                 // kontrollib konkreetseid veatüüpe ja annab kasutajasõbraliku vastuse
                 if (error.code === 'permission-denied') {
-                    // see võib tähendada, et Firestore reeglid on valed
-                    userFriendlyMessage = "Permission denied. Please check Firebase Firestore rules.";
+                    // see võib tähendada, et serveripoolsed õigused vajavad kontrolli
+                    userFriendlyMessage = "Permission denied. Please check your access permissions and server configuration.";
                 } else if (error.code === 'unavailable') {
                     // teenus on ajutiselt kättesaamatu
                     userFriendlyMessage = "Service temporarily unavailable. Please try again in a moment.";

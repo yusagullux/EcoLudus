@@ -1,0 +1,615 @@
+// @ts-nocheck
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
+import { Pool, type QueryResultRow } from "pg";
+
+type QueryResult<T extends QueryResultRow = QueryResultRow> = {
+  command: string;
+  rowCount: number;
+  rows: T[];
+};
+
+type UserRow = {
+  id: string;
+  email: string;
+  password_hash: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+type TeamRow = {
+  id: string;
+  join_code: string;
+  created_by: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+type TeamSubdocRow = {
+  id: string;
+  team_id: string;
+  mission_id: string | null;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at?: string;
+};
+
+type MissionLogRow = {
+  id: string;
+  user_id: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+};
+
+type FileStore = {
+  users: UserRow[];
+  teams: TeamRow[];
+  team_active_missions: TeamSubdocRow[];
+  team_mission_logs: TeamSubdocRow[];
+  mission_logs: MissionLogRow[];
+  photo_hashes: Array<Record<string, unknown>>;
+};
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __ecoquestPool: Pool | undefined;
+  // eslint-disable-next-line no-var
+  var __ecoquestDbMode: "postgres" | "file" | undefined;
+  // eslint-disable-next-line no-var
+  var __ecoquestStore: FileStore | undefined;
+  // eslint-disable-next-line no-var
+  var __ecoquestStoreWrite: Promise<void> | undefined;
+}
+
+const STORE_PATH = path.join(process.cwd(), "data", "local-db.json");
+const EMPTY_STORE: FileStore = {
+  users: [],
+  teams: [],
+  team_active_missions: [],
+  team_mission_logs: [],
+  mission_logs: [],
+  photo_hashes: []
+};
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeSql(text: string) {
+  return text.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function parseJsonObject(value: unknown) {
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return value;
+}
+
+function getConnectionString() {
+  const connectionString = process.env.DATABASE_URL;
+  return connectionString?.trim() ? connectionString : null;
+}
+
+function createPool() {
+  const connectionString = getConnectionString();
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is not configured");
+  }
+
+  return new Pool({
+    connectionString,
+    ssl: process.env.POSTGRES_SSL === "true" ? { rejectUnauthorized: false } : undefined
+  });
+}
+
+async function ensureStoreDir() {
+  await mkdir(path.dirname(STORE_PATH), { recursive: true });
+}
+
+async function loadStore() {
+  if (global.__ecoquestStore) {
+    return global.__ecoquestStore;
+  }
+
+  await ensureStoreDir();
+
+  try {
+    const raw = await readFile(STORE_PATH, "utf8");
+    global.__ecoquestStore = {
+      ...clone(EMPTY_STORE),
+      ...JSON.parse(raw)
+    };
+  } catch {
+    global.__ecoquestStore = clone(EMPTY_STORE);
+    await writeFile(STORE_PATH, JSON.stringify(global.__ecoquestStore, null, 2), "utf8");
+  }
+
+  return global.__ecoquestStore;
+}
+
+async function persistStore() {
+  const store = await loadStore();
+  await ensureStoreDir();
+
+  const write = async () => {
+    await writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+  };
+
+  global.__ecoquestStoreWrite = (global.__ecoquestStoreWrite ?? Promise.resolve()).then(write, write);
+  await global.__ecoquestStoreWrite;
+}
+
+function result<T extends QueryResultRow>(rows: T[], command = "SELECT"): QueryResult<T> {
+  return {
+    command,
+    rowCount: rows.length,
+    rows
+  };
+}
+
+async function fileSql<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params: unknown[] = []
+): Promise<QueryResult<T>> {
+  const store = await loadStore();
+  const normalized = normalizeSql(text);
+
+  if (normalized === "select 1 as ok") {
+    return result([{ ok: 1 } as T]);
+  }
+
+  if (normalized === "select id from users where email = $1 limit 1") {
+    const email = String(params[0] ?? "");
+    const row = store.users.find((user) => user.email === email);
+    return result(row ? ([{ id: row.id }] as T[]) : []);
+  }
+
+  if (normalized === "select id, email, password_hash, payload from users where email = $1 limit 1") {
+    const email = String(params[0] ?? "");
+    const row = store.users.find((user) => user.email === email);
+    return result(row ? ([clone(row)] as T[]) : []);
+  }
+
+  if (normalized === "select id, email, payload from users where id = $1 limit 1") {
+    const id = String(params[0] ?? "");
+    const row = store.users.find((user) => user.id === id);
+    return result(row ? ([{ id: row.id, email: row.email, payload: clone(row.payload) }] as T[]) : []);
+  }
+
+  if (normalized === "select id, join_code, payload from teams where id = $1 limit 1") {
+    const id = String(params[0] ?? "");
+    const row = store.teams.find((team) => team.id === id);
+    return result(
+      row ? ([{ id: row.id, join_code: row.join_code, payload: clone(row.payload) }] as T[]) : []
+    );
+  }
+
+  if (normalized === "select payload from team_active_missions where team_id = $1 and id = $2 limit 1") {
+    const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
+    const row = store.team_active_missions.find((entry) => entry.team_id === teamId && entry.id === id);
+    return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
+  }
+
+  if (normalized === "select payload from team_mission_logs where team_id = $1 and id = $2 limit 1") {
+    const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
+    const row = store.team_mission_logs.find((entry) => entry.team_id === teamId && entry.id === id);
+    return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
+  }
+
+  if (normalized === "select payload from mission_logs where id = $1 limit 1") {
+    const id = String(params[0] ?? "");
+    const row = store.mission_logs.find((entry) => entry.id === id);
+    return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
+  }
+
+  if (
+    normalized ===
+    "insert into users (id, email, password_hash, payload) values ($1, $2, $3, $4::jsonb)"
+  ) {
+    const [id, email, passwordHash, payloadRaw] = params;
+    const existing = store.users.find((user) => user.id === id);
+    if (existing) {
+      existing.email = String(email);
+      existing.password_hash = String(passwordHash);
+      existing.payload = parseJsonObject(payloadRaw) as Record<string, unknown>;
+      existing.updated_at = nowIso();
+    } else {
+      store.users.push({
+        id: String(id),
+        email: String(email),
+        password_hash: String(passwordHash),
+        payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
+        created_at: nowIso(),
+        updated_at: nowIso()
+      });
+    }
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into users (id, email, password_hash, payload) values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb) on conflict (id) do update set email = excluded.email, payload = excluded.payload, updated_at = now()"
+  ) {
+    const [id, email, payloadRaw] = params;
+    const existing = store.users.find((user) => user.id === id);
+    if (existing) {
+      existing.email = String(email);
+      existing.payload = parseJsonObject(payloadRaw) as Record<string, unknown>;
+      existing.updated_at = nowIso();
+    } else {
+      store.users.push({
+        id: String(id),
+        email: String(email),
+        password_hash: "",
+        payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
+        created_at: nowIso(),
+        updated_at: nowIso()
+      });
+    }
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into teams (id, join_code, created_by, payload) values ($1, $2, $3, $4::jsonb) on conflict (id) do update set join_code = excluded.join_code, payload = excluded.payload, updated_at = now()"
+  ) {
+    const [id, joinCode, createdBy, payloadRaw] = params;
+    const existing = store.teams.find((team) => team.id === id);
+    if (existing) {
+      existing.join_code = String(joinCode);
+      existing.payload = parseJsonObject(payloadRaw) as Record<string, unknown>;
+      existing.updated_at = nowIso();
+    } else {
+      store.teams.push({
+        id: String(id),
+        join_code: String(joinCode),
+        created_by: createdBy ? String(createdBy) : null,
+        payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
+        created_at: nowIso(),
+        updated_at: nowIso()
+      });
+    }
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into team_active_missions (id, team_id, mission_id, payload) values ($1, $2, $3, $4::jsonb) on conflict (id) do update set mission_id = excluded.mission_id, payload = excluded.payload, updated_at = now()"
+  ) {
+    const [id, teamId, missionId, payloadRaw] = params;
+    const existing = store.team_active_missions.find((entry) => entry.id === id);
+    if (existing) {
+      existing.team_id = String(teamId);
+      existing.mission_id = missionId ? String(missionId) : null;
+      existing.payload = parseJsonObject(payloadRaw) as Record<string, unknown>;
+      existing.updated_at = nowIso();
+    } else {
+      store.team_active_missions.push({
+        id: String(id),
+        team_id: String(teamId),
+        mission_id: missionId ? String(missionId) : null,
+        payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
+        created_at: nowIso(),
+        updated_at: nowIso()
+      });
+    }
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into team_mission_logs (id, team_id, mission_id, payload) values ($1, $2, $3, $4::jsonb) on conflict (id) do update set mission_id = excluded.mission_id, payload = excluded.payload"
+  ) {
+    const [id, teamId, missionId, payloadRaw] = params;
+    const existing = store.team_mission_logs.find((entry) => entry.id === id);
+    if (existing) {
+      existing.team_id = String(teamId);
+      existing.mission_id = missionId ? String(missionId) : null;
+      existing.payload = parseJsonObject(payloadRaw) as Record<string, unknown>;
+    } else {
+      store.team_mission_logs.push({
+        id: String(id),
+        team_id: String(teamId),
+        mission_id: missionId ? String(missionId) : null,
+        payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
+        created_at: nowIso()
+      });
+    }
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into mission_logs (id, user_id, payload) values ($1, $2, $3::jsonb) on conflict (id) do update set user_id = excluded.user_id, payload = excluded.payload"
+  ) {
+    const [id, userId, payloadRaw] = params;
+    const existing = store.mission_logs.find((entry) => entry.id === id);
+    if (existing) {
+      existing.user_id = String(userId);
+      existing.payload = parseJsonObject(payloadRaw) as Record<string, unknown>;
+    } else {
+      store.mission_logs.push({
+        id: String(id),
+        user_id: String(userId),
+        payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
+        created_at: nowIso()
+      });
+    }
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (normalized === "delete from users where id = $1") {
+    const id = String(params[0] ?? "");
+    store.users = store.users.filter((user) => user.id !== id);
+    await persistStore();
+    return result([], "DELETE");
+  }
+
+  if (normalized === "delete from teams where id = $1") {
+    const id = String(params[0] ?? "");
+    store.teams = store.teams.filter((team) => team.id !== id);
+    store.team_active_missions = store.team_active_missions.filter((entry) => entry.team_id !== id);
+    store.team_mission_logs = store.team_mission_logs.filter((entry) => entry.team_id !== id);
+    await persistStore();
+    return result([], "DELETE");
+  }
+
+  if (normalized === "delete from team_active_missions where team_id = $1 and id = $2") {
+    const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
+    store.team_active_missions = store.team_active_missions.filter(
+      (entry) => !(entry.team_id === teamId && entry.id === id)
+    );
+    await persistStore();
+    return result([], "DELETE");
+  }
+
+  if (normalized === "delete from team_mission_logs where team_id = $1 and id = $2") {
+    const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
+    store.team_mission_logs = store.team_mission_logs.filter(
+      (entry) => !(entry.team_id === teamId && entry.id === id)
+    );
+    await persistStore();
+    return result([], "DELETE");
+  }
+
+  if (normalized === "delete from mission_logs where id = $1 and user_id = $2") {
+    const [id, userId] = [String(params[0] ?? ""), String(params[1] ?? "")];
+    store.mission_logs = store.mission_logs.filter(
+      (entry) => !(entry.id === id && entry.user_id === userId)
+    );
+    await persistStore();
+    return result([], "DELETE");
+  }
+
+  if (normalized === "select id, email, payload from users order by created_at asc limit $1") {
+    const limitValue = Number(params[0] ?? 100);
+    const rows = store.users
+      .slice()
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .slice(0, limitValue)
+      .map((row) => ({
+        id: row.id,
+        email: row.email,
+        payload: clone(row.payload)
+      }));
+
+    return result(rows as T[]);
+  }
+
+  if (normalized === "select id, join_code, payload from teams order by created_at desc limit $1") {
+    const limitValue = Number(params[0] ?? 100);
+    const rows = store.teams
+      .slice()
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limitValue)
+      .map((row) => ({
+        id: row.id,
+        join_code: row.join_code,
+        payload: clone(row.payload)
+      }));
+
+    return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
+    "select id, join_code, payload from teams where join_code = $1 order by created_at desc limit $2"
+  ) {
+    const joinCode = String(params[0] ?? "");
+    const limitValue = Number(params[1] ?? 100);
+    const rows = store.teams
+      .filter((row) => row.join_code === joinCode)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limitValue)
+      .map((row) => ({
+        id: row.id,
+        join_code: row.join_code,
+        payload: clone(row.payload)
+      }));
+
+    return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
+    "select id, payload from team_active_missions where team_id = $1 order by created_at desc limit $2"
+  ) {
+    const [teamId, limitValue] = [String(params[0] ?? ""), Number(params[1] ?? 100)];
+    const rows = store.team_active_missions
+      .filter((entry) => entry.team_id === teamId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limitValue)
+      .map((row) => ({
+        id: row.id,
+        payload: clone(row.payload)
+      }));
+
+    return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
+    "select id, payload from team_mission_logs where team_id = $1 order by created_at desc limit $2"
+  ) {
+    const [teamId, limitValue] = [String(params[0] ?? ""), Number(params[1] ?? 100)];
+    const rows = store.team_mission_logs
+      .filter((entry) => entry.team_id === teamId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limitValue)
+      .map((row) => ({
+        id: row.id,
+        payload: clone(row.payload)
+      }));
+
+    return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
+    "select id, payload from team_mission_logs where team_id = $1 and mission_id = $2 order by created_at desc limit $3"
+  ) {
+    const [teamId, missionId, limitValue] = [
+      String(params[0] ?? ""),
+      String(params[1] ?? ""),
+      Number(params[2] ?? 100)
+    ];
+    const rows = store.team_mission_logs
+      .filter((entry) => entry.team_id === teamId && entry.mission_id === missionId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limitValue)
+      .map((row) => ({
+        id: row.id,
+        payload: clone(row.payload)
+      }));
+
+    return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
+    "select id, payload from mission_logs where user_id = $1 order by created_at desc limit $2"
+  ) {
+    const [userId, limitValue] = [String(params[0] ?? ""), Number(params[1] ?? 100)];
+    const rows = store.mission_logs
+      .filter((entry) => entry.user_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limitValue)
+      .map((row) => ({
+        id: row.id,
+        payload: clone(row.payload)
+      }));
+
+    return result(rows as T[]);
+  }
+
+  throw new Error(`Unsupported file database query: ${text}`);
+}
+
+function isConnectionError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const code = (error as Error & { code?: string }).code;
+  return Boolean(
+    code === "ECONNREFUSED" ||
+      code === "ENOTFOUND" ||
+      code === "3D000" ||
+      code === "28P01" ||
+      error.message.includes("connect") ||
+      error.message.includes("DATABASE_URL")
+  );
+}
+
+function getPool() {
+  if (!global.__ecoquestPool) {
+    global.__ecoquestPool = createPool();
+  }
+
+  return global.__ecoquestPool;
+}
+
+async function detectMode() {
+  if (global.__ecoquestDbMode) {
+    return global.__ecoquestDbMode;
+  }
+
+  const connectionString = getConnectionString();
+
+  if (!connectionString || process.env.LOCAL_DB_MODE === "file") {
+    global.__ecoquestDbMode = "file";
+    return global.__ecoquestDbMode;
+  }
+
+  try {
+    const pool = getPool();
+    await pool.query("select 1 as ok");
+    global.__ecoquestDbMode = "postgres";
+  } catch (error) {
+    if (!isConnectionError(error)) {
+      throw error;
+    }
+
+    console.warn("PostgreSQL unavailable, falling back to local persistent data store.");
+    global.__ecoquestDbMode = "file";
+  }
+
+  return global.__ecoquestDbMode;
+}
+
+export async function sql<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params: unknown[] = []
+): Promise<QueryResult<T>> {
+  const mode = await detectMode();
+
+  if (mode === "file") {
+    return fileSql<T>(text, params);
+  }
+
+  try {
+    const result = await getPool().query<T>(text, params);
+    return {
+      command: result.command,
+      rowCount: result.rowCount ?? 0,
+      rows: result.rows
+    };
+  } catch (error) {
+    if (!isConnectionError(error)) {
+      throw error;
+    }
+
+    global.__ecoquestDbMode = "file";
+    console.warn("PostgreSQL query failed, switching to local persistent data store.");
+    return fileSql<T>(text, params);
+  }
+}
+
+export const pool = {
+  query: sql,
+  async end() {
+    if (global.__ecoquestPool) {
+      await global.__ecoquestPool.end();
+      global.__ecoquestPool = undefined;
+    }
+  }
+};
