@@ -63,7 +63,9 @@ declare global {
   var __ecoquestStoreWrite: Promise<void> | undefined;
 }
 
-const STORE_PATH = path.join(process.cwd(), "data", "local-db.json");
+const STORE_PATH = process.env.VERCEL
+  ? path.join("/tmp", "local-db.json")
+  : path.join(process.cwd(), "data", "local-db.json");
 const EMPTY_STORE: FileStore = {
   users: [],
   teams: [],
@@ -548,6 +550,84 @@ function getPool() {
   return global.__ecoquestPool;
 }
 
+let migrationPromise: Promise<void> | null = null;
+
+async function ensureMigrations(poolInstance: Pool) {
+  if (migrationPromise) {
+    return migrationPromise;
+  }
+
+  const migrationSql = `
+create extension if not exists pgcrypto;
+
+create table if not exists users (
+  id uuid primary key,
+  email text not null unique,
+  password_hash text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists teams (
+  id uuid primary key,
+  join_code text not null unique,
+  created_by uuid references users(id) on delete set null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists team_active_missions (
+  id uuid primary key,
+  team_id uuid not null references teams(id) on delete cascade,
+  mission_id text,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists team_mission_logs (
+  id uuid primary key,
+  team_id uuid not null references teams(id) on delete cascade,
+  mission_id text,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists mission_logs (
+  id uuid primary key,
+  user_id uuid not null references users(id) on delete cascade,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists photo_hashes (
+  id uuid primary key default gen_random_uuid(),
+  image_hash text not null unique,
+  user_id uuid not null references users(id) on delete cascade,
+  quest_id text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_teams_join_code on teams(join_code);
+create index if not exists idx_team_active_missions_team_id on team_active_missions(team_id);
+create index if not exists idx_team_active_missions_mission_id on team_active_missions(mission_id);
+create index if not exists idx_team_mission_logs_team_id on team_mission_logs(team_id);
+create index if not exists idx_team_mission_logs_mission_id on team_mission_logs(mission_id);
+create index if not exists idx_mission_logs_user_id on mission_logs(user_id);
+  `;
+
+  migrationPromise = poolInstance.query(migrationSql).then(() => {
+    console.log("Database migrations applied successfully.");
+  }).catch((err) => {
+    migrationPromise = null;
+    throw err;
+  });
+
+  return migrationPromise;
+}
+
 async function detectMode() {
   if (global.__ecoquestDbMode) {
     return global.__ecoquestDbMode;
@@ -563,13 +643,10 @@ async function detectMode() {
   try {
     const pool = getPool();
     await pool.query("select 1 as ok");
+    await ensureMigrations(pool);
     global.__ecoquestDbMode = "postgres";
   } catch (error) {
-    if (!isConnectionError(error)) {
-      throw error;
-    }
-
-    console.warn("PostgreSQL unavailable, falling back to local persistent data store.");
+    console.warn("PostgreSQL unavailable, falling back to local persistent data store. Error:", error);
     global.__ecoquestDbMode = "file";
   }
 
@@ -594,12 +671,8 @@ export async function sql<T extends QueryResultRow = QueryResultRow>(
       rows: result.rows
     };
   } catch (error) {
-    if (!isConnectionError(error)) {
-      throw error;
-    }
-
     global.__ecoquestDbMode = "file";
-    console.warn("PostgreSQL query failed, switching to local persistent data store.");
+    console.warn("PostgreSQL query failed, switching to local persistent data store. Error:", error);
     return fileSql<T>(text, params);
   }
 }
