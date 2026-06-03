@@ -1,11 +1,13 @@
 // @ts-nocheck
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { logOut } from "@/public/js/auth.js";
 import { getBadgeImageForLevel, getBadgeNameForLevel } from "@/public/js/levels.js";
+import { dangerButton, secondaryButton } from "@/components/game-ui";
 
 type NavigationBarProps = {
   user: any;
@@ -13,27 +15,25 @@ type NavigationBarProps = {
   refreshProfile: () => void;
 };
 
+const navLinks = [
+  { name: "Dashboard", href: "/dashboard", mark: "DB" },
+  { name: "Team", href: "/team", mark: "TM" },
+  { name: "Insights", href: "/insights", mark: "IN" },
+  { name: "Shop", href: "/shop", mark: "SH" },
+  { name: "Collection", href: "/collection", mark: "CO" },
+  { name: "Profile", href: "/profile", mark: "PR" },
+  { name: "Leaderboard", href: "/leaderboard", mark: "LB" }
+];
+
 export function NavigationBar({ user, profile, refreshProfile }: NavigationBarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navLinks = [
-    { name: "Dashboard", href: "/dashboard", icon: "📋" },
-    { name: "Team", href: "/team", icon: "👥" },
-    { name: "Insights", href: "/insights", icon: "📊" },
-    { name: "Shop", href: "/shop", icon: "🛒" },
-    { name: "Collection", href: "/collection", icon: "📚" },
-    { name: "Profile", href: "/profile", icon: "👤" },
-    { name: "Leaderboard", href: "/leaderboard", icon: "🏆" }
-  ];
-
   const handleLogout = async () => {
-    if (confirm("Are you sure you want to sign out from your forest journey?")) {
+    if (confirm("Sign out of EcoLudus?")) {
       const res = await logOut();
-      if (res.success) {
-        router.push("/landing");
-      }
+      if (res.success) router.push("/landing");
     }
   };
 
@@ -44,102 +44,86 @@ export function NavigationBar({ user, profile, refreshProfile }: NavigationBarPr
   const badgeName = getBadgeNameForLevel(level);
 
   return (
-    <header className="sticky top-4 z-50 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-      <nav className="flex items-center justify-between rounded-3xl border border-forest-900/10 bg-white/80 px-6 py-4 shadow-[0_20px_54px_rgba(16,33,20,0.08)] backdrop-blur-xl">
-        {/* Brand/Logo */}
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest-900 text-lg font-semibold text-cream-100 shadow-[0_12px_24px_rgba(16,33,20,0.18)] hover:scale-105 transition-transform">
-            E
+    <header className="sticky top-3 z-50 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <nav className="flex items-center justify-between rounded-[22px] border border-[#dce6d8] bg-[#fffefa]/92 px-4 py-3 shadow-[0_18px_54px_rgba(16,33,20,0.11)] backdrop-blur-xl">
+        <Link href="/dashboard" className="flex shrink-0 items-center gap-3 text-forest-950">
+          <div className="relative h-11 w-11 overflow-hidden rounded-3xl bg-white shadow-[0_14px_34px_rgba(16,33,20,0.18)]">
+            <Image src="/images/logo.png" alt="EcoLudus logo" fill className="object-cover" priority />
           </div>
-          <div>
-            <div className="font-serif text-xl font-bold tracking-wide text-forest-950">EcoLudus</div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-forest-700/70">Forest Edition</div>
+          <div className="hidden sm:block">
+            <div className="font-serif text-xl font-extrabold leading-none">EcoLudus</div>
+            <div className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.24em] text-forest-700/70">Forest Edition</div>
           </div>
         </Link>
 
-        {/* Desktop Links */}
-        <div className="hidden lg:flex items-center gap-1 xl:gap-2">
+        <div className="hidden items-center gap-1 lg:flex">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative px-4 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all ${
+                className={`flex items-center gap-2 rounded-full px-3 py-2 text-[13px] font-extrabold transition ${
                   isActive
-                    ? "bg-gradient-to-r from-forest-800 to-forest-700 text-cream-100 shadow-[0_8px_16px_rgba(22,48,29,0.15)]"
-                    : "text-forest-900/80 hover:text-forest-950 hover:bg-forest-900/5"
+                    ? "bg-forest-950 text-cream-100 shadow-[0_12px_24px_rgba(16,33,20,0.16)]"
+                    : "text-forest-700 hover:bg-forest-100 hover:text-forest-950"
                 }`}
               >
-                <span className="mr-1.5">{link.icon}</span>
+                <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${isActive ? "bg-white/12" : "bg-forest-200/70"}`}>
+                  {link.mark}
+                </span>
                 {link.name}
               </Link>
             );
           })}
         </div>
 
-        {/* Mini Stats Bar (Desktop) */}
-        {profile && (
-          <div className="hidden md:flex items-center gap-3 rounded-full border border-forest-900/8 bg-forest-100/50 p-1.5 pr-4 shadow-inner">
-            <div className="relative group flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm">
-              <img src={badgeImg} alt={badgeName} className="h-7 w-7 object-contain group-hover:scale-110 transition-transform" />
-              {/* Tooltip */}
-              <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-forest-900 px-2 py-1 text-[10px] text-cream-100 opacity-0 transition-opacity group-hover:opacity-100 shadow-lg">
-                {badgeName} Badge
-              </span>
-            </div>
-            <div className="flex flex-col text-left">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-forest-700">Lvl {level}</span>
-              <span className="text-xs font-extrabold text-forest-950">{xp.toLocaleString()} XP</span>
-            </div>
-            <div className="h-6 w-px bg-forest-900/10" />
-            <div className="flex flex-col text-left">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-forest-700">EcoPoints</span>
-              <span className="text-xs font-extrabold text-moss-600">💰 {ecoPoints.toLocaleString()}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Action Button & Menu Toggle */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleLogout}
-            className="hidden md:inline-flex items-center justify-center rounded-full border border-forest-900/12 bg-white/90 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-forest-900 shadow-sm hover:bg-white hover:-translate-y-0.5 hover:shadow-md transition-all cursor-pointer"
-          >
-            Sign Out
-          </button>
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="lg:hidden flex h-10 w-10 items-center justify-center rounded-xl bg-forest-900/5 hover:bg-forest-900/10 text-forest-950 transition-colors"
-            aria-label="Toggle Menu"
-          >
-            <span className="text-xl">{mobileOpen ? "✕" : "☰"}</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile Drawer */}
-      {mobileOpen && (
-        <div className="lg:hidden mt-2 rounded-3xl border border-forest-900/10 bg-white/95 p-5 shadow-[0_24px_50px_rgba(16,33,20,0.12)] backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-200">
-          {/* Mini Stats Bar (Mobile) */}
+        <div className="flex shrink-0 items-center gap-3">
           {profile && (
-            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-forest-900/8 bg-forest-100/40 p-3 mb-4 text-center">
-              <div className="flex flex-col items-center border-r border-forest-900/10">
-                <img src={badgeImg} alt={badgeName} className="h-8 w-8 object-contain mb-1" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-forest-700">{badgeName}</span>
+            <div className="hidden items-center gap-3 rounded-2xl border border-[#dce6d8] bg-[#f4f7ef] px-3 py-2 md:flex">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-sm">
+                <Image src={badgeImg} alt={badgeName} width={28} height={28} className="object-contain" />
               </div>
-              <div className="flex flex-col justify-center border-r border-forest-900/10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-forest-700">Level {level}</span>
-                <span className="text-xs font-extrabold text-forest-950">{xp} XP</span>
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-forest-600">Lvl {level}</div>
+                <div className="text-xs font-extrabold leading-none text-forest-950">{xp.toLocaleString()} XP</div>
               </div>
-              <div className="flex flex-col justify-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-forest-700">EcoPoints</span>
-                <span className="text-xs font-extrabold text-moss-600">💰 {ecoPoints}</span>
+              <div className="h-6 w-px bg-[#d6e0d0]" />
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-forest-600">Eco</div>
+                <div className="text-xs font-extrabold leading-none text-forest-800">{ecoPoints.toLocaleString()}</div>
               </div>
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
+          <button onClick={handleLogout} className={`hidden md:inline-flex ${secondaryButton}`}>
+            Sign Out
+          </button>
+
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#dce6d8] bg-[#f4f7ef] text-sm font-extrabold text-forest-950 transition hover:bg-white lg:hidden"
+            aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? "X" : "M"}
+          </button>
+        </div>
+      </nav>
+
+      {mobileOpen && (
+        <div className="mt-2 rounded-[22px] border border-[#dce6d8] bg-[#fffefa] p-4 shadow-[0_18px_54px_rgba(16,33,20,0.14)] lg:hidden">
+          {profile && (
+            <div className="mb-3 flex items-center gap-3 rounded-2xl border border-[#dce6d8] bg-[#f4f7ef] p-3">
+              <Image src={badgeImg} alt={badgeName} width={40} height={40} className="h-10 w-10 rounded-xl bg-white p-1 shadow-sm" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-extrabold text-forest-950">{badgeName} Badge, Level {level}</div>
+                <div className="text-[11px] font-semibold text-forest-700">{xp.toLocaleString()} XP, {ecoPoints.toLocaleString()} Eco</div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -147,26 +131,24 @@ export function NavigationBar({ user, profile, refreshProfile }: NavigationBarPr
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
-                    isActive
-                      ? "bg-gradient-to-r from-forest-800 to-forest-700 text-cream-100"
-                      : "text-forest-900/80 hover:text-forest-950 hover:bg-forest-900/5"
+                  className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-extrabold transition ${
+                    isActive ? "bg-forest-950 text-cream-100" : "text-forest-800 hover:bg-forest-100"
                   }`}
                 >
-                  <span className="text-lg">{link.icon}</span>
-                  {link.name}
+                  <span>{link.name}</span>
+                  <span className={isActive ? "text-cream-100/70" : "text-forest-500"}>{link.mark}</span>
                 </Link>
               );
             })}
-            <div className="h-px bg-forest-900/10 my-2" />
+            <div className="my-2 h-px bg-[#e7ecdf]" />
             <button
               onClick={() => {
                 setMobileOpen(false);
                 handleLogout();
               }}
-              className="flex w-full items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold text-rose-700 hover:bg-rose-50 transition-all cursor-pointer"
+              className={`w-full ${dangerButton}`}
             >
-              🚪 Sign Out
+              Sign Out
             </button>
           </div>
         </div>

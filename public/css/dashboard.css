@@ -12,27 +12,27 @@
    Easy to modify - change here and all places update
    ============================================ */
 :root {
-  /* Primary Colors */
-  --color-primary: #4caf50;      /* Green - main color */
-  --color-secondary: #81d4fa;    /* Light blue - secondary color */
-  --color-accent: #2e7d32;       /* Dark green - for emphasis */
-  --color-bg-light: #f5f5f5;     /* Light gray background */
-  --color-bg-dark: #1b1b1b;      /* Dark background */
-  --color-text: #424242;         /* Text color */
-  --color-white: #ffffff;        /* White */
-  
-  /* Fonts */
-  --font-main: "Poppins", sans-serif;        /* Main font (headings) */
-  --font-secondary: "Inter", sans-serif;     /* Secondary font (body text) */
-  
-  /* Sizes */
-  --max-width: 1200px;           /* Maximum page width */
-  --border-radius: 15px;         /* Rounded corners */
-  --section-padding: 60px;       /* Section spacing */
-  
+  /* Forest palette (aligned with app/landing) */
+  --color-primary: #3f7c47;
+  --color-secondary: #8cb291;
+  --color-accent: #16301d;
+  --color-bg-light: #f8f4ec;
+  --color-bg-dark: #102114;
+  --color-text: #243528;
+  --color-white: #fffdf8;
+
+  /* Typography */
+  --font-main: "Baloo 2", system-ui, sans-serif;
+  --font-secondary: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Layout */
+  --max-width: 1280px;
+  --border-radius: 24px;
+  --section-padding: 60px;
+
   /* Shadows */
-  --shadow-light: 0 5px 15px rgba(0, 0, 0, 0.1);    /* Light shadow */
-  --shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.2);    /* Hover shadow */
+  --shadow-light: 0 18px 44px rgba(16, 33, 20, 0.08);
+  --shadow-hover: 0 28px 70px rgba(16, 33, 20, 0.14);
   
   /* Animations */
   --transition: all 0.3s ease;   /* Transition speed */
@@ -64,11 +64,11 @@
 @keyframes pulseReplay {
     0%, 100% {
         transform: scale(1);
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 15px rgba(22, 48, 29, 0.25);
     }
     50% {
         transform: scale(1.02);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        box-shadow: 0 6px 20px rgba(63, 124, 71, 0.4);
     }
 }
 
@@ -133,8 +133,7 @@
 
 /* replay mode kaart stiilid */
 #allQuestsCompletedCard {
-    animation: slideInReplay 0.6s ease-out, pulseReplay 2s ease-in-out infinite;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    background: linear-gradient(135deg, #16301d 0%, #3f7c47 50%, #629168 100%);
     background-size: 200% 200%;
     animation: slideInReplay 0.6s ease-out, pulseReplay 2s ease-in-out infinite, gradientShift 3s ease infinite;
 }
@@ -223,11 +222,14 @@ button,
   }
 }
 
-/* Pealkirjad kasutavad peamist fonti */
+/* Headings — serif like landing page */
 h1,
 h2,
 h3 {
   font-family: var(--font-main);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
 }
 
 /* ============================================
@@ -634,10 +636,12 @@ main {
 
 .stat-card h3 {
   margin: 0 0 10px 0;
-  color: var(--color-accent);
-  font-size: 14px;
+  color: rgba(36, 53, 40, 0.72);
+  font-family: var(--font-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.2em;
 }
 
 .stat-card .stat-value {
@@ -989,7 +993,8 @@ main {
   color: var(--color-accent);
   margin-top: 0;
   margin-bottom: 20px;
-  font-size: 24px;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 1.1;
 }
 
 .mission-list {

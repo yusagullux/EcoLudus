@@ -3,32 +3,30 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { inputClass, primaryButton } from "@/components/game-ui";
 
 type Mode = "login" | "signup";
-
-type AuthCardProps = {
-  mode: Mode;
-};
+type AuthCardProps = { mode: Mode };
 
 const copy = {
   login: {
-    eyebrow: "Welcome Back",
-    title: "Step into your forest journey.",
-    subtitle: "Log in to continue your daily missions, team progress, and collection growth.",
+    eyebrow: "Account Access",
+    title: "Return to your daily eco rhythm.",
+    subtitle: "Open your missions, team progress, collection, and impact dashboard.",
     submit: "Log In",
-    pending: "Opening your dashboard...",
-    altPrompt: "Need a fresh start?",
-    altLabel: "Create your profile",
+    pending: "Opening dashboard...",
+    altPrompt: "New here?",
+    altLabel: "Create a profile",
     altHref: "/signup"
   },
   signup: {
-    eyebrow: "Get Started",
-    title: "Create a calm, greener ritual.",
-    subtitle: "Start tracking eco actions, unlock rewards, and grow your collection with a more polished experience.",
+    eyebrow: "New Profile",
+    title: "Start building a greener routine.",
+    subtitle: "Create your profile, earn EcoPoints, and grow your collection through daily action.",
     submit: "Join EcoLudus",
-    pending: "Preparing your forest hub...",
-    altPrompt: "Already exploring EcoLudus?",
-    altLabel: "Log in instead",
+    pending: "Setting up profile...",
+    altPrompt: "Already a member?",
+    altLabel: "Log in",
     altHref: "/login"
   }
 } as const;
@@ -36,12 +34,11 @@ const copy = {
 function formatClientError(message: string) {
   const mapped: Record<string, string> = {
     "auth/email-already-in-use": "This email is already in use. Try logging in instead.",
-    "auth/user-not-found": "We couldn’t find a profile for that email.",
-    "auth/wrong-password": "The password looks incorrect. Please try again.",
+    "auth/user-not-found": "No profile found for that email.",
+    "auth/wrong-password": "Incorrect password. Please try again.",
     "auth/invalid-input": "Please check your details and try again.",
     "auth/internal-error": "Something went wrong on the server. Please try again."
   };
-
   return mapped[message] ?? "Something went wrong. Please try again.";
 }
 
@@ -57,78 +54,62 @@ export function AuthCard({ mode }: AuthCardProps) {
     event.preventDefault();
     setError("");
     setPending(true);
-
     const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
-
     try {
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password
-        })
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password })
       });
-
       const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(payload?.error?.code || "auth/internal-error");
-      }
-
-      router.push("/html/dashboard.html");
+      if (!response.ok) throw new Error(payload?.error?.code || "auth/internal-error");
+      router.push("/dashboard");
       router.refresh();
-    } catch (submissionError) {
-      const message = submissionError instanceof Error ? submissionError.message : "auth/internal-error";
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "auth/internal-error";
       setError(formatClientError(message));
       setPending(false);
     }
   }
 
   return (
-    <section className="mx-auto flex min-h-[calc(100vh-96px)] w-full max-w-7xl items-center px-5 pb-14 pt-4 sm:px-8 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:gap-10 lg:px-10">
-      <div className="hidden pr-10 lg:block">
-        <div className="rounded-[2rem] border border-white/70 bg-white/55 p-8 shadow-[0_30px_80px_rgba(20,42,25,0.14)] backdrop-blur-xl">
-          <div className="inline-flex items-center gap-2 rounded-full bg-forest-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-cream-100">
-            Forest theme
-          </div>
-          <h1 className="mt-8 max-w-lg font-serif text-6xl leading-[0.95] text-forest-950">
-            A calmer sustainability space, redesigned for everyday momentum.
+    <section className="mx-auto grid min-h-[calc(100vh-96px)] w-full max-w-6xl px-5 pb-14 pt-6 sm:px-8 lg:grid-cols-[0.92fr_1fr] lg:px-0">
+      <aside className="hidden flex-col justify-between rounded-l-[28px] bg-[linear-gradient(145deg,#102016_0%,#203b29_58%,#5f7c52_100%)] p-12 text-cream-100 shadow-[0_30px_90px_rgba(16,33,20,0.2)] lg:flex">
+        <div>
+          <span className="inline-flex rounded-full border border-white/12 bg-white/8 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.24em] text-moss-200">
+            Forest Edition
+          </span>
+          <h1 className="mt-8 max-w-xl text-balance font-serif text-5xl font-extrabold leading-[1.04] text-cream-100">
+            A focused operating room for sustainable habits.
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-forest-900/78">
-            Cleaner spacing, warmer tones, and a smoother flow make EcoLudus feel more premium while keeping the same
-            missions, rewards, and community features you already use.
+          <p className="mt-6 max-w-md text-base leading-7 text-cream-100/68">
+            Quiet surfaces, strong hierarchy, and measured contrast keep the product useful while giving it a more distinctive identity.
           </p>
-          <div className="mt-10 grid grid-cols-3 gap-4">
-            {[
-              ["Daily rhythm", "Track quests and progress with less friction."],
-              ["Natural palette", "Forest greens, bark tones, and soft light surfaces."],
-              ["Faster flow", "Sharper UI hierarchy and leaner interactions."]
-            ].map(([title, text]) => (
-              <div
-                key={title}
-                className="rounded-3xl border border-forest-900/8 bg-gradient-to-b from-white to-[#eff3e8] p-5 shadow-[0_18px_40px_rgba(23,48,29,0.08)]"
-              >
-                <h2 className="font-serif text-2xl text-forest-900">{title}</h2>
-                <p className="mt-3 text-sm leading-6 text-forest-900/72">{text}</p>
-              </div>
-            ))}
-          </div>
         </div>
-      </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            ["Missions", "Daily actions"],
+            ["Teams", "Shared progress"],
+            ["Rewards", "EcoPoints"]
+          ].map(([title, text]) => (
+            <div key={title} className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <h3 className="font-serif text-lg font-extrabold text-cream-100">{title}</h3>
+              <p className="mt-1 text-xs font-semibold text-cream-100/58">{text}</p>
+            </div>
+          ))}
+        </div>
+      </aside>
 
-      <div className="w-full">
-        <div className="mx-auto w-full max-w-xl rounded-[2rem] border border-white/75 bg-white/80 p-6 shadow-[0_30px_90px_rgba(16,33,20,0.16)] backdrop-blur-xl sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-forest-700">{content.eyebrow}</p>
-          <h1 className="mt-4 font-serif text-4xl leading-tight text-forest-950 sm:text-5xl">{content.title}</h1>
-          <p className="mt-4 max-w-lg text-base leading-7 text-forest-900/75">{content.subtitle}</p>
+      <div className="flex items-center justify-center rounded-[28px] border border-[#dfe7d7] bg-[#fffefa]/94 px-6 py-12 shadow-[0_24px_70px_rgba(16,33,20,0.1)] backdrop-blur lg:rounded-l-none lg:px-14">
+        <div className="w-full max-w-sm">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-forest-700/72">{content.eyebrow}</p>
+          <h1 className="mt-3 text-balance font-serif text-4xl font-extrabold leading-tight text-forest-950">{content.title}</h1>
+          <p className="mt-3 text-sm leading-6 text-forest-800/72">{content.subtitle}</p>
 
-          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-forest-900">
+          <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="email" className="text-xs font-extrabold uppercase tracking-[0.14em] text-forest-800">
                 Email
               </label>
               <input
@@ -138,13 +119,13 @@ export function AuthCard({ mode }: AuthCardProps) {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-2xl border border-forest-900/12 bg-[#fbfcf8] px-4 py-3.5 text-forest-950 outline-none ring-0 placeholder:text-forest-900/35 focus:border-forest-600 focus:bg-white focus:shadow-[0_0_0_4px_rgba(95,155,103,0.12)]"
                 placeholder="you@example.com"
+                className={inputClass}
               />
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-forest-900">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="password" className="text-xs font-extrabold uppercase tracking-[0.14em] text-forest-800">
                 Password
               </label>
               <input
@@ -155,27 +136,25 @@ export function AuthCard({ mode }: AuthCardProps) {
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-2xl border border-forest-900/12 bg-[#fbfcf8] px-4 py-3.5 text-forest-950 outline-none ring-0 placeholder:text-forest-900/35 focus:border-forest-600 focus:bg-white focus:shadow-[0_0_0_4px_rgba(95,155,103,0.12)]"
                 placeholder="At least 6 characters"
+                className={inputClass}
               />
             </div>
 
-            {error ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-            ) : null}
+            {error && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
+                {error}
+              </div>
+            )}
 
-            <button
-              type="submit"
-              disabled={pending}
-              className="inline-flex w-full items-center justify-center rounded-full bg-forest-900 px-6 py-3.5 text-sm font-semibold tracking-[0.08em] text-cream-100 shadow-[0_18px_45px_rgba(16,33,20,0.26)] hover:-translate-y-0.5 hover:bg-forest-800 disabled:cursor-wait disabled:opacity-70"
-            >
+            <button type="submit" disabled={pending} className={`mt-1 w-full ${primaryButton}`}>
               {pending ? content.pending : content.submit}
             </button>
           </form>
 
-          <div className="mt-6 flex items-center justify-between gap-4 border-t border-forest-900/10 pt-6 text-sm text-forest-900/75">
+          <div className="mt-6 flex items-center justify-between border-t border-[#e7ecdf] pt-5 text-sm text-forest-700">
             <span>{content.altPrompt}</span>
-            <Link href={content.altHref} className="font-semibold text-forest-700 hover:text-forest-900">
+            <Link href={content.altHref} className="font-extrabold text-forest-950 transition hover:text-forest-700">
               {content.altLabel}
             </Link>
           </div>

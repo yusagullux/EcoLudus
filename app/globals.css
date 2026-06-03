@@ -1,18 +1,19 @@
-@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --color-forest-50: #f4f7f5;
-  --color-forest-100: #eef3e8;
-  --color-forest-200: #dce7dc;
-  --color-forest-300: #b8d0bb;
-  --color-forest-400: #8cb291;
-  --color-forest-500: #629168;
-  --color-forest-600: #4a754f;
-  --color-forest-700: #2d5a3f;
-  --color-forest-800: #1b3a24;
-  --color-forest-900: #16301d;
-  --color-forest-950: #102114;
+  --font-serif: var(--font-heading), "Baloo 2", system-ui, sans-serif;
+  --font-sans: var(--font-body), "Manrope", system-ui, sans-serif;
+  --color-forest-50: #f5f7f0;
+  --color-forest-100: #e9efe0;
+  --color-forest-200: #d4dfc8;
+  --color-forest-300: #aebf9b;
+  --color-forest-400: #829b72;
+  --color-forest-500: #5f7c52;
+  --color-forest-600: #43653f;
+  --color-forest-700: #2f4f35;
+  --color-forest-800: #203b29;
+  --color-forest-900: #182e20;
+  --color-forest-950: #102016;
 
   --color-cream-50: #fffdfc;
   --color-cream-100: #fcf9f2;
@@ -22,7 +23,7 @@
   --color-moss-50: #f2f7f2;
   --color-moss-100: #e2edd9;
   --color-moss-200: #c9dba9;
-  --color-moss-300: #a7c484;
+  --color-moss-300: #aac487;
   --color-moss-400: #88ad62;
   --color-moss-500: #698e43;
   --color-moss-600: #517031;
@@ -72,18 +73,10 @@
 
 :root {
   color-scheme: light;
-  --font-sans:
-    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
-  --font-heading: "Baloo 2", cursive;
+  --font-sans: var(--font-body), "Manrope", system-ui, sans-serif;
+  --font-heading-font: var(--font-heading), "Baloo 2", system-ui, sans-serif;
   --page-bg:
-    radial-gradient(circle at top, rgba(94, 142, 101, 0.18), transparent 32%),
-    radial-gradient(
-      circle at 20% 20%,
-      rgba(180, 211, 169, 0.22),
-      transparent 28%
-    ),
-    linear-gradient(180deg, #f8f4ec 0%, #eef2e6 48%, #e7edde 100%);
+    linear-gradient(135deg, rgba(232, 238, 224, 0.86) 0%, rgba(250, 248, 240, 0.94) 42%, rgba(226, 235, 218, 0.88) 100%);
 }
 
 html,
@@ -95,7 +88,7 @@ body {
 
 body {
   background: var(--page-bg);
-  color: #1a281d;
+  color: #172419;
   font-family: var(--font-sans);
   line-height: 1.5;
 }
@@ -106,7 +99,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-heading);
+  font-family: var(--font-heading-font);
 }
 
 /* Normalize box sizing and responsive media */
@@ -153,5 +146,9 @@ select {
 }
 
 ::selection {
-  background: rgba(63, 124, 71, 0.2);
+  background: rgba(47, 107, 70, 0.22);
+}
+
+.text-balance {
+  text-wrap: balance;
 }

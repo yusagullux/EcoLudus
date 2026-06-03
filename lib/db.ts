@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
+import { randomUUID } from "crypto";
 import { Pool, type QueryResultRow } from "pg";
 
 type QueryResult<T extends QueryResultRow = QueryResultRow> = {
@@ -215,6 +216,38 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const id = String(params[0] ?? "");
     const row = store.mission_logs.find((entry) => entry.id === id);
     return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
+  }
+
+  if (normalized === "select id, image_hash, user_id, quest_id, created_at from photo_hashes where image_hash = $1 limit 1") {
+    const hash = String(params[0] ?? "");
+    const row = store.photo_hashes.find((entry) => entry.image_hash === hash);
+    return result(row ? ([clone(row)] as T[]) : []);
+  }
+
+  if (
+    normalized ===
+    "insert into photo_hashes (image_hash, user_id, quest_id) values ($1, $2, $3) on conflict (image_hash) do update set user_id = excluded.user_id, quest_id = excluded.quest_id, created_at = now()"
+  ) {
+    const [imageHash, userId, questId] = params;
+    const hash = String(imageHash);
+    const existing = store.photo_hashes.find((entry) => entry.image_hash === hash);
+
+    if (existing) {
+      existing.user_id = String(userId);
+      existing.quest_id = questId === null ? null : String(questId);
+      existing.created_at = nowIso();
+    } else {
+      store.photo_hashes.push({
+        id: randomUUID(),
+        image_hash: hash,
+        user_id: String(userId),
+        quest_id: questId === null ? null : String(questId),
+        created_at: nowIso()
+      });
+    }
+
+    await persistStore();
+    return result([], "INSERT");
   }
 
   if (
