@@ -1,11 +1,15 @@
+/* EcoLudus forest theme — matches app/landing visual language */
+
 :root {
   --color-primary: #3f7c47 !important;
-  --color-secondary: #8db995 !important;
-  --color-accent: #1e4a28 !important;
-  --color-bg-light: #f7f3ea !important;
+  --color-secondary: #8cb291 !important;
+  --color-accent: #16301d !important;
+  --color-bg-light: #f8f4ec !important;
   --color-bg-dark: #102114 !important;
   --color-text: #243528 !important;
   --color-white: #fffdf8 !important;
+  --font-main: "Baloo 2", system-ui, sans-serif !important;
+  --font-secondary: "Manrope", system-ui, sans-serif !important;
   --shadow-light: 0 18px 44px rgba(16, 33, 20, 0.08) !important;
   --shadow-hover: 0 28px 70px rgba(16, 33, 20, 0.14) !important;
   --border-radius: 24px !important;
@@ -14,15 +18,39 @@
 body {
   background:
     radial-gradient(circle at top, rgba(132, 173, 129, 0.2), transparent 24%),
+    radial-gradient(circle at 90% 10%, rgba(155, 118, 83, 0.1), transparent 22%),
     linear-gradient(180deg, #f8f4ec 0%, #edf2e7 46%, #e7edde 100%) !important;
   color: var(--color-text) !important;
+  font-family: var(--font-secondary) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(63, 124, 71, 0.22);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-main) !important;
+  font-weight: 600 !important;
+  color: var(--color-accent) !important;
 }
 
 header {
   background: rgba(255, 253, 248, 0.86) !important;
-  border: 1px solid rgba(30, 74, 40, 0.08);
+  border-bottom: 1px solid rgba(30, 74, 40, 0.08);
   box-shadow: 0 20px 54px rgba(16, 33, 20, 0.08) !important;
   backdrop-filter: blur(16px);
+  margin-bottom: 0 !important;
+}
+
+header nav {
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 0.25rem;
 }
 
 nav img {
@@ -32,11 +60,15 @@ nav img {
 
 nav ul li a {
   color: rgba(36, 53, 40, 0.78) !important;
+  font-family: var(--font-secondary) !important;
   font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0.04em !important;
 }
 
 nav ul li a:hover {
   color: var(--color-accent) !important;
+  background: rgba(248, 244, 236, 0.9) !important;
 }
 
 .logout-button,
@@ -48,9 +80,16 @@ nav ul li a:hover {
 .shop-mode-btn.active,
 .filter-btn.active,
 .collection-mode-btn.active {
-  background: linear-gradient(135deg, #1f4c29 0%, #3f7c47 100%) !important;
+  background: linear-gradient(135deg, #16301d 0%, #3f7c47 100%) !important;
   border-color: transparent !important;
+  color: #fffdf8 !important;
+  border-radius: 999px !important;
   box-shadow: 0 16px 32px rgba(31, 76, 41, 0.2) !important;
+  font-family: var(--font-secondary) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  font-size: 0.8rem !important;
 }
 
 .logout-button:hover,
@@ -73,6 +112,8 @@ nav ul li a:hover {
   background: rgba(255, 253, 248, 0.9) !important;
   border: 1px solid rgba(30, 74, 40, 0.12) !important;
   color: var(--color-accent) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
 }
 
 .user-info,
@@ -101,6 +142,7 @@ nav ul li a:hover {
   border: 1px solid rgba(30, 74, 40, 0.08) !important;
   box-shadow: 0 22px 56px rgba(16, 33, 20, 0.08) !important;
   backdrop-filter: blur(14px);
+  border-radius: var(--border-radius) !important;
 }
 
 .dashboard-card:hover,
@@ -114,8 +156,14 @@ nav ul li a:hover {
 .shop-header,
 .profile-header {
   background:
-    linear-gradient(135deg, rgba(30, 74, 40, 0.96), rgba(63, 124, 71, 0.9)),
-    rgba(30, 74, 40, 0.95) !important;
+    linear-gradient(135deg, rgba(22, 48, 29, 0.97), rgba(63, 124, 71, 0.92)) !important;
+  color: #fffdf8 !important;
+}
+
+.user-info h2 {
+  font-family: var(--font-main) !important;
+  font-size: clamp(1.75rem, 4vw, 2.5rem) !important;
+  line-height: 1.05 !important;
   color: #fffdf8 !important;
 }
 
@@ -131,15 +179,18 @@ nav ul li a:hover {
 .progress-fill,
 .category-progress-fill,
 .hatching-progress-fill {
-  background: linear-gradient(90deg, #1f4c29 0%, #9ac495 100%) !important;
+  background: linear-gradient(90deg, #16301d 0%, #9ac495 100%) !important;
 }
 
 .countdown-timer,
 .ecopoints-display,
 .team-role-pill,
 .count-badge,
-.rarity-badge {
+.rarity-badge,
+.level-badge {
   border-radius: 999px !important;
+  font-family: var(--font-secondary) !important;
+  letter-spacing: 0.08em !important;
 }
 
 .mission-item,
@@ -176,5 +227,15 @@ nav ul li a:hover {
 #userXP,
 #ecoPoints,
 #totalCarbonReduced {
+  font-family: var(--font-main) !important;
   color: var(--color-accent) !important;
+}
+
+main {
+  max-width: 1280px !important;
+}
+
+.photo-modal-header h3,
+.team-modal-header h3 {
+  font-family: var(--font-main) !important;
 }

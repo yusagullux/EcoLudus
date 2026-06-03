@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { Baloo_2, Manrope } from "next/font/google";
 import "./globals.css";
 
-const headingFont = Cormorant_Garamond({
+const headingFont = Baloo_2({
   subsets: ["latin"],
   variable: "--font-heading",
-  weight: ["500", "600", "700"]
+  weight: ["400", "500", "600", "700", "800"]
 });
 
 const bodyFont = Manrope({
