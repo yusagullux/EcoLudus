@@ -4,7 +4,7 @@ import { setSessionCookie, verifyPassword } from "@/lib/auth";
 import { sql } from "@/lib/db";
 
 const loginSchema = z.object({
-  email: z.email(),
+  email: z.string().email(),
   password: z.string().min(6).max(128)
 });
 

@@ -5,7 +5,7 @@ import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { sql } from "@/lib/db";
 
 const signUpSchema = z.object({
-  email: z.email(),
+  email: z.string().email(),
   password: z.string().min(6).max(128),
   displayName: z.string().trim().min(1).max(50).nullable().optional()
 });
