@@ -3,10 +3,20 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
+import { updateUserProfile } from "@/public/js/auth.js";
 import { HeroMetric, PageHero, Panel, Pill, primaryButton } from "@/components/game-ui";
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
 type Mode = "plants" | "eggs";
+
+type ShopItem = {
+  id: number;
+  name: string;
+  rarity: Rarity;
+  price: number;
+  mark: string;
+  hatchTime?: string;
+};
 
 const rarityStyle: Record<Rarity, { border: string; chip: string; accent: string }> = {
   common: { border: "#d9e2d2", chip: "bg-[#eef2e8] text-[#344534]", accent: "#7c8b74" },
@@ -34,7 +44,7 @@ const eggs = [
 ];
 
 export default function ShopPage() {
-  const { profile } = useAuth();
+  const { user, profile, setProfile } = useAuth();
   const ecoPoints = profile?.ecoPoints ?? 0;
   const [mode, setMode] = useState<Mode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
@@ -44,8 +54,74 @@ export default function ShopPage() {
   const filtered = filter === "all" ? items : items.filter((item) => item.rarity === filter);
   const tabs: ("all" | Rarity)[] = ["all", "common", "rare", "epic", "legendary"];
 
-  const handleBuy = (item: typeof plants[0]) => {
-    setToast(ecoPoints < item.price ? `Need ${item.price} EcoPoints; you have ${ecoPoints}.` : `${item.name} added to collection!`);
+  const handleBuy = async (item: ShopItem) => {
+    if (!profile || !user) {
+      setToast("Please log in to purchase items.");
+      setTimeout(() => setToast(""), 3000);
+      return;
+    }
+
+    if (ecoPoints < item.price) {
+      setToast(`Need ${item.price} EcoPoints; you have ${ecoPoints}.`);
+      setTimeout(() => setToast(""), 3000);
+      return;
+    }
+
+    const currentPlants = Array.isArray(profile.plants) ? profile.plants : [];
+    const currentEggs = Array.isArray(profile.eggs) ? profile.eggs : [];
+
+    const nextEcoPoints = ecoPoints - item.price;
+    const profileUpdates: Record<string, unknown> = {
+      ecoPoints: nextEcoPoints
+    };
+
+    if (mode === "plants") {
+      const existingIndex = currentPlants.findIndex((entry) => entry.id === item.id);
+      const nextPlants = [...currentPlants];
+
+      if (existingIndex >= 0) {
+        const existingPlant = nextPlants[existingIndex];
+        nextPlants[existingIndex] = {
+          ...existingPlant,
+          count: (existingPlant.count ?? 1) + 1,
+          purchasedAt: new Date().toISOString()
+        };
+      } else {
+        nextPlants.push({ ...item, count: 1, purchasedAt: new Date().toISOString() });
+      }
+
+      profileUpdates.plants = nextPlants;
+    } else {
+      const existingIndex = currentEggs.findIndex((entry) => entry.id === item.id);
+      const nextEggs = [...currentEggs];
+
+      if (existingIndex >= 0) {
+        const existingEgg = nextEggs[existingIndex];
+        nextEggs[existingIndex] = {
+          ...existingEgg,
+          count: (existingEgg.count ?? 1) + 1,
+          purchasedAt: new Date().toISOString()
+        };
+      } else {
+        nextEggs.push({ ...item, count: 1, purchasedAt: new Date().toISOString() });
+      }
+
+      profileUpdates.eggs = nextEggs;
+    }
+
+    const result = await updateUserProfile(user.uid, profileUpdates);
+
+    if (!result.success) {
+      setToast("Purchase failed. Please try again.");
+      setTimeout(() => setToast(""), 3000);
+      return;
+    }
+
+    if (typeof setProfile === "function") {
+      setProfile({ ...profile, ...profileUpdates });
+    }
+
+    setToast(`${item.name} added to collection!`);
     setTimeout(() => setToast(""), 3000);
   };
 

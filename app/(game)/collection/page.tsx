@@ -16,18 +16,18 @@ const rarityStyle: Record<Rarity, { border: string; chip: string; accent: string
 };
 
 const samplePlants = [
-  { id: 1, name: "Mossy Fern", rarity: "common", mark: "MF", count: 3 },
-  { id: 2, name: "Golden Daisy", rarity: "common", mark: "GD", count: 1 },
-  { id: 3, name: "Blue Orchid", rarity: "rare", mark: "BO", count: 2 },
-  { id: 4, name: "Mystic Bamboo", rarity: "epic", mark: "MB", count: 1 },
-  { id: 5, name: "Aurora Blossom", rarity: "legendary", mark: "AB", count: 1 },
-  { id: 6, name: "Spotted Aloe", rarity: "rare", mark: "SA", count: 1 }
+  { id: 1, name: "Mossy Fern", rarity: "common", mark: "MF", count: 0 },
+  { id: 2, name: "Golden Daisy", rarity: "common", mark: "GD", count: 0 },
+  { id: 3, name: "Blue Orchid", rarity: "rare", mark: "BO", count: 0 },
+  { id: 4, name: "Mystic Bamboo", rarity: "epic", mark: "MB", count: 0 },
+  { id: 5, name: "Aurora Blossom", rarity: "legendary", mark: "AB", count: 0 },
+  { id: 6, name: "Spotted Aloe", rarity: "rare", mark: "SA", count: 0 }
 ];
 
 const sampleAnimals = [
-  { id: 1, name: "Forest Fox", rarity: "rare", mark: "FX", count: 1, active: true },
-  { id: 2, name: "Mystic Owl", rarity: "epic", mark: "OW", count: 1, active: false },
-  { id: 3, name: "Golden Deer", rarity: "legendary", mark: "DR", count: 1, active: false }
+  { id: 1, name: "Forest Fox", rarity: "rare", mark: "FX", count: 0, active: false },
+  { id: 2, name: "Mystic Owl", rarity: "epic", mark: "OW", count: 0, active: false },
+  { id: 3, name: "Golden Deer", rarity: "legendary", mark: "DR", count: 0, active: false }
 ];
 
 export default function CollectionPage() {
@@ -36,10 +36,12 @@ export default function CollectionPage() {
   const [mode, setMode] = useState<CollMode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
 
-  const items = mode === "plants" ? samplePlants : sampleAnimals;
+  const profilePlants = Array.isArray(profile?.plants) ? profile.plants : [];
+  const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
+  const items = mode === "plants" ? profilePlants : profileAnimals;
   const filtered = filter === "all" ? items : items.filter((item) => item.rarity === filter);
-  const totalPlants = samplePlants.reduce((sum, plant) => sum + plant.count, 0);
-  const totalAnimals = sampleAnimals.length;
+  const totalPlants = profilePlants.reduce((sum, plant) => sum + (plant.count ?? 1), 0);
+  const totalAnimals = profileAnimals.reduce((sum, animal) => sum + (animal.count ?? 1), 0);
   const tabs: ("all" | Rarity)[] = ["all", "common", "rare", "epic", "legendary"];
 
   return (

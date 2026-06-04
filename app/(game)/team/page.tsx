@@ -1,16 +1,16 @@
 // @ts-nocheck
 "use client";
 
+import { useAuth } from "@/lib/useAuth";
 import { useState } from "react";
-import { MetricCard, PageHero, Panel, Pill, ProgressBar, inputClass, primaryButton, secondaryButton } from "@/components/game-ui";
 
 const missionTemplates = [
-  { id: "t1", title: "Recycle 15 Plastic Bottles", desc: "Split the work and recycle at least 15 plastic bottles as a team.", mark: "RC", difficulty: "Easy", xp: 240, eco: 140, needed: 3 },
-  { id: "t2", title: "Clean One Shared Area", desc: "Pick a park block or stairwell and leave it visibly better.", mark: "CL", difficulty: "Easy", xp: 260, eco: 160, needed: 3 },
-  { id: "t3", title: "Commute Sustainably", desc: "At least 3 teammates bike, walk or take transit instead of a car.", mark: "TR", difficulty: "Medium", xp: 300, eco: 180, needed: 3 },
-  { id: "t4", title: "Save 50 Liters of Water", desc: "Collectively save about 50 liters through shorter showers.", mark: "WA", difficulty: "Medium", xp: 320, eco: 190, needed: 3 },
-  { id: "t5", title: "Night Power Down", desc: "Unplug unused chargers/devices across at least 3 households.", mark: "EN", difficulty: "Easy", xp: 220, eco: 130, needed: 2 },
-  { id: "t6", title: "Plant or Care for 3 Greens", desc: "Plant seeds or tend to three different plants as a joint effort.", mark: "GD", difficulty: "Easy", xp: 210, eco: 120, needed: 3 }
+  { id: "t1", title: "Recycle 15 Plastic Bottles", desc: "Split the work and recycle at least 15 plastic bottles as a team.", icon: "♻️", difficulty: "Easy", xp: 240, eco: 140, needed: 3 },
+  { id: "t2", title: "Clean One Shared Area", desc: "Pick a park block or stairwell and leave it visibly better.", icon: "🧹", difficulty: "Easy", xp: 260, eco: 160, needed: 3 },
+  { id: "t3", title: "Commute Sustainably", desc: "At least 3 teammates bike, walk or take transit instead of a car.", icon: "🚶", difficulty: "Medium", xp: 300, eco: 180, needed: 3 },
+  { id: "t4", title: "Save 50 Liters of Water", desc: "Collectively save about 50 liters through shorter showers.", icon: "💧", difficulty: "Medium", xp: 320, eco: 190, needed: 3 },
+  { id: "t5", title: "Night Power Down", desc: "Unplug unused chargers/devices across at least 3 households.", icon: "🔌", difficulty: "Easy", xp: 220, eco: 130, needed: 2 },
+  { id: "t6", title: "Plant or Care for 3 Greens", desc: "Plant seeds or tend to three different plants as a joint effort.", icon: "🌱", difficulty: "Easy", xp: 210, eco: 120, needed: 3 },
 ];
 
 const mockTeam = {
@@ -22,15 +22,22 @@ const mockTeam = {
     { name: "You (Leader)", role: "leader", xp: 2480 },
     { name: "EcoWalker", role: "member", xp: 1320 },
     { name: "ForestSpirit", role: "member", xp: 980 },
-    { name: "GreenSeed", role: "member", xp: 440 }
-  ]
+    { name: "GreenSeed", role: "member", xp: 440 },
+  ],
 };
 
 const activeMissions = [
-  { id: "am1", title: "Recycle 15 Plastic Bottles", mark: "RC", xp: 240, eco: 140, needed: 3, done: 2 }
+  { id: "am1", title: "Recycle 15 Plastic Bottles", icon: "♻️", xp: 240, eco: 140, needed: 3, done: 2 },
 ];
 
+const difficultyColor: Record<string, string> = {
+  Easy: "bg-emerald-50 text-emerald-700",
+  Medium: "bg-amber-50 text-amber-700",
+  Hard: "bg-rose-50 text-rose-700",
+};
+
 export default function TeamPage() {
+  const { user } = useAuth();
   const [joined, setJoined] = useState(true);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -42,161 +49,269 @@ export default function TeamPage() {
     setTimeout(() => setToast(""), 3000);
   };
 
+  const closeModals = () => {
+    setShowCreateModal(false);
+    setShowJoinModal(false);
+    setInputVal("");
+  };
+
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Cooperative play" title="Team Hub" description="Collaborate on eco goals, share progress, and keep group momentum visible.">
-        <div className="flex flex-wrap gap-3">
-          {!joined ? (
-            <>
-              <button onClick={() => setShowCreateModal(true)} className={primaryButton}>Create Team</button>
-              <button onClick={() => setShowJoinModal(true)} className={secondaryButton}>Join via Code</button>
-            </>
-          ) : (
-            <button
-              onClick={() => {
-                setJoined(false);
-                showToast("Left the team.");
-              }}
-              className="inline-flex items-center justify-center rounded-full border border-white/25 bg-white/8 px-5 py-2.5 text-xs font-extrabold uppercase tracking-[0.1em] text-cream-100 transition hover:-translate-y-0.5 hover:bg-white/12"
-            >
-              Leave Team
-            </button>
-          )}
-        </div>
-      </PageHero>
 
-      {!joined ? (
-        <Panel className="min-h-[320px]">
-          <div className="flex flex-col items-center justify-center gap-6 py-8 text-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-forest-100 text-xl font-extrabold text-forest-800">TM</span>
-            <div>
-              <h2 className="font-serif text-3xl font-extrabold text-forest-950">You are not part of a team yet</h2>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-forest-800/66">Create a squad or join an existing one with a 6-character code.</p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button onClick={() => setShowCreateModal(true)} className={primaryButton}>Start a Team</button>
-              <button onClick={() => setShowJoinModal(true)} className={secondaryButton}>Have a Code?</button>
-            </div>
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-forest-950 px-8 py-8 text-cream-100">
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(ellipse_at_top_right,rgba(167,196,132,0.12),transparent_60%)]" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-moss-300">Cooperative play</p>
+            <h1 className="mt-2 font-serif text-3xl font-bold sm:text-4xl">Team Hub</h1>
+            <p className="mt-1 text-sm text-cream-100/60">Collaborate on eco goals with your squad.</p>
           </div>
-        </Panel>
+          <div className="flex flex-wrap gap-3">
+            {!joined ? (
+              <>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="rounded-xl bg-cream-100 px-5 py-2.5 text-sm font-bold tracking-wide text-forest-950 hover:bg-white active:scale-[0.98] transition-all"
+                >
+                  Create Team
+                </button>
+                <button
+                  onClick={() => setShowJoinModal(true)}
+                  className="rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-white/12 transition-all"
+                >
+                  Join via Code
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => { setJoined(false); showToast("Left the team."); }}
+                className="rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-semibold text-cream-100/80 hover:bg-white/12 transition-all"
+              >
+                Leave Team
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Empty state ── */}
+      {!joined ? (
+        <div className="flex min-h-[280px] flex-col items-center justify-center gap-5 rounded-2xl border-2 border-dashed border-forest-200 bg-white p-10 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-forest-50 text-2xl">👥</div>
+          <div>
+            <p className="font-serif text-xl font-bold text-forest-950">You're not part of a team yet</p>
+            <p className="mt-1 text-sm text-forest-500 max-w-xs mx-auto">Create a cozy squad or join with a 6-character code.</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
+            >
+              Start a Team
+            </button>
+            <button
+              onClick={() => setShowJoinModal(true)}
+              className="rounded-xl border border-forest-200 bg-white px-5 py-2.5 text-sm font-bold text-forest-900 hover:border-forest-400 transition-all"
+            >
+              Have a Code?
+            </button>
+          </div>
+        </div>
       ) : (
         <>
-          <Panel
-            eyebrow="Your team"
-            title={mockTeam.name}
-            action={<button onClick={() => { navigator.clipboard?.writeText(mockTeam.code); showToast("Code copied!"); }} className={secondaryButton}>Copy Code</button>}
-          >
-            <div className="mb-5 flex flex-wrap items-center gap-2">
-              <Pill>Code: {mockTeam.code}</Pill>
-              <Pill active>{mockTeam.role}</Pill>
+          {/* ── Team Overview ── */}
+          <div className="rounded-2xl border border-forest-100 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-forest-500">Your team</p>
+                <h2 className="mt-0.5 font-serif text-2xl font-bold text-forest-950">{mockTeam.name}</h2>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="rounded-lg border border-forest-100 bg-forest-50 px-3 py-1 text-xs font-bold text-forest-700">
+                    Code: {mockTeam.code}
+                  </span>
+                  <span className="rounded-lg bg-forest-950 px-3 py-1 text-xs font-bold uppercase text-cream-100">
+                    {mockTeam.role}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(mockTeam.code); showToast("Code copied!"); }}
+                className="self-start rounded-xl border border-forest-200 bg-white px-4 py-2 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
+              >
+                Copy Code
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <MetricCard label="XP Shared" value={mockTeam.stats.xp.toLocaleString()} accent="#2f6b46" />
-              <MetricCard label="Eco Shared" value={mockTeam.stats.eco.toLocaleString()} accent="#237482" />
-              <MetricCard label="Cleared" value={mockTeam.stats.missions} accent="#9a6b1f" />
-              <MetricCard label="Members" value={mockTeam.stats.members} accent="#62508f" />
-            </div>
-            <div className="mt-6 grid gap-2">
-              {mockTeam.members.map((member, index) => (
-                <div key={index} className="flex items-center justify-between rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-xs font-extrabold text-forest-800">{member.role === "leader" ? "LD" : "MB"}</span>
-                    <span className="text-sm font-extrabold text-forest-950">{member.name}</span>
-                  </div>
-                  <span className="text-xs font-extrabold text-forest-700">{member.xp.toLocaleString()} XP</span>
+
+            {/* Stats grid */}
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: "XP Shared", value: mockTeam.stats.xp.toLocaleString(), accent: "#4CAF50" },
+                { label: "EcoPoints Shared", value: mockTeam.stats.eco.toLocaleString(), accent: "#06B6D4" },
+                { label: "Missions Cleared", value: mockTeam.stats.missions, accent: "#F59E0B" },
+                { label: "Active Members", value: mockTeam.stats.members, accent: "#8B5CF6" },
+              ].map(({ label, value, accent }) => (
+                <div key={label} className="rounded-xl border border-forest-100 bg-forest-50 p-3" style={{ borderLeft: `3px solid ${accent}` }}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-forest-500">{label}</p>
+                  <p className="mt-1 font-serif text-2xl font-bold text-forest-950">{value}</p>
                 </div>
               ))}
             </div>
-          </Panel>
 
-          <Panel eyebrow="Active missions" title="Team Missions" action={<Pill>{activeMissions.length}/3 active</Pill>}>
-            {activeMissions.map((mission) => {
-              const pct = Math.round((mission.done / mission.needed) * 100);
-              return (
-                <article key={mission.id} className="rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            {/* Members */}
+            <div className="mt-5">
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-forest-500">Members</p>
+              <div className="flex flex-col divide-y divide-forest-50 overflow-hidden rounded-xl border border-forest-100">
+                {mockTeam.members.map((m, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white px-4 py-3 hover:bg-forest-50/60 transition-colors">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xs font-extrabold text-forest-800">{mission.mark}</span>
-                      <p className="font-serif text-xl font-extrabold text-forest-950">{mission.title}</p>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-forest-50 text-base">
+                        {m.role === "leader" ? "👑" : "🌿"}
+                      </div>
+                      <span className="text-sm font-semibold text-forest-950">{m.name}</span>
                     </div>
-                    <div className="flex gap-2">
-                      <Pill>+{mission.xp} XP</Pill>
-                      <Pill>+{mission.eco} Eco</Pill>
-                    </div>
+                    <span className="text-xs font-bold text-forest-700">{m.xp.toLocaleString()} XP</span>
                   </div>
-                  <div className="mt-4 flex items-center gap-3">
-                    <div className="flex-1"><ProgressBar value={pct} color="#2f6b46" /></div>
-                    <span className="text-xs font-extrabold text-forest-700">{mission.done}/{mission.needed} submissions</span>
-                  </div>
-                  <button onClick={() => showToast("Progress submitted!")} className={`mt-4 ${primaryButton}`}>Submit Progress</button>
-                </article>
-              );
-            })}
-          </Panel>
+                ))}
+              </div>
+            </div>
+          </div>
 
-          <Panel eyebrow="Mission library" title="Assign New Mission">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {missionTemplates.map((template) => (
-                <article key={template.id} className="flex flex-col gap-3 rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] p-4 transition hover:-translate-y-0.5 hover:bg-white">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-extrabold text-forest-800 shadow-sm">{template.mark}</span>
-                    <div>
-                      <p className="font-serif text-lg font-extrabold leading-tight text-forest-950">{template.title}</p>
-                      <p className="mt-1 text-xs leading-5 text-forest-800/64">{template.desc}</p>
+          {/* ── Active Missions ── */}
+          <div className="rounded-2xl border border-forest-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-forest-500">Active missions</p>
+                <h2 className="mt-0.5 font-serif text-xl font-bold text-forest-950">Team Missions</h2>
+              </div>
+              <span className="rounded-lg border border-forest-100 bg-forest-50 px-3 py-1.5 text-xs font-bold text-forest-600">
+                {activeMissions.length}/3 active
+              </span>
+            </div>
+            <div className="flex flex-col gap-3">
+              {activeMissions.map((m) => {
+                const pct = Math.round((m.done / m.needed) * 100);
+                return (
+                  <div key={m.id} className="rounded-xl border border-forest-100 bg-forest-50/60 p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <p className="font-serif text-lg font-bold text-forest-950">{m.icon} {m.title}</p>
+                      <div className="flex gap-2">
+                        <span className="rounded-lg bg-forest-100 px-2.5 py-1 text-xs font-bold text-forest-700">+{m.xp} XP</span>
+                        <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">+{m.eco} Eco</span>
+                      </div>
                     </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-forest-100">
+                        <div className="h-full rounded-full bg-forest-700 transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs font-bold text-forest-600">{m.done}/{m.needed}</span>
+                    </div>
+                    <button
+                      onClick={() => showToast("Progress submitted!")}
+                      className="mt-4 rounded-xl bg-forest-950 px-5 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
+                    >
+                      Submit Progress
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Mission Library ── */}
+          <div className="rounded-2xl border border-forest-100 bg-white p-6 shadow-sm">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-forest-500">Mission library</p>
+            <h2 className="mt-0.5 mb-5 font-serif text-xl font-bold text-forest-950">Assign New Mission</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {missionTemplates.map((t) => (
+                <div key={t.id} className="flex flex-col gap-3 rounded-xl border border-forest-100 bg-forest-50/60 p-4 hover:bg-forest-50 transition-colors">
+                  <div>
+                    <p className="font-serif text-base font-bold text-forest-950">{t.icon} {t.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-forest-500">{t.desc}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Pill>{template.difficulty}</Pill>
-                    <Pill>+{template.xp} XP</Pill>
-                    <Pill>+{template.eco} Eco</Pill>
-                    <Pill>{template.needed} teammates</Pill>
+                    <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${difficultyColor[t.difficulty] ?? "bg-forest-50 text-forest-700"}`}>
+                      {t.difficulty}
+                    </span>
+                    <span className="rounded-lg bg-forest-100 px-2.5 py-1 text-[10px] font-bold text-forest-700">+{t.xp} XP</span>
+                    <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">+{t.eco} Eco</span>
+                    <span className="rounded-lg bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">{t.needed} teammates</span>
                   </div>
-                  <button onClick={() => showToast(`"${template.title}" assigned!`)} className={`mt-auto ${primaryButton}`}>Assign</button>
-                </article>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel eyebrow="Ranking" title="Team Leaderboard">
-            <div className="grid gap-2">
-              {[...mockTeam.members].sort((a, b) => b.xp - a.xp).map((member, index) => (
-                <div key={index} className="flex items-center gap-4 rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] px-4 py-3">
-                  <span className="w-8 text-center font-serif text-xl font-extrabold text-forest-700/48">#{index + 1}</span>
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-xs font-extrabold text-forest-800">{member.role === "leader" ? "LD" : "MB"}</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-extrabold text-forest-950">{member.name}</p>
-                    <p className="text-xs font-semibold capitalize text-forest-700/54">{member.role}</p>
-                  </div>
-                  <span className="font-serif text-lg font-extrabold text-forest-800">{member.xp.toLocaleString()} XP</span>
+                  <button
+                    onClick={() => showToast(`"${t.title}" assigned!`)}
+                    className="mt-auto rounded-xl bg-forest-950 px-4 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
+                  >
+                    Assign
+                  </button>
                 </div>
               ))}
             </div>
-          </Panel>
+          </div>
+
+          {/* ── Team Leaderboard ── */}
+          <div className="rounded-2xl border border-forest-100 bg-white shadow-sm overflow-hidden">
+            <div className="px-6 pt-5 pb-4 border-b border-forest-50">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-forest-500">Ranking</p>
+              <h2 className="mt-0.5 font-serif text-xl font-bold text-forest-950">Team Leaderboard</h2>
+            </div>
+            <div className="divide-y divide-forest-50">
+              {[...mockTeam.members].sort((a, b) => b.xp - a.xp).map((m, i) => (
+                <div key={i} className="flex items-center gap-4 px-6 py-3.5 hover:bg-forest-50/60 transition-colors">
+                  <span className="w-6 text-center font-serif text-base font-black text-forest-300">#{i + 1}</span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-forest-50 text-base">
+                    {m.role === "leader" ? "👑" : "🌿"}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-forest-950">{m.name}</p>
+                    <p className="text-xs capitalize text-forest-400">{m.role}</p>
+                  </div>
+                  <span className="font-serif text-base font-bold text-forest-700">{m.xp.toLocaleString()} XP</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </>
       )}
 
+      {/* ── Modals ── */}
       {(showCreateModal || showJoinModal) && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
-          onClick={() => { setShowCreateModal(false); setShowJoinModal(false); setInputVal(""); }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-forest-950/60 p-4 backdrop-blur-sm"
+          onClick={closeModals}
         >
-          <div className="w-full max-w-md rounded-[28px] border border-[#dfe7d7] bg-[#fffefa] p-8 shadow-[0_40px_90px_rgba(16,33,20,0.24)]" onClick={(event) => event.stopPropagation()}>
-            <h3 className="font-serif text-3xl font-extrabold text-forest-950">{showCreateModal ? "Create a Team" : "Join a Team"}</h3>
-            <p className="mt-2 text-sm leading-6 text-forest-800/66">{showCreateModal ? "Name your squad so friends can recognize it." : "Enter the 6-character invite code."}</p>
-            <input value={inputVal} onChange={(event) => setInputVal(event.target.value)} placeholder={showCreateModal ? "Example: Green Guardians" : "Example: ECO123"} maxLength={showCreateModal ? 40 : 6} className={`mt-5 ${inputClass}`} />
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-7 shadow-[0_24px_60px_rgba(16,33,20,0.18)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-serif text-2xl font-bold text-forest-950">
+              {showCreateModal ? "Create a Team" : "Join a Team"}
+            </h3>
+            <p className="mt-2 text-sm text-forest-500">
+              {showCreateModal ? "Name your squad so friends can recognize it." : "Enter the 6-character invite code."}
+            </p>
+            <input
+              value={inputVal}
+              onChange={(e) => setInputVal(e.target.value)}
+              placeholder={showCreateModal ? "e.g. Green Guardians" : "e.g. ECO123"}
+              maxLength={showCreateModal ? 40 : 6}
+              className="mt-5 w-full rounded-xl border border-forest-200 bg-white px-4 py-3 text-sm text-forest-950 placeholder:text-forest-300 outline-none focus:border-forest-500 focus:ring-2 focus:ring-forest-500/15"
+            />
             <div className="mt-5 flex justify-end gap-3">
-              <button onClick={() => { setShowCreateModal(false); setShowJoinModal(false); setInputVal(""); }} className={secondaryButton}>Cancel</button>
+              <button
+                onClick={closeModals}
+                className="rounded-xl border border-forest-200 px-5 py-2.5 text-sm font-semibold text-forest-900 hover:border-forest-400 transition-all"
+              >
+                Cancel
+              </button>
               <button
                 onClick={() => {
                   if (!inputVal.trim()) return;
-                  const submittedValue = inputVal;
+                  const val = inputVal;
                   setJoined(true);
-                  setShowCreateModal(false);
-                  setShowJoinModal(false);
-                  setInputVal("");
-                  showToast(showCreateModal ? `Team "${submittedValue}" created!` : "Joined the team!");
+                  closeModals();
+                  showToast(showCreateModal ? `Team "${val}" created!` : "Joined the team!");
                 }}
-                className={primaryButton}
+                className="rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
               >
                 {showCreateModal ? "Create" : "Join"}
               </button>
@@ -205,8 +320,9 @@ export default function TeamPage() {
         </div>
       )}
 
+      {/* ── Toast ── */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-forest-950 px-6 py-3 text-sm font-extrabold text-cream-100 shadow-[0_20px_44px_rgba(16,33,20,0.3)]">
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex items-center gap-2 rounded-xl bg-forest-950 px-5 py-3 text-sm font-semibold text-cream-100 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
           {toast}
         </div>
       )}

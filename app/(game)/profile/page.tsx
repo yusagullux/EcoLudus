@@ -59,6 +59,8 @@ export default function ProfilePage() {
   const missionsCompleted = profile?.missionsCompleted ?? 0;
   const badge = getBadge(level);
   const totalCo2 = categories.reduce((sum, category) => sum + category.co2, 0);
+  const profilePlants = Array.isArray(profile?.plants) ? profile.plants : [];
+  const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
 
   const statCards = [
     { label: "Current Rank", value: "#4", accent: "#2f6b46" },
@@ -113,15 +115,24 @@ export default function ProfilePage() {
         </div>
       </Panel>
 
-      <Panel eyebrow="Rare finds" title="Collection Book" action={<Pill>{samplePlants.length} plants</Pill>}>
+      <Panel eyebrow="Rare finds" title="Collection Book" action={<Pill>{profilePlants.reduce((sum, plant) => sum + (plant.count ?? 1), 0)} plants</Pill>}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {samplePlants.map((plant) => (
-            <article key={plant.id} className="flex flex-col items-center gap-3 rounded-2xl border bg-[#fffefa] p-4 text-center transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(26,45,29,0.1)]" style={{ borderColor: rarityBorder[plant.rarity] }}>
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f4f7ef] font-serif text-xl font-extrabold text-forest-800">{plant.mark}</span>
-              <p className="text-sm font-extrabold leading-tight text-forest-950">{plant.name}</p>
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${rarityChip[plant.rarity]}`}>{plant.rarity}</span>
+          {profilePlants.length > 0 ? (
+            profilePlants.map((plant) => (
+              <article key={plant.id} className="flex flex-col items-center gap-3 rounded-2xl border bg-[#fffefa] p-4 text-center transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(26,45,29,0.1)]" style={{ borderColor: rarityBorder[plant.rarity] }}>
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f4f7ef] font-serif text-xl font-extrabold text-forest-800">{plant.mark}</span>
+                <p className="text-sm font-extrabold leading-tight text-forest-950">{plant.name}</p>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${rarityChip[plant.rarity]}`}>{plant.rarity}</span>
+                {plant.count > 1 && <span className="text-[10px] font-semibold text-forest-700/70">x{plant.count}</span>}
+              </article>
+            ))
+          ) : (
+            <article className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#cbd9c2] bg-[#f7f9f2] p-8 text-center text-forest-700">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white font-serif text-lg font-extrabold">+</span>
+              <p className="text-sm font-bold">Your collection is empty</p>
+              <p className="text-xs">Buy plants to fill your collection book.</p>
             </article>
-          ))}
+          )}
           <a href="/shop" className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#cbd9c2] bg-[#f7f9f2] p-4 text-center text-forest-700 transition hover:-translate-y-0.5 hover:bg-white">
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white font-serif text-lg font-extrabold">SH</span>
             <span className="text-xs font-extrabold uppercase tracking-[0.08em]">Visit Shop</span>
