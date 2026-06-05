@@ -1,52 +1,89 @@
-// @ts-nocheck
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthChange, getUserProfile } from "@/public/js/auth.js";
+
+type AuthUser = {
+  uid: string;
+  email: string;
+  displayName: string;
+};
 
 export function useAuth() {
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const refreshProfile = async (uid: string) => {
+  const refreshProfile = useCallback(async (uid: string) => {
     try {
-      const profileRes = await getUserProfile(uid);
-      if (profileRes.success) {
-        setProfile(profileRes.data);
+      const res = await fetch("/api/firestore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ op: "getDoc", path: ["users", uid] })
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload.data) {
+          setProfile(payload.data);
+        }
       }
     } catch (err) {
       console.error("Error refreshing profile:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthChange(async (currentUser) => {
-      if (!currentUser) {
-        setUser(null);
-        setProfile(null);
-        if (typeof window !== "undefined") {
-          const path = window.location.pathname;
-          if (path !== "/landing" && path !== "/login" && path !== "/signup") {
-            router.push("/login");
+    let cancelled = false;
+
+    async function bootstrap() {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store"
+        });
+        const payload = await res.json().catch(() => ({}));
+
+        if (cancelled) return;
+
+        if (payload.user) {
+          const currentUser: AuthUser = {
+            uid: payload.user.uid,
+            email: payload.user.email,
+            displayName: payload.user.displayName
+          };
+          setUser(currentUser);
+          await refreshProfile(currentUser.uid);
+        } else {
+          setUser(null);
+          setProfile(null);
+          if (typeof window !== "undefined") {
+            const path = window.location.pathname;
+            if (path !== "/landing" && path !== "/login" && path !== "/signup") {
+              router.push("/login");
+            }
           }
         }
-        setLoading(false);
-      } else {
-        setUser(currentUser);
-        await refreshProfile(currentUser.uid);
-        setLoading(false);
+      } catch (err) {
+        console.error("Auth bootstrap error:", err);
+        if (!cancelled) {
+          setUser(null);
+          setProfile(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    });
+    }
+
+    bootstrap();
 
     return () => {
-      if (typeof unsubscribe === "function") {
-        unsubscribe();
-      }
+      cancelled = true;
     };
-  }, [router]);
+  }, [router, refreshProfile]);
 
   return {
     user,
