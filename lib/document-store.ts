@@ -179,8 +179,12 @@ async function readTeam(id) {
   };
 }
 
-async function readTeamSubdoc(table, teamId, id) {
-  const result = await sql(`select payload from ${table} where team_id = $1 and id = $2 limit 1`, [teamId, id]);
+async function readTeamSubdoc(table: "team_active_missions" | "team_mission_logs", teamId, id) {
+  if (table === "team_active_missions") {
+    const result = await sql("select payload from team_active_missions where team_id = $1 and id = $2 limit 1", [teamId, id]);
+    return result.rows[0]?.payload ?? null;
+  }
+  const result = await sql("select payload from team_mission_logs where team_id = $1 and id = $2 limit 1", [teamId, id]);
   return result.rows[0]?.payload ?? null;
 }
 
