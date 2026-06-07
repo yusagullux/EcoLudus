@@ -62,6 +62,8 @@ declare global {
   var __ecoquestStore: FileStore | undefined;
   // eslint-disable-next-line no-var
   var __ecoquestStoreWrite: Promise<void> | undefined;
+  // eslint-disable-next-line no-var
+  var __ecoquestDetectModePromise: Promise<"postgres" | "file"> | undefined;
 }
 
 const STORE_PATH = process.env.VERCEL
@@ -666,6 +668,12 @@ async function detectMode() {
     return global.__ecoquestDbMode;
   }
 
+  // Return the in-flight promise if detection is already running (prevents race conditions
+  // where concurrent requests both enter detection before __ecoquestDbMode is set)
+  if (global.__ecoquestDetectModePromise) {
+    return global.__ecoquestDetectModePromise;
+  }
+
   const connectionString = getConnectionString();
 
   if (!connectionString || process.env.LOCAL_DB_MODE === "file") {
@@ -673,17 +681,22 @@ async function detectMode() {
     return global.__ecoquestDbMode;
   }
 
-  try {
-    const pool = getPool();
-    await pool.query("select 1 as ok");
-    await ensureMigrations(pool);
-    global.__ecoquestDbMode = "postgres";
-  } catch (error) {
-    console.warn("PostgreSQL unavailable, falling back to local persistent data store. Error:", error);
-    global.__ecoquestDbMode = "file";
-  }
+  global.__ecoquestDetectModePromise = (async () => {
+    try {
+      const pool = getPool();
+      await pool.query("select 1 as ok");
+      await ensureMigrations(pool);
+      global.__ecoquestDbMode = "postgres";
+    } catch (error) {
+      console.warn("PostgreSQL unavailable, falling back to local persistent data store. Error:", error);
+      global.__ecoquestDbMode = "file";
+    } finally {
+      global.__ecoquestDetectModePromise = undefined;
+    }
+    return global.__ecoquestDbMode!;
+  })();
 
-  return global.__ecoquestDbMode;
+  return global.__ecoquestDetectModePromise;
 }
 
 export async function sql<T extends QueryResultRow = QueryResultRow>(
