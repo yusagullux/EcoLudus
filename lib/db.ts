@@ -194,11 +194,43 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result(row ? ([{ id: row.id, email: row.email, payload: clone(row.payload) }] as T[]) : []);
   }
 
+  if (normalized === "select id, email, payload from users order by created_at asc limit 100") {
+    const rows = store.users
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .slice(0, 100)
+      .map((row) => ({
+        id: row.id,
+        email: row.email,
+        payload: clone(row.payload)
+      }));
+    return result(rows as T[]);
+  }
+
   if (normalized === "select id, join_code, payload from teams where id = $1 limit 1") {
     const id = String(params[0] ?? "");
     const row = store.teams.find((team) => team.id === id);
     return result(
       row ? ([{ id: row.id, join_code: row.join_code, payload: clone(row.payload) }] as T[]) : []
+    );
+  }
+
+  if (normalized === "select id, join_code, created_by, payload from teams where id = (select team_id from team_active_missions where payload->>'user_id' = $1 limit 1)") {
+    const userId = String(params[0] ?? "");
+    const teamActiveMission = store.team_active_missions.find((tam) => (tam.payload as any)?.user_id === userId);
+    if (!teamActiveMission) {
+      return result([] as T[]);
+    }
+    const row = store.teams.find((team) => team.id === teamActiveMission.team_id);
+    return result(
+      row ? ([{ id: row.id, join_code: row.join_code, created_by: row.created_by, payload: clone(row.payload) }] as T[]) : []
+    );
+  }
+
+  if (normalized === "select id, payload from teams where join_code = $1 limit 1") {
+    const joinCode = String(params[0] ?? "");
+    const row = store.teams.find((team) => team.join_code === joinCode);
+    return result(
+      row ? ([{ id: row.id, payload: clone(row.payload) }] as T[]) : []
     );
   }
 
@@ -327,6 +359,24 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
 
   if (
     normalized ===
+    "insert into teams (join_code, created_by, payload) values ($1, $2, $3::jsonb) returning id"
+  ) {
+    const [joinCode, createdBy, payloadRaw] = params;
+    const newId = randomUUID();
+    store.teams.push({
+      id: newId,
+      join_code: String(joinCode),
+      created_by: createdBy ? String(createdBy) : null,
+      payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
+      created_at: nowIso(),
+      updated_at: nowIso()
+    });
+    await persistStore();
+    return result([{ id: newId }] as T[], "INSERT");
+  }
+
+  if (
+    normalized ===
     "insert into team_active_missions (id, team_id, mission_id, payload) values ($1, $2, $3, $4::jsonb) on conflict (id) do update set mission_id = excluded.mission_id, payload = excluded.payload, updated_at = now()"
   ) {
     const [id, teamId, missionId, payloadRaw] = params;
@@ -346,6 +396,23 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         updated_at: nowIso()
       });
     }
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into team_active_missions (id, team_id, payload) values ($1, $2, $3::jsonb)"
+  ) {
+    const [id, teamId, payloadRaw] = params;
+    store.team_active_missions.push({
+      id: String(id),
+      team_id: String(teamId),
+      mission_id: null,
+      payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
+      created_at: nowIso(),
+      updated_at: nowIso()
+    });
     await persistStore();
     return result([], "INSERT");
   }
@@ -450,6 +517,67 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
       }));
 
     return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
+    "select distinct u.id, u.email, u.payload from team_active_missions tam join users u on (tam.payload->>'user_id')::text = u.id where tam.team_id = $1"
+  ) {
+    const teamId = String(params[0] ?? "");
+    const teamActiveMissions = store.team_active_missions.filter((tam) => tam.team_id === teamId);
+    const userIds = [...new Set(teamActiveMissions.map((tam) => (tam.payload as any)?.user_id).filter(Boolean))];
+    const users = store.users.filter((u) => userIds.includes(u.id));
+    const rows = users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      payload: clone(u.payload)
+    }));
+    return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
+    "select coalesce(sum((payload->>'xp')::int), 0) as total_xp, coalesce(sum((payload->>'ecoPoints')::int), 0) as total_eco, count(*) as member_count from users where id in (select distinct (payload->>'user_id')::text from team_active_missions where team_id = $1)"
+  ) {
+    const teamId = String(params[0] ?? "");
+    const teamActiveMissions = store.team_active_missions.filter((tam) => tam.team_id === teamId);
+    const userIds = [...new Set(teamActiveMissions.map((tam) => (tam.payload as any)?.user_id).filter(Boolean))];
+    const users = store.users.filter((u) => userIds.includes(u.id));
+    const totalXp = users.reduce((sum, u) => sum + ((u.payload as any)?.xp || 0), 0);
+    const totalEco = users.reduce((sum, u) => sum + ((u.payload as any)?.ecoPoints || 0), 0);
+    return result([{ total_xp: totalXp, total_eco: totalEco, member_count: users.length }] as T[]);
+  }
+
+  if (normalized === "select count(*) as missions_completed from team_mission_logs where team_id = $1") {
+    const teamId = String(params[0] ?? "");
+    const count = store.team_mission_logs.filter((entry) => entry.team_id === teamId).length;
+    return result([{ missions_completed: count }] as T[]);
+  }
+
+  if (normalized === "select id, mission_id, payload from team_active_missions where team_id = $1 order by created_at desc") {
+    const teamId = String(params[0] ?? "");
+    const rows = store.team_active_missions
+      .filter((tam) => tam.team_id === teamId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((row) => ({
+        id: row.id,
+        mission_id: row.mission_id,
+        payload: clone(row.payload)
+      }));
+    return result(rows as T[]);
+  }
+
+  if (normalized === "select team_id from team_active_missions where payload->>'user_id' = $1 limit 1") {
+    const userId = String(params[0] ?? "");
+    const row = store.team_active_missions.find((tam) => (tam.payload as any)?.user_id === userId);
+    return result(row ? ([{ team_id: row.team_id }] as T[]) : []);
+  }
+
+  if (normalized === "delete from team_active_missions where payload->>'user_id' = $1") {
+    const userId = String(params[0] ?? "");
+    store.team_active_missions = store.team_active_missions.filter((tam) => (tam.payload as any)?.user_id !== userId);
+    await persistStore();
+    return result([], "DELETE");
   }
 
   if (normalized === "select id, join_code, payload from teams order by created_at desc limit $1") {

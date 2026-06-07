@@ -21,18 +21,12 @@ function getBadge(level: number) {
 }
 
 const categories = [
-  { id: "recycling", name: "Recycling", mark: "RC", color: "#2f6b46", done: 4, total: 8, co2: 1.8, maxCo2: 3.6, badge: "Recycler" },
-  { id: "energy", name: "Energy Saving", mark: "EN", color: "#9a6b1f", done: 3, total: 7, co2: 0.9, maxCo2: 2.1, badge: "Energy Saver" },
-  { id: "transportation", name: "Transportation", mark: "TR", color: "#2f5f86", done: 2, total: 5, co2: 1.2, maxCo2: 3.0, badge: "Eco Commuter" },
-  { id: "water", name: "Water Saving", mark: "WA", color: "#237482", done: 5, total: 6, co2: 0.4, maxCo2: 0.5, badge: "Water Guardian" },
-  { id: "cleanup", name: "Clean-Up", mark: "CU", color: "#62508f", done: 1, total: 4, co2: 0.6, maxCo2: 2.4, badge: "Clean Earth" },
-  { id: "gardening", name: "Gardening & Nature", mark: "GD", color: "#4c7a3b", done: 2, total: 4, co2: 0.3, maxCo2: 0.6, badge: "Green Thumb" }
-];
-
-const samplePlants = [
-  { id: 1, name: "Mossy Fern", rarity: "common", mark: "MF" },
-  { id: 2, name: "Blue Orchid", rarity: "rare", mark: "BO" },
-  { id: 3, name: "Aurora Blossom", rarity: "legendary", mark: "AB" }
+  { id: "recycling", name: "Recycling", mark: "RC", color: "#2f6b46", maxCo2: 3.6, badge: "Recycler" },
+  { id: "energy", name: "Energy Saving", mark: "EN", color: "#9a6b1f", maxCo2: 2.1, badge: "Energy Saver" },
+  { id: "transportation", name: "Transportation", mark: "TR", color: "#2f5f86", maxCo2: 3.0, badge: "Eco Commuter" },
+  { id: "water", name: "Water Saving", mark: "WA", color: "#237482", maxCo2: 0.5, badge: "Water Guardian" },
+  { id: "cleanup", name: "Clean-Up", mark: "CU", color: "#62508f", maxCo2: 2.4, badge: "Clean Earth" },
+  { id: "gardening", name: "Gardening & Nature", mark: "GD", color: "#4c7a3b", maxCo2: 0.6, badge: "Green Thumb" }
 ];
 
 const rarityChip: Record<string, string> = {
@@ -57,17 +51,33 @@ export default function ProfilePage() {
   const ecoPoints = profile?.ecoPoints ?? 0;
   const level = profile?.level ?? 1;
   const missionsCompleted = profile?.missionsCompleted ?? 0;
+  const carbonReduced = profile?.carbonReduced ?? 0;
+  const completedQuests = profile?.completedQuests || [];
   const badge = getBadge(level);
-  const totalCo2 = categories.reduce((sum, category) => sum + category.co2, 0);
   const profilePlants = Array.isArray(profile?.plants) ? profile.plants : [];
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
 
+  // Calculate category progress from completed quests
+  const categoryProgress = categories.map(category => {
+    // Estimate total quests per category (this is game configuration)
+    const total = category.id === "recycling" ? 8 :
+                  category.id === "energy" ? 7 :
+                  category.id === "transportation" ? 5 :
+                  category.id === "water" ? 6 :
+                  category.id === "cleanup" ? 4 : 4;
+    // Calculate done based on completed quests (simplified - in real app would track per category)
+    const done = Math.min(completedQuests.length, total);
+    // Calculate CO2 based on progress
+    const co2 = (done / total) * category.maxCo2;
+    return { ...category, done, total, co2 };
+  });
+
+  const totalCo2 = categoryProgress.reduce((sum, category) => sum + category.co2, 0);
+
   const statCards = [
-    { label: "Current Rank", value: "#4", accent: "#2f6b46" },
-    { label: "Best Rank", value: "#2", accent: "#9a6b1f" },
     { label: "Level", value: level, accent: "#2f5f86" },
     { label: "Missions Completed", value: missionsCompleted, accent: "#62508f" },
-    { label: "CO2 Reduced", value: `${totalCo2.toFixed(1)} kg`, accent: "#237482", wide: true },
+    { label: "CO2 Reduced", value: `${(+carbonReduced).toFixed(1)} kg`, accent: "#237482", wide: true },
     { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "#4c7a3b" }
   ];
 
@@ -89,7 +99,7 @@ export default function ProfilePage() {
 
       <Panel eyebrow="Achievement tracking" title="Quest Category Progress">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map(({ name, mark, color, done, total, co2, maxCo2, badge: categoryBadge }) => {
+          {categoryProgress.map(({ name, mark, color, done, total, co2, maxCo2, badge: categoryBadge }) => {
             const pct = Math.round((done / total) * 100);
             const completed = done === total;
             return (

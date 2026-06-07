@@ -9,12 +9,12 @@ import { updateUserProfile } from "@/public/js/auth.js";
 import { calculateLevel } from "@/public/js/levels.js";
 
 const CATEGORIES = [
-  { name: "Recycling", mark: "RC", color: "#2f6b46", done: 4, total: 8 },
-  { name: "Energy Saving", mark: "EN", color: "#9a6b1f", done: 3, total: 7 },
-  { name: "Transportation", mark: "TR", color: "#2f5f86", done: 2, total: 5 },
-  { name: "Water Saving", mark: "WA", color: "#237482", done: 5, total: 6 },
-  { name: "Clean-Up", mark: "CU", color: "#62508f", done: 1, total: 4 },
-  { name: "Gardening", mark: "GD", color: "#4c7a3b", done: 2, total: 4 }
+  { name: "Recycling", mark: "RC", color: "#2f6b46" },
+  { name: "Energy Saving", mark: "EN", color: "#9a6b1f" },
+  { name: "Transportation", mark: "TR", color: "#2f5f86" },
+  { name: "Water Saving", mark: "WA", color: "#237482" },
+  { name: "Clean-Up", mark: "CU", color: "#62508f" },
+  { name: "Gardening", mark: "GD", color: "#4c7a3b" }
 ];
 
 export default function DashboardPage() {
@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const level = profile?.level ?? 1;
   const carbonReduced = profile?.carbonReduced ?? 0;
   const missionsCompleted = profile?.missionsCompleted ?? 0;
+  const completedQuests = profile?.completedQuests || [];
 
   const thresholds = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 50000, Infinity];
   const curXP = thresholds[Math.min(level - 1, 8)];
@@ -49,6 +50,14 @@ export default function DashboardPage() {
   const selectedPhotoQuests = selectedQuests.filter((quest) => quest.requiresPhoto);
   const unverifiedPhotoQuests = selectedPhotoQuests.filter((quest) => !photoVerifiedForQuestIds.includes(quest.id));
   const nextPhotoQuestToVerify = unverifiedPhotoQuests[0] ?? null;
+
+  // Calculate category progress from completed quests
+  const categoryProgress = CATEGORIES.map(category => {
+    const categoryQuests = quests.filter(q => q.category === category.name);
+    const total = categoryQuests.length;
+    const done = categoryQuests.filter(q => completedQuests.includes(q.id)).length;
+    return { ...category, done: done || 0, total: total || 1 };
+  });
 
   const showToast = (message: string) => {
     setToast(message);
@@ -250,7 +259,7 @@ export default function DashboardPage() {
 
       <Panel eyebrow="Quest progress" title="Category Progress">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {CATEGORIES.map(({ name, mark, color, done, total }) => {
+          {categoryProgress.map(({ name, mark, color, done, total }) => {
             const progress = Math.round((done / total) * 100);
             return (
               <article key={name} className="rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] p-4">
