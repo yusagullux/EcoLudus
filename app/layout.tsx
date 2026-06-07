@@ -16,7 +16,14 @@ const bodyFont = Manrope({
 
 export const metadata: Metadata = {
   title: "EcoLudus",
-  description: "Gamified environmental sustainability platform with a calm forest-inspired experience"
+  description: "Gamified environmental sustainability platform with a calm forest-inspired experience",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" }
+    ],
+    shortcut: "/favicon.png",
+    apple: "/favicon.png"
+  }
 };
 
 export default function RootLayout({
