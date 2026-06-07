@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel, Pill } from "@/components/game-ui";
 
@@ -21,25 +21,57 @@ function getBadge(level: number) {
   return badgeList[Math.min(Math.max(level, 1), 9) - 1];
 }
 
-const mockUsers = [
-  { id: "u1", displayName: "EcoWarrior", xp: 8420, level: 7 },
-  { id: "u2", displayName: "GreenHunter", xp: 5230, level: 6 },
-  { id: "u3", displayName: "NatureKeeper", xp: 3190, level: 5 },
-  { id: "u4", displayName: "ForestWalker", xp: 2040, level: 4 },
-  { id: "u5", displayName: "LeafGuard", xp: 1250, level: 3 },
-  { id: "u6", displayName: "MossStep", xp: 740, level: 2 },
-  { id: "u7", displayName: "TreeSapling", xp: 320, level: 1 }
-];
 
 const medalLabel = ["1st", "2nd", "3rd"];
 const medalColors = ["#9a6b1f", "#5d6f7a", "#8a4f25"];
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
-  const [users] = useState(mockUsers);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const response = await fetch("/api/users");
+        const data = await response.json();
+        setUsers(data.users || []);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUsers();
+  }, []);
+
   const sorted = [...users].sort((a, b) => b.xp - a.xp);
   const podium = [sorted[1], sorted[0], sorted[2]];
   const podiumRank = [2, 1, 3];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5">
+        <PageHero eyebrow="Global rankings" title="Leaderboard" description="Top EcoLudus players ranked by XP earned." />
+        <Panel>
+          <div className="p-8 text-center text-forest-700">Loading leaderboard...</div>
+        </Panel>
+      </div>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <div className="flex flex-col gap-5">
+        <PageHero eyebrow="Global rankings" title="Leaderboard" description="Top EcoLudus players ranked by XP earned." />
+        <Panel>
+          <div className="p-8 text-center text-forest-700">No users found. Be the first to join!</div>
+        </Panel>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">

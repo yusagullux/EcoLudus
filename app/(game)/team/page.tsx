@@ -2,7 +2,7 @@
 "use client";
 
 import { useAuth } from "@/lib/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const missionTemplates = [
   { id: "t1", title: "Recycle 15 Plastic Bottles", desc: "Split the work and recycle at least 15 plastic bottles as a team.", icon: "♻️", difficulty: "Easy", xp: 240, eco: 140, needed: 3 },
@@ -13,22 +13,6 @@ const missionTemplates = [
   { id: "t6", title: "Plant or Care for 3 Greens", desc: "Plant seeds or tend to three different plants as a joint effort.", icon: "🌱", difficulty: "Easy", xp: 210, eco: 120, needed: 3 },
 ];
 
-const mockTeam = {
-  name: "Green Guardians",
-  code: "GRN7X4",
-  role: "leader",
-  stats: { xp: 1240, eco: 620, missions: 8, members: 4 },
-  members: [
-    { name: "You (Leader)", role: "leader", xp: 2480 },
-    { name: "EcoWalker", role: "member", xp: 1320 },
-    { name: "ForestSpirit", role: "member", xp: 980 },
-    { name: "GreenSeed", role: "member", xp: 440 },
-  ],
-};
-
-const activeMissions = [
-  { id: "am1", title: "Recycle 15 Plastic Bottles", icon: "♻️", xp: 240, eco: 140, needed: 3, done: 2 },
-];
 
 const difficultyColor: Record<string, string> = {
   Easy: "bg-emerald-50 text-emerald-700",
@@ -38,11 +22,43 @@ const difficultyColor: Record<string, string> = {
 
 export default function TeamPage() {
   const { user } = useAuth();
-  const [joined, setJoined] = useState(true);
+  const [joined, setJoined] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [team, setTeam] = useState<any>(null);
+  const [activeMissions, setActiveMissions] = useState<any[]>([]);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [inputVal, setInputVal] = useState("");
   const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    async function fetchTeamData() {
+      if (!user?.uid) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/teams?userId=${user.uid}`);
+        const data = await response.json();
+        
+        if (data.team) {
+          setTeam(data.team);
+          setActiveMissions(data.activeMissions || []);
+          setJoined(true);
+        } else {
+          setJoined(false);
+        }
+      } catch (error) {
+        console.error("Failed to fetch team data:", error);
+        setJoined(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTeamData();
+  }, [user?.uid]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -54,6 +70,95 @@ export default function TeamPage() {
     setShowJoinModal(false);
     setInputVal("");
   };
+
+  const handleCreateTeam = async () => {
+    if (!inputVal.trim() || !user?.uid) return;
+
+    try {
+      const response = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create", userId: user.uid, teamName: inputVal.trim() })
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setJoined(true);
+        closeModals();
+        showToast(`Team "${inputVal}" created! Code: ${data.code}`);
+        // Refresh team data
+        const teamResponse = await fetch(`/api/teams?userId=${user.uid}`);
+        const teamData = await teamResponse.json();
+        if (teamData.team) {
+          setTeam(teamData.team);
+          setActiveMissions(teamData.activeMissions || []);
+        }
+      } else {
+        showToast(data.error?.code || "Failed to create team");
+      }
+    } catch (error) {
+      console.error("Create team error:", error);
+      showToast("Failed to create team");
+    }
+  };
+
+  const handleJoinTeam = async () => {
+    if (!inputVal.trim() || !user?.uid) return;
+
+    try {
+      const response = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "join", userId: user.uid, teamCode: inputVal.trim() })
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setJoined(true);
+        closeModals();
+        showToast(`Joined team "${data.teamName}"!`);
+        // Refresh team data
+        const teamResponse = await fetch(`/api/teams?userId=${user.uid}`);
+        const teamData = await teamResponse.json();
+        if (teamData.team) {
+          setTeam(teamData.team);
+          setActiveMissions(teamData.activeMissions || []);
+        }
+      } else {
+        showToast(data.error?.code || "Failed to join team");
+      }
+    } catch (error) {
+      console.error("Join team error:", error);
+      showToast("Failed to join team");
+    }
+  };
+
+  const handleLeaveTeam = async () => {
+    if (!user?.uid) return;
+
+    try {
+      const response = await fetch(`/api/teams?userId=${user.uid}`, { method: "DELETE" });
+      if (response.ok) {
+        setJoined(false);
+        setTeam(null);
+        setActiveMissions([]);
+        showToast("Left the team");
+      } else {
+        showToast("Failed to leave team");
+      }
+    } catch (error) {
+      console.error("Leave team error:", error);
+      showToast("Failed to leave team");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <p className="text-forest-500">Loading team data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -85,7 +190,7 @@ export default function TeamPage() {
               </>
             ) : (
               <button
-                onClick={() => { setJoined(false); showToast("Left the team."); }}
+                onClick={handleLeaveTeam}
                 className="rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-semibold text-cream-100/80 hover:bg-white/12 transition-all"
               >
                 Leave Team
@@ -125,18 +230,18 @@ export default function TeamPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-forest-500">Your team</p>
-                <h2 className="mt-0.5 font-serif text-2xl font-bold text-forest-950">{mockTeam.name}</h2>
+                <h2 className="mt-0.5 font-serif text-2xl font-bold text-forest-950">{team?.name || "Team"}</h2>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <span className="rounded-lg border border-forest-100 bg-forest-50 px-3 py-1 text-xs font-bold text-forest-700">
-                    Code: {mockTeam.code}
+                    Code: {team?.code || "N/A"}
                   </span>
                   <span className="rounded-lg bg-forest-950 px-3 py-1 text-xs font-bold uppercase text-cream-100">
-                    {mockTeam.role}
+                    {team?.role || "member"}
                   </span>
                 </div>
               </div>
               <button
-                onClick={() => { navigator.clipboard?.writeText(mockTeam.code); showToast("Code copied!"); }}
+                onClick={() => { navigator.clipboard?.writeText(team?.code || ""); showToast("Code copied!"); }}
                 className="self-start rounded-xl border border-forest-200 bg-white px-4 py-2 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
               >
                 Copy Code
@@ -146,10 +251,10 @@ export default function TeamPage() {
             {/* Stats grid */}
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                { label: "XP Shared", value: mockTeam.stats.xp.toLocaleString(), accent: "#4CAF50" },
-                { label: "EcoPoints Shared", value: mockTeam.stats.eco.toLocaleString(), accent: "#06B6D4" },
-                { label: "Missions Cleared", value: mockTeam.stats.missions, accent: "#F59E0B" },
-                { label: "Active Members", value: mockTeam.stats.members, accent: "#8B5CF6" },
+                { label: "XP Shared", value: (team?.stats?.xp || 0).toLocaleString(), accent: "#4CAF50" },
+                { label: "EcoPoints Shared", value: (team?.stats?.eco || 0).toLocaleString(), accent: "#06B6D4" },
+                { label: "Missions Cleared", value: team?.stats?.missions || 0, accent: "#F59E0B" },
+                { label: "Active Members", value: team?.stats?.members || 0, accent: "#8B5CF6" },
               ].map(({ label, value, accent }) => (
                 <div key={label} className="rounded-xl border border-forest-100 bg-forest-50 p-3" style={{ borderLeft: `3px solid ${accent}` }}>
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-forest-500">{label}</p>
@@ -162,7 +267,7 @@ export default function TeamPage() {
             <div className="mt-5">
               <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-forest-500">Members</p>
               <div className="flex flex-col divide-y divide-forest-50 overflow-hidden rounded-xl border border-forest-100">
-                {mockTeam.members.map((m, i) => (
+                {team?.members?.map((m: any, i: number) => (
                   <div key={i} className="flex items-center justify-between bg-white px-4 py-3 hover:bg-forest-50/60 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-forest-50 text-base">
@@ -255,7 +360,7 @@ export default function TeamPage() {
               <h2 className="mt-0.5 font-serif text-xl font-bold text-forest-950">Team Leaderboard</h2>
             </div>
             <div className="divide-y divide-forest-50">
-              {[...mockTeam.members].sort((a, b) => b.xp - a.xp).map((m, i) => (
+              {[...(team?.members || [])].sort((a: any, b: any) => b.xp - a.xp).map((m: any, i: number) => (
                 <div key={i} className="flex items-center gap-4 px-6 py-3.5 hover:bg-forest-50/60 transition-colors">
                   <span className="w-6 text-center font-serif text-base font-black text-forest-300">#{i + 1}</span>
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-forest-50 text-base">
@@ -304,13 +409,7 @@ export default function TeamPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  if (!inputVal.trim()) return;
-                  const val = inputVal;
-                  setJoined(true);
-                  closeModals();
-                  showToast(showCreateModal ? `Team "${val}" created!` : "Joined the team!");
-                }}
+                onClick={showCreateModal ? handleCreateTeam : handleJoinTeam}
                 className="rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
               >
                 {showCreateModal ? "Create" : "Join"}
