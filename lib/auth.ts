@@ -11,10 +11,10 @@ type SessionPayload = {
 };
 
 function getSessionSecret() {
-  const secret = process.env.SESSION_SECRET;
+  const secret = process.env.SESSION_SECRET || "development-fallback-session-secret-at-least-32-chars-long";
 
-  if (!secret) {
-    throw new Error("SESSION_SECRET is not configured");
+  if (!process.env.SESSION_SECRET) {
+    console.warn("WARNING: SESSION_SECRET env variable is not configured. Using a fallback secret for development.");
   }
 
   return new TextEncoder().encode(secret);

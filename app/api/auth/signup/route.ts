@@ -82,10 +82,23 @@ export async function POST(request: Request) {
         "insert into users (id, email, password_hash, payload) values ($1, $2, $3, $4::jsonb)",
         [userId, email, passwordHash, JSON.stringify(profile)]
       );
-    } catch (dbError) {
-      console.error("Database error during signup", dbError);
+    } catch (dbError: any) {
+      console.error("Database error during signup:", dbError);
+      
+      const isUniqueViolation = 
+        dbError.code === "23505" || 
+        String(dbError.message || "").toLowerCase().includes("unique constraint") ||
+        String(dbError.message || "").toLowerCase().includes("already exists");
+        
+      if (isUniqueViolation) {
+        return NextResponse.json(
+          { error: { code: "auth/email-already-in-use", message: "This email is already in use. Try logging in instead." } },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json(
-        { error: { code: "auth/database-error", message: "Failed to create user profile." } },
+        { error: { code: "auth/database-error", message: `Failed to create user profile: ${dbError.message || dbError}` } },
         { status: 500 }
       );
     }
@@ -117,9 +130,9 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("Signup error", error);
+    console.error("Signup error details:", error);
     return NextResponse.json(
-      { error: { code: "auth/internal-error" } },
+      { error: { code: "auth/internal-error", message: error instanceof Error ? error.message : String(error) } },
       { status: 500 }
     );
   }
