@@ -28,6 +28,7 @@ export function MarketingShell({
           <Link href="/landing#about" className="hover:text-forest-700">About</Link>
           <Link href="/landing#features" className="hover:text-forest-700">Features</Link>
           <Link href="/landing#experience" className="hover:text-forest-700">Experience</Link>
+          <a href="mailto:hello@ecoludus.com" className="hover:text-forest-700">Contact</a>
           <Link
             href={ctaHref}
             className="rounded-full border border-forest-900/10 bg-white/80 px-5 py-2.5 text-forest-900 shadow-[0_14px_30px_rgba(16,33,20,0.08)] backdrop-blur hover:-translate-y-0.5 hover:bg-white"

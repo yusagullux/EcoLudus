@@ -15,8 +15,30 @@ const bodyFont = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "EcoLudus",
-  description: "Gamified environmental sustainability platform with a calm forest-inspired experience",
+  title: "EcoLudus | Sustainable Habits & Rewards",
+  description: "Play, protect, and grow. EcoLudus is a gamified environmental sustainability platform that turns eco-friendly habits into a rewarding daily ritual.",
+  openGraph: {
+    title: "EcoLudus | Gamified Sustainability",
+    description: "Turn eco actions into rewards. Grow your virtual collection and track your carbon footprint in a modern nature-inspired experience.",
+    url: "https://ecoludus.com",
+    siteName: "EcoLudus",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "EcoLudus Dashboard Preview"
+      }
+    ],
+    locale: "en_US",
+    type: "website"
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EcoLudus | Sustainable Habits & Rewards",
+    description: "Turn eco actions into rewards and grow your virtual collection in a modern nature-inspired experience.",
+    images: ["/og-image.jpg"]
+  },
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png" }
