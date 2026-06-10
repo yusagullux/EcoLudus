@@ -68,8 +68,8 @@ export async function POST(request: Request) {
     const existing = await sql("select id from users where email = $1 limit 1", [email]);
     if (existing.rowCount) {
       return NextResponse.json(
-        { error: { code: "auth/email-already-in-use" } },
-        { status: 409 }
+        { error: { code: "auth/email-already-in-use", message: "This email is already in use. Try logging in instead." } },
+        { status: 400 }
       );
     }
 
@@ -77,10 +77,18 @@ export async function POST(request: Request) {
     const passwordHash = await hashPassword(payload.password);
     const profile = buildInitialProfile(email, payload.displayName ?? undefined);
 
-    await sql(
-      "insert into users (id, email, password_hash, payload) values ($1, $2, $3, $4::jsonb)",
-      [userId, email, passwordHash, JSON.stringify(profile)]
-    );
+    try {
+      await sql(
+        "insert into users (id, email, password_hash, payload) values ($1, $2, $3, $4::jsonb)",
+        [userId, email, passwordHash, JSON.stringify(profile)]
+      );
+    } catch (dbError) {
+      console.error("Database error during signup", dbError);
+      return NextResponse.json(
+        { error: { code: "auth/database-error", message: "Failed to create user profile." } },
+        { status: 500 }
+      );
+    }
 
     await setSessionCookie({
       sub: userId,
@@ -98,6 +106,13 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: { code: "auth/invalid-input", details: error.flatten() } },
+        { status: 400 }
+      );
+    }
+    
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: { code: "auth/invalid-json", message: "Invalid JSON payload" } },
         { status: 400 }
       );
     }

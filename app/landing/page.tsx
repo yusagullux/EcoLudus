@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MarketingShell } from "@/components/marketing-shell";
+import { MiniQuiz } from "@/components/mini-quiz";
 
 const features = [
   {
@@ -50,6 +52,17 @@ export default function LandingPage() {
                 Continue exploring
               </Link>
             </div>
+            <div className="mt-8 flex flex-wrap items-center gap-4 opacity-95">
+              <button className="flex items-center gap-2 rounded-xl bg-forest-950 px-4 py-2 text-white hover:bg-forest-900">
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.78.78-.04 1.94-.8 3.44-.75 1.13.04 2.16.5 2.87 1.34-2.48 1.48-2.05 4.3.46 5.3-.64 1.76-1.57 3.65-2.85 5.3v1zm-3.1-13.6c.2-1.74-1.12-3.32-2.84-3.48-.28 1.83 1.25 3.39 2.84 3.48z"/></svg>
+                <div className="text-left"><div className="text-[10px] leading-none">Download on the</div><div className="text-sm font-semibold leading-tight">App Store</div></div>
+              </button>
+              <button className="flex items-center gap-2 rounded-xl bg-forest-950 px-4 py-2 text-white hover:bg-forest-900">
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M3 20.5v-17c0-.83.67-1.5 1.5-1.5.38 0 .73.15 1 .39l15 8.6c.64.37.86 1.19.49 1.83-.14.24-.34.44-.58.58l-15 8.6c-.64.37-1.46.15-1.83-.49-.05-.09-.08-.19-.08-.3z"/></svg>
+                <div className="text-left"><div className="text-[10px] leading-none">GET IT ON</div><div className="text-sm font-semibold leading-tight">Google Play</div></div>
+              </button>
+            </div>
+            <p className="mt-4 text-sm font-semibold text-forest-800">Syncs seamlessly across desktop and mobile browsers.</p>
           </div>
 
           <div className="relative">
@@ -99,11 +112,46 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Impact Stats */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-[2rem] border border-forest-900/10 bg-white/60 p-6 text-center shadow-sm backdrop-blur">
+            <div className="text-4xl font-serif font-extrabold text-forest-900">24,500<span className="text-lg">kg</span></div>
+            <div className="mt-2 text-sm font-bold uppercase tracking-widest text-forest-800">CO₂ Saved</div>
+          </div>
+          <div className="rounded-[2rem] border border-forest-900/10 bg-white/60 p-6 text-center shadow-sm backdrop-blur">
+            <div className="text-4xl font-serif font-extrabold text-forest-900">12,480</div>
+            <div className="mt-2 text-sm font-bold uppercase tracking-widest text-forest-800">Virtual Plants</div>
+          </div>
+          <div className="rounded-[2rem] border border-forest-900/10 bg-white/60 p-6 text-center shadow-sm backdrop-blur">
+            <div className="text-4xl font-serif font-extrabold text-forest-900">4,200+</div>
+            <div className="mt-2 text-sm font-bold uppercase tracking-widest text-forest-800">Eco-Warriors</div>
+          </div>
+        </div>
+
+        {/* App Previews Mockups */}
+        <section className="py-10">
+          <div className="mb-10 text-center">
+            <h2 className="font-serif text-4xl text-forest-950">A beautiful way to save the planet.</h2>
+            <p className="mt-4 text-lg font-medium text-forest-900">Track, complete, and grow with our stunning interfaces.</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="overflow-hidden rounded-[2rem] border border-forest-900/10 shadow-[0_24px_50px_rgba(16,33,20,0.1)]">
+              <Image src="/mockup-virtual-garden.png" alt="Virtual Garden" width={600} height={800} className="w-full object-cover" />
+            </div>
+            <div className="overflow-hidden rounded-[2rem] border border-forest-900/10 shadow-[0_24px_50px_rgba(16,33,20,0.1)]">
+              <Image src="/mockup-daily-missions.png" alt="Daily Missions" width={600} height={800} className="w-full object-cover" />
+            </div>
+            <div className="overflow-hidden rounded-[2rem] border border-forest-900/10 shadow-[0_24px_50px_rgba(16,33,20,0.1)]">
+              <Image src="/mockup-carbon-tracker.png" alt="Carbon Tracker" width={600} height={800} className="w-full object-cover" />
+            </div>
+          </div>
+        </section>
+
         <section id="about" className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-[2rem] border border-white/70 bg-white/80 p-8 shadow-[0_28px_70px_rgba(16,33,20,0.12)] backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-forest-700">About EcoLudus</p>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-forest-800">About EcoLudus</p>
             <h2 className="mt-4 font-serif text-4xl text-forest-950">A gentler path to visible environmental action.</h2>
-            <p className="mt-5 text-base leading-8 text-forest-900/75">
+            <p className="mt-5 text-base leading-8 font-medium text-forest-900/90">
               EcoLudus makes sustainability feel tangible. Complete daily missions, track your impact, grow your virtual
               collection, and stay motivated through a peaceful, modern experience designed to make good habits stick.
             </p>
@@ -115,10 +163,27 @@ export default function LandingPage() {
                 className="rounded-[2rem] border border-white/70 bg-white/72 p-6 shadow-[0_24px_60px_rgba(16,33,20,0.1)] backdrop-blur transition-transform hover:-translate-y-1"
               >
                 <h3 className="font-serif text-3xl text-forest-950">{feature.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-forest-900/74">{feature.text}</p>
+                <p className="mt-4 text-sm font-medium leading-7 text-forest-900/90">{feature.text}</p>
               </article>
             ))}
           </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="rounded-[2rem] border border-white/70 bg-white/80 p-8 shadow-[0_28px_70px_rgba(16,33,20,0.12)] backdrop-blur">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-forest-800">Rewards Explained</p>
+            <h2 className="mt-4 font-serif text-4xl text-forest-950">Turn eco actions into real-world impact.</h2>
+            <p className="mt-5 text-base font-medium leading-8 text-forest-900">
+              When you complete missions, you earn EcoPoints. These aren't just digital numbers. 
+              We partner with real-world conservation efforts and eco-brands. Convert your EcoPoints into:
+            </p>
+            <ul className="mt-6 flex flex-col gap-4 text-forest-900">
+              <li className="flex items-center gap-3"><div className="h-2 w-2 rounded-full bg-forest-600" /> <b>Real Tree Planting:</b> Turn 1,000 pts into a tree planted.</li>
+              <li className="flex items-center gap-3"><div className="h-2 w-2 rounded-full bg-forest-600" /> <b>Brand Discounts:</b> Unlock up to 20% off eco-friendly products.</li>
+              <li className="flex items-center gap-3"><div className="h-2 w-2 rounded-full bg-forest-600" /> <b>Profile Badges:</b> Show off your verified green status.</li>
+            </ul>
+          </div>
+          <MiniQuiz />
         </section>
 
         <section

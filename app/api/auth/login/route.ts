@@ -59,6 +59,13 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: { code: "auth/invalid-json", message: "Invalid JSON payload" } },
+        { status: 400 }
+      );
+    }
 
     console.error("Login error", error);
     return NextResponse.json(
