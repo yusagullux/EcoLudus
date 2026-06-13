@@ -240,6 +240,28 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
   }
 
+  if (normalized === "select payload, mission_id from team_active_missions where team_id = $1 and id = $2 limit 1") {
+    const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
+    const row = store.team_active_missions.find((entry) => entry.team_id === teamId && entry.id === id);
+    return result(row ? ([{ payload: clone(row.payload), mission_id: row.mission_id }] as T[]) : []);
+  }
+
+  if (normalized === "select count(*) as count from team_active_missions where team_id = $1 and mission_id is not null") {
+    const teamId = String(params[0] ?? "");
+    const count = store.team_active_missions.filter(
+      (entry) => entry.team_id === teamId && entry.mission_id !== null
+    ).length;
+    return result([{ count }] as T[]);
+  }
+
+  if (normalized === "select id from team_active_missions where team_id = $1 and mission_id = $2 limit 1") {
+    const [teamId, missionId] = [String(params[0] ?? ""), String(params[1] ?? "")];
+    const row = store.team_active_missions.find(
+      (entry) => entry.team_id === teamId && entry.mission_id === missionId
+    );
+    return result(row ? ([{ id: row.id }] as T[]) : []);
+  }
+
   if (normalized === "select payload from team_mission_logs where team_id = $1 and id = $2 limit 1") {
     const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
     const row = store.team_mission_logs.find((entry) => entry.team_id === teamId && entry.id === id);
@@ -250,6 +272,15 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const id = String(params[0] ?? "");
     const row = store.mission_logs.find((entry) => entry.id === id);
     return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
+  }
+
+  if (normalized === "select id, user_id, payload from mission_logs") {
+    const rows = store.mission_logs.map((row) => ({
+      id: row.id,
+      user_id: row.user_id,
+      payload: clone(row.payload)
+    }));
+    return result(rows as T[]);
   }
 
   if (normalized === "select id, image_hash, user_id, quest_id, created_at from photo_hashes where image_hash = $1 limit 1") {

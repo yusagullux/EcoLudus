@@ -13,7 +13,6 @@ const missionTemplates = [
   { id: "t6", title: "Plant or Care for 3 Greens", desc: "Plant seeds or tend to three different plants as a joint effort.", icon: "🌱", difficulty: "Easy", xp: 210, eco: 120, needed: 3 },
 ];
 
-
 const difficultyColor: Record<string, string> = {
   Easy: "bg-emerald-50 text-emerald-700",
   Medium: "bg-amber-50 text-amber-700",
@@ -30,39 +29,43 @@ export default function TeamPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [inputVal, setInputVal] = useState("");
   const [toast, setToast] = useState("");
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchTeamData() {
-      if (!user?.uid) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/teams?userId=${user.uid}`);
-        const data = await response.json();
-        
-        if (data.team) {
-          setTeam(data.team);
-          setActiveMissions(data.activeMissions || []);
-          setJoined(true);
-        } else {
-          setJoined(false);
-        }
-      } catch (error) {
-        console.error("Failed to fetch team data:", error);
-        setJoined(false);
-      } finally {
-        setLoading(false);
-      }
+  const fetchTeamData = async () => {
+    if (!user?.uid) {
+      setLoading(false);
+      return;
     }
 
+    try {
+      const response = await fetch(`/api/teams?userId=${user.uid}`);
+      const data = await response.json();
+
+      if (data.team) {
+        setTeam(data.team);
+        setActiveMissions(data.activeMissions || []);
+        setJoined(true);
+      } else {
+        setJoined(false);
+        setTeam(null);
+        setActiveMissions([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch team data:", error);
+      setJoined(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTeamData();
   }, [user?.uid]);
 
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(""), 3000);
+    setTimeout(() => setToast(""), 3500);
   };
 
   const closeModals = () => {
@@ -83,16 +86,9 @@ export default function TeamPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setJoined(true);
         closeModals();
         showToast(`Team "${inputVal}" created! Code: ${data.code}`);
-        // Refresh team data
-        const teamResponse = await fetch(`/api/teams?userId=${user.uid}`);
-        const teamData = await teamResponse.json();
-        if (teamData.team) {
-          setTeam(teamData.team);
-          setActiveMissions(teamData.activeMissions || []);
-        }
+        await fetchTeamData();
       } else {
         showToast(data.error?.code || "Failed to create team");
       }
@@ -114,16 +110,9 @@ export default function TeamPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setJoined(true);
         closeModals();
         showToast(`Joined team "${data.teamName}"!`);
-        // Refresh team data
-        const teamResponse = await fetch(`/api/teams?userId=${user.uid}`);
-        const teamData = await teamResponse.json();
-        if (teamData.team) {
-          setTeam(teamData.team);
-          setActiveMissions(teamData.activeMissions || []);
-        }
+        await fetchTeamData();
       } else {
         showToast(data.error?.code || "Failed to join team");
       }
@@ -149,6 +138,86 @@ export default function TeamPage() {
     } catch (error) {
       console.error("Leave team error:", error);
       showToast("Failed to leave team");
+    }
+  };
+
+  const handleAssignMission = async (t: typeof missionTemplates[0]) => {
+    if (!user?.uid || !team?.id) return;
+    if (activeMissions.length >= 3) {
+      showToast("Maximum 3 active missions allowed");
+      return;
+    }
+    const alreadyActive = activeMissions.some((m) => m.mission_id === t.id);
+    if (alreadyActive) {
+      showToast(`"${t.title}" is already active`);
+      return;
+    }
+
+    setAssigningId(t.id);
+    try {
+      const response = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "assign",
+          userId: user.uid,
+          teamId: team.id,
+          missionId: t.id,
+          title: t.title,
+          icon: t.icon,
+          xp: t.xp,
+          eco: t.eco,
+          needed: t.needed
+        })
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        showToast(`"${t.title}" assigned to team!`);
+        await fetchTeamData();
+      } else {
+        showToast(data.error?.message || data.error?.code || "Failed to assign mission");
+      }
+    } catch (error) {
+      console.error("Assign mission error:", error);
+      showToast("Failed to assign mission");
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
+  const handleSubmitProgress = async (activeMissionId: string) => {
+    if (!user?.uid || !team?.id) return;
+
+    setSubmittingId(activeMissionId);
+    try {
+      const response = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "submit_progress",
+          userId: user.uid,
+          teamId: team.id,
+          activeMissionId
+        })
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.completed) {
+          showToast("🎉 Mission completed! Rewards granted to all members!");
+        } else {
+          showToast("Progress submitted! Keep going!");
+        }
+        await fetchTeamData();
+      } else {
+        showToast(data.error?.message || data.error?.code || "Failed to submit progress");
+      }
+    } catch (error) {
+      console.error("Submit progress error:", error);
+      showToast("Failed to submit progress");
+    } finally {
+      setSubmittingId(null);
     }
   };
 
@@ -267,7 +336,7 @@ export default function TeamPage() {
             <div className="mt-5">
               <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-forest-500">Members</p>
               <div className="flex flex-col divide-y divide-forest-50 overflow-hidden rounded-xl border border-forest-100">
-                {team?.members?.map((m: any, i: number) => (
+                {team?.members?.length > 0 ? team.members.map((m: any, i: number) => (
                   <div key={i} className="flex items-center justify-between bg-white px-4 py-3 hover:bg-forest-50/60 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-forest-50 text-base">
@@ -275,9 +344,11 @@ export default function TeamPage() {
                       </div>
                       <span className="text-sm font-semibold text-forest-950">{m.name}</span>
                     </div>
-                    <span className="text-xs font-bold text-forest-700">{m.xp.toLocaleString()} XP</span>
+                    <span className="text-xs font-bold text-forest-700">{(m.xp || 0).toLocaleString()} XP</span>
                   </div>
-                ))}
+                )) : (
+                  <div className="px-4 py-4 text-sm text-forest-400 text-center">No members yet</div>
+                )}
               </div>
             </div>
           </div>
@@ -293,34 +364,43 @@ export default function TeamPage() {
                 {activeMissions.length}/3 active
               </span>
             </div>
-            <div className="flex flex-col gap-3">
-              {activeMissions.map((m) => {
-                const pct = Math.round((m.done / m.needed) * 100);
-                return (
-                  <div key={m.id} className="rounded-xl border border-forest-100 bg-forest-50/60 p-5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <p className="font-serif text-lg font-bold text-forest-950">{m.icon} {m.title}</p>
-                      <div className="flex gap-2">
-                        <span className="rounded-lg bg-forest-100 px-2.5 py-1 text-xs font-bold text-forest-700">+{m.xp} XP</span>
-                        <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">+{m.eco} Eco</span>
+            {activeMissions.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-10 text-center text-forest-400">
+                <span className="text-3xl">🎯</span>
+                <p className="text-sm">No active missions yet. Assign one from the library below!</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {activeMissions.map((m) => {
+                  const pct = Math.round(((m.done || 0) / (m.needed || 1)) * 100);
+                  const isSubmitting = submittingId === m.id;
+                  return (
+                    <div key={m.id} className="rounded-xl border border-forest-100 bg-forest-50/60 p-5">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <p className="font-serif text-lg font-bold text-forest-950">{m.icon} {m.title}</p>
+                        <div className="flex gap-2">
+                          <span className="rounded-lg bg-forest-100 px-2.5 py-1 text-xs font-bold text-forest-700">+{m.xp} XP</span>
+                          <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">+{m.eco} Eco</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-3 flex items-center gap-3">
-                      <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-forest-100">
-                        <div className="h-full rounded-full bg-forest-700 transition-all" style={{ width: `${pct}%` }} />
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-forest-100">
+                          <div className="h-full rounded-full bg-forest-700 transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-bold text-forest-600">{m.done}/{m.needed}</span>
                       </div>
-                      <span className="text-xs font-bold text-forest-600">{m.done}/{m.needed}</span>
+                      <button
+                        onClick={() => handleSubmitProgress(m.id)}
+                        disabled={isSubmitting}
+                        className="mt-4 rounded-xl bg-forest-950 px-5 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSubmitting ? "Submitting…" : "Submit Progress"}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => showToast("Progress submitted!")}
-                      className="mt-4 rounded-xl bg-forest-950 px-5 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
-                    >
-                      Submit Progress
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* ── Mission Library ── */}
@@ -328,28 +408,33 @@ export default function TeamPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-forest-500">Mission library</p>
             <h2 className="mt-0.5 mb-5 font-serif text-xl font-bold text-forest-950">Assign New Mission</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              {missionTemplates.map((t) => (
-                <div key={t.id} className="flex flex-col gap-3 rounded-xl border border-forest-100 bg-forest-50/60 p-4 hover:bg-forest-50 transition-colors">
-                  <div>
-                    <p className="font-serif text-base font-bold text-forest-950">{t.icon} {t.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-forest-500">{t.desc}</p>
+              {missionTemplates.map((t) => {
+                const isAssigning = assigningId === t.id;
+                const isAlreadyActive = activeMissions.some((m) => m.mission_id === t.id);
+                return (
+                  <div key={t.id} className="flex flex-col gap-3 rounded-xl border border-forest-100 bg-forest-50/60 p-4 hover:bg-forest-50 transition-colors">
+                    <div>
+                      <p className="font-serif text-base font-bold text-forest-950">{t.icon} {t.title}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-forest-500">{t.desc}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${difficultyColor[t.difficulty] ?? "bg-forest-50 text-forest-700"}`}>
+                        {t.difficulty}
+                      </span>
+                      <span className="rounded-lg bg-forest-100 px-2.5 py-1 text-[10px] font-bold text-forest-700">+{t.xp} XP</span>
+                      <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">+{t.eco} Eco</span>
+                      <span className="rounded-lg bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">{t.needed} teammates</span>
+                    </div>
+                    <button
+                      onClick={() => handleAssignMission(t)}
+                      disabled={isAssigning || isAlreadyActive || activeMissions.length >= 3}
+                      className="mt-auto rounded-xl bg-forest-950 px-4 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isAssigning ? "Assigning…" : isAlreadyActive ? "Already Active" : activeMissions.length >= 3 ? "Limit Reached" : "Assign"}
+                    </button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${difficultyColor[t.difficulty] ?? "bg-forest-50 text-forest-700"}`}>
-                      {t.difficulty}
-                    </span>
-                    <span className="rounded-lg bg-forest-100 px-2.5 py-1 text-[10px] font-bold text-forest-700">+{t.xp} XP</span>
-                    <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">+{t.eco} Eco</span>
-                    <span className="rounded-lg bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">{t.needed} teammates</span>
-                  </div>
-                  <button
-                    onClick={() => showToast(`"${t.title}" assigned!`)}
-                    className="mt-auto rounded-xl bg-forest-950 px-4 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
-                  >
-                    Assign
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -360,7 +445,7 @@ export default function TeamPage() {
               <h2 className="mt-0.5 font-serif text-xl font-bold text-forest-950">Team Leaderboard</h2>
             </div>
             <div className="divide-y divide-forest-50">
-              {[...(team?.members || [])].sort((a: any, b: any) => b.xp - a.xp).map((m: any, i: number) => (
+              {[...(team?.members || [])].sort((a: any, b: any) => (b.xp || 0) - (a.xp || 0)).map((m: any, i: number) => (
                 <div key={i} className="flex items-center gap-4 px-6 py-3.5 hover:bg-forest-50/60 transition-colors">
                   <span className="w-6 text-center font-serif text-base font-black text-forest-300">#{i + 1}</span>
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-forest-50 text-base">
@@ -370,9 +455,12 @@ export default function TeamPage() {
                     <p className="text-sm font-semibold text-forest-950">{m.name}</p>
                     <p className="text-xs capitalize text-forest-400">{m.role}</p>
                   </div>
-                  <span className="font-serif text-base font-bold text-forest-700">{m.xp.toLocaleString()} XP</span>
+                  <span className="font-serif text-base font-bold text-forest-700">{(m.xp || 0).toLocaleString()} XP</span>
                 </div>
               ))}
+              {(!team?.members || team.members.length === 0) && (
+                <div className="px-6 py-6 text-sm text-forest-400 text-center">No members to rank yet</div>
+              )}
             </div>
           </div>
         </>
@@ -397,6 +485,7 @@ export default function TeamPage() {
             <input
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (showCreateModal ? handleCreateTeam() : handleJoinTeam())}
               placeholder={showCreateModal ? "e.g. Green Guardians" : "e.g. ECO123"}
               maxLength={showCreateModal ? 40 : 6}
               className="mt-5 w-full rounded-xl border border-forest-200 bg-white px-4 py-3 text-sm text-forest-950 placeholder:text-forest-300 outline-none focus:border-forest-500 focus:ring-2 focus:ring-forest-500/15"

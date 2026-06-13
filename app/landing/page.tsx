@@ -1,6 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import { MarketingShell } from "@/components/marketing-shell";
+import { LiveStatsCard } from "@/components/live-stats-card";
+import { CommunityPulse } from "@/components/community-pulse";
+import { GardenPreview } from "@/components/garden-preview";
 
 const features = [
   {
@@ -55,53 +59,22 @@ export default function LandingPage() {
           </div>
 
           <div className="relative">
-            <div className="rounded-[2rem] border border-white/70 bg-[linear-gradient(145deg,rgba(255,255,255,0.94),rgba(239,243,232,0.82))] p-5 shadow-[0_35px_90px_rgba(16,33,20,0.16)] backdrop-blur-xl">
-              <div className="rounded-[1.5rem] bg-[linear-gradient(180deg,#26472e_0%,#16301d_100%)] p-6 text-cream-100 shadow-inner">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-moss-300">Today&apos;s pulse</p>
-                    <h2 className="mt-3 font-serif text-3xl">Forest dashboard</h2>
-                  </div>
-                  <div className="rounded-2xl bg-white/10 px-4 py-3 text-right">
-                    <div className="text-xs uppercase tracking-[0.22em] text-moss-300">CO₂ reduced</div>
-                    <div className="mt-2 text-3xl font-semibold">18.4kg</div>
-                  </div>
-                </div>
-                <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                  {[
-                    ["XP", "2,480"],
-                    ["EcoPoints", "1,160"],
-                    ["Level", "6"]
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-3xl border border-white/10 bg-white/8 px-4 py-5">
-                      <div className="text-xs uppercase tracking-[0.2em] text-moss-300">{label}</div>
-                      <div className="mt-3 text-2xl font-semibold text-white">{value}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
-                  <div className="flex items-center justify-between text-sm text-moss-300">
-                    <span>Daily missions</span>
-                    <span>3 / 5 complete</span>
-                  </div>
-                  <div className="mt-4 h-3 rounded-full bg-white/10">
-                    <div className="h-3 w-3/5 rounded-full bg-[linear-gradient(90deg,#d8ead0,#7cb082)]" />
-                  </div>
-                  <div className="mt-5 grid gap-3 text-sm">
-                    {["Reusable bottle refill", "Walk instead of drive", "Sort household recycling"].map((task) => (
-                      <div key={task} className="flex items-center justify-between rounded-2xl bg-black/10 px-4 py-3">
-                        <span>{task}</span>
-                        <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em]">active</span>
-                      </div>
-                    ))}
-                  </div>
+            <Suspense fallback={
+              <div className="rounded-[2rem] border border-white/70 bg-[linear-gradient(145deg,rgba(255,255,255,0.94),rgba(239,243,232,0.82))] p-5 shadow-[0_35px_90px_rgba(16,33,20,0.16)] backdrop-blur-xl">
+                <div className="rounded-[1.5rem] bg-[linear-gradient(180deg,#26472e_0%,#16301d_100%)] p-6 text-cream-100 shadow-inner text-center py-12">
+                  <p className="text-moss-300">Loading live data...</p>
                 </div>
               </div>
-            </div>
+            }>
+              <LiveStatsCard />
+            </Suspense>
           </div>
         </div>
 
-
+        {/* Community Social Proof */}
+        <div className="py-6">
+          <CommunityPulse />
+        </div>
 
         {/* App Previews Mockups */}
         <section className="py-10">
@@ -144,7 +117,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-
+        {/* Garden Preview */}
+        <section className="py-10">
+          <GardenPreview />
+        </section>
 
         <section
           id="experience"
