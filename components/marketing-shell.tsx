@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -27,9 +28,9 @@ export function MarketingShell({
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(95,155,103,0.18),transparent_26%),radial-gradient(circle_at_10%_30%,rgba(155,118,83,0.14),transparent_22%)]" />
       <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
-        <Link href="/landing" className="flex items-center gap-3 text-forest-900">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest-900 text-lg font-semibold text-cream-100 shadow-[0_20px_40px_rgba(16,33,20,0.18)]">
-            E
+        <Link href="/landing" className="group flex items-center gap-3 text-forest-900">
+          <div className="relative h-11 w-11 overflow-hidden rounded-2xl bg-white shadow-[0_20px_40px_rgba(16,33,20,0.18)] ring-1 ring-forest-900/10 transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-105">
+            <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="44px" className="object-cover" priority />
           </div>
           <div>
             <div className="font-serif text-2xl font-semibold tracking-wide">EcoLudus</div>
@@ -61,12 +62,12 @@ export function MarketingShell({
         {/* Mobile Menu Button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden flex flex-col gap-1.5 p-2"
+          className="flex flex-col gap-1.5 p-2 md:hidden"
           aria-label="Toggle menu"
         >
-          <div className={`h-0.5 w-6 bg-forest-900 transition-transform ${mobileMenuOpen ? "rotate-45 translate-y-2" : ""}`} />
-          <div className={`h-0.5 w-6 bg-forest-900 transition-opacity ${mobileMenuOpen ? "opacity-0" : ""}`} />
-          <div className={`h-0.5 w-6 bg-forest-900 transition-transform ${mobileMenuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+          <div className={`h-0.5 w-6 bg-forest-900 transition-transform duration-300 ease-out ${mobileMenuOpen ? "translate-y-2 rotate-45" : ""}`} />
+          <div className={`h-0.5 w-6 bg-forest-900 transition-opacity duration-200 ease-out ${mobileMenuOpen ? "opacity-0" : ""}`} />
+          <div className={`h-0.5 w-6 bg-forest-900 transition-transform duration-300 ease-out ${mobileMenuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
         </button>
       </header>
 
@@ -113,8 +114,8 @@ export function MarketingShell({
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-12">
           <div>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-forest-900 text-sm font-semibold text-cream-100">
-                E
+              <div className="relative h-8 w-8 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-forest-900/10">
+                <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="32px" className="object-cover" />
               </div>
               <div className="font-serif text-lg font-semibold text-forest-900">EcoLudus</div>
             </div>

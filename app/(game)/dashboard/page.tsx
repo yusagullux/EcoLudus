@@ -271,7 +271,9 @@ export default function DashboardPage() {
   if (loading || loadingQuests) {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-forest-600 border-t-transparent" />
+        <div className="logo-breathe h-14 w-14 overflow-hidden rounded-2xl bg-white shadow-[0_18px_38px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10">
+          <img src="/images/logo.png" alt="EcoLudus logo" className="h-full w-full object-cover" />
+        </div>
         <p className="text-sm font-semibold text-forest-800">Synchronizing daily quest rhythm...</p>
       </div>
     );

@@ -52,7 +52,7 @@ export function HeroMetric({ label, value }: { label: string; value: ReactNode }
 export function MetricCard({ label, value, accent = "#2f6b46", wide = false }: MetricCardProps) {
   return (
     <article
-      className={`rounded-[20px] border border-[#dfe7d7] bg-[#fffefa] p-4 shadow-[0_18px_48px_rgba(26,45,29,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_58px_rgba(26,45,29,0.1)] ${wide ? "sm:col-span-2" : ""}`}
+      className={`rounded-[20px] border border-[#dfe7d7] bg-[#fffefa] p-4 shadow-[0_18px_48px_rgba(26,45,29,0.07)] transition duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_24px_58px_rgba(26,45,29,0.1)] ${wide ? "sm:col-span-2" : ""}`}
     >
       <div className="mb-3 h-1 w-10 rounded-full" style={{ background: accent }} />
       <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">{label}</p>
@@ -82,7 +82,7 @@ export function ProgressBar({ value, color = "#2f6b46" }: { value: number; color
   return (
     <div className="h-2 overflow-hidden rounded-full bg-[#e8eee1]">
       <div
-        className="h-full rounded-full transition-all duration-700"
+        className="h-full rounded-full transition-all duration-1000 ease-out"
         style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: color }}
       />
     </div>
@@ -104,7 +104,7 @@ export function Pill({ children, active = false }: { children: ReactNode; active
 }
 
 export const buttonBase =
-  "inline-flex items-center justify-center rounded-full px-5 py-2.5 text-xs font-extrabold uppercase tracking-[0.1em] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55";
+  "inline-flex items-center justify-center rounded-full px-5 py-2.5 text-xs font-extrabold uppercase tracking-[0.1em] transition duration-300 ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55";
 
 export const primaryButton =
   `${buttonBase} bg-forest-950 text-cream-100 shadow-[0_16px_36px_rgba(16,33,20,0.2)] hover:-translate-y-0.5 hover:bg-forest-800`;

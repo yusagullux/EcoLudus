@@ -617,7 +617,9 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
 
   if (
     normalized ===
-    "select distinct u.id, u.email, u.payload from team_active_missions tam join users u on (tam.payload->>'user_id')::text = u.id where tam.team_id = $1"
+      "select distinct u.id, u.email, u.payload from team_active_missions tam join users u on (tam.payload->>'user_id')::text = u.id where tam.team_id = $1" ||
+    normalized ===
+      "select distinct u.id, u.email, u.payload from team_active_missions tam join users u on u.id::text = tam.payload->>'user_id' where tam.team_id = $1"
   ) {
     const teamId = String(params[0] ?? "");
     const teamActiveMissions = store.team_active_missions.filter((tam) => tam.team_id === teamId);
@@ -633,7 +635,9 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
 
   if (
     normalized ===
-    "select coalesce(sum((payload->>'xp')::int), 0) as total_xp, coalesce(sum((payload->>'ecoPoints')::int), 0) as total_eco, count(*) as member_count from users where id in (select distinct (payload->>'user_id')::text from team_active_missions where team_id = $1)"
+      "select coalesce(sum((payload->>'xp')::int), 0) as total_xp, coalesce(sum((payload->>'ecopoints')::int), 0) as total_eco, count(*) as member_count from users where id in (select distinct (payload->>'user_id')::text from team_active_missions where team_id = $1)" ||
+    normalized ===
+      "select coalesce(sum((payload->>'xp')::int), 0) as total_xp, coalesce(sum((payload->>'ecopoints')::int), 0) as total_eco, count(*) as member_count from users where id::text in (select distinct payload->>'user_id' from team_active_missions where team_id = $1)"
   ) {
     const teamId = String(params[0] ?? "");
     const teamActiveMissions = store.team_active_missions.filter((tam) => tam.team_id === teamId);

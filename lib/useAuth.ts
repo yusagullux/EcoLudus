@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import {
+  clearRememberedSession,
+  getRememberedSession,
+  saveRememberedSession
+} from "@/lib/auth-persistence";
 
 type AuthUser = {
   uid: string;
@@ -54,10 +59,14 @@ export function useAuth() {
             displayName: payload.user.displayName
           };
           setUser(currentUser);
+          if (getRememberedSession()) {
+            saveRememberedSession(currentUser);
+          }
           await refreshProfile(currentUser.uid);
         } else {
           setUser(null);
           setProfile(null);
+          clearRememberedSession();
           if (typeof window !== "undefined") {
             const path = window.location.pathname;
             if (path !== "/landing" && path !== "/login" && path !== "/signup") {
@@ -70,6 +79,7 @@ export function useAuth() {
         if (!cancelled) {
           setUser(null);
           setProfile(null);
+          clearRememberedSession();
         }
       } finally {
         if (!cancelled) {
