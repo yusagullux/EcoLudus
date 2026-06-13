@@ -6,16 +6,15 @@ import { useAuth } from "@/lib/useAuth";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, primaryButton } from "@/components/game-ui";
 import PhotoVerification from "@/components/photo-verification";
 import { updateUserProfile } from "@/public/js/auth.js";
-import { calculateLevel } from "@/public/js/levels.js";
 
 const CATEGORIES = [
-  { name: "Recycling", mark: "RC", color: "#2f6b46" },
-  { name: "Energy Saving", mark: "EN", color: "#9a6b1f" },
-  { name: "Transportation", mark: "TR", color: "#2f5f86" },
-  { name: "Water Saving", mark: "WA", color: "#237482" },
-  { name: "Clean-Up Missions", mark: "CU", color: "#62508f" },
-  { name: "Gardening & Nature", mark: "GD", color: "#4c7a3b" },
-  { name: "Sustainable Living", mark: "SL", color: "#3e8c7c" }
+  { name: "Recycling", image: "/images/forest.png", color: "#2f6b46" },
+  { name: "Energy Saving", image: "/images/background.png", color: "#9a6b1f" },
+  { name: "Transportation", image: "/images/mountains.png", color: "#2f5f86" },
+  { name: "Water Saving", image: "/images/nature.png", color: "#237482" },
+  { name: "Clean-Up Missions", image: "/images/night.png", color: "#62508f" },
+  { name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b" },
+  { name: "Sustainable Living", image: "/images/plants/lotus.png", color: "#3e8c7c" }
 ];
 
 const CATEGORY_IMAGES: Record<string, string> = {
@@ -236,36 +235,20 @@ export default function DashboardPage() {
     }
 
     setPendingCompletion(true);
-    const completedAt = new Date();
-    const dateKey = completedAt.toISOString().slice(0, 10);
-    const xpReward = selectedQuests.reduce((sum, quest) => sum + quest.xp, 0);
-    const ecoReward = selectedQuests.reduce((sum, quest) => sum + quest.eco, 0);
-    const carbonReward = selectedQuests.reduce((sum, quest) => sum + quest.carbon, 0);
     const completedIds = selectedQuests.map((quest) => quest.id);
-    
-    const nextXp = (profile.xp || 0) + xpReward;
-    const nextCompletedQuests = Array.from(new Set([...(profile.completedQuests || []), ...completedIds]));
-    const nextDailyQuestsCompleted = Array.from(new Set([...(profile.dailyQuestsCompleted || []), ...completedIds]));
-    const dailyQuestCompletions = {
-      ...(profile.dailyQuestCompletions || {}),
-      [dateKey]: Array.from(new Set([...(profile.dailyQuestCompletions?.[dateKey] || []), ...completedIds]))
-    };
 
     try {
-      const result = await updateUserProfile(user.uid, {
-        xp: nextXp,
-        ecoPoints: (profile.ecoPoints || 0) + ecoReward,
-        level: calculateLevel(nextXp),
-        carbonReduced: (profile.carbonReduced || 0) + carbonReward,
-        missionsCompleted: (profile.missionsCompleted || 0) + selectedQuests.length,
-        completedQuests: nextCompletedQuests,
-        dailyQuestsCompleted: nextDailyQuestsCompleted,
-        dailyQuestCompletions,
-        lastQuestCompletionTime: completedAt.toISOString()
+      const response = await fetch("/api/quests/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ questIds: completedIds })
       });
 
-      if (!result.success) {
-        throw new Error(result.error || "Failed to update profile database.");
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result.success) {
+        throw new Error(result?.error?.code || "Failed to complete selected missions.");
       }
 
       setQuests((items) => items.map((item) => (completedIds.includes(item.id) ? { ...item, done: true } : item)));
@@ -273,7 +256,9 @@ export default function DashboardPage() {
       await refreshProfile();
       const completedTitles = selectedQuests.map((quest) => quest.title).join(", ");
       setCompletedPopup(`Mission complete! ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"} finished: ${completedTitles}`);
-      showToast(`Completed ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"}: +${xpReward} XP, +${ecoReward} EcoPoints`);
+      showToast(
+        `Completed ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"}: +${result.totals.xp} XP, +${result.totals.ecoPoints} EcoPoints, ${Number(result.totals.carbonReduced || 0).toFixed(1)} kg CO2`
+      );
       setPhotoVerifiedForQuestIds((ids) => ids.filter((id) => !completedIds.includes(id)));
     } catch (error) {
       console.error("Mission completion error:", error);
@@ -447,14 +432,14 @@ export default function DashboardPage() {
 
       <Panel eyebrow="Quest progress" title="Category Progress">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {categoryProgress.map(({ name, mark, color, done, total }) => {
+          {categoryProgress.map(({ name, image, color, done, total }) => {
             const progress = Math.round((done / total) * 100);
             return (
-              <article key={name} className="rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] p-4">
+              <article key={name} className="reveal-card rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] p-4 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_16px_38px_rgba(26,45,29,0.08)]">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-xs font-extrabold text-forest-800 shadow-sm">
-                      {mark}
+                    <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
+                      <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
                     </span>
                     <div>
                       <p className="text-sm font-extrabold text-forest-950">{name}</p>

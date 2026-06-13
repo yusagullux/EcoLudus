@@ -5,15 +5,15 @@ import { useAuth } from "@/lib/useAuth";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar } from "@/components/game-ui";
 
 const badgeList = [
-  { level: 1, name: "Cat", mark: "CT" },
-  { level: 2, name: "Fox", mark: "FX" },
-  { level: 3, name: "Rabbit", mark: "RB" },
-  { level: 4, name: "Deer", mark: "DR" },
-  { level: 5, name: "Wolf", mark: "WF" },
-  { level: 6, name: "Bear", mark: "BR" },
-  { level: 7, name: "Eagle", mark: "EA" },
-  { level: 8, name: "Tiger", mark: "TG" },
-  { level: 9, name: "Lion", mark: "LN" }
+  { level: 1, name: "Cat", image: "/images/ecoquests-badges/cat-badge-removedbg.png" },
+  { level: 2, name: "Fox", image: "/images/ecoquests-badges/fox-badge-removedbg.png" },
+  { level: 3, name: "Rabbit", image: "/images/ecoquests-badges/rabbit-badge-removedbg.png" },
+  { level: 4, name: "Deer", image: "/images/ecoquests-badges/deer-badge-removedbg.png" },
+  { level: 5, name: "Wolf", image: "/images/ecoquests-badges/wolf-badge-removedbg.png" },
+  { level: 6, name: "Bear", image: "/images/ecoquests-badges/bear-badge-removedbg.png" },
+  { level: 7, name: "Eagle", image: "/images/ecoquests-badges/eagle-badge-removedbg.png" },
+  { level: 8, name: "Tiger", image: "/images/ecoquests-badges/tiger-badge-removedbg.png" },
+  { level: 9, name: "Lion", image: "/images/ecoquests-badges/lion-badge-removedbg.png" }
 ];
 
 function getBadge(level: number) {
@@ -21,12 +21,12 @@ function getBadge(level: number) {
 }
 
 const categories = [
-  { id: "recycling", name: "Recycling", mark: "RC", color: "#2f6b46", maxCo2: 3.6, badge: "Recycler" },
-  { id: "energy", name: "Energy Saving", mark: "EN", color: "#9a6b1f", maxCo2: 2.1, badge: "Energy Saver" },
-  { id: "transportation", name: "Transportation", mark: "TR", color: "#2f5f86", maxCo2: 3.0, badge: "Eco Commuter" },
-  { id: "water", name: "Water Saving", mark: "WA", color: "#237482", maxCo2: 0.5, badge: "Water Guardian" },
-  { id: "cleanup", name: "Clean-Up", mark: "CU", color: "#62508f", maxCo2: 2.4, badge: "Clean Earth" },
-  { id: "gardening", name: "Gardening & Nature", mark: "GD", color: "#4c7a3b", maxCo2: 0.6, badge: "Green Thumb" }
+  { id: "recycling", name: "Recycling", image: "/images/forest.png", color: "#2f6b46", maxCo2: 3.6, badge: "Recycler" },
+  { id: "energy", name: "Energy Saving", image: "/images/background.png", color: "#9a6b1f", maxCo2: 2.1, badge: "Energy Saver" },
+  { id: "transportation", name: "Transportation", image: "/images/mountains.png", color: "#2f5f86", maxCo2: 3.0, badge: "Eco Commuter" },
+  { id: "water", name: "Water Saving", image: "/images/nature.png", color: "#237482", maxCo2: 0.5, badge: "Water Guardian" },
+  { id: "cleanup", name: "Clean-Up", image: "/images/night.png", color: "#62508f", maxCo2: 2.4, badge: "Clean Earth" },
+  { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b", maxCo2: 0.6, badge: "Green Thumb" }
 ];
 
 const rarityChip: Record<string, string> = {
@@ -42,6 +42,21 @@ const rarityBorder: Record<string, string> = {
   epic: "#d2c9df",
   legendary: "#e6d3a6"
 };
+
+const plantAssetByName: Record<string, string> = {
+  "Mossy Fern": "/images/plants/mint.png",
+  "Golden Daisy": "/images/plants/sunflower.png",
+  "Blue Orchid": "/images/plants/orchid.png",
+  "Spotted Aloe": "/images/plants/basil.png",
+  "Mystic Bamboo": "/images/plants/bamboo.png",
+  "Crystal Lotus": "/images/plants/lotus.png",
+  "Aurora Blossom": "/images/plants/cherry_blossom.png",
+  "Ember Cactus": "/images/plants/dragonfruit.png"
+};
+
+function getPlantImage(plant: any) {
+  return plant.image || plantAssetByName[plant.name] || "/images/plants/sunflower.png";
+}
 
 export default function ProfilePage() {
   const { user, profile } = useAuth();
@@ -85,7 +100,9 @@ export default function ProfilePage() {
     <div className="flex flex-col gap-5">
       <PageHero eyebrow={`${badge.name} Badge, Level ${level}`} title={displayName} description={email}>
         <div className="flex flex-wrap gap-3">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/12 bg-white/8 font-serif text-3xl font-extrabold text-white">{badge.mark}</div>
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/12 bg-white/12 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+            <img src={badge.image} alt={`${badge.name} badge`} className="h-full w-full object-contain drop-shadow-[0_10px_14px_rgba(0,0,0,0.2)]" />
+          </div>
           <HeroMetric label="XP" value={xp.toLocaleString()} />
           <HeroMetric label="Missions" value={missionsCompleted} />
         </div>
@@ -99,14 +116,16 @@ export default function ProfilePage() {
 
       <Panel eyebrow="Achievement tracking" title="Quest Category Progress">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {categoryProgress.map(({ name, mark, color, done, total, co2, maxCo2, badge: categoryBadge }) => {
+          {categoryProgress.map(({ name, image, color, done, total, co2, maxCo2, badge: categoryBadge }) => {
             const pct = Math.round((done / total) * 100);
             const completed = done === total;
             return (
               <article key={name} className="rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-xs font-extrabold text-forest-800 shadow-sm">{mark}</span>
+                    <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
+                      <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    </span>
                     <div>
                       <p className="text-sm font-extrabold text-forest-950">{name}</p>
                       <p className="text-xs font-semibold text-forest-700/58">{done}/{total} quests</p>
@@ -129,8 +148,10 @@ export default function ProfilePage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {profilePlants.length > 0 ? (
             profilePlants.map((plant) => (
-              <article key={plant.id} className="flex flex-col items-center gap-3 rounded-2xl border bg-[#fffefa] p-4 text-center transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(26,45,29,0.1)]" style={{ borderColor: rarityBorder[plant.rarity] }}>
-                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f4f7ef] font-serif text-xl font-extrabold text-forest-800">{plant.mark}</span>
+              <article key={plant.id} className="reveal-card group flex flex-col items-center gap-3 rounded-2xl border bg-[#fffefa] p-4 text-center transition hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(26,45,29,0.1)]" style={{ borderColor: rarityBorder[plant.rarity] }}>
+                <span className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-[#f4f7ef]">
+                  <img src={getPlantImage(plant)} alt={plant.name} loading="lazy" className="h-16 w-16 object-contain drop-shadow-[0_10px_14px_rgba(16,33,20,0.16)] transition group-hover:scale-110" />
+                </span>
                 <p className="text-sm font-extrabold leading-tight text-forest-950">{plant.name}</p>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${rarityChip[plant.rarity]}`}>{plant.rarity}</span>
                 {plant.count > 1 && <span className="text-[10px] font-semibold text-forest-700/70">x{plant.count}</span>}
@@ -144,7 +165,9 @@ export default function ProfilePage() {
             </article>
           )}
           <a href="/shop" className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#cbd9c2] bg-[#f7f9f2] p-4 text-center text-forest-700 transition hover:-translate-y-0.5 hover:bg-white">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white font-serif text-lg font-extrabold">SH</span>
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white">
+              <img src="/images/plants/sunflower.png" alt="" className="h-10 w-10 object-contain" />
+            </span>
             <span className="text-xs font-extrabold uppercase tracking-[0.08em]">Visit Shop</span>
           </a>
         </div>

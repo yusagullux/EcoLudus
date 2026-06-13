@@ -42,6 +42,14 @@ create table if not exists mission_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists carbon_cache (
+  quest_id text primary key,
+  carbon_value numeric not null,
+  source text not null,
+  source_payload jsonb not null default '{}'::jsonb,
+  cached_at timestamptz not null default now()
+);
+
 create table if not exists photo_hashes (
   id uuid primary key default gen_random_uuid(),
   image_hash text not null unique,
@@ -56,3 +64,4 @@ create index if not exists idx_team_active_missions_mission_id on team_active_mi
 create index if not exists idx_team_mission_logs_team_id on team_mission_logs(team_id);
 create index if not exists idx_team_mission_logs_mission_id on team_mission_logs(mission_id);
 create index if not exists idx_mission_logs_user_id on mission_logs(user_id);
+create index if not exists idx_carbon_cache_cached_at on carbon_cache(cached_at);

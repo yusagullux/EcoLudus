@@ -44,12 +44,21 @@ type MissionLogRow = {
   created_at: string;
 };
 
+type CarbonCacheRow = {
+  quest_id: string;
+  carbon_value: number;
+  source: string;
+  source_payload: Record<string, unknown>;
+  cached_at: string;
+};
+
 type FileStore = {
   users: UserRow[];
   teams: TeamRow[];
   team_active_missions: TeamSubdocRow[];
   team_mission_logs: TeamSubdocRow[];
   mission_logs: MissionLogRow[];
+  carbon_cache: CarbonCacheRow[];
   photo_hashes: Array<Record<string, unknown>>;
 };
 
@@ -75,6 +84,7 @@ const EMPTY_STORE: FileStore = {
   team_active_missions: [],
   team_mission_logs: [],
   mission_logs: [],
+  carbon_cache: [],
   photo_hashes: []
 };
 
@@ -105,6 +115,24 @@ function parseJsonObject(value: unknown) {
 function getConnectionString() {
   const connectionString = process.env.DATABASE_URL;
   return connectionString?.trim() ? connectionString : null;
+}
+
+function isHostedRuntime() {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL === "1" ||
+    process.env.NETLIFY === "true"
+  );
+}
+
+function canUseLocalFileStore() {
+  return !isHostedRuntime() && process.env.LOCAL_DB_MODE !== "postgres";
+}
+
+function missingProductionDatabaseError() {
+  return new Error(
+    "DATABASE_URL is required in production. Refusing to use the local file database because it is reset on deploys and would lose user accounts."
+  );
 }
 
 function createPool() {
@@ -283,6 +311,18 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result(rows as T[]);
   }
 
+  if (
+    normalized ===
+    "select quest_id, carbon_value, source, source_payload, cached_at from carbon_cache where quest_id = $1 and cached_at > now() - interval '30 days' limit 1"
+  ) {
+    const questId = String(params[0] ?? "");
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const row = store.carbon_cache.find(
+      (entry) => entry.quest_id === questId && new Date(entry.cached_at).getTime() > cutoff
+    );
+    return result(row ? ([clone(row)] as T[]) : []);
+  }
+
   if (normalized === "select id, image_hash, user_id, quest_id, created_at from photo_hashes where image_hash = $1 limit 1") {
     const hash = String(params[0] ?? "");
     const row = store.photo_hashes.find((entry) => entry.image_hash === hash);
@@ -309,6 +349,31 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         quest_id: questId === null ? null : String(questId),
         created_at: nowIso()
       });
+    }
+
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into carbon_cache (quest_id, carbon_value, source, source_payload, cached_at) values ($1, $2, $3, $4::jsonb, now()) on conflict (quest_id) do update set carbon_value = excluded.carbon_value, source = excluded.source, source_payload = excluded.source_payload, cached_at = now()"
+  ) {
+    const [questId, carbonValue, source, sourcePayloadRaw] = params;
+    const id = String(questId);
+    const existing = store.carbon_cache.find((entry) => entry.quest_id === id);
+    const nextRow = {
+      quest_id: id,
+      carbon_value: Number(carbonValue ?? 0),
+      source: String(source ?? "unknown"),
+      source_payload: parseJsonObject(sourcePayloadRaw) as Record<string, unknown>,
+      cached_at: nowIso()
+    };
+
+    if (existing) {
+      Object.assign(existing, nextRow);
+    } else {
+      store.carbon_cache.push(nextRow);
     }
 
     await persistStore();
@@ -796,6 +861,14 @@ create table if not exists mission_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists carbon_cache (
+  quest_id text primary key,
+  carbon_value numeric not null,
+  source text not null,
+  source_payload jsonb not null default '{}'::jsonb,
+  cached_at timestamptz not null default now()
+);
+
 create table if not exists photo_hashes (
   id uuid primary key default gen_random_uuid(),
   image_hash text not null unique,
@@ -810,6 +883,7 @@ create index if not exists idx_team_active_missions_mission_id on team_active_mi
 create index if not exists idx_team_mission_logs_team_id on team_mission_logs(team_id);
 create index if not exists idx_team_mission_logs_mission_id on team_mission_logs(mission_id);
 create index if not exists idx_mission_logs_user_id on mission_logs(user_id);
+create index if not exists idx_carbon_cache_cached_at on carbon_cache(cached_at);
   `;
 
   migrationPromise = poolInstance.query(migrationSql).then(() => {
@@ -835,7 +909,20 @@ async function detectMode() {
 
   const connectionString = getConnectionString();
 
-  if (!connectionString || process.env.LOCAL_DB_MODE === "file") {
+  if (process.env.LOCAL_DB_MODE === "file") {
+    if (!canUseLocalFileStore()) {
+      throw missingProductionDatabaseError();
+    }
+
+    global.__ecoquestDbMode = "file";
+    return global.__ecoquestDbMode;
+  }
+
+  if (!connectionString) {
+    if (!canUseLocalFileStore()) {
+      throw missingProductionDatabaseError();
+    }
+
     global.__ecoquestDbMode = "file";
     return global.__ecoquestDbMode;
   }
@@ -847,6 +934,11 @@ async function detectMode() {
       await ensureMigrations(pool);
       global.__ecoquestDbMode = "postgres";
     } catch (error) {
+      if (!canUseLocalFileStore()) {
+        global.__ecoquestDbMode = undefined;
+        throw error;
+      }
+
       console.warn("PostgreSQL unavailable, falling back to local persistent data store. Error:", error);
       global.__ecoquestDbMode = "file";
     } finally {
@@ -876,6 +968,10 @@ export async function sql<T extends QueryResultRow = QueryResultRow>(
       rows: result.rows
     };
   } catch (error) {
+    if (!canUseLocalFileStore()) {
+      throw error;
+    }
+
     global.__ecoquestDbMode = "file";
     console.warn("PostgreSQL query failed, switching to local persistent data store. Error:", error);
     return fileSql<T>(text, params);
