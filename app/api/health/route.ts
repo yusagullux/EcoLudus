@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { isDatabaseSetupError, sql } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -10,13 +10,16 @@ export async function GET() {
       database: db.rows[0]?.ok === 1 ? "connected" : "unknown"
     });
   } catch (error) {
+    const setupError = isDatabaseSetupError(error);
+
     return NextResponse.json(
       {
         status: "error",
         database: "unavailable",
+        code: setupError ? "database-not-configured" : "database-unavailable",
         message: error instanceof Error ? error.message : "Database connection failed"
       },
-      { status: 500 }
+      { status: setupError ? 503 : 500 }
     );
   }
 }

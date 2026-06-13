@@ -14,7 +14,6 @@ type ShopItem = {
   name: string;
   rarity: Rarity;
   price: number;
-  mark: string;
   image: string;
   hatchTime?: string;
 };
@@ -27,21 +26,21 @@ const rarityStyle: Record<Rarity, { border: string; chip: string; accent: string
 };
 
 const plants = [
-  { id: 1, name: "Mossy Fern", rarity: "common", price: 50, mark: "MF", image: "/images/plants/mint.png" },
-  { id: 2, name: "Golden Daisy", rarity: "common", price: 60, mark: "GD", image: "/images/plants/sunflower.png" },
-  { id: 3, name: "Blue Orchid", rarity: "rare", price: 180, mark: "BO", image: "/images/plants/orchid.png" },
-  { id: 4, name: "Spotted Aloe", rarity: "rare", price: 200, mark: "SA", image: "/images/plants/basil.png" },
-  { id: 5, name: "Mystic Bamboo", rarity: "epic", price: 450, mark: "MB", image: "/images/plants/bamboo.png" },
-  { id: 6, name: "Crystal Lotus", rarity: "epic", price: 500, mark: "CL", image: "/images/plants/lotus.png" },
-  { id: 7, name: "Aurora Blossom", rarity: "legendary", price: 1200, mark: "AB", image: "/images/plants/cherry_blossom.png" },
-  { id: 8, name: "Ember Cactus", rarity: "legendary", price: 1500, mark: "EC", image: "/images/plants/dragonfruit.png" }
+  { id: 1, name: "Mossy Fern", rarity: "common", price: 50, image: "/images/plants/mint.png" },
+  { id: 2, name: "Golden Daisy", rarity: "common", price: 60, image: "/images/plants/sunflower.png" },
+  { id: 3, name: "Blue Orchid", rarity: "rare", price: 180, image: "/images/plants/orchid.png" },
+  { id: 4, name: "Spotted Aloe", rarity: "rare", price: 200, image: "/images/plants/basil.png" },
+  { id: 5, name: "Mystic Bamboo", rarity: "epic", price: 450, image: "/images/plants/bamboo.png" },
+  { id: 6, name: "Crystal Lotus", rarity: "epic", price: 500, image: "/images/plants/lotus.png" },
+  { id: 7, name: "Aurora Blossom", rarity: "legendary", price: 1200, image: "/images/plants/cherry_blossom.png" },
+  { id: 8, name: "Ember Cactus", rarity: "legendary", price: 1500, image: "/images/plants/dragonfruit.png" }
 ];
 
 const eggs = [
-  { id: 1, name: "Common Egg", rarity: "common", price: 100, mark: "CE", image: "/images/eggs/common-egg.png", hatchTime: "1h" },
-  { id: 2, name: "Rare Egg", rarity: "rare", price: 300, mark: "RE", image: "/images/eggs/rare-egg.png", hatchTime: "4h" },
-  { id: 3, name: "Epic Egg", rarity: "epic", price: 700, mark: "EE", image: "/images/eggs/epic-egg.png", hatchTime: "12h" },
-  { id: 4, name: "Legendary Egg", rarity: "legendary", price: 1800, mark: "LE", image: "/images/eggs/legendary-egg.png", hatchTime: "24h" }
+  { id: 1, name: "Common Egg", rarity: "common", price: 100, image: "/images/eggs/common-egg.png", hatchTime: "1h" },
+  { id: 2, name: "Rare Egg", rarity: "rare", price: 300, image: "/images/eggs/rare-egg.png", hatchTime: "4h" },
+  { id: 3, name: "Epic Egg", rarity: "epic", price: 700, image: "/images/eggs/epic-egg.png", hatchTime: "12h" },
+  { id: 4, name: "Legendary Egg", rarity: "legendary", price: 1800, image: "/images/eggs/legendary-egg.png", hatchTime: "24h" }
 ];
 
 export default function ShopPage() {
@@ -165,13 +164,13 @@ export default function ShopPage() {
           const canAfford = ecoPoints >= item.price;
           return (
             <article key={item.id} className="reveal-card group flex flex-col overflow-hidden rounded-[22px] border bg-[#fffefa] shadow-[0_18px_48px_rgba(26,45,29,0.07)] transition hover:-translate-y-1 hover:shadow-[0_28px_64px_rgba(26,45,29,0.13)]" style={{ borderColor: style.border }}>
-              <div className="relative flex h-40 items-center justify-center overflow-hidden" style={{ background: `${style.accent}14` }}>
-                <div className="absolute inset-x-6 bottom-5 h-8 rounded-full bg-black/8 blur-xl transition group-hover:scale-110" />
+              <div className="relative flex aspect-square min-h-44 items-center justify-center overflow-hidden p-5" style={{ background: `${style.accent}14` }}>
+                <div className="absolute inset-x-7 bottom-7 h-8 rounded-full bg-black/8 blur-xl transition group-hover:scale-110" />
                 <img
                   src={item.image}
                   alt={item.name}
                   loading="lazy"
-                  className="relative h-28 w-28 object-contain drop-shadow-[0_14px_18px_rgba(16,33,20,0.16)] transition duration-300 group-hover:scale-110"
+                  className="relative h-full max-h-36 w-full max-w-36 object-contain drop-shadow-[0_14px_18px_rgba(16,33,20,0.16)] transition duration-300 group-hover:scale-105"
                 />
                 <span className={`absolute right-2 top-2 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
               </div>

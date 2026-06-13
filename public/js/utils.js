@@ -107,6 +107,7 @@ export function formatErrorMessage(error) {
         'auth/weak-password': 'Password is too weak. Please choose a stronger password.',
         'auth/user-not-found': 'No profile found with this email address.',
         'auth/wrong-password': 'Incorrect password. Please try again.',
+        'auth/database-not-configured': 'EcoLudus needs its production database configured before login will work.',
         'auth/invalid-credential': 'Invalid email or password. Please check your credentials and try again.',
         'auth/invalid-login-credentials': 'Invalid email or password. Please check your credentials and try again.',
         'auth/too-many-requests': 'Too many failed attempts. Please try again later.',

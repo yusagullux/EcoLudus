@@ -97,8 +97,7 @@ export default function DashboardPage() {
           xp: quest.xp || 35,
           eco: quest.ecoCoins || 25,
           carbon: quest.carbonFootprintReduction || 0.5,
-          requiresPhoto: checkIfQuestRequiresPhoto(quest.id),
-          imageSrc: CATEGORY_IMAGES[category.id] || "/images/forest.png"
+          requiresPhoto: checkIfQuestRequiresPhoto(quest.id)
         });
       });
     });
@@ -334,13 +333,6 @@ export default function DashboardPage() {
                   onChange={() => toggleSelection(quest)}
                   className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded accent-forest-800"
                 />
-                {quest.imageSrc && (
-                  <img
-                    src={quest.imageSrc}
-                    alt={quest.title}
-                    className="h-14 w-14 rounded-2xl object-cover shadow-sm"
-                  />
-                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: quest.categoryColor }} />
@@ -367,7 +359,7 @@ export default function DashboardPage() {
                           : "bg-amber-100 text-amber-800 hover:bg-amber-200"
                       }`}
                     >
-                      {isPhotoVerified ? "📷 Verified" : "📷 Verify Proof"}
+                      {isPhotoVerified ? "Verified" : "Verify proof"}
                     </button>
                   )}
                 </div>

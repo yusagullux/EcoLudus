@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { isDatabaseSetupError, sql } from "@/lib/db";
 
 const signUpSchema = z.object({
   email: z.string().email(),
@@ -131,6 +131,18 @@ export async function POST(request: Request) {
     }
 
     console.error("Signup error details:", error);
+    if (isDatabaseSetupError(error)) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "auth/database-not-configured",
+            message: "The production database is not configured. Set DATABASE_URL before using authentication."
+          }
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: { code: "auth/internal-error", message: error instanceof Error ? error.message : String(error) } },
       { status: 500 }

@@ -130,9 +130,15 @@ function canUseLocalFileStore() {
 }
 
 function missingProductionDatabaseError() {
-  return new Error(
+  const error = new Error(
     "DATABASE_URL is required in production. Refusing to use the local file database because it is reset on deploys and would lose user accounts."
   );
+  error.name = "DatabaseSetupError";
+  return error;
+}
+
+export function isDatabaseSetupError(error: unknown) {
+  return error instanceof Error && error.name === "DatabaseSetupError";
 }
 
 function createPool() {
