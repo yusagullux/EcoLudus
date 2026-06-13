@@ -4,6 +4,29 @@ import { db } from "./firebase-config.js";
 let cachedUser = null;
 let authBootstrapPromise = null;
 const authListeners = new Set();
+const REMEMBERED_SESSION_KEY = "ecoludus.rememberedSession";
+
+function saveRememberedSession(user) {
+  try {
+    localStorage.setItem(
+      REMEMBERED_SESSION_KEY,
+      JSON.stringify({
+        user,
+        savedAt: new Date().toISOString()
+      })
+    );
+  } catch {
+    // Storage can be unavailable in private browsing or restricted webviews.
+  }
+}
+
+function clearRememberedSession() {
+  try {
+    localStorage.removeItem(REMEMBERED_SESSION_KEY);
+  } catch {
+    // Storage can be unavailable in private browsing or restricted webviews.
+  }
+}
 
 async function readJson(response) {
   const payload = await response.json().catch(() => ({}));
@@ -47,6 +70,11 @@ async function bootstrapAuthState() {
   });
   const payload = await readJson(response);
   cachedUser = normalizeUser(payload.user);
+  if (cachedUser) {
+    saveRememberedSession(cachedUser);
+  } else {
+    clearRememberedSession();
+  }
   notifyAuthListeners();
   return cachedUser;
 }
@@ -85,6 +113,7 @@ export async function signUp(email, password, displayName = null) {
 
     const payload = await readJson(response);
     cachedUser = normalizeUser(payload.user);
+    saveRememberedSession(cachedUser);
     notifyAuthListeners();
 
     return { success: true, user: cachedUser };
@@ -111,12 +140,13 @@ export async function signIn(email, password) {
 
     const payload = await readJson(response);
     cachedUser = normalizeUser(payload.user);
+    saveRememberedSession(cachedUser);
     notifyAuthListeners();
 
     return { success: true, user: cachedUser };
   } catch (error) {
     console.error("Sign in error:", error);
-    return { success: false, error };
+    return { success: false, error: error.code || error.message || "auth/internal-error" };
   }
 }
 
@@ -130,11 +160,16 @@ export async function logOut() {
     await readJson(response);
     cachedUser = null;
     authBootstrapPromise = Promise.resolve(null);
+    clearRememberedSession();
     notifyAuthListeners();
 
     return { success: true };
   } catch (error) {
     console.error("Sign out error:", error);
+    cachedUser = null;
+    authBootstrapPromise = Promise.resolve(null);
+    clearRememberedSession();
+    notifyAuthListeners();
     return { success: false, error: error.message };
   }
 }

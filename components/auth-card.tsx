@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { inputClass, primaryButton } from "@/components/game-ui";
+import {
+  clearRememberedSession,
+  getRememberedSession,
+  saveRememberedSession
+} from "@/lib/auth-persistence";
 
 type Mode = "login" | "signup";
 type AuthCardProps = { mode: Mode };
@@ -37,7 +42,8 @@ function formatClientError(message: string) {
     "auth/user-not-found": "No profile found for that email.",
     "auth/wrong-password": "Incorrect password. Please try again.",
     "auth/invalid-input": "Please check your details and try again.",
-    "auth/internal-error": "Something went wrong on the server. Please try again."
+    "auth/internal-error": "Something went wrong on the server. Please try again.",
+    "auth/network-request-failed": "We could not reach EcoLudus. Check your connection and try again."
   };
   return mapped[message] ?? "Something went wrong. Please try again.";
 }
@@ -46,9 +52,50 @@ export function AuthCard({ mode }: AuthCardProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(mode === "login");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const content = copy[mode];
+
+  useEffect(() => {
+    if (mode !== "login" || !getRememberedSession()) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function restoreSession() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store"
+        });
+        const payload = await response.json().catch(() => ({}));
+
+        if (cancelled) {
+          return;
+        }
+
+        if (response.ok && payload.user) {
+          saveRememberedSession(payload.user);
+          router.replace("/dashboard");
+          router.refresh();
+        } else {
+          clearRememberedSession();
+        }
+      } catch {
+        if (!cancelled) {
+          clearRememberedSession();
+        }
+      }
+    }
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,10 +111,19 @@ export function AuthCard({ mode }: AuthCardProps) {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.error?.code || "auth/internal-error");
+      if (rememberMe && payload.user) {
+        saveRememberedSession(payload.user);
+      } else {
+        clearRememberedSession();
+      }
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "auth/internal-error";
+      const message = err instanceof TypeError
+        ? "auth/network-request-failed"
+        : err instanceof Error
+          ? err.message
+          : "auth/internal-error";
       setError(formatClientError(message));
       setPending(false);
     }
@@ -140,6 +196,18 @@ export function AuthCard({ mode }: AuthCardProps) {
                 className={inputClass}
               />
             </div>
+
+            {mode === "login" && (
+              <label className="flex items-center gap-3 text-sm font-bold text-forest-800">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(event) => setRememberMe(event.target.checked)}
+                  className="h-4 w-4 rounded border-[#c8d5bf] text-forest-900 accent-forest-900"
+                />
+                Remember me on this browser
+              </label>
+            )}
 
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">

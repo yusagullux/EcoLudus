@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { sql } from "@/lib/db";
 
 function calculateLevel(xp: number) {
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
       const membersResult = await sql(
         `select distinct u.id, u.email, u.payload 
          from team_active_missions tam
-         join users u on (tam.payload->>'user_id')::text = u.id
+         join users u on u.id::text = tam.payload->>'user_id'
          where tam.team_id = $1`,
         [team.id]
       );
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
            coalesce(sum((payload->>'ecoPoints')::int), 0) as total_eco,
            count(*) as member_count
          from users 
-         where id in (select distinct (payload->>'user_id')::text from team_active_missions where team_id = $1)`,
+         where id::text in (select distinct payload->>'user_id' from team_active_missions where team_id = $1)`,
         [team.id]
       );
 
@@ -130,19 +131,35 @@ export async function POST(request: Request) {
 
     // Create a new team
     if (action === "create" && teamName && userId) {
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-      const result = await sql(
-        "insert into teams (join_code, created_by, payload) values ($1, $2, $3::jsonb) returning id",
-        [code, userId, JSON.stringify({ name: teamName })]
+      const existingResult = await sql(
+        "select team_id from team_active_missions where payload->>'user_id' = $1 limit 1",
+        [userId]
       );
 
-      const teamId = result.rows[0].id;
+      if (existingResult.rowCount > 0) {
+        return NextResponse.json(
+          { error: { code: "already-in-team", message: "You are already part of a team." } },
+          { status: 400 }
+        );
+      }
+
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const teamId = randomUUID();
+
+      await sql(
+        `insert into teams (id, join_code, created_by, payload)
+         values ($1, $2, $3, $4::jsonb)
+         on conflict (id) do update
+         set join_code = excluded.join_code,
+             payload = excluded.payload,
+             updated_at = now()`,
+        [teamId, code, userId, JSON.stringify({ name: teamName })]
+      );
 
       // Add leader to team_active_missions as a placeholder
       await sql(
         "insert into team_active_missions (id, team_id, payload) values ($1, $2, $3::jsonb)",
-        [crypto.randomUUID(), teamId, JSON.stringify({ user_id: userId, role: "leader" })]
+        [randomUUID(), teamId, JSON.stringify({ user_id: userId, role: "leader" })]
       );
 
       return NextResponse.json({ teamId, code });
@@ -180,7 +197,7 @@ export async function POST(request: Request) {
       // Add user to team
       await sql(
         "insert into team_active_missions (id, team_id, payload) values ($1, $2, $3::jsonb)",
-        [crypto.randomUUID(), team.id, JSON.stringify({ user_id: userId, role: "member" })]
+        [randomUUID(), team.id, JSON.stringify({ user_id: userId, role: "member" })]
       );
 
       return NextResponse.json({ teamId: team.id, teamName: (team.payload as any)?.name || "Team" });
@@ -212,7 +229,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const activeMissionId = crypto.randomUUID();
+      const activeMissionId = randomUUID();
       const payload = {
         title,
         icon,
@@ -265,7 +282,7 @@ export async function POST(request: Request) {
         );
 
         // Add to logs
-        const logId = crypto.randomUUID();
+        const logId = randomUUID();
         const completedPayload = {
           ...missionPayload,
           completed_count: newCount,
@@ -285,7 +302,7 @@ export async function POST(request: Request) {
         const membersResult = await sql(
           `select distinct u.id, u.email, u.payload 
            from team_active_missions tam
-           join users u on (tam.payload->>'user_id')::text = u.id
+           join users u on u.id::text = tam.payload->>'user_id'
            where tam.team_id = $1`,
           [teamId]
         );

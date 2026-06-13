@@ -76,21 +76,22 @@ export default function TeamPage() {
 
   const handleCreateTeam = async () => {
     if (!inputVal.trim() || !user?.uid) return;
+    const teamName = inputVal.trim();
 
     try {
       const response = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", userId: user.uid, teamName: inputVal.trim() })
+        body: JSON.stringify({ action: "create", userId: user.uid, teamName })
       });
       const data = await response.json();
 
       if (response.ok) {
         closeModals();
-        showToast(`Team "${inputVal}" created! Code: ${data.code}`);
+        showToast(`Team "${teamName}" created! Code: ${data.code}`);
         await fetchTeamData();
       } else {
-        showToast(data.error?.code || "Failed to create team");
+        showToast(data.error?.message || data.error?.code || "Failed to create team");
       }
     } catch (error) {
       console.error("Create team error:", error);
