@@ -149,8 +149,8 @@ export default function ProfilePage() {
           {profilePlants.length > 0 ? (
             profilePlants.map((plant) => (
               <article key={plant.id} className="reveal-card group flex flex-col items-center gap-3 rounded-2xl border bg-[#fffefa] p-4 text-center transition hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(26,45,29,0.1)]" style={{ borderColor: rarityBorder[plant.rarity] }}>
-                <span className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-[#f4f7ef]">
-                  <img src={getPlantImage(plant)} alt={plant.name} loading="lazy" className="h-16 w-16 object-contain drop-shadow-[0_10px_14px_rgba(16,33,20,0.16)] transition group-hover:scale-110" />
+                <span className="relative flex aspect-square w-full max-w-32 items-center justify-center rounded-2xl bg-[#f4f7ef] p-4">
+                  <img src={getPlantImage(plant)} alt={plant.name} loading="lazy" className="h-full w-full object-contain drop-shadow-[0_10px_14px_rgba(16,33,20,0.16)] transition group-hover:scale-105" />
                 </span>
                 <p className="text-sm font-extrabold leading-tight text-forest-950">{plant.name}</p>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${rarityChip[plant.rarity]}`}>{plant.rarity}</span>

@@ -42,6 +42,7 @@ function formatClientError(message: string) {
     "auth/user-not-found": "No profile found for that email.",
     "auth/wrong-password": "Incorrect password. Please try again.",
     "auth/invalid-input": "Please check your details and try again.",
+    "auth/database-not-configured": "EcoLudus needs its production database configured before login will work.",
     "auth/internal-error": "Something went wrong on the server. Please try again.",
     "auth/network-request-failed": "We could not reach EcoLudus. Check your connection and try again."
   };

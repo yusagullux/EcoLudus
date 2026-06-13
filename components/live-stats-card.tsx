@@ -1,4 +1,4 @@
-import { sql } from "@/lib/db";
+import { isDatabaseSetupError, sql } from "@/lib/db";
 
 async function getAggregatedStats() {
   try {
@@ -22,7 +22,10 @@ async function getAggregatedStats() {
       total_co2_reduced: totalCO2Reduced
     };
   } catch (error) {
-    console.error("Error calculating stats:", error);
+    if (!isDatabaseSetupError(error)) {
+      console.error("Error calculating stats:", error);
+    }
+
     return {
       active_users: 0,
       total_missions: 0,

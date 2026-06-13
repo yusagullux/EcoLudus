@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { isDatabaseSetupError, sql } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -30,6 +30,13 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Session restore error:", error);
+    if (isDatabaseSetupError(error)) {
+      return NextResponse.json(
+        { user: null, error: { code: "auth/database-not-configured" } },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { user: null, error: { code: "auth/session-restore-failed" } },
       { status: 503 }
