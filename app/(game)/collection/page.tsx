@@ -16,19 +16,46 @@ const rarityStyle: Record<Rarity, { border: string; chip: string; accent: string
 };
 
 const samplePlants = [
-  { id: 1, name: "Mossy Fern", rarity: "common", mark: "MF", count: 0 },
-  { id: 2, name: "Golden Daisy", rarity: "common", mark: "GD", count: 0 },
-  { id: 3, name: "Blue Orchid", rarity: "rare", mark: "BO", count: 0 },
-  { id: 4, name: "Mystic Bamboo", rarity: "epic", mark: "MB", count: 0 },
-  { id: 5, name: "Aurora Blossom", rarity: "legendary", mark: "AB", count: 0 },
-  { id: 6, name: "Spotted Aloe", rarity: "rare", mark: "SA", count: 0 }
+  { id: 1, name: "Mossy Fern", rarity: "common", mark: "MF", count: 0, image: "/images/plants/mint.png" },
+  { id: 2, name: "Golden Daisy", rarity: "common", mark: "GD", count: 0, image: "/images/plants/sunflower.png" },
+  { id: 3, name: "Blue Orchid", rarity: "rare", mark: "BO", count: 0, image: "/images/plants/orchid.png" },
+  { id: 4, name: "Mystic Bamboo", rarity: "epic", mark: "MB", count: 0, image: "/images/plants/bamboo.png" },
+  { id: 5, name: "Aurora Blossom", rarity: "legendary", mark: "AB", count: 0, image: "/images/plants/cherry_blossom.png" },
+  { id: 6, name: "Spotted Aloe", rarity: "rare", mark: "SA", count: 0, image: "/images/plants/basil.png" }
 ];
 
 const sampleAnimals = [
-  { id: 1, name: "Forest Fox", rarity: "rare", mark: "FX", count: 0, active: false },
-  { id: 2, name: "Mystic Owl", rarity: "epic", mark: "OW", count: 0, active: false },
-  { id: 3, name: "Golden Deer", rarity: "legendary", mark: "DR", count: 0, active: false }
+  { id: 1, name: "Forest Fox", rarity: "rare", mark: "FX", count: 0, active: false, image: "/images/pets/wolf.png" },
+  { id: 2, name: "Mystic Owl", rarity: "epic", mark: "OW", count: 0, active: false, image: "/images/pets/owl.png" },
+  { id: 3, name: "Golden Deer", rarity: "legendary", mark: "DR", count: 0, active: false, image: "/images/pets/deer.png" }
 ];
+
+const assetByName: Record<string, string> = {
+  "Mossy Fern": "/images/plants/mint.png",
+  "Golden Daisy": "/images/plants/sunflower.png",
+  "Blue Orchid": "/images/plants/orchid.png",
+  "Spotted Aloe": "/images/plants/basil.png",
+  "Mystic Bamboo": "/images/plants/bamboo.png",
+  "Crystal Lotus": "/images/plants/lotus.png",
+  "Aurora Blossom": "/images/plants/cherry_blossom.png",
+  "Ember Cactus": "/images/plants/dragonfruit.png",
+  "Common Egg": "/images/eggs/common-egg.png",
+  "Rare Egg": "/images/eggs/rare-egg.png",
+  "Epic Egg": "/images/eggs/epic-egg.png",
+  "Legendary Egg": "/images/eggs/legendary-egg.png",
+  Cat: "/images/pets/cat.png",
+  Deer: "/images/pets/deer.png",
+  Wolf: "/images/pets/wolf.png",
+  Bear: "/images/pets/bear.png",
+  Eagle: "/images/pets/eagle.png",
+  Tiger: "/images/pets/tiger.png",
+  Lion: "/images/pets/lion.png",
+  Owl: "/images/pets/owl.png"
+};
+
+function getAsset(item: any, mode: CollMode) {
+  return item.image || assetByName[item.name] || (mode === "plants" ? "/images/plants/sunflower.png" : "/images/pets/cat.png");
+}
 
 export default function CollectionPage() {
   const { profile } = useAuth();
@@ -84,7 +111,7 @@ export default function CollectionPage() {
       {filtered.length === 0 ? (
         <Panel>
           <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 text-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-forest-100 text-xl font-extrabold text-forest-800">CO</span>
+            <img src="/images/plants/sunflower.png" alt="" className="h-20 w-20 object-contain opacity-70" />
             <div>
               <p className="font-serif text-2xl font-extrabold text-forest-950">Nothing here yet</p>
               <p className="mt-1 text-sm text-forest-700/64">Visit the Shop to start your collection.</p>
@@ -96,11 +123,17 @@ export default function CollectionPage() {
           {filtered.map((item) => {
             const style = rarityStyle[item.rarity as Rarity];
             return (
-              <article key={item.id} className="relative flex flex-col overflow-hidden rounded-[22px] border bg-[#fffefa] shadow-[0_18px_48px_rgba(26,45,29,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_58px_rgba(26,45,29,0.11)]" style={{ borderColor: style.border }}>
+              <article key={item.id} className="reveal-card group relative flex flex-col overflow-hidden rounded-[22px] border bg-[#fffefa] shadow-[0_18px_48px_rgba(26,45,29,0.07)] transition hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(26,45,29,0.11)]" style={{ borderColor: style.border }}>
                 {(item as any).active && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2.5 py-1 text-[10px] font-extrabold uppercase text-[#76511a]">Active</span>}
                 {(item as any).count > 1 && <span className="absolute right-2 top-2 z-10 rounded-full bg-forest-950 px-2.5 py-1 text-[10px] font-extrabold text-cream-100">x{(item as any).count}</span>}
-                <div className="flex h-32 items-center justify-center" style={{ background: `${style.accent}14` }}>
-                  <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/86 font-serif text-2xl font-extrabold" style={{ color: style.accent }}>{item.mark}</span>
+                <div className="relative flex h-36 items-center justify-center overflow-hidden" style={{ background: `${style.accent}14` }}>
+                  <div className="absolute inset-x-8 bottom-5 h-7 rounded-full bg-black/8 blur-xl transition group-hover:scale-110" />
+                  <img
+                    src={getAsset(item, mode)}
+                    alt={item.name}
+                    loading="lazy"
+                    className="relative h-24 w-24 object-contain drop-shadow-[0_12px_16px_rgba(16,33,20,0.14)] transition duration-300 group-hover:scale-110"
+                  />
                 </div>
                 <div className="flex flex-col gap-2 p-4">
                   <p className="font-serif text-base font-extrabold leading-tight text-forest-950">{item.name}</p>

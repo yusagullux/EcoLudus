@@ -6,15 +6,15 @@ import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel, Pill } from "@/components/game-ui";
 
 const badgeList = [
-  { level: 1, name: "Cat", mark: "CT" },
-  { level: 2, name: "Fox", mark: "FX" },
-  { level: 3, name: "Rabbit", mark: "RB" },
-  { level: 4, name: "Deer", mark: "DR" },
-  { level: 5, name: "Wolf", mark: "WF" },
-  { level: 6, name: "Bear", mark: "BR" },
-  { level: 7, name: "Eagle", mark: "EA" },
-  { level: 8, name: "Tiger", mark: "TG" },
-  { level: 9, name: "Lion", mark: "LN" }
+  { level: 1, name: "Cat", image: "/images/ecoquests-badges/cat-badge-removedbg.png" },
+  { level: 2, name: "Fox", image: "/images/ecoquests-badges/fox-badge-removedbg.png" },
+  { level: 3, name: "Rabbit", image: "/images/ecoquests-badges/rabbit-badge-removedbg.png" },
+  { level: 4, name: "Deer", image: "/images/ecoquests-badges/deer-badge-removedbg.png" },
+  { level: 5, name: "Wolf", image: "/images/ecoquests-badges/wolf-badge-removedbg.png" },
+  { level: 6, name: "Bear", image: "/images/ecoquests-badges/bear-badge-removedbg.png" },
+  { level: 7, name: "Eagle", image: "/images/ecoquests-badges/eagle-badge-removedbg.png" },
+  { level: 8, name: "Tiger", image: "/images/ecoquests-badges/tiger-badge-removedbg.png" },
+  { level: 9, name: "Lion", image: "/images/ecoquests-badges/lion-badge-removedbg.png" }
 ];
 
 function getBadge(level: number) {
@@ -91,7 +91,9 @@ export default function LeaderboardPage() {
               }`}
             >
               <span className="font-serif text-3xl font-extrabold" style={{ color: medalColors[rank - 1] }}>{medalLabel[rank - 1]}</span>
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white font-serif text-xl font-extrabold text-forest-800 shadow-sm">{badge.mark}</span>
+              <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-2 shadow-sm">
+                <img src={badge.image} alt={`${badge.name} badge`} className="h-full w-full object-contain" loading="lazy" />
+              </span>
               <div>
                 <p className="font-serif text-lg font-extrabold leading-snug text-forest-950">{player.displayName}</p>
                 <p className="text-xs font-semibold text-forest-700/58">{badge.name}, Lvl {player.level}</p>
@@ -124,7 +126,9 @@ export default function LeaderboardPage() {
                 >
                   <div className="text-center font-serif text-xl font-extrabold" style={{ color: isTop3 ? medalColors[rank - 1] : "#8fa083" }}>{rank}</div>
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4f7ef] text-xs font-extrabold text-forest-800">{badge.mark}</span>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f4f7ef] p-1.5">
+                      <img src={badge.image} alt={`${badge.name} badge`} className="h-full w-full object-contain" loading="lazy" />
+                    </span>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-extrabold text-forest-950">{player.displayName}{isCurrentUser ? " (You)" : ""}</p>
                       <p className="text-xs font-semibold text-forest-700/56">{badge.name} Badge</p>

@@ -13,7 +13,17 @@
 - If PostgreSQL is available, the app uses PostgreSQL.
 - If PostgreSQL is not available locally, the app now falls back to a persistent local data store in `data/local-db.json`.
 - This keeps signup, login, profiles, teams, and mission data working during local development instead of failing at startup.
-- Production should still use a real PostgreSQL database.
+- Production must use a real PostgreSQL database. Hosted deployments refuse to use the local file fallback because server files can be reset on each deploy, which would make users appear to lose their accounts.
+
+## Deployment checklist
+
+Set these environment variables on the hosting provider before deploying:
+
+- `DATABASE_URL`: PostgreSQL connection string for the permanent production database.
+- `SESSION_SECRET`: a long random string used to keep login sessions valid between deploys.
+- `POSTGRES_SSL`: set to `true` if your database provider requires SSL.
+
+After deploy, open `/api/health`. It should return `status: "ok"` and `database: "connected"`.
 
 ## How the migration works
 

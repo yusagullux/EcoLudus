@@ -6,14 +6,24 @@ import { useAuth } from "@/lib/useAuth";
 import { MetricCard, PageHero, Panel, Pill, ProgressBar } from "@/components/game-ui";
 
 const CATEGORIES_FALLBACK = [
-  { name: "Recycling", mark: "RC", color: "#2f6b46", done: 0, total: 1 },
-  { name: "Energy Saving", mark: "EN", color: "#9a6b1f", done: 0, total: 1 },
-  { name: "Transportation", mark: "TR", color: "#2f5f86", done: 0, total: 1 },
-  { name: "Water Saving", mark: "WA", color: "#237482", done: 0, total: 1 },
-  { name: "Clean-Up Missions", mark: "CU", color: "#62508f", done: 0, total: 1 },
-  { name: "Gardening & Nature", mark: "GD", color: "#4c7a3b", done: 0, total: 1 },
-  { name: "Sustainable Living", mark: "SL", color: "#3e8c7c", done: 0, total: 1 }
+  { id: "recycling", name: "Recycling", image: "/images/forest.png", color: "#2f6b46", done: 0, total: 1 },
+  { id: "energy_saving", name: "Energy Saving", image: "/images/background.png", color: "#9a6b1f", done: 0, total: 1 },
+  { id: "transportation", name: "Transportation", image: "/images/mountains.png", color: "#2f5f86", done: 0, total: 1 },
+  { id: "water_saving", name: "Water Saving", image: "/images/nature.png", color: "#237482", done: 0, total: 1 },
+  { id: "cleanup_missions", name: "Clean-Up Missions", image: "/images/night.png", color: "#62508f", done: 0, total: 1 },
+  { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b", done: 0, total: 1 },
+  { id: "sustainable_living", name: "Sustainable Living", image: "/images/plants/lotus.png", color: "#3e8c7c", done: 0, total: 1 }
 ];
+
+const categoryImages: Record<string, string> = {
+  recycling: "/images/forest.png",
+  energy_saving: "/images/background.png",
+  transportation: "/images/mountains.png",
+  water_saving: "/images/nature.png",
+  cleanup_missions: "/images/night.png",
+  gardening: "/images/plants/bamboo.png",
+  sustainable_living: "/images/plants/lotus.png"
+};
 
 export default function InsightsPage() {
   const { profile } = useAuth();
@@ -65,8 +75,9 @@ export default function InsightsPage() {
         const done = c.quests.filter((q: any) => profile?.completedQuests?.includes(q.id)).length;
         const total = c.quests.length;
         return {
+          id: c.id,
           name: c.name,
-          mark: c.name.substring(0, 2).toUpperCase(),
+          image: categoryImages[c.id] || "/images/forest.png",
           color: c.color || "#4CAF50",
           done,
           total
@@ -124,12 +135,14 @@ export default function InsightsPage() {
 
       <Panel eyebrow="Breakdown" title="Category Distribution">
         <div className="flex flex-col gap-4">
-          {categoriesProgress.map(({ name, mark, color, done, total }) => {
+          {categoriesProgress.map(({ name, image, color, done, total }) => {
             const pct = Math.round((done / total) * 100);
             return (
-              <div key={name} className="grid grid-cols-[minmax(112px,160px)_1fr_48px_48px] items-center gap-3">
+              <div key={name} className="grid grid-cols-[minmax(132px,180px)_1fr_48px_48px] items-center gap-3 rounded-2xl px-2 py-1 transition hover:bg-[#f7f9f2]">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#f4f7ef] text-[10px] font-extrabold text-forest-800">{mark}</span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f4f7ef]">
+                    <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  </span>
                   <span className="truncate text-xs font-extrabold text-forest-900">{name}</span>
                 </div>
                 <ProgressBar value={pct} color={color} />

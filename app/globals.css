@@ -44,6 +44,7 @@
 
   --animate-wiggle: wiggle 0.5s ease-in-out infinite;
   --animate-float-up: floatUp 1.2s ease-out forwards;
+  --animate-soft-rise: softRise 420ms ease-out both;
 
   @keyframes wiggle {
     0%,
@@ -65,6 +66,16 @@
     100% {
       transform: translateY(-40px);
       opacity: 0;
+    }
+  }
+  @keyframes softRise {
+    from {
+      transform: translateY(8px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
     }
   }
 }
@@ -151,4 +162,41 @@ select {
 
 .text-balance {
   text-wrap: balance;
+}
+
+.reveal-card {
+  animation: softRise 420ms ease-out both;
+  will-change: transform;
+}
+
+.reveal-card:nth-child(2) {
+  animation-delay: 35ms;
+}
+
+.reveal-card:nth-child(3) {
+  animation-delay: 70ms;
+}
+
+.reveal-card:nth-child(4) {
+  animation-delay: 105ms;
+}
+
+.reveal-card:nth-child(5) {
+  animation-delay: 140ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+
+  .reveal-card {
+    animation: none;
+    will-change: auto;
+  }
 }
