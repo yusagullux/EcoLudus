@@ -113,8 +113,35 @@ function parseJsonObject(value: unknown) {
 }
 
 function getConnectionString() {
-  const connectionString = process.env.DATABASE_URL;
-  return connectionString?.trim() ? connectionString : null;
+  const candidates = [
+    process.env.DATABASE_URL,
+    process.env.POSTGRES_URL_NON_POOLING,
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_PRISMA_URL
+  ];
+
+  for (const candidate of candidates) {
+    const value = candidate?.trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function shouldUseSsl(connectionString: string) {
+  if (process.env.POSTGRES_SSL === "true") {
+    return true;
+  }
+
+  if (process.env.POSTGRES_SSL === "false") {
+    return false;
+  }
+
+  return /supabase\.(co|com)|neon\.tech|render\.com|amazonaws\.com|rds\.amazonaws\.com/i.test(
+    connectionString
+  );
 }
 
 function isHostedRuntime() {
@@ -131,7 +158,7 @@ function canUseLocalFileStore() {
 
 function missingProductionDatabaseError() {
   const error = new Error(
-    "DATABASE_URL is required in production. Refusing to use the local file database because it is reset on deploys and would lose user accounts."
+    "DATABASE_URL (or POSTGRES_URL from the Supabase/Vercel integration) is required in production. Refusing to use the local file database because it is reset on deploys and would lose user accounts."
   );
   error.name = "DatabaseSetupError";
   return error;
@@ -141,6 +168,20 @@ export function isDatabaseSetupError(error: unknown) {
   return error instanceof Error && error.name === "DatabaseSetupError";
 }
 
+function normalizeConnectionString(connectionString: string) {
+  try {
+    const url = new URL(connectionString);
+    url.searchParams.delete("sslmode");
+    url.searchParams.delete("ssl");
+    return url.toString();
+  } catch {
+    return connectionString
+      .replace(/([?&])sslmode=[^&]*/g, "$1")
+      .replace(/([?&])ssl=[^&]*/g, "$1")
+      .replace(/[?&]$/, "");
+  }
+}
+
 function createPool() {
   const connectionString = getConnectionString();
 
@@ -148,9 +189,12 @@ function createPool() {
     throw new Error("DATABASE_URL is not configured");
   }
 
+  const useSsl = shouldUseSsl(connectionString);
+
   return new Pool({
-    connectionString,
-    ssl: process.env.POSTGRES_SSL === "true" ? { rejectUnauthorized: false } : undefined
+    connectionString: normalizeConnectionString(connectionString),
+    ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+    max: isHostedRuntime() ? 1 : 10
   });
 }
 
