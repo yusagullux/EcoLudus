@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getQuestDefinition } from "@/lib/carbon-calc";
-import { verifyTextProofWithGemini } from "@/lib/photo-verification";
+import { verifyTextProofWithGemini, verifyImageWithProvider } from "@/lib/photo-verification";
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -14,18 +14,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { questId, textProof } = await request.json();
+    const { questId, textProof, photoProof, mimeType } = await request.json();
 
-    if (!questId || !textProof || typeof textProof !== "string") {
+    if (!questId) {
       return NextResponse.json(
-        { error: { code: "invalid-argument", message: "Quest ID and text proof are required." } },
+        { error: { code: "invalid-argument", message: "Quest ID is required." } },
         { status: 400 }
       );
     }
 
-    if (textProof.trim().length < 8) {
+    if (!textProof && !photoProof) {
       return NextResponse.json(
-        { error: { code: "invalid-argument", message: "Please describe your proof in more detail (min 8 characters)." } },
+        { error: { code: "invalid-argument", message: "Please provide either a text description or a photo as proof." } },
         { status: 400 }
       );
     }
@@ -35,6 +35,46 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: { code: "quest-not-found", message: "Quest not found." } },
         { status: 404 }
+      );
+    }
+
+    // Photo proof verification
+    if (photoProof) {
+      let base64Data = photoProof;
+      if (base64Data.includes(";base64,")) {
+        base64Data = base64Data.split(";base64,").pop() || "";
+      }
+      const buffer = Buffer.from(base64Data, "base64");
+      const resolvedMimeType = mimeType || "image/jpeg";
+
+      const result = await verifyImageWithProvider(
+        buffer,
+        session.userId || "",
+        questId,
+        quest.title,
+        resolvedMimeType
+      );
+
+      if (!result.verified) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "verification-failed",
+              message: result.details || "The uploaded photo does not appear to show completion of this quest. Please provide a relevant photo."
+            }
+          },
+          { status: 422 }
+        );
+      }
+
+      return NextResponse.json({ verified: true, reasoning: result.details || "Photo proof accepted." });
+    }
+
+    // Text proof verification
+    if (typeof textProof !== "string" || textProof.trim().length < 8) {
+      return NextResponse.json(
+        { error: { code: "invalid-argument", message: "Please describe your proof in more detail (min 8 characters)." } },
+        { status: 400 }
       );
     }
 
@@ -61,3 +101,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

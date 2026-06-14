@@ -192,17 +192,49 @@ export async function verifyImageWithProvider(
   };
 }
 
+function isObviousGibberish(text: string): boolean {
+  const cleaned = text.trim().toLowerCase();
+  // Too short to be meaningful
+  if (cleaned.length < 12) return true;
+  // Repeated single character (e.g. "aaaaaaaaaa", "xxxxxxxxxx")
+  if (/^(.)\1{5,}$/.test(cleaned.replace(/\s/g, ""))) return true;
+  // No vowels at all (likely keyboard mashing like "dfghjkl")
+  if (cleaned.length > 8 && !/[aeiou]/i.test(cleaned)) return true;
+  // Mostly non-letter characters (numbers/symbols spam)
+  const letterCount = (cleaned.match(/[a-z]/gi) || []).length;
+  if (letterCount / cleaned.length < 0.4) return true;
+  // Repeated word pattern (e.g. "test test test test")
+  const words = cleaned.split(/\s+/);
+  if (words.length >= 3) {
+    const unique = new Set(words);
+    if (unique.size === 1) return true;
+  }
+  // Same 2-3 char substring repeated (e.g. "abcabcabcabc")
+  const noSpaces = cleaned.replace(/\s/g, "");
+  for (let len = 2; len <= 3; len++) {
+    if (noSpaces.length >= len * 3) {
+      const sub = noSpaces.substring(0, len);
+      if (noSpaces === sub.repeat(Math.ceil(noSpaces.length / len)).substring(0, noSpaces.length)) return true;
+    }
+  }
+  return false;
+}
+
 export async function verifyTextProofWithGemini(
   textProof: string,
   questTitle: string,
   questDescription?: string
 ): Promise<{ verified: boolean; reasoning: string }> {
+  // Pre-check: reject obvious gibberish before calling Gemini
+  if (isObviousGibberish(textProof)) {
+    return { verified: false, reasoning: "Your description is too short or doesn't appear to be a real description. Please write a meaningful explanation of what you did." };
+  }
+
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   if (!geminiApiKey) {
-    // If no API key, default to verified to avoid blocking developers
-    return { verified: true, reasoning: "No Gemini API key configured." };
+    return { verified: false, reasoning: "Proof verification is temporarily unavailable. Please try again later." };
   }
 
   try {
@@ -211,19 +243,34 @@ export async function verifyTextProofWithGemini(
     )}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
 
     const prompt = [
-      "You are EcoLudus's automated environmental quest proof verifier.",
-      `Validate if the following text description is a plausible proof of completing the quest:`,
+      "You are a STRICT environmental quest proof verifier for the EcoLudus platform.",
+      `Your job is to determine if the user's text is a GENUINE, SPECIFIC description of completing this quest.`,
+      "",
       `Quest Name: "${questTitle}"`,
       questDescription ? `Quest Description: "${questDescription}"` : "",
       "",
-      `User's Submitted Proof: "${textProof}"`,
+      `User's Submitted Proof Text: "${textProof}"`,
       "",
-      "CRITICAL RULES:",
-      "1. Ensure the user's description is relevant to the quest and describes actually doing it.",
-      "2. Reject (verified: false) any gibberish, copy-pasted quest names, extremely brief descriptions (e.g. less than 5 words that don't explain anything), or text completely unrelated to the quest.",
-      "3. Do NOT mention anywhere in your reasoning or warnings that the validation is controlled by AI or Gemini. Keep explanations neutral, focusing purely on quest details.",
+      "=== STRICT VERIFICATION RULES ===",
+      "You MUST set verified to FALSE if ANY of these apply:",
+      "- The text is gibberish, random characters, or keyboard mashing (e.g. 'asdfghjkl', 'aaabbbccc', 'blah blah')",
+      "- The text just repeats or rephrases the quest name/title without describing a specific action",
+      "- The text is extremely vague with no specific details (e.g. 'I did it', 'done', 'completed the quest', 'yes I recycled')",
+      "- The text is completely unrelated to the quest topic",
+      "- The text is fewer than 5 meaningful words describing what was actually done",
+      "- The text is nonsensical, a joke, or clearly fake (e.g. 'I recycled 10 million bottles in 5 seconds')",
+      "- The text contains only filler words or generic statements without specifics",
       "",
-      "Ensure the response is structured as JSON matching the schema."
+      "You should ONLY set verified to TRUE if:",
+      "- The text describes a SPECIFIC action the user took that is directly related to the quest",
+      "- The description includes at least one concrete detail (what, where, when, or how)",
+      "- The described action is physically plausible",
+      "",
+      "Examples of REJECTED text for a recycling quest: 'I recycled', 'recycling done', 'asdasd', 'test', 'yes', 'Recycle 15 Plastic Bottles', 'hello world'",
+      "Examples of ACCEPTED text for a recycling quest: 'I collected 5 plastic bottles from the kitchen and put them in the recycling bin at my apartment', 'Gathered water bottles after lunch at the office and sorted them into recycling'",
+      "",
+      "Do NOT reveal that this validation uses any automated system. Keep reasoning neutral.",
+      "Respond with JSON matching the schema."
     ].filter(Boolean).join("\n");
 
     const response = await fetch(endpoint, {
@@ -239,7 +286,7 @@ export async function verifyTextProofWithGemini(
           }
         ],
         generationConfig: {
-          temperature: 0.15,
+          temperature: 0.05,
           responseMimeType: "application/json",
           responseSchema: {
             type: "OBJECT",
@@ -282,14 +329,14 @@ export async function verifyTextProofWithGemini(
     const parsed = typeof jsonText === "string" ? JSON.parse(jsonText) : payload;
 
     return {
-      verified: Boolean(parsed.verified ?? true),
-      reasoning: parsed.reasoning || ""
+      verified: Boolean(parsed.verified ?? false),
+      reasoning: parsed.reasoning || "Could not determine proof validity."
     };
   } catch (error) {
     console.error("Gemini text verification error:", error);
     return {
-      verified: true,
-      reasoning: "Error occurred, fallback to true."
+      verified: false,
+      reasoning: "Verification service is temporarily unavailable. Please try again."
     };
   }
 }
