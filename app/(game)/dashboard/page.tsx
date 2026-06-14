@@ -64,7 +64,10 @@ export default function DashboardPage() {
   const [selectedQuestIds, setSelectedQuestIds] = useState<string[]>([]);
   const [verifiedQuestIds, setVerifiedQuestIds] = useState<string[]>([]);
   const [activeTextVerifyQuest, setActiveTextVerifyQuest] = useState<any | null>(null);
+  const [proofType, setProofType] = useState<"text" | "photo">("text");
   const [textProof, setTextProof] = useState<string>("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [verifyingText, setVerifyingText] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [completedPopup, setCompletedPopup] = useState<string | null>(null);
@@ -218,6 +221,11 @@ export default function DashboardPage() {
       if (!selectedQuestIds.includes(quest.id)) {
         // Trigger modal for verification first
         setActiveTextVerifyQuest(quest);
+        setProofType("text");
+        setTextProof("");
+        setPhotoFile(null);
+        setPhotoPreview(null);
+        setVerificationError(null);
         return;
       }
     }
@@ -227,20 +235,39 @@ export default function DashboardPage() {
     );
   };
 
-  const handleVerifyTextProof = async () => {
-    if (!activeTextVerifyQuest || textProof.trim().length < 8 || verifyingText) return;
+  const handleVerifyProof = async () => {
+    if (!activeTextVerifyQuest || verifyingText) return;
+
+    // Validate based on proof type
+    if (proofType === "text" && textProof.trim().length < 8) return;
+    if (proofType === "photo" && !photoFile) return;
 
     setVerifyingText(true);
     setVerificationError(null);
 
     try {
+      let bodyPayload: any = { questId: activeTextVerifyQuest.id };
+
+      if (proofType === "photo" && photoFile) {
+        const photoData = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") resolve(reader.result);
+            else reject(new Error("Failed to read photo."));
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(photoFile);
+        });
+        bodyPayload.photoProof = photoData;
+        bodyPayload.mimeType = photoFile.type;
+      } else {
+        bodyPayload.textProof = textProof.trim();
+      }
+
       const response = await fetch("/api/quests/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questId: activeTextVerifyQuest.id,
-          textProof: textProof.trim()
-        })
+        body: JSON.stringify(bodyPayload)
       });
 
       const data = await response.json();
@@ -253,6 +280,8 @@ export default function DashboardPage() {
       setSelectedQuestIds((current) => Array.from(new Set([...current, activeTextVerifyQuest.id])));
       showToast("Proof verified. Quest checked!");
       setTextProof("");
+      setPhotoFile(null);
+      setPhotoPreview(null);
       setActiveTextVerifyQuest(null);
     } catch (err: any) {
       setVerificationError(err.message || "An error occurred during verification.");
@@ -391,6 +420,11 @@ export default function DashboardPage() {
                         e.preventDefault();
                         e.stopPropagation();
                         setActiveTextVerifyQuest(quest);
+                        setProofType("text");
+                        setTextProof("");
+                        setPhotoFile(null);
+                        setPhotoPreview(null);
+                        setVerificationError(null);
                       }}
                       className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider transition ${
                         isVerified
@@ -416,7 +450,7 @@ export default function DashboardPage() {
         </button>
       </Panel>
 
-      {/* ── Text Verification Popup Modal ── */}
+      {/* ── Proof Verification Modal (Text + Photo) ── */}
       {activeTextVerifyQuest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
           <div className="relative w-full max-w-lg overflow-hidden rounded-[28px] border border-[#dce6d8] bg-[#fffefa] p-6 shadow-[0_24px_70px_rgba(16,33,20,0.25)]">
@@ -424,6 +458,8 @@ export default function DashboardPage() {
               onClick={() => {
                 setActiveTextVerifyQuest(null);
                 setTextProof("");
+                setPhotoFile(null);
+                setPhotoPreview(null);
                 setVerificationError(null);
               }}
               className="absolute right-5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-forest-100 text-forest-900 hover:bg-forest-200 transition text-lg font-bold"
@@ -437,22 +473,94 @@ export default function DashboardPage() {
                 <h3 className="mt-1 font-serif text-xl font-bold text-forest-950">Verify proof for: {activeTextVerifyQuest.title}</h3>
               </div>
 
-              <div className="mt-2">
-                <label htmlFor="quest-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
-                  Describe what you did to complete this quest
-                </label>
-                <textarea
-                  id="quest-text-proof"
-                  value={textProof}
-                  onChange={(e) => setTextProof(e.target.value)}
-                  placeholder="Provide a short description of your actions (min 8 characters)..."
-                  rows={4}
-                  className={`${inputClass} resize-none`}
-                />
-                <p className={`mt-1 text-right text-[10px] font-bold ${textProof.trim().length >= 8 ? "text-forest-600" : "text-rose-500"}`}>
-                  {textProof.trim().length}/8 min characters
-                </p>
+              {/* Proof type tabs */}
+              <div className="flex rounded-xl bg-forest-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => { setProofType("text"); setVerificationError(null); }}
+                  className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition ${
+                    proofType === "text" ? "bg-white text-forest-900 shadow-sm" : "text-forest-600 hover:text-forest-900"
+                  }`}
+                >
+                  ✏️ Text Proof
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setProofType("photo"); setVerificationError(null); }}
+                  className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition ${
+                    proofType === "photo" ? "bg-white text-forest-900 shadow-sm" : "text-forest-600 hover:text-forest-900"
+                  }`}
+                >
+                  📷 Photo Proof
+                </button>
               </div>
+
+              {proofType === "text" ? (
+                <div>
+                  <label htmlFor="quest-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                    Describe what you did to complete this quest
+                  </label>
+                  <textarea
+                    id="quest-text-proof"
+                    value={textProof}
+                    onChange={(e) => setTextProof(e.target.value)}
+                    placeholder="e.g. I collected 5 plastic bottles from my kitchen and sorted them into the recycling bin..."
+                    rows={4}
+                    className={`${inputClass} resize-none`}
+                  />
+                  <p className={`mt-1 text-right text-[10px] font-bold ${textProof.trim().length >= 8 ? "text-forest-600" : "text-rose-500"}`}>
+                    {textProof.trim().length}/8 min characters
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                    Upload a photo showing quest completion
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById("quest-photo-file-picker")?.click()}
+                      className={`flex-1 rounded-xl border border-forest-200 bg-white py-3 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all`}
+                    >
+                      {photoFile ? "Change Photo" : "Choose Photo"}
+                    </button>
+                    {photoFile && (
+                      <button
+                        type="button"
+                        onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                        className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 hover:border-rose-300 transition-all"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    id="quest-photo-file-picker"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (file) {
+                        setPhotoFile(file);
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (typeof reader.result === "string") {
+                            setPhotoPreview(reader.result);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="sr-only"
+                  />
+                  {photoPreview && (
+                    <div className="overflow-hidden rounded-xl border border-forest-100 bg-forest-50 p-2 text-center">
+                      <img src={photoPreview} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {verificationError && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
@@ -462,8 +570,12 @@ export default function DashboardPage() {
 
               <div className="mt-4 flex gap-3">
                 <button
-                  onClick={handleVerifyTextProof}
-                  disabled={textProof.trim().length < 8 || verifyingText}
+                  onClick={handleVerifyProof}
+                  disabled={
+                    verifyingText ||
+                    (proofType === "text" && textProof.trim().length < 8) ||
+                    (proofType === "photo" && !photoFile)
+                  }
                   className={`flex-1 ${primaryButton}`}
                 >
                   {verifyingText ? (
@@ -479,6 +591,8 @@ export default function DashboardPage() {
                   onClick={() => {
                     setActiveTextVerifyQuest(null);
                     setTextProof("");
+                    setPhotoFile(null);
+                    setPhotoPreview(null);
                     setVerificationError(null);
                   }}
                   className={secondaryButton}
