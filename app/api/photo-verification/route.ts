@@ -65,7 +65,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const providerResult = await verifyImageWithProvider(buffer, session.userId, questId || null);
+    const providerResult = await verifyImageWithProvider(
+      buffer,
+      session.userId,
+      questId || null,
+      questTitle || null,
+      file.type || "image/jpeg"
+    );
 
     if (!providerResult.verified) {
       return NextResponse.json(

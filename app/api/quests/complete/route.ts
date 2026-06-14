@@ -5,23 +5,11 @@ import { getSession } from "@/lib/auth";
 import { getQuestCarbonReduction, getQuestDefinition } from "@/lib/carbon-calc";
 import { sql } from "@/lib/db";
 
+import { calculateLevel } from "@/lib/level-system";
+
 const completeQuestSchema = z.object({
   questIds: z.array(z.string().min(1)).min(1).max(5)
 });
-
-const LEVEL_MILESTONES = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 50000];
-
-function calculateLevel(xp: number) {
-  if (!Number.isFinite(xp) || xp < 0) return 1;
-
-  for (let index = LEVEL_MILESTONES.length - 1; index >= 0; index -= 1) {
-    if (xp >= LEVEL_MILESTONES[index]) {
-      return index + 1;
-    }
-  }
-
-  return 1;
-}
 
 function asArray(value: unknown) {
   return Array.isArray(value) ? value : [];
@@ -121,11 +109,12 @@ export async function POST(request: Request) {
       )
     };
 
+    const nextLevel = calculateLevel(nextXp);
     const nextProfile = {
       ...profile,
       xp: nextXp,
       ecoPoints: Number(profile.ecoPoints || 0) + ecoReward,
-      level: calculateLevel(nextXp),
+      level: nextLevel,
       carbonReduced: Math.round((Number(profile.carbonReduced || 0) + carbonReward) * 100) / 100,
       missionsCompleted: Number(profile.missionsCompleted || 0) + completionRecords.length,
       completedQuests: nextCompletedQuests,
@@ -135,13 +124,15 @@ export async function POST(request: Request) {
     };
 
     await sql(
-      `insert into users (id, email, password_hash, payload)
-       values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
+      `insert into users (id, email, password_hash, xp, level, payload)
+       values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $4, $5, $3::jsonb)
        on conflict (id) do update
        set email = excluded.email,
+           xp = excluded.xp,
+           level = excluded.level,
            payload = excluded.payload,
            updated_at = now()`,
-      [session.userId, session.email, JSON.stringify(nextProfile)]
+      [session.userId, session.email, JSON.stringify(nextProfile), nextXp, nextLevel]
     );
 
     for (const completion of completionRecords) {

@@ -264,14 +264,21 @@ export async function setDocument(path, data, session) {
       email: session.email
     };
 
+    const xpVal = Number(payload.xp ?? 0);
+    const levelVal = Number(payload.level ?? 1);
+    const trustScoreVal = Number(payload.trustScore ?? payload.trust_score ?? 50);
+
     await sql(
-      `insert into users (id, email, password_hash, payload)
-       values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
+      `insert into users (id, email, password_hash, xp, level, trust_score, payload)
+       values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $4, $5, $6, $3::jsonb)
        on conflict (id) do update
        set email = excluded.email,
+           xp = excluded.xp,
+           level = excluded.level,
+           trust_score = excluded.trust_score,
            payload = excluded.payload,
            updated_at = now()`,
-      [ref.id, session.email, JSON.stringify(payload)]
+      [ref.id, session.email, JSON.stringify(payload), xpVal, levelVal, trustScoreVal]
     );
     return;
   }

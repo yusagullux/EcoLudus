@@ -338,14 +338,18 @@ function getTodayDateString() {
     return `${year}-${month}-${day}`;
 }
 
+function requiredXP(level) {
+    const safeLevel = Math.max(1, Math.floor(level));
+    return 100 * safeLevel + 25 * safeLevel * safeLevel;
+}
+
 function calculateLevel(xp) {
-    const LEVEL_MILESTONES = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 50000];
-    for (let i = LEVEL_MILESTONES.length - 1; i >= 0; i--) {
-        if (xp >= LEVEL_MILESTONES[i]) {
-            return i + 1;
-        }
+    const safeXp = Math.max(0, Math.floor(Number.isFinite(xp) ? xp : 0));
+    let level = 1;
+    while (safeXp >= requiredXP(level)) {
+        level += 1;
     }
-    return 1;
+    return level;
 }
 
 function normalizeTeamCode(code = "") {
