@@ -207,7 +207,7 @@ export async function submitPrivateMission(
     description: body.description,
     timeWindowKey
   });
-  const currentTrustScore = Number(user.trust_score ?? user.payload?.trustScore ?? 50);
+  const currentTrustScore = Number(user.payload?.trustScore ?? user.payload?.trust_score ?? user.trust_score ?? 50);
   const recentSubmissions = await getRecentSubmissions(body.userId);
   const missionVarietyCount = await getMissionVarietyCount(body.userId);
 
@@ -230,9 +230,9 @@ export async function submitPrivateMission(
     recentSubmissionCount
   });
   const finalXp = xpForVerification(mission.base_xp, verification, trustUpdate.nextScore);
-  const previousXp = Number(user.xp ?? user.payload?.xp ?? 0);
+  const previousXp = Number(user.payload?.xp ?? user.xp ?? 0);
   const nextXp = previousXp + finalXp;
-  const previousLevel = Number(user.level ?? user.payload?.level ?? calculateLevel(previousXp));
+  const previousLevel = Number(user.payload?.level ?? user.level ?? calculateLevel(previousXp));
   const nextLevel = calculateLevel(nextXp);
   const levelRewards = getLevelUpRewards(previousLevel, nextLevel);
   const teamId = await getTeamId(body.userId);

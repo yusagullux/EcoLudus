@@ -29,7 +29,126 @@ export async function savePhotoHash(imageHash: string, userId: string, questId: 
   );
 }
 
-export async function verifyImageWithProvider(buffer: Buffer, userId: string, questId: string | null) {
+export async function verifyImageWithProvider(
+  buffer: Buffer,
+  userId: string,
+  questId: string | null,
+  questTitle: string | null = null,
+  mimeType: string | null = null
+) {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+  if (geminiApiKey) {
+    try {
+      const base64Image = buffer.toString("base64");
+      const resolvedMimeType = mimeType || "image/jpeg";
+      
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+        geminiModel
+      )}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
+
+      let detailsText = "";
+      if (questId) {
+        try {
+          const { getQuestDefinition } = await import("./carbon-calc");
+          const questDef = await getQuestDefinition(questId);
+          if (questDef) {
+            detailsText = `\nQuest Category: ${questDef.categoryName}\nQuest Description: ${questDef.title}`;
+          }
+        } catch (e) {
+          // Ignore import/fetch errors
+        }
+      }
+
+      const prompt = [
+        "You are EcoLudus's automated environmental quest photo verifier.",
+        `Verify if the attached image provides plausible visual proof of completing the quest: "${questTitle || questId || 'Eco Quest'}".`,
+        detailsText,
+        "Analyze the image for: relevance to the quest, clarity of the proof, and potential mismatch.",
+        "Ensure the response is structured as JSON matching the schema."
+      ].join("\n");
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    mimeType: resolvedMimeType,
+                    data: base64Image
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.15,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                verified: {
+                  type: "BOOLEAN"
+                },
+                reasoning: {
+                  type: "STRING"
+                },
+                warnings: {
+                  type: "ARRAY",
+                  items: {
+                    type: "STRING"
+                  }
+                }
+              },
+              required: ["verified", "reasoning", "warnings"]
+            }
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Gemini photo verification returned ${response.status}: ${text}`);
+      }
+
+      const payload = await response.json();
+      const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      let jsonText = text;
+      if (typeof jsonText === "string") {
+        jsonText = jsonText.trim();
+        if (jsonText.startsWith("```json")) {
+          jsonText = jsonText.substring(7);
+        } else if (jsonText.startsWith("```")) {
+          jsonText = jsonText.substring(3);
+        }
+        if (jsonText.endsWith("```")) {
+          jsonText = jsonText.substring(0, jsonText.length - 3);
+        }
+        jsonText = jsonText.trim();
+      }
+
+      const parsed = typeof jsonText === "string" ? JSON.parse(jsonText) : payload;
+
+      return {
+        verified: Boolean(parsed.verified ?? true),
+        warnings: Array.isArray(parsed.warnings) ? parsed.warnings.map(String) : [],
+        provider: `google-gemini-photo:${geminiModel}`,
+        details: parsed.reasoning || null
+      };
+    } catch (error) {
+      console.error("Gemini photo verification failed, falling back:", error);
+    }
+  }
+
   const endpoint = process.env.PHOTO_VERIFICATION_ENDPOINT;
   const apiKey = process.env.PHOTO_VERIFICATION_API_KEY;
 

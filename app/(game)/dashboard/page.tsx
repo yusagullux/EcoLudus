@@ -3,9 +3,17 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
-import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, primaryButton } from "@/components/game-ui";
+import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
 import PhotoVerification from "@/components/photo-verification";
 import { updateUserProfile } from "@/public/js/auth.js";
+import { requiredXP } from "@/public/js/levels.js";
+
+const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string; icon: string; label: string }> = {
+  APPROVED: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", icon: "✓", label: "Approved" },
+  PARTIAL:  { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",   icon: "◐", label: "Partial Credit" },
+  REJECTED: { bg: "bg-rose-50",    text: "text-rose-700",    border: "border-rose-200",    icon: "✗", label: "Rejected" },
+  FLAGGED:  { bg: "bg-red-50",     text: "text-red-800",     border: "border-red-300",     icon: "⚑", label: "Flagged" },
+};
 
 const CATEGORIES = [
   { name: "Recycling", image: "/images/forest.png", color: "#2f6b46" },
@@ -61,6 +69,17 @@ export default function DashboardPage() {
   const [toast, setToast] = useState("");
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
+  // Private missions state
+  const [privateMissions, setPrivateMissions] = useState<any[] | null>(null);
+  const [loadingPrivateMissions, setLoadingPrivateMissions] = useState(true);
+  const [selectedMissionId, setSelectedMissionId] = useState<string>("");
+  const [beforeValue, setBeforeValue] = useState<string>("");
+  const [afterValue, setAfterValue] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [confidence, setConfidence] = useState<number>(5);
+  const [submittingHabit, setSubmittingHabit] = useState(false);
+  const [habitVerificationResult, setHabitVerificationResult] = useState<any | null>(null);
+
   // Load quests.json on mount
   useEffect(() => {
     async function loadQuests() {
@@ -75,6 +94,29 @@ export default function DashboardPage() {
       }
     }
     loadQuests();
+  }, []);
+
+  // Load private missions on mount
+  useEffect(() => {
+    async function loadPrivateMissions() {
+      try {
+        const res = await fetch("/api/private-missions");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setPrivateMissions(data.missions || []);
+            if (data.missions && data.missions.length > 0) {
+              setSelectedMissionId(data.missions[0].id);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error loading private missions:", err);
+      } finally {
+        setLoadingPrivateMissions(false);
+      }
+    }
+    loadPrivateMissions();
   }, []);
 
   // Sync / Initialize daily quests based on profile and questsData
@@ -178,10 +220,9 @@ export default function DashboardPage() {
   const missionsCompleted = profile?.missionsCompleted ?? 0;
   const completedQuests = profile?.completedQuests || [];
 
-  const thresholds = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 50000, Infinity];
-  const curXP = thresholds[Math.min(level - 1, 8)];
-  const nextXP = thresholds[Math.min(level, 8)];
-  const pct = nextXP === Infinity ? 100 : Math.min(100, Math.round(((xp - curXP) / (nextXP - curXP)) * 100));
+  const curXP = level <= 1 ? 0 : requiredXP(level - 1);
+  const nextXP = requiredXP(level);
+  const pct = Math.min(100, Math.max(0, Math.round(((xp - curXP) / (nextXP - curXP)) * 100)));
   const completedToday = quests.filter((quest) => quest.done).length;
   const selectedQuests = quests.filter((quest) => selectedQuestIds.includes(quest.id) && !quest.done);
   
@@ -264,6 +305,68 @@ export default function DashboardPage() {
       showToast("Unable to complete missions. Please try again.");
     } finally {
       setPendingCompletion(false);
+    }
+  };
+
+  const selectedMission = privateMissions?.find((m: any) => m.id === selectedMissionId) ?? null;
+
+  const submitHabitMission = async () => {
+    if (!user?.uid || !selectedMissionId || description.trim().length < 8 || submittingHabit) return;
+
+    setSubmittingHabit(true);
+    setHabitVerificationResult(null);
+
+    try {
+      const response = await fetch("/api/private-missions/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          missionId: selectedMissionId,
+          userId: user.uid,
+          beforeValue: beforeValue.trim() || undefined,
+          afterValue: afterValue.trim() || undefined,
+          description: description.trim(),
+          confidence,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result.success) {
+        const code = result?.error?.code || "unknown";
+        if (code === "missions/rate-limited") {
+          showToast("Too many submissions. Please wait before trying again.");
+        } else if (code === "missions/duplicate-window") {
+          showToast("You already submitted this recently. Try a different mission.");
+        } else {
+          showToast(result?.error?.message || "Submission failed. Try again.");
+        }
+        return;
+      }
+
+      setHabitVerificationResult(result);
+      await refreshProfile();
+
+      if (result.verification?.status === "APPROVED") {
+        showToast(`Habit verified! +${result.rewards?.xpAwarded ?? 0} XP awarded.`);
+      } else if (result.verification?.status === "PARTIAL") {
+        showToast(`Partial credit: +${result.rewards?.xpAwarded ?? 0} XP awarded.`);
+      } else {
+        showToast(`Submission reviewed: ${result.verification?.status?.toLowerCase() || "complete"}.`);
+      }
+
+      // Reset form fields for next submission
+      setDescription("");
+      setBeforeValue("");
+      setAfterValue("");
+      setConfidence(5);
+    } catch (error) {
+      console.error("Habit submission error:", error);
+      showToast("Unable to submit. Please try again.");
+    } finally {
+      setSubmittingHabit(false);
     }
   };
 
@@ -423,6 +526,240 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ── Private Habit Mission Logging Panel ── */}
+      <Panel
+        eyebrow="AI-Verified habits"
+        title="Log a Private Habit Mission"
+        action={<Pill>Gemini AI</Pill>}
+      >
+        {loadingPrivateMissions ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-forest-300 border-t-forest-800" />
+            <span className="ml-3 text-sm font-semibold text-forest-700">Loading missions...</span>
+          </div>
+        ) : !privateMissions || privateMissions.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#d6e0d0] bg-[#f9fbf5] px-6 py-10 text-center">
+            <p className="text-sm font-semibold text-forest-700/70">No habit missions available yet.</p>
+            <p className="mt-1 text-xs text-forest-600/50">Private missions will appear here once configured.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
+            {/* Mission Selector */}
+            <div>
+              <label htmlFor="habit-mission-select" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                Select Mission
+              </label>
+              <select
+                id="habit-mission-select"
+                value={selectedMissionId}
+                onChange={(e) => {
+                  setSelectedMissionId(e.target.value);
+                  setHabitVerificationResult(null);
+                }}
+                className={`${inputClass} cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%234a6b52%22%20d%3D%22M2%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[position:right_16px_center] bg-no-repeat pr-10`}
+              >
+                {privateMissions.map((mission: any) => (
+                  <option key={mission.id} value={mission.id}>
+                    {mission.title} — {mission.category} (+{mission.base_xp} XP)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Before / After Values */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="habit-before" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                  Before Value <span className="font-medium normal-case tracking-normal text-forest-500/50">(optional)</span>
+                </label>
+                <input
+                  id="habit-before"
+                  type="text"
+                  value={beforeValue}
+                  onChange={(e) => setBeforeValue(e.target.value)}
+                  placeholder="e.g. 3 bags of waste"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="habit-after" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                  After Value <span className="font-medium normal-case tracking-normal text-forest-500/50">(optional)</span>
+                </label>
+                <input
+                  id="habit-after"
+                  type="text"
+                  value={afterValue}
+                  onChange={(e) => setAfterValue(e.target.value)}
+                  placeholder="e.g. 1 bag recycled, 2 composted"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label htmlFor="habit-description" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                Describe What You Did
+              </label>
+              <textarea
+                id="habit-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe your habit in detail (min 8 characters)..."
+                rows={3}
+                className={`${inputClass} resize-none`}
+              />
+              <p className={`mt-1 text-right text-[10px] font-bold ${description.trim().length >= 8 ? "text-forest-600" : "text-rose-500"}`}>
+                {description.trim().length}/8 min
+              </p>
+            </div>
+
+            {/* Confidence Stars */}
+            <div>
+              <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                Self-Confidence <span className="font-medium normal-case tracking-normal text-forest-500/50">(how sure are you?)</span>
+              </label>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setConfidence(star)}
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl transition-all duration-200 ${
+                      star <= confidence
+                        ? "scale-110 bg-amber-100 text-amber-500 shadow-[0_4px_12px_rgba(180,130,20,0.15)]"
+                        : "bg-[#f0f3ea] text-forest-400/40 hover:bg-[#e8eee1] hover:text-amber-400"
+                    }`}
+                    aria-label={`Confidence ${star} of 5`}
+                  >
+                    ★
+                  </button>
+                ))}
+                <span className="ml-2 text-xs font-bold text-forest-700/60">{confidence}/5</span>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              onClick={submitHabitMission}
+              disabled={submittingHabit || description.trim().length < 8 || !selectedMissionId}
+              className={`w-full ${primaryButton}`}
+            >
+              {submittingHabit ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />
+                  Analyzing with Gemini AI...
+                </span>
+              ) : (
+                "Verify & Log Habit"
+              )}
+            </button>
+
+            {/* ── Gemini Loading Shimmer ── */}
+            {submittingHabit && (
+              <div className="overflow-hidden rounded-2xl border border-[#dfe7d7] bg-gradient-to-br from-[#f4f7ef] to-[#e8f0e0] p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-forest-950 text-lg text-cream-100 shadow-md">
+                    ✦
+                  </div>
+                  <div>
+                    <p className="text-sm font-extrabold text-forest-950">Gemini AI is analyzing your submission...</p>
+                    <p className="mt-0.5 text-xs text-forest-600/70">Checking realism, consistency, and credibility.</p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <div className="h-3 animate-pulse rounded-full bg-forest-200/60" style={{ width: "85%" }} />
+                  <div className="h-3 animate-pulse rounded-full bg-forest-200/40" style={{ width: "65%", animationDelay: "0.15s" }} />
+                  <div className="h-3 animate-pulse rounded-full bg-forest-200/30" style={{ width: "45%", animationDelay: "0.3s" }} />
+                </div>
+              </div>
+            )}
+
+            {/* ── Gemini Verification Results Card ── */}
+            {habitVerificationResult && !submittingHabit && (() => {
+              const v = habitVerificationResult.verification;
+              const r = habitVerificationResult.rewards;
+              const t = habitVerificationResult.trust;
+              const style = VERDICT_STYLES[v?.status] || VERDICT_STYLES.REJECTED;
+
+              return (
+                <div className={`overflow-hidden rounded-2xl border ${style.border} ${style.bg} shadow-[0_12px_36px_rgba(26,45,29,0.08)]`}>
+                  {/* Verdict Header */}
+                  <div className="flex items-center justify-between border-b border-inherit px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <span className={`flex h-11 w-11 items-center justify-center rounded-2xl text-xl font-black ${style.bg} ${style.text} ring-2 ring-current/20`}>
+                        {style.icon}
+                      </span>
+                      <div>
+                        <h4 className={`text-base font-extrabold ${style.text}`}>{style.label}</h4>
+                        <p className="text-[11px] font-bold text-forest-600/50">Gemini AI Verification</p>
+                      </div>
+                    </div>
+                    {r?.xpAwarded > 0 && (
+                      <div className="rounded-full bg-forest-950 px-4 py-1.5 text-xs font-extrabold text-cream-100 shadow-md">
+                        +{r.xpAwarded} XP
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Scores Row */}
+                  <div className="grid grid-cols-3 divide-x divide-inherit border-b border-inherit">
+                    <div className="px-4 py-3 text-center">
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-forest-700/60">Realism</p>
+                      <p className={`mt-1 font-serif text-2xl font-extrabold ${style.text}`}>{v?.realism_score ?? "—"}</p>
+                    </div>
+                    <div className="px-4 py-3 text-center">
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-forest-700/60">Confidence</p>
+                      <p className={`mt-1 font-serif text-2xl font-extrabold ${style.text}`}>{v?.confidence ?? "—"}%</p>
+                    </div>
+                    <div className="px-4 py-3 text-center">
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-forest-700/60">Trust Δ</p>
+                      <p className={`mt-1 font-serif text-2xl font-extrabold ${(t?.delta ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                        {(t?.delta ?? 0) >= 0 ? "+" : ""}{t?.delta ?? 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* AI Reasoning */}
+                  {v?.reasoning && (
+                    <div className="border-b border-inherit px-5 py-4">
+                      <p className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-forest-700/60">AI Reasoning</p>
+                      <p className="text-sm leading-relaxed text-forest-800">{v.reasoning}</p>
+                    </div>
+                  )}
+
+                  {/* Risk Flags */}
+                  {v?.risk_flags && v.risk_flags.length > 0 && (
+                    <div className="px-5 py-4">
+                      <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-rose-600/70">Risk Flags</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {v.risk_flags.map((flag: string, i: number) => (
+                          <span key={i} className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold text-rose-700">
+                            ⚠ {flag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rewards Summary Footer */}
+                  {r && (
+                    <div className="flex flex-wrap items-center gap-3 border-t border-inherit bg-white/50 px-5 py-3">
+                      <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-forest-700/50">Rewards:</span>
+                      <Pill active={r.xpAwarded > 0}>+{r.xpAwarded} XP</Pill>
+                      {r.levelRewards?.ecoCoins > 0 && <Pill>+{r.levelRewards.ecoCoins} Eco</Pill>}
+                      <span className="ml-auto text-[10px] font-bold text-forest-600/50">
+                        Trust: {t?.nextScore ?? "—"}/100
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </Panel>
 
       <Panel eyebrow="Quest progress" title="Category Progress">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

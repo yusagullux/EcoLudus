@@ -1,68 +1,50 @@
-export const LEVEL_MILESTONES = [
-    0,      // Level 1
-    100,    // Level 2
-    250,    // Level 3
-    500,    // Level 4
-    1000,   // Level 5
-    2500,   // Level 6
-    5000,   // Level 7
-    10000,  // Level 8
-    50000   // Level 9
-];
-
-export const MAX_LEVEL = LEVEL_MILESTONES.length; // 9
+export function requiredXP(level) {
+    const safeLevel = Math.max(1, Math.floor(level));
+    return 100 * safeLevel + 25 * safeLevel * safeLevel;
+}
 
 export function calculateLevel(xp) {
-    if (typeof xp !== 'number' || xp < 0) return 1;
-    for (let i = LEVEL_MILESTONES.length - 1; i >= 0; i--) {
-        if (xp >= LEVEL_MILESTONES[i]) {
-            return i + 1;
-        }
+    const safeXp = Math.max(0, Math.floor(Number.isFinite(xp) ? xp : 0));
+    let level = 1;
+    while (safeXp >= requiredXP(level)) {
+        level += 1;
     }
-    return 1;
+    return level;
 }
 
 export function getXPRequiredForLevel(level) {
-    if (level <= 1) return LEVEL_MILESTONES[1] - LEVEL_MILESTONES[0]; // 100
-    if (level >= MAX_LEVEL) return Infinity; // Maksimumtase saavutatud
-    return LEVEL_MILESTONES[level] - LEVEL_MILESTONES[level - 1];
+    const activeLevel = Math.max(1, Math.floor(level));
+    return requiredXP(activeLevel) - (activeLevel <= 1 ? 0 : requiredXP(activeLevel - 1));
 }
 
 export function getTotalXPForLevel(level) {
     if (level <= 1) return 0;
-    if (level > MAX_LEVEL) return LEVEL_MILESTONES[MAX_LEVEL - 1];
-    return LEVEL_MILESTONES[level - 1];
+    return requiredXP(level - 1);
 }
 
 export function getXPProgress(xp, currentLevel = null) {
     const safeXP = Math.max(0, parseInt(xp) || 0);
     const level = currentLevel || calculateLevel(safeXP);
 
-    // Maksimumtaseme korral kuva täisriba
-    if (level >= MAX_LEVEL) {
-        return {
-            current: safeXP - LEVEL_MILESTONES[MAX_LEVEL - 1],
-            required: 0,
-            percentage: 100
-        };
-    }
-
-    const totalXPForCurrentLevel = getTotalXPForLevel(level);
+    const totalXPForCurrentLevel = level <= 1 ? 0 : requiredXP(level - 1);
+    const totalXPForNextLevel = requiredXP(level);
     const xpInCurrentLevel = safeXP - totalXPForCurrentLevel;
-    const requiredXP = getXPRequiredForLevel(level + 1);
+    const requiredXPInLevel = totalXPForNextLevel - totalXPForCurrentLevel;
 
-    const percentage = requiredXP > 0
-        ? Math.min(100, (xpInCurrentLevel / requiredXP) * 100)
+    const percentage = requiredXPInLevel > 0
+        ? Math.min(100, (xpInCurrentLevel / requiredXPInLevel) * 100)
         : 100;
 
     return {
         current: xpInCurrentLevel,
-        required: requiredXP,
+        required: requiredXPInLevel,
         percentage: Math.max(0, percentage)
     };
 }
 
 export function getBadgeImageForLevel(level) {
+    const activeLevel = Math.max(1, Math.floor(level));
+    const badgeIndex = ((activeLevel - 1) % 9) + 1;
     const badgeImages = {
         1: "/images/ecoquests-badges/cat-badge-removedbg.png",
         2: "/images/ecoquests-badges/fox-badge-removedbg.png",
@@ -74,11 +56,15 @@ export function getBadgeImageForLevel(level) {
         8: "/images/ecoquests-badges/tiger-badge-removedbg.png",
         9: "/images/ecoquests-badges/lion-badge-removedbg.png"
     };
-    return badgeImages[level] || badgeImages[1];
+    return badgeImages[badgeIndex] || badgeImages[1];
 }
 
 export function getBadgeNameForLevel(level) {
-    const badgeNames = {
+    const activeLevel = Math.max(1, Math.floor(level));
+    const badgeIndex = ((activeLevel - 1) % 9) + 1;
+    const tier = Math.floor((activeLevel - 1) / 9);
+
+    const baseNames = {
         1: "Cat",
         2: "Fox",
         3: "Rabbit",
@@ -89,7 +75,29 @@ export function getBadgeNameForLevel(level) {
         8: "Tiger",
         9: "Lion"
     };
-    return badgeNames[level] || badgeNames[1];
+
+    const tiers = ["Bronze", "Silver", "Gold", "Platinum", "Emerald", "Diamond", "Master", "Grandmaster", "Legendary"];
+    const tierName = tiers[Math.min(tier, tiers.length - 1)];
+    const animalName = baseNames[badgeIndex] || "Explorer";
+
+    if (tier >= tiers.length) {
+        const roman = getRomanNumeral(tier - tiers.length + 1);
+        return `Legendary ${animalName} ${roman}`;
+    }
+
+    return `${tierName} ${animalName}`;
+}
+
+function getRomanNumeral(num) {
+    const lookup = { M: 1000, CM: 900, D: 500, CD: 400, C: 100, XC: 90, L: 50, XL: 40, X: 10, IX: 9, V: 5, IV: 4, I: 1 };
+    let roman = '';
+    for (let i in lookup) {
+        while (num >= lookup[i]) {
+            roman += i;
+            num -= lookup[i];
+        }
+    }
+    return roman;
 }
 
 export function calculateEcoPoints(xp, level, badgesCount = 0) {

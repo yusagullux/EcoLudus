@@ -208,7 +208,22 @@ async function verifyWithGemini(input: PrivateMissionVerificationInput) {
 
   const payload = await response.json();
   const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
-  const candidate = typeof text === "string" ? JSON.parse(text) : payload?.result ?? payload;
+  
+  let jsonText = text;
+  if (typeof jsonText === "string") {
+    jsonText = jsonText.trim();
+    if (jsonText.startsWith("```json")) {
+      jsonText = jsonText.substring(7);
+    } else if (jsonText.startsWith("```")) {
+      jsonText = jsonText.substring(3);
+    }
+    if (jsonText.endsWith("```")) {
+      jsonText = jsonText.substring(0, jsonText.length - 3);
+    }
+    jsonText = jsonText.trim();
+  }
+
+  const candidate = typeof jsonText === "string" ? JSON.parse(jsonText) : payload?.result ?? payload;
   const parsed = aiVerificationSchema.parse(candidate);
 
   return {
