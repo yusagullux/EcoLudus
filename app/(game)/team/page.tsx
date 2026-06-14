@@ -32,6 +32,15 @@ export default function TeamPage() {
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
+  // Team progress proof states
+  const [activeProofMission, setActiveProofMission] = useState<any | null>(null);
+  const [proofType, setProofType] = useState<"text" | "photo">("text");
+  const [teamTextProof, setTeamTextProof] = useState("");
+  const [teamPhotoFile, setTeamPhotoFile] = useState<File | null>(null);
+  const [teamPhotoPreview, setTeamPhotoPreview] = useState<string | null>(null);
+  const [submittingProof, setSubmittingProof] = useState(false);
+  const [proofError, setProofError] = useState<string | null>(null);
+
   const fetchTeamData = async () => {
     if (!user?.uid) {
       setLoading(false);
@@ -187,10 +196,37 @@ export default function TeamPage() {
     }
   };
 
-  const handleSubmitProgress = async (activeMissionId: string) => {
-    if (!user?.uid || !team?.id) return;
+  const handleSubmitProgress = async () => {
+    if (!user?.uid || !team?.id || !activeProofMission || submittingProof) return;
 
-    setSubmittingId(activeMissionId);
+    setSubmittingProof(true);
+    setProofError(null);
+
+    let photoProof: string | null = null;
+    let mimeType: string | null = null;
+
+    if (proofType === "photo" && teamPhotoFile) {
+      try {
+        photoProof = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve(reader.result);
+            } else {
+              reject(new Error("Failed to read photo."));
+            }
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(teamPhotoFile);
+        });
+        mimeType = teamPhotoFile.type;
+      } catch (err: any) {
+        setProofError(err.message || "Failed to process photo.");
+        setSubmittingProof(false);
+        return;
+      }
+    }
+
     try {
       const response = await fetch("/api/teams", {
         method: "POST",
@@ -199,26 +235,32 @@ export default function TeamPage() {
           action: "submit_progress",
           userId: user.uid,
           teamId: team.id,
-          activeMissionId
+          activeMissionId: activeProofMission.id,
+          textProof: proofType === "text" ? teamTextProof.trim() : undefined,
+          photoProof,
+          mimeType
         })
       });
+
       const data = await response.json();
 
-      if (response.ok) {
-        if (data.completed) {
-          showToast("🎉 Mission completed! Rewards granted to all members!");
-        } else {
-          showToast("Progress submitted! Keep going!");
-        }
-        await fetchTeamData();
-      } else {
-        showToast(data.error?.message || data.error?.code || "Failed to submit progress");
+      if (!response.ok) {
+        throw new Error(data?.error?.message || "Failed to submit progress.");
       }
-    } catch (error) {
+
+      if (data.completed) {
+        showToast("🎉 Mission completed! Rewards granted to all members!");
+      } else {
+        showToast("Progress submitted! Keep going!");
+      }
+
+      setActiveProofMission(null);
+      await fetchTeamData();
+    } catch (error: any) {
       console.error("Submit progress error:", error);
-      showToast("Failed to submit progress");
+      setProofError(error.message || "Failed to submit progress.");
     } finally {
-      setSubmittingId(null);
+      setSubmittingProof(false);
     }
   };
 
@@ -391,11 +433,17 @@ export default function TeamPage() {
                         <span className="text-xs font-bold text-forest-600">{m.done}/{m.needed}</span>
                       </div>
                       <button
-                        onClick={() => handleSubmitProgress(m.id)}
-                        disabled={isSubmitting}
-                        className="mt-4 rounded-xl bg-forest-950 px-5 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          setActiveProofMission(m);
+                          setProofType("text");
+                          setTeamTextProof("");
+                          setTeamPhotoFile(null);
+                          setTeamPhotoPreview(null);
+                          setProofError(null);
+                        }}
+                        className="mt-4 rounded-xl bg-forest-950 px-5 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
                       >
-                        {isSubmitting ? "Submitting…" : "Submit Progress"}
+                        Submit Progress
                       </button>
                     </div>
                   );
@@ -503,6 +551,133 @@ export default function TeamPage() {
                 className="rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
               >
                 {showCreateModal ? "Create" : "Join"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Submit Proof Modal ── */}
+      {activeProofMission && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-7 shadow-[0_24px_60px_rgba(16,33,20,0.18)]">
+            <h3 className="font-serif text-2xl font-bold text-forest-950">
+              Submit Progress Proof
+            </h3>
+            <p className="mt-2 text-sm text-forest-500">
+              Provide proof for completing progress on: <strong className="text-forest-900">"{activeProofMission.title}"</strong>.
+            </p>
+
+            {/* Tab selector */}
+            <div className="mt-5 flex rounded-xl bg-forest-50 p-1">
+              <button
+                type="button"
+                onClick={() => { setProofType("text"); setProofError(null); }}
+                className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition ${proofType === "text" ? "bg-white text-forest-900 shadow-sm" : "text-forest-600 hover:text-forest-900"}`}
+              >
+                Text Description
+              </button>
+              <button
+                type="button"
+                onClick={() => { setProofType("photo"); setProofError(null); }}
+                className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition ${proofType === "photo" ? "bg-white text-forest-900 shadow-sm" : "text-forest-600 hover:text-forest-900"}`}
+              >
+                Photo Upload
+              </button>
+            </div>
+
+            {proofType === "text" ? (
+              <div className="mt-5">
+                <label htmlFor="team-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                  Describe what you completed (min 8 characters)
+                </label>
+                <textarea
+                  id="team-text-proof"
+                  value={teamTextProof}
+                  onChange={(e) => setTeamTextProof(e.target.value)}
+                  placeholder="e.g. I commuted to work by bicycle today instead of driving."
+                  rows={4}
+                  className="w-full rounded-xl border border-forest-200 bg-white px-4 py-3 text-sm text-forest-950 outline-none focus:border-forest-500 focus:ring-2 focus:ring-forest-500/15 resize-none"
+                />
+                <p className={`mt-1 text-right text-[10px] font-bold ${teamTextProof.trim().length >= 8 ? "text-forest-600" : "text-rose-500"}`}>
+                  {teamTextProof.trim().length}/8 min characters
+                </p>
+              </div>
+            ) : (
+              <div className="mt-5 flex flex-col gap-3">
+                <label className="block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                  Select a photo showing completion
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("team-photo-file-picker")?.click()}
+                    className="flex-1 rounded-xl border border-forest-200 bg-white py-3 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
+                  >
+                    {teamPhotoFile ? "Change Photo" : "Choose Photo"}
+                  </button>
+                  {teamPhotoFile && (
+                    <button
+                      type="button"
+                      onClick={() => { setTeamPhotoFile(null); setTeamPhotoPreview(null); }}
+                      className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 hover:border-rose-300 transition-all"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <input
+                  id="team-photo-file-picker"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    if (file) {
+                      setTeamPhotoFile(file);
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === "string") {
+                          setTeamPhotoPreview(reader.result);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="sr-only"
+                />
+                {teamPhotoPreview && (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-forest-100 bg-forest-50 p-2 text-center">
+                    <img src={teamPhotoPreview} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {proofError && (
+              <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                {proofError}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveProofMission(null)}
+                className="rounded-xl border border-forest-200 px-5 py-2.5 text-sm font-semibold text-forest-900 hover:border-forest-400 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitProgress}
+                disabled={
+                  submittingProof ||
+                  (proofType === "text" && teamTextProof.trim().length < 8) ||
+                  (proofType === "photo" && !teamPhotoFile)
+                }
+                className="rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingProof ? "Verifying…" : "Submit Proof"}
               </button>
             </div>
           </div>

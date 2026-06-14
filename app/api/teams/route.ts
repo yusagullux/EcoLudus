@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { sql } from "@/lib/db";
+import { verifyImageWithProvider, verifyTextProofWithGemini } from "@/lib/photo-verification";
 
 function calculateLevel(xp: number) {
   const milestones = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 50000];
@@ -127,7 +128,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, userId, teamName, teamCode, teamId, missionId, activeMissionId, title, icon, xp, eco, needed } = body;
+    const { action, userId, teamName, teamCode, teamId, missionId, activeMissionId, title, icon, xp, eco, needed, textProof, photoProof, mimeType } = body;
 
     // Create a new team
     if (action === "create" && teamName && userId) {
@@ -269,6 +270,47 @@ export async function POST(request: Request) {
       const row = activeMissionResult.rows[0];
       const missionPayload = row.payload as any;
       const currentMissionId = row.mission_id;
+
+      if (!textProof && !photoProof) {
+        return NextResponse.json(
+          { error: { code: "proof-required", message: "Please provide either a text description or a photo proof to submit progress." } },
+          { status: 400 }
+        );
+      }
+
+      if (photoProof) {
+        let base64Data = photoProof;
+        if (base64Data.includes(";base64,")) {
+          base64Data = base64Data.split(";base64,").pop() || "";
+        }
+        const buffer = Buffer.from(base64Data, "base64");
+        const resolvedMimeType = mimeType || "image/jpeg";
+        const result = await verifyImageWithProvider(
+          buffer,
+          userId,
+          currentMissionId,
+          missionPayload.title || "Team Mission",
+          resolvedMimeType
+        );
+        if (!result.verified) {
+          return NextResponse.json(
+            { error: { code: "verification-failed", message: result.details || "The uploaded photo does not match or prove completion of this quest. Please provide a relevant photo." } },
+            { status: 422 }
+          );
+        }
+      } else if (textProof) {
+        const result = await verifyTextProofWithGemini(
+          textProof,
+          missionPayload.title || "Team Mission",
+          missionPayload.title || "Team Mission"
+        );
+        if (!result.verified) {
+          return NextResponse.json(
+            { error: { code: "verification-failed", message: result.reasoning || "The description provided does not match or prove completion of this team quest. Please write a relevant description." } },
+            { status: 422 }
+          );
+        }
+      }
 
       const newCount = (missionPayload.completed_count || 0) + 1;
       const needed = missionPayload.needed || 1;
