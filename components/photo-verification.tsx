@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Panel, primaryButton, secondaryButton, Pill } from "@/components/game-ui";
 
 type PhotoVerificationProps = {
@@ -11,6 +11,8 @@ type PhotoVerificationProps = {
 };
 
 export default function PhotoVerification({ questId, questTitle, verified, onVerified }: PhotoVerificationProps) {
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,17 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const resetSelection = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setError(null);
+    setWarnings([]);
+    setStatus(null);
+
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
   };
 
   const verifyPhoto = async () => {
@@ -103,15 +116,40 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
   return (
     <Panel eyebrow="Quest verification" title={`Verify proof for: ${questTitle}`}>
       <div className="grid gap-4">
-        <label className="block text-sm font-semibold text-forest-900">
-          Upload photo proof
+        <div className="grid gap-2">
+          <p className="text-sm font-semibold text-forest-900">Photo proof</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className={primaryButton}
+            >
+              Take Photo
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              className={secondaryButton}
+            >
+              Choose Photo
+            </button>
+          </div>
           <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileChange}
+            className="sr-only"
+          />
+          <input
+            ref={galleryInputRef}
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            className="mt-2 w-full rounded-2xl border border-[#d8e1d2] bg-[#fbfcf7] px-4 py-3 text-sm text-forest-950 outline-none"
+            className="sr-only"
           />
-        </label>
+        </div>
 
         {selectedFile && (
           <div className="rounded-2xl border border-[#e0e7db] bg-[#f4f7ef] px-4 py-3 text-sm text-forest-700">
@@ -150,12 +188,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
           </button>
           <button
             type="button"
-            onClick={() => {
-              setSelectedFile(null);
-              setError(null);
-              setWarnings([]);
-              setStatus(null);
-            }}
+            onClick={resetSelection}
             className={secondaryButton}
           >
             Reset
