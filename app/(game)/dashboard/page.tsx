@@ -520,10 +520,17 @@ export default function DashboardPage() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => document.getElementById("quest-photo-file-picker")?.click()}
-                      className={`flex-1 rounded-xl border border-forest-200 bg-white py-3 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all`}
+                      onClick={() => document.getElementById("quest-photo-camera")?.click()}
+                      className="flex-1 rounded-xl border border-forest-200 bg-white py-3 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
                     >
-                      {photoFile ? "Change Photo" : "Choose Photo"}
+                      📸 Take Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById("quest-photo-gallery")?.click()}
+                      className="flex-1 rounded-xl border border-forest-200 bg-white py-3 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
+                    >
+                      🖼️ Gallery
                     </button>
                     {photoFile && (
                       <button
@@ -535,8 +542,30 @@ export default function DashboardPage() {
                       </button>
                     )}
                   </div>
+                  {/* Camera input (opens native camera on mobile) */}
                   <input
-                    id="quest-photo-file-picker"
+                    id="quest-photo-camera"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (file) {
+                        setPhotoFile(file);
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          if (typeof reader.result === "string") {
+                            setPhotoPreview(reader.result);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="sr-only"
+                  />
+                  {/* Gallery input (opens photo library) */}
+                  <input
+                    id="quest-photo-gallery"
                     type="file"
                     accept="image/*"
                     onChange={(e) => {
