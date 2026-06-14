@@ -52,6 +52,41 @@ type CarbonCacheRow = {
   cached_at: string;
 };
 
+type MissionRow = {
+  id: string;
+  title: string;
+  category: string;
+  mission_type: string;
+  visibility: string;
+  base_xp: number;
+  repeat_window_seconds: number;
+  active: boolean;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+type MissionSubmissionRow = {
+  id: string;
+  mission_id: string;
+  user_id: string;
+  before_value: string | null;
+  after_value: string | null;
+  description: string;
+  confidence: number;
+  submitted_at: string;
+  submission_hash: string;
+  time_window_key: string;
+  status: string;
+  final_xp: number;
+  trust_before: number;
+  trust_after: number;
+  ip_hash: string | null;
+  user_agent_hash: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 type FileStore = {
   users: UserRow[];
   teams: TeamRow[];
@@ -60,6 +95,13 @@ type FileStore = {
   mission_logs: MissionLogRow[];
   carbon_cache: CarbonCacheRow[];
   photo_hashes: Array<Record<string, unknown>>;
+  missions: MissionRow[];
+  mission_submissions: MissionSubmissionRow[];
+  private_mission_logs: Array<Record<string, unknown>>;
+  ai_verification_results: Array<Record<string, unknown>>;
+  team_progress: Array<Record<string, unknown>>;
+  xp_transactions: Array<Record<string, unknown>>;
+  trust_history: Array<Record<string, unknown>>;
 };
 
 declare global {
@@ -85,7 +127,54 @@ const EMPTY_STORE: FileStore = {
   team_mission_logs: [],
   mission_logs: [],
   carbon_cache: [],
-  photo_hashes: []
+  photo_hashes: [],
+  missions: [
+    {
+      id: "shower_reduce_5min",
+      title: "Reduce shower time",
+      category: "water",
+      mission_type: "private",
+      visibility: "private",
+      base_xp: 40,
+      repeat_window_seconds: 86400,
+      active: true,
+      metadata: { preferredBeforeAfter: true, unitHint: "minutes" },
+      created_at: nowIso(),
+      updated_at: nowIso()
+    },
+    {
+      id: "drink_more_water",
+      title: "Drink more water",
+      category: "health",
+      mission_type: "private",
+      visibility: "private",
+      base_xp: 25,
+      repeat_window_seconds: 86400,
+      active: true,
+      metadata: { preferredBeforeAfter: true, unitHint: "cups or liters" },
+      created_at: nowIso(),
+      updated_at: nowIso()
+    },
+    {
+      id: "limit_screen_time",
+      title: "Limit screen time",
+      category: "wellbeing",
+      mission_type: "private",
+      visibility: "private",
+      base_xp: 35,
+      repeat_window_seconds: 86400,
+      active: true,
+      metadata: { preferredBeforeAfter: true, unitHint: "minutes or hours" },
+      created_at: nowIso(),
+      updated_at: nowIso()
+    }
+  ],
+  mission_submissions: [],
+  private_mission_logs: [],
+  ai_verification_results: [],
+  team_progress: [],
+  xp_transactions: [],
+  trust_history: []
 };
 
 function nowIso() {
@@ -272,6 +361,24 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result(row ? ([{ id: row.id, email: row.email, payload: clone(row.payload) }] as T[]) : []);
   }
 
+  if (normalized === "select id, email, xp, level, trust_score, payload from users where id = $1 limit 1") {
+    const id = String(params[0] ?? "");
+    const row = store.users.find((user) => user.id === id);
+    if (!row) return result([] as T[]);
+    return result(
+      [
+        {
+          id: row.id,
+          email: row.email,
+          xp: Number((row.payload as any)?.xp ?? 0),
+          level: Number((row.payload as any)?.level ?? 1),
+          trust_score: Number((row.payload as any)?.trustScore ?? 50),
+          payload: clone(row.payload)
+        }
+      ] as T[]
+    );
+  }
+
   if (normalized === "select id, email, payload from users order by created_at asc limit 100") {
     const rows = store.users
       .sort((a, b) => a.created_at.localeCompare(b.created_at))
@@ -403,6 +510,248 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
 
     await persistStore();
     return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "select id, title, base_xp, repeat_window_seconds from missions where id = $1 and active = true and mission_type = 'private' limit 1"
+  ) {
+    const id = String(params[0] ?? "");
+    const row = store.missions.find((mission) => mission.id === id && mission.active && mission.mission_type === "private");
+    return result(
+      row
+        ? ([
+            {
+              id: row.id,
+              title: row.title,
+              base_xp: row.base_xp,
+              repeat_window_seconds: row.repeat_window_seconds
+            }
+          ] as T[])
+        : []
+    );
+  }
+
+  if (
+    normalized ===
+    "select count(*) as count from mission_submissions where user_id = $1 and submitted_at > now() - interval '1 hour'"
+  ) {
+    const userId = String(params[0] ?? "");
+    const cutoff = Date.now() - 60 * 60 * 1000;
+    const count = store.mission_submissions.filter(
+      (entry) => entry.user_id === userId && new Date(entry.submitted_at).getTime() > cutoff
+    ).length;
+    return result([{ count }] as T[]);
+  }
+
+  if (
+    normalized ===
+    "select count(distinct mission_id) as count from mission_submissions where user_id = $1 and submitted_at > now() - interval '14 days'"
+  ) {
+    const userId = String(params[0] ?? "");
+    const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const missionIds = new Set(
+      store.mission_submissions
+        .filter((entry) => entry.user_id === userId && new Date(entry.submitted_at).getTime() > cutoff)
+        .map((entry) => entry.mission_id)
+    );
+    return result([{ count: missionIds.size }] as T[]);
+  }
+
+  if (
+    normalized ===
+    "select mission_id, status, submitted_at, before_value, after_value, description from mission_submissions where user_id = $1 order by submitted_at desc limit 20"
+  ) {
+    const userId = String(params[0] ?? "");
+    const rows = store.mission_submissions
+      .filter((entry) => entry.user_id === userId)
+      .sort((a, b) => b.submitted_at.localeCompare(a.submitted_at))
+      .slice(0, 20)
+      .map((entry) => ({
+        mission_id: entry.mission_id,
+        status: entry.status,
+        submitted_at: entry.submitted_at,
+        before_value: entry.before_value,
+        after_value: entry.after_value,
+        description: entry.description
+      }));
+    return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
+    "insert into mission_submissions ( id, mission_id, user_id, before_value, after_value, description, confidence, submitted_at, submission_hash, time_window_key, status, final_xp, trust_before, trust_after, ip_hash, user_agent_hash, metadata ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::jsonb)"
+  ) {
+    const [
+      id,
+      missionId,
+      userId,
+      beforeValue,
+      afterValue,
+      description,
+      confidence,
+      submittedAt,
+      submissionHash,
+      timeWindowKey,
+      status,
+      finalXp,
+      trustBefore,
+      trustAfter,
+      ipHash,
+      userAgentHash,
+      metadataRaw
+    ] = params;
+
+    const duplicate = store.mission_submissions.some(
+      (entry) =>
+        entry.submission_hash === submissionHash ||
+        (entry.user_id === userId && entry.mission_id === missionId && entry.time_window_key === timeWindowKey)
+    );
+    if (duplicate) {
+      const error = new Error("duplicate mission submission") as Error & { code?: string };
+      error.code = "23505";
+      throw error;
+    }
+
+    store.mission_submissions.push({
+      id: String(id),
+      mission_id: String(missionId),
+      user_id: String(userId),
+      before_value: beforeValue === null ? null : String(beforeValue),
+      after_value: afterValue === null ? null : String(afterValue),
+      description: String(description),
+      confidence: Number(confidence),
+      submitted_at: String(submittedAt),
+      submission_hash: String(submissionHash),
+      time_window_key: String(timeWindowKey),
+      status: String(status),
+      final_xp: Number(finalXp),
+      trust_before: Number(trustBefore),
+      trust_after: Number(trustAfter),
+      ip_hash: ipHash === null ? null : String(ipHash),
+      user_agent_hash: userAgentHash === null ? null : String(userAgentHash),
+      metadata: parseJsonObject(metadataRaw) as Record<string, unknown>,
+      created_at: nowIso()
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into private_mission_logs ( id, submission_id, mission_id, user_id, before_value, after_value, description, self_confidence, logged_at ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+  ) {
+    const [id, submissionId, missionId, userId, beforeValue, afterValue, description, confidence, loggedAt] = params;
+    store.private_mission_logs.push({
+      id: String(id),
+      submission_id: String(submissionId),
+      mission_id: String(missionId),
+      user_id: String(userId),
+      before_value: beforeValue === null ? null : String(beforeValue),
+      after_value: afterValue === null ? null : String(afterValue),
+      description: String(description),
+      self_confidence: Number(confidence),
+      logged_at: String(loggedAt)
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into ai_verification_results ( id, submission_id, status, confidence, realism_score, reasoning, risk_flags, provider, verified_at ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, now())"
+  ) {
+    const [id, submissionId, status, confidence, realismScore, reasoning, riskFlagsRaw, provider] = params;
+    store.ai_verification_results.push({
+      id: String(id),
+      submission_id: String(submissionId),
+      status: String(status),
+      confidence: Number(confidence),
+      realism_score: Number(realismScore),
+      reasoning: String(reasoning),
+      risk_flags: parseJsonObject(riskFlagsRaw),
+      provider: provider === null ? null : String(provider),
+      verified_at: nowIso()
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into trust_history ( id, user_id, submission_id, previous_score, next_score, delta, reason, risk_flags ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)"
+  ) {
+    const [id, userId, submissionId, previousScore, nextScore, delta, reasonText, riskFlagsRaw] = params;
+    store.trust_history.push({
+      id: String(id),
+      user_id: String(userId),
+      submission_id: String(submissionId),
+      previous_score: Number(previousScore),
+      next_score: Number(nextScore),
+      delta: Number(delta),
+      reason: String(reasonText),
+      risk_flags: parseJsonObject(riskFlagsRaw),
+      created_at: nowIso()
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into xp_transactions ( id, user_id, submission_id, amount, reason, trust_multiplier, verification_status, metadata ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)"
+  ) {
+    const [id, userId, submissionId, amount, reasonText, trustMultiplier, verificationStatus, metadataRaw] = params;
+    store.xp_transactions.push({
+      id: String(id),
+      user_id: String(userId),
+      submission_id: String(submissionId),
+      amount: Number(amount),
+      reason: String(reasonText),
+      trust_multiplier: Number(trustMultiplier),
+      verification_status: String(verificationStatus),
+      metadata: parseJsonObject(metadataRaw),
+      created_at: nowIso()
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "insert into team_progress ( id, team_id, user_id, submission_id, points, source, created_at ) values ($1, $2, $3, $4, $5, $6, now())"
+  ) {
+    const [id, teamId, userId, submissionId, points, source] = params;
+    store.team_progress.push({
+      id: String(id),
+      team_id: String(teamId),
+      user_id: String(userId),
+      submission_id: String(submissionId),
+      points: Number(points),
+      source: String(source),
+      created_at: nowIso()
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "update users set xp = $1, level = $2, trust_score = $3, payload = $4::jsonb, updated_at = now() where id = $5"
+  ) {
+    const [xp, level, trustScore, payloadRaw, id] = params;
+    const row = store.users.find((user) => user.id === id);
+    if (row) {
+      row.payload = {
+        ...(parseJsonObject(payloadRaw) as Record<string, unknown>),
+        xp: Number(xp),
+        level: Number(level),
+        trustScore: Number(trustScore)
+      };
+      row.updated_at = nowIso();
+    }
+    await persistStore();
+    return result([], "UPDATE");
   }
 
   if (
@@ -938,6 +1287,129 @@ create index if not exists idx_team_mission_logs_team_id on team_mission_logs(te
 create index if not exists idx_team_mission_logs_mission_id on team_mission_logs(mission_id);
 create index if not exists idx_mission_logs_user_id on mission_logs(user_id);
 create index if not exists idx_carbon_cache_cached_at on carbon_cache(cached_at);
+
+alter table users
+  add column if not exists xp integer not null default 0,
+  add column if not exists level integer not null default 1,
+  add column if not exists trust_score numeric(5,2) not null default 50;
+
+create table if not exists missions (
+  id text primary key,
+  title text not null,
+  category text not null default 'habits',
+  mission_type text not null default 'private',
+  visibility text not null default 'private',
+  base_xp integer not null default 25,
+  repeat_window_seconds integer not null default 86400,
+  active boolean not null default true,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists mission_submissions (
+  id uuid primary key default gen_random_uuid(),
+  mission_id text not null references missions(id),
+  user_id uuid not null references users(id) on delete cascade,
+  before_value text,
+  after_value text,
+  description text not null,
+  confidence smallint not null check (confidence between 1 and 5),
+  submitted_at timestamptz not null default now(),
+  submission_hash text not null unique,
+  time_window_key text not null,
+  status text not null check (status in ('APPROVED', 'PARTIAL', 'REJECTED', 'FLAGGED')),
+  final_xp integer not null default 0 check (final_xp >= 0),
+  trust_before numeric(5,2) not null,
+  trust_after numeric(5,2) not null,
+  ip_hash text,
+  user_agent_hash text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (user_id, mission_id, time_window_key)
+);
+
+create table if not exists private_mission_logs (
+  id uuid primary key default gen_random_uuid(),
+  submission_id uuid not null unique references mission_submissions(id) on delete cascade,
+  mission_id text not null references missions(id),
+  user_id uuid not null references users(id) on delete cascade,
+  before_value text,
+  after_value text,
+  description text not null,
+  self_confidence smallint not null check (self_confidence between 1 and 5),
+  logged_at timestamptz not null default now()
+);
+
+create table if not exists ai_verification_results (
+  id uuid primary key default gen_random_uuid(),
+  submission_id uuid not null unique references mission_submissions(id) on delete cascade,
+  status text not null check (status in ('APPROVED', 'PARTIAL', 'REJECTED', 'FLAGGED')),
+  confidence integer not null check (confidence >= 0 and confidence <= 100),
+  realism_score integer not null check (realism_score >= 0 and realism_score <= 100),
+  reasoning text not null,
+  risk_flags jsonb not null default '[]'::jsonb,
+  provider text,
+  verified_at timestamptz not null default now()
+);
+
+create table if not exists team_progress (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  submission_id uuid references mission_submissions(id) on delete set null,
+  points integer not null default 0 check (points >= 0),
+  source text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists xp_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  submission_id uuid unique references mission_submissions(id) on delete set null,
+  amount integer not null check (amount >= 0),
+  reason text not null,
+  trust_multiplier numeric(4,2) not null default 1,
+  verification_status text not null check (verification_status in ('APPROVED', 'PARTIAL', 'REJECTED', 'FLAGGED')),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists trust_history (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  submission_id uuid references mission_submissions(id) on delete set null,
+  previous_score numeric(5,2) not null,
+  next_score numeric(5,2) not null,
+  delta numeric(5,2) not null,
+  reason text not null,
+  risk_flags jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+insert into missions (id, title, category, mission_type, visibility, base_xp, repeat_window_seconds, metadata)
+values
+  ('shower_reduce_5min', 'Reduce shower time', 'water', 'private', 'private', 40, 86400, '{"preferredBeforeAfter": true, "unitHint": "minutes"}'::jsonb),
+  ('drink_more_water', 'Drink more water', 'health', 'private', 'private', 25, 86400, '{"preferredBeforeAfter": true, "unitHint": "cups or liters"}'::jsonb),
+  ('limit_screen_time', 'Limit screen time', 'wellbeing', 'private', 'private', 35, 86400, '{"preferredBeforeAfter": true, "unitHint": "minutes or hours"}'::jsonb)
+on conflict (id) do update
+set title = excluded.title,
+    category = excluded.category,
+    mission_type = excluded.mission_type,
+    visibility = excluded.visibility,
+    base_xp = excluded.base_xp,
+    repeat_window_seconds = excluded.repeat_window_seconds,
+    metadata = excluded.metadata,
+    updated_at = now();
+
+create index if not exists idx_missions_type_active on missions(mission_type, active);
+create index if not exists idx_mission_submissions_user_submitted on mission_submissions(user_id, submitted_at desc);
+create index if not exists idx_mission_submissions_mission on mission_submissions(mission_id);
+create index if not exists idx_private_mission_logs_user_logged on private_mission_logs(user_id, logged_at desc);
+create index if not exists idx_ai_verification_results_status on ai_verification_results(status);
+create index if not exists idx_team_progress_team_created on team_progress(team_id, created_at desc);
+create index if not exists idx_xp_transactions_user_created on xp_transactions(user_id, created_at desc);
+create index if not exists idx_trust_history_user_created on trust_history(user_id, created_at desc);
   `;
 
   migrationPromise = poolInstance.query(migrationSql).then(() => {
@@ -1029,6 +1501,40 @@ export async function sql<T extends QueryResultRow = QueryResultRow>(
     global.__ecoquestDbMode = "file";
     console.warn("PostgreSQL query failed, switching to local persistent data store. Error:", error);
     return fileSql<T>(text, params);
+  }
+}
+
+export async function transaction<T>(
+  callback: (query: <R extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]) => Promise<QueryResult<R>>) => Promise<T>
+) {
+  const mode = await detectMode();
+
+  if (mode === "file") {
+    return callback(sql);
+  }
+
+  const client = await getPool().connect();
+
+  try {
+    await client.query("begin");
+    const value = await callback(async <R extends QueryResultRow = QueryResultRow>(
+      text: string,
+      params: unknown[] = []
+    ) => {
+      const queryResult = await client.query<R>(text, params);
+      return {
+        command: queryResult.command,
+        rowCount: queryResult.rowCount ?? 0,
+        rows: queryResult.rows
+      };
+    });
+    await client.query("commit");
+    return value;
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
   }
 }
 
