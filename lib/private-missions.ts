@@ -391,7 +391,7 @@ export async function submitPrivateMission(
     throw error;
   }
 
-  return {
+  const submissionResult = {
     submission: {
       id: submissionId,
       missionId: body.missionId,
@@ -429,5 +429,5 @@ export async function submitPrivateMission(
     console.error("Milestone check after private mission failed:", err)
   );
 
-  return result;
+  return submissionResult;
 }
