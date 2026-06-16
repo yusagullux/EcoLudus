@@ -17,6 +17,13 @@ const bodyFont = Manrope({
 export const metadata: Metadata = {
   title: "EcoLudus | Sustainable Habits & Rewards",
   description: "Play, protect, and grow. EcoLudus is a gamified environmental sustainability platform that turns eco-friendly habits into a rewarding daily ritual.",
+  manifest: "/manifest.json",
+  themeColor: "#102016",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "EcoLudus"
+  },
   openGraph: {
     title: "EcoLudus | Gamified Sustainability",
     description: "Turn eco actions into rewards. Grow your virtual collection and track your carbon footprint in a modern nature-inspired experience.",

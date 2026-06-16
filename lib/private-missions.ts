@@ -12,6 +12,7 @@ import {
   getManualReviewProbability,
   getTrustMultiplier
 } from "./trust-system";
+import { checkAndProcessMilestones } from "./rewards-sync";
 
 export const privateMissionSubmissionSchema = z.object({
   missionId: z.string().min(2).max(120),
@@ -422,4 +423,11 @@ export async function submitPrivateMission(
       pointsAwarded: teamId ? finalXp : 0
     }
   };
+
+  // Check milestones async (tree planting) — fire-and-forget, never blocks the response
+  checkAndProcessMilestones(body.userId).catch((err) =>
+    console.error("Milestone check after private mission failed:", err)
+  );
+
+  return result;
 }

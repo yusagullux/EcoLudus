@@ -220,6 +220,34 @@ function isObviousGibberish(text: string): boolean {
   return false;
 }
 
+function heuristicTextVerification(
+  textProof: string,
+  questTitle: string
+): { verified: boolean; reasoning: string } {
+  const cleaned = textProof.trim().toLowerCase();
+  const questWords = questTitle.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+
+  // Too short
+  if (cleaned.length < 15) {
+    return { verified: false, reasoning: "Your description is too short. Please explain specifically what you did to complete this quest." };
+  }
+
+  // Check if it's just the quest title repeated
+  const isJustTitle = questWords.length > 0 && questWords.every((word) => cleaned.includes(word)) && cleaned.split(/\s+/).length <= questWords.length + 2;
+  if (isJustTitle) {
+    return { verified: false, reasoning: "Your description just repeats the quest name. Please describe the specific action you took." };
+  }
+
+  // Must contain at least some action words or specific details
+  const actionWords = ["i ", "my ", "the ", "used ", "did ", "made ", "took ", "went ", "collected ", "sorted ", "reduced ", "switched ", "turned ", "walked ", "recycled ", "planted ", "cleaned ", "bought ", "avoided ", "replaced ", "unplugged ", "fixed "];
+  const hasActionWord = actionWords.some((word) => cleaned.includes(word));
+  if (!hasActionWord) {
+    return { verified: false, reasoning: "Please describe what you actually did — your proof should include specific actions you took." };
+  }
+
+  return { verified: true, reasoning: "Your description provides a plausible account of completing this quest." };
+}
+
 export async function verifyTextProofWithGemini(
   textProof: string,
   questTitle: string,
@@ -234,7 +262,8 @@ export async function verifyTextProofWithGemini(
   const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   if (!geminiApiKey) {
-    return { verified: false, reasoning: "Proof verification is temporarily unavailable. Please try again later." };
+    // Fall back to heuristic verification instead of blocking
+    return heuristicTextVerification(textProof, questTitle);
   }
 
   try {
