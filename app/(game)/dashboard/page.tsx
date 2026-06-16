@@ -273,12 +273,22 @@ export default function DashboardPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error?.message || "Verification failed.");
+        // Show Gemini's reasoning if available, otherwise use a friendly message
+        const reason = data?.error?.message;
+        const isRejection = response.status === 422;
+        throw new Error(
+          reason
+            ? reason
+            : isRejection
+            ? "Proof not accepted. Please provide a more specific description of what you did."
+            : "Verification failed. Please try again."
+        );
       }
 
+      const confidence = data.confidence ? ` (${data.confidence}% confidence)` : "";
       setVerifiedQuestIds((current) => Array.from(new Set([...current, activeTextVerifyQuest.id])));
       setSelectedQuestIds((current) => Array.from(new Set([...current, activeTextVerifyQuest.id])));
-      showToast("Proof verified. Quest checked!");
+      showToast(`✓ Proof verified${confidence}. Quest checked!`);
       setTextProof("");
       setPhotoFile(null);
       setPhotoPreview(null);

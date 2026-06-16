@@ -514,6 +514,24 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
 
   if (
     normalized ===
+    "select id, title, category, base_xp, repeat_window_seconds, metadata from missions where active = true and mission_type = 'private' order by title asc"
+  ) {
+    const rows = store.missions
+      .filter((mission) => mission.active && mission.mission_type === "private")
+      .sort((a, b) => a.title.localeCompare(b.title))
+      .map((mission) => ({
+        id: mission.id,
+        title: mission.title,
+        category: mission.category,
+        base_xp: mission.base_xp,
+        repeat_window_seconds: mission.repeat_window_seconds,
+        metadata: clone(mission.metadata)
+      }));
+    return result(rows as T[]);
+  }
+
+  if (
+    normalized ===
     "select id, title, base_xp, repeat_window_seconds from missions where id = $1 and active = true and mission_type = 'private' limit 1"
   ) {
     const id = String(params[0] ?? "");
@@ -961,6 +979,40 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     store.users = store.users.filter((user) => user.id !== id);
     await persistStore();
     return result([], "DELETE");
+  }
+
+  // ── Community aggregate (used by /api/stats/community-aggregate) ─────────
+  if (
+    normalized ===
+    "select count(*) as total_users, coalesce(sum((payload->>'xp')::numeric), 0) as total_xp, coalesce(sum((payload->>'carbonreduced')::numeric), 0) as total_co2, coalesce(sum((payload->>'missionscompleted')::numeric), 0) as total_missions, coalesce(sum((payload->>'treesplanted')::numeric), 0) as total_trees from users"
+  ) {
+    const totalUsers = store.users.length;
+    const totalXp = store.users.reduce((s, u) => s + Number((u.payload as any)?.xp ?? 0), 0);
+    const totalCo2 = store.users.reduce((s, u) => s + Number((u.payload as any)?.carbonReduced ?? 0), 0);
+    const totalMissions = store.users.reduce((s, u) => s + Number((u.payload as any)?.missionsCompleted ?? 0), 0);
+    const totalTrees = store.users.reduce((s, u) => s + Number((u.payload as any)?.treesPlanted ?? 0), 0);
+    return result([{ total_users: totalUsers, total_xp: totalXp, total_co2: totalCo2, total_missions: totalMissions, total_trees: totalTrees }] as T[]);
+  }
+
+  // ── Cron: list all users for milestone processing ─────────────────────────
+  if (normalized === "select id from users limit 1000") {
+    const rows = store.users.slice(0, 1000).map((u) => ({ id: u.id }));
+    return result(rows as T[]);
+  }
+
+  // ── rewards-sync: update payload only ─────────────────────────────────────
+  if (
+    normalized ===
+    "update users set payload = $1::jsonb, updated_at = now() where id = $2"
+  ) {
+    const [payloadRaw, id] = params;
+    const row = store.users.find((u) => u.id === id);
+    if (row) {
+      row.payload = parseJsonObject(payloadRaw) as Record<string, unknown>;
+      row.updated_at = nowIso();
+    }
+    await persistStore();
+    return result([], "UPDATE");
   }
 
   if (normalized === "delete from teams where id = $1") {

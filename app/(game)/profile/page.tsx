@@ -93,7 +93,8 @@ export default function ProfilePage() {
     { label: "Level", value: level, accent: "#2f5f86" },
     { label: "Missions Completed", value: missionsCompleted, accent: "#62508f" },
     { label: "CO2 Reduced", value: `${(+carbonReduced).toFixed(1)} kg`, accent: "#237482", wide: true },
-    { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "#4c7a3b" }
+    { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "#4c7a3b" },
+    { label: "Trees Planted", value: profile?.treesPlanted ?? 0, accent: "#2f6b46" }
   ];
 
   return (

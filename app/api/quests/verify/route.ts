@@ -67,7 +67,16 @@ export async function POST(request: Request) {
         );
       }
 
-      return NextResponse.json({ verified: true, reasoning: result.details || "Photo proof accepted." });
+      // Confidence: Gemini's warnings count as partial confidence deductions
+      const warningCount = result.warnings?.length ?? 0;
+      const confidence = Math.max(60, 100 - warningCount * 12);
+
+      return NextResponse.json({
+        verified: true,
+        reasoning: result.details || "Photo proof accepted.",
+        confidence,
+        warnings: result.warnings ?? []
+      });
     }
 
     // Text proof verification
@@ -92,7 +101,15 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ verified: true, reasoning: result.reasoning });
+    // Text confidence: based on length and specificity heuristic
+    const wordCount = textProof.trim().split(/\s+/).length;
+    const textConfidence = Math.min(100, Math.max(70, 70 + wordCount * 2));
+
+    return NextResponse.json({
+      verified: true,
+      reasoning: result.reasoning,
+      confidence: textConfidence
+    });
   } catch (error) {
     console.error("Error in quest verification route:", error);
     return NextResponse.json(

@@ -4,8 +4,8 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { getQuestCarbonReduction, getQuestDefinition } from "@/lib/carbon-calc";
 import { sql } from "@/lib/db";
-
 import { calculateLevel } from "@/lib/level-system";
+import { checkAndProcessMilestones } from "@/lib/rewards-sync";
 
 const completeQuestSchema = z.object({
   questIds: z.array(z.string().min(1)).min(1).max(5)
@@ -145,6 +145,11 @@ export async function POST(request: Request) {
         [completion.id, session.userId, JSON.stringify({ ...completion, userId: session.userId })]
       );
     }
+
+    // Check milestones async (tree planting) — non-blocking, don't fail the request
+    checkAndProcessMilestones(session.userId).catch((err) =>
+      console.error("Milestone check after quest completion failed:", err)
+    );
 
     return NextResponse.json({
       success: true,
