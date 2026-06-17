@@ -99,7 +99,10 @@ export function useAuth() {
     user,
     profile,
     setProfile,
-    refreshProfile: () => user && refreshProfile(user.uid),
+    refreshProfile: (): Promise<void> => {
+      if (!user) return Promise.resolve();
+      return refreshProfile(user.uid);
+    },
     loading
   };
 }
