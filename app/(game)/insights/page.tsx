@@ -109,24 +109,25 @@ export default function InsightsPage() {
       </div>
 
       <Panel eyebrow="Activity" title="Quest Completion Trend" action={<Pill>7 days</Pill>}>
-        <div className="flex h-48 items-end gap-2 sm:gap-3">
+        <div className="flex h-44 items-end gap-1.5 sm:gap-2.5">
           {questsPerDay.map((count, index) => {
             const height = (count / maxQPD) * 100;
             const isToday = index === questsPerDay.length - 1;
             return (
-              <div key={weekDays[index]} className="flex flex-1 flex-col items-center gap-2">
-                <span className="text-xs font-extrabold text-forest-800">{count}</span>
-                <div className="flex h-36 w-full items-end rounded-2xl bg-[#f4f7ef] p-1">
+              <div key={weekDays[index]} className="flex flex-1 flex-col items-center gap-1.5">
+                <span className="text-[10px] font-extrabold" style={{ color: "var(--text-primary)" }}>{count}</span>
+                <div className="flex h-32 w-full items-end rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
                   <div
-                    className="w-full rounded-xl transition-all duration-700"
+                    className="w-full rounded-lg transition-all duration-700"
                     style={{
-                      height: `${height}%`,
-                      minHeight: "8px",
-                      background: isToday ? "#102016" : "#9fb78c"
+                      height: `${Math.max(height, 4)}%`,
+                      minHeight: "6px",
+                      background: isToday ? "var(--text-primary)" : "var(--text-accent, #43653f)",
+                      opacity: isToday ? 1 : 0.55
                     }}
                   />
                 </div>
-                <span className={`text-xs font-extrabold ${isToday ? "text-forest-950" : "text-forest-600/64"}`}>{weekDays[index]}</span>
+                <span className="text-[10px] font-extrabold" style={{ color: isToday ? "var(--text-primary)" : "var(--text-muted)" }}>{weekDays[index]}</span>
               </div>
             );
           })}
@@ -134,20 +135,20 @@ export default function InsightsPage() {
       </Panel>
 
       <Panel eyebrow="Breakdown" title="Category Distribution">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {categoriesProgress.map(({ name, image, color, done, total }) => {
             const pct = Math.round((done / total) * 100);
             return (
-              <div key={name} className="grid grid-cols-[minmax(132px,180px)_1fr_48px_48px] items-center gap-3 rounded-2xl px-2 py-1 transition hover:bg-[#f7f9f2]">
+              <div key={name} className="grid grid-cols-[minmax(120px,160px)_1fr_44px_44px] items-center gap-3 rounded-xl px-2 py-1.5 transition" style={{ background: "transparent" }}>
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f4f7ef]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: "var(--bg-panel-alt)" }}>
                     <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
                   </span>
-                  <span className="truncate text-xs font-extrabold text-forest-900">{name}</span>
+                  <span className="truncate text-xs font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</span>
                 </div>
                 <ProgressBar value={pct} color={color} />
                 <span className="text-right text-xs font-extrabold" style={{ color }}>{pct}%</span>
-                <span className="text-right text-xs font-semibold text-forest-700/54">{done}/{total}</span>
+                <span className="text-right text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{done}/{total}</span>
               </div>
             );
           })}
@@ -164,11 +165,11 @@ export default function InsightsPage() {
             return (
               <div key={label}>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-extrabold text-forest-950">{label}</span>
+                  <span className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{label}</span>
                   <span className="font-serif text-base font-extrabold" style={{ color }}>{value.toLocaleString()}</span>
                 </div>
                 <ProgressBar value={pct} color={color} />
-                <p className="mt-2 text-right text-xs font-semibold text-forest-700/54">{pct}% of milestone</p>
+                <p className="mt-1.5 text-right text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{pct}% of milestone</p>
               </div>
             );
           })}

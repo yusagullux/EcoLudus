@@ -1,17 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Manrope } from "next/font/google";
+import { Baloo_2, Inter } from "next/font/google";
 import "./globals.css";
 
 const headingFont = Baloo_2({
   subsets: ["latin"],
   variable: "--font-heading",
-  weight: ["400", "500", "600", "700", "800"]
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap"
 });
 
-const bodyFont = Manrope({
+const bodyFont = Inter({
   subsets: ["latin"],
   variable: "--font-body",
-  weight: ["400", "500", "600", "700"]
+  weight: ["400", "500", "600", "700"],
+  display: "swap"
 });
 
 export const viewport: Viewport = {
@@ -66,8 +68,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "EcoLudus",
+    "url": "https://ecoludus.com",
+    "description": "Gamified environmental sustainability platform. Turn eco-friendly habits into daily rewards.",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  };
+
   return (
     <html lang="en" className={`${headingFont.variable} ${bodyFont.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );
