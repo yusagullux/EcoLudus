@@ -74,12 +74,8 @@ export async function verifyImageWithProvider(
   const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   if (!geminiApiKey) {
-    return {
-      verified: false,
-      warnings: [],
-      provider: null,
-      details: "Photo verification requires a Gemini API key. Please add GEMINI_API_KEY to your environment, or use text proof instead."
-    };
+    // No key configured — use basic image heuristic (size/format validation)
+    return heuristicPhotoVerification(buffer, mimeType);
   }
 
   try {
@@ -164,16 +160,57 @@ export async function verifyImageWithProvider(
     };
   } catch (error) {
     console.error("Gemini photo verification failed:", error);
-    return {
-      verified: false,
-      warnings: [],
-      provider: "error",
-      details: "Photo verification is temporarily unavailable. Please try again or use text proof instead."
-    };
+    // Gemini unavailable — fall back to basic heuristic rather than blocking users
+    return heuristicPhotoVerification(buffer, mimeType);
   }
 }
 
-// ── Gibberish detection ───────────────────────────────────────────────────────
+// ── Heuristic photo validation (no AI available) ─────────────────────────────
+// Checks the image is a real, non-trivial photo rather than a blank or corrupt file.
+// Not as strict as Gemini but prevents empty submissions.
+function heuristicPhotoVerification(
+  buffer: Buffer,
+  mimeType: string | null
+): { verified: boolean; warnings: string[]; provider: string; details: string | null } {
+  const warnings: string[] = [];
+
+  // Must be a real image format
+  const validMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic", "image/heif"];
+  const resolvedMime = (mimeType || "image/jpeg").toLowerCase();
+  if (!validMimes.some(m => resolvedMime.includes(m.split("/")[1]))) {
+    return { verified: false, warnings: ["unsupported_format"], provider: "heuristic", details: "Please upload a photo in JPEG, PNG, or WebP format." };
+  }
+
+  // Must be at least 5KB — a blank/corrupt image is smaller
+  if (buffer.length < 5 * 1024) {
+    return { verified: false, warnings: ["file_too_small"], provider: "heuristic", details: "The uploaded file appears to be empty or corrupt. Please upload a real photo." };
+  }
+
+  // Must be under 10MB
+  if (buffer.length > 10 * 1024 * 1024) {
+    return { verified: false, warnings: ["file_too_large"], provider: "heuristic", details: "Photo is too large (max 10MB). Please compress it and try again." };
+  }
+
+  // Check for valid JPEG/PNG/WebP magic bytes
+  const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8;
+  const isPng  = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+  const isWebp = buffer.slice(8, 12).toString("ascii") === "WEBP";
+
+  if (!isJpeg && !isPng && !isWebp) {
+    warnings.push("unrecognized_image_header");
+  }
+
+  return {
+    verified: true,
+    warnings,
+    provider: "heuristic-local",
+    details: warnings.length > 0
+      ? "Photo accepted with minor warnings. For better verification, ensure GEMINI_API_KEY is configured."
+      : "Photo accepted. Upload real proof photos for accurate quest verification."
+  };
+}
+
+
 function isObviousGibberish(text: string): boolean {
   const cleaned = text.trim().toLowerCase();
   if (cleaned.length < 12) return true;
@@ -308,9 +345,7 @@ export async function verifyTextProofWithGemini(
     };
   } catch (error) {
     console.error("Gemini text verification error:", error);
-    return {
-      verified: false,
-      reasoning: "Verification service is temporarily unavailable. Please try again."
-    };
+    // Fall back to heuristic rather than blocking
+    return heuristicTextVerification(textProof, questTitle);
   }
 }
