@@ -285,6 +285,18 @@ a, button, input, textarea, select {
 .t-panel {
   background: var(--bg-panel);
   border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.t-panel-alt {
+  background: var(--bg-panel-alt);
+  color: var(--text-primary);
+}
+
+/* Make the whole page body honour the theme text color —
+   this cascades into every component that doesn't override */
+html {
+  color: var(--text-primary);
 }
 
 .t-panel-alt {
@@ -393,6 +405,7 @@ a, button, input, textarea, select {
 
 .app-main-bg {
   background-color: var(--bg-page-solid);
+  color: var(--text-primary);
   min-height: 100vh;
 }
 
@@ -412,21 +425,45 @@ a, button, input, textarea, select {
    These handle hardcoded bg hex values still present in pages.
    ─────────────────────────────────────────────────────────── */
 
+/* White panels → dark theme panel bg */
 [data-theme="dark"] .bg-white,
-[data-theme="liquid"] .bg-white { background-color: var(--bg-panel) !important; }
-
-[data-theme="dark"] .bg-\[#fffefa\], [data-theme="dark"] .bg-\[#f7f9f2\],
-[data-theme="dark"] .bg-\[#f4f7ef\], [data-theme="dark"] .bg-\[#fbfcf7\],
-[data-theme="liquid"] .bg-\[#fffefa\], [data-theme="liquid"] .bg-\[#f7f9f2\],
-[data-theme="liquid"] .bg-\[#f4f7ef\], [data-theme="liquid"] .bg-\[#fbfcf7\] {
-  background-color: var(--bg-panel-alt) !important;
+[data-theme="liquid"] .bg-white {
+  background-color: var(--bg-panel) !important;
+  color: var(--text-primary);
 }
 
+/* Hardcoded light-hex panel bgs → dark panel */
+[data-theme="dark"] .bg-\[#fffefa\], [data-theme="dark"] .bg-\[#f7f9f2\],
+[data-theme="dark"] .bg-\[#f4f7ef\], [data-theme="dark"] .bg-\[#fbfcf7\],
+[data-theme="dark"] .bg-\[#eef5ea\], [data-theme="dark"] .bg-\[#f0f8e8\],
+[data-theme="liquid"] .bg-\[#fffefa\], [data-theme="liquid"] .bg-\[#f7f9f2\],
+[data-theme="liquid"] .bg-\[#f4f7ef\], [data-theme="liquid"] .bg-\[#fbfcf7\],
+[data-theme="liquid"] .bg-\[#eef5ea\], [data-theme="liquid"] .bg-\[#f0f8e8\] {
+  background-color: var(--bg-panel-alt) !important;
+  color: var(--text-primary);
+}
+
+/* Borders */
 [data-theme="dark"] .border-\[#dfe7d7\], [data-theme="dark"] .border-\[#e7ecdf\],
-[data-theme="dark"] .border-\[#dce6d8\],
+[data-theme="dark"] .border-\[#dce6d8\], [data-theme="dark"] .border-\[#dfe7d7\],
 [data-theme="liquid"] .border-\[#dfe7d7\], [data-theme="liquid"] .border-\[#e7ecdf\],
-[data-theme="liquid"] .border-\[#dce6d8\] {
+[data-theme="liquid"] .border-\[#dce6d8\], [data-theme="liquid"] .border-\[#dfe7d7\] {
   border-color: var(--border-default) !important;
+}
+
+/* Global rule: on dark/liquid themes, any element that has a light bg
+   MUST have dark text on it — prevent white-on-white */
+[data-theme="dark"] .bg-rose-50,
+[data-theme="liquid"] .bg-rose-50 {
+  color: #7f1d1d !important;
+}
+[data-theme="dark"] .bg-emerald-50,
+[data-theme="liquid"] .bg-emerald-50 {
+  color: #14532d !important;
+}
+[data-theme="dark"] .bg-amber-50,
+[data-theme="liquid"] .bg-amber-50 {
+  color: #78350f !important;
 }
 
 /* ── REDUCED MOTION ──────────────────────────────────────── */
@@ -439,4 +476,46 @@ a, button, input, textarea, select {
     transition-duration: 1ms !important;
   }
   .reveal-card, .logo-breathe { animation: none; will-change: auto; }
+}
+
+/* ── UNIVERSAL CONTRAST FIX ──────────────────────────────────
+   Any inline-style text color with a hardcoded dark value
+   on a dark-theme page will be unreadable. These rules ensure
+   the body text colour always matches the active theme.
+   We do NOT touch text inside the hero (dark bg with light text)
+   or the sidebar (always dark bg).
+   ─────────────────────────────────────────────────────────── */
+
+/* Inherit theme text colour throughout the content area */
+[data-theme="dark"] .app-main-bg,
+[data-theme="liquid"] .app-main-bg {
+  color: var(--text-primary);
+}
+
+/* Any plain <p>, <span>, <div>, <li> that has no explicit color class
+   will pick up the inherited colour automatically.
+   For elements that DO have a hardcoded class we cascade: */
+
+/* text-* that map to near-black shades → remap to theme text */
+[data-theme="dark"] .text-forest-950,  [data-theme="dark"] .text-forest-900,
+[data-theme="liquid"] .text-forest-950,[data-theme="liquid"] .text-forest-900 {
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .text-forest-800,  [data-theme="dark"] .text-forest-700,
+[data-theme="liquid"] .text-forest-800,[data-theme="liquid"] .text-forest-700 {
+  color: var(--text-secondary) !important;
+}
+[data-theme="dark"] .text-forest-600,  [data-theme="dark"] .text-forest-500,
+[data-theme="dark"] .text-forest-400,
+[data-theme="liquid"] .text-forest-600,[data-theme="liquid"] .text-forest-500,
+[data-theme="liquid"] .text-forest-400 {
+  color: var(--text-muted) !important;
+}
+
+/* Hardcoded dark hex text colors that can't be covered by Tailwind classes */
+[data-theme="dark"] [style*="color: #102016"],
+[data-theme="dark"] [style*="color:#102016"],
+[data-theme="liquid"] [style*="color: #102016"],
+[data-theme="liquid"] [style*="color:#102016"] {
+  color: var(--text-primary) !important;
 }
