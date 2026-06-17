@@ -355,78 +355,127 @@ a, button, input, textarea, select {
   .reveal-card, .logo-breathe { animation: none; will-change: auto; }
 }
 
-/* ── DARK / LIQUID: remap hardcoded forest text colors ───────
-   Tailwind's text-forest-* classes use static hex values.
-   On dark/liquid themes those values are unreadable (dark on dark).
-   These overrides swap them to the theme's text tokens.
-   ─────────────────────────────────────────────────────────── */
+/* ── PAGE BACKGROUND ─────────────────────────────────────── */
+/* Applied to the main content wrapper — using a solid bg-color for
+   smooth theme transitions (gradient backgrounds can't animate) */
 
-[data-theme="dark"],
-[data-theme="liquid"] {
-  /* Primary text — forest-950, forest-900 */
-  .text-forest-950,
-  .text-forest-900 {
-    color: var(--text-primary) !important;
-  }
-
-  /* Secondary text — forest-800, forest-700 */
-  .text-forest-800,
-  .text-forest-700 {
-    color: var(--text-secondary) !important;
-  }
-
-  /* Muted text — forest-600, forest-500, forest-400 */
-  .text-forest-600,
-  .text-forest-500,
-  .text-forest-400,
-  .text-forest-300 {
-    color: var(--text-muted) !important;
-  }
-
-  /* Accent text */
-  .text-forest-200,
-  .text-forest-100 {
-    color: var(--text-accent) !important;
-  }
-
-  /* White backgrounds become panel backgrounds */
-  .bg-white {
-    background-color: var(--bg-panel) !important;
-  }
-
-  /* White text stays legible on dark bg */
-  .text-white { color: var(--text-sidebar) !important; }
-  .text-cream-100 { color: var(--text-sidebar) !important; }
-
-  /* Light panel backgrounds */
-  .bg-\[#fffefa\],
-  .bg-\[#f7f9f2\],
-  .bg-\[#f4f7ef\],
-  .bg-\[#fbfcf7\],
-  .bg-\[#f8fff5\],
-  .bg-\[#f0f8e8\] {
-    background-color: var(--bg-panel-alt) !important;
-  }
-
-  /* Light border colors */
-  .border-\[#dfe7d7\],
-  .border-\[#e7ecdf\],
-  .border-\[#dce6d8\],
-  .border-forest-100,
-  .border-forest-200 {
-    border-color: var(--border-default) !important;
-  }
-
-  /* Sidebar/app chrome backgrounds */
-  .bg-forest-50,
-  .bg-forest-100 { background-color: var(--bg-panel-alt) !important; }
-  .bg-forest-950,
-  .bg-forest-900 { background-color: var(--bg-sidebar) !important; }
+.app-main-bg {
+  background-color: var(--bg-page-solid);
+  min-height: 100vh;
 }
 
-/* ── ALL themes: text opacity variants (forest-700/60 etc) ───
-   These get their own CSS vars via the custom property trick  */
-[data-theme="dark"] body,
-[data-theme="liquid"] body {
-  --tw-text-opacity: 1;
+:root,
+[data-theme="light"] {
+  --bg-page-solid: #edf1e6;
+}
+[data-theme="dark"] {
+  --bg-page-solid: #0e1810;
+}
+[data-theme="liquid"] {
+  --bg-page-solid: #0f2b3a;
+}
+
+/* ── DARK / LIQUID: remap hardcoded forest text colors ───────
+   Flat selectors (no nesting) for maximum browser compatibility
+   ─────────────────────────────────────────────────────────── */
+
+/* Primary */
+[data-theme="dark"] .text-forest-950,
+[data-theme="dark"] .text-forest-900,
+[data-theme="liquid"] .text-forest-950,
+[data-theme="liquid"] .text-forest-900 {
+  color: var(--text-primary) !important;
+}
+
+/* Secondary */
+[data-theme="dark"] .text-forest-800,
+[data-theme="dark"] .text-forest-700,
+[data-theme="liquid"] .text-forest-800,
+[data-theme="liquid"] .text-forest-700 {
+  color: var(--text-secondary) !important;
+}
+
+/* Muted */
+[data-theme="dark"] .text-forest-600,
+[data-theme="dark"] .text-forest-500,
+[data-theme="dark"] .text-forest-400,
+[data-theme="dark"] .text-forest-300,
+[data-theme="liquid"] .text-forest-600,
+[data-theme="liquid"] .text-forest-500,
+[data-theme="liquid"] .text-forest-400,
+[data-theme="liquid"] .text-forest-300 {
+  color: var(--text-muted) !important;
+}
+
+/* Accent */
+[data-theme="dark"] .text-forest-200,
+[data-theme="dark"] .text-forest-100,
+[data-theme="liquid"] .text-forest-200,
+[data-theme="liquid"] .text-forest-100 {
+  color: var(--text-accent) !important;
+}
+
+/* Inverse text (used on dark hero banners) */
+[data-theme="dark"] .text-white,
+[data-theme="dark"] .text-cream-100,
+[data-theme="liquid"] .text-white,
+[data-theme="liquid"] .text-cream-100 {
+  color: var(--text-sidebar) !important;
+}
+
+/* White backgrounds → panel */
+[data-theme="dark"] .bg-white,
+[data-theme="liquid"] .bg-white {
+  background-color: var(--bg-panel) !important;
+}
+
+/* Hardcoded light panel bg colors */
+[data-theme="dark"] .bg-\[#fffefa\],
+[data-theme="dark"] .bg-\[#f7f9f2\],
+[data-theme="dark"] .bg-\[#f4f7ef\],
+[data-theme="dark"] .bg-\[#fbfcf7\],
+[data-theme="dark"] .bg-\[#f8fff5\],
+[data-theme="dark"] .bg-\[#f0f8e8\],
+[data-theme="liquid"] .bg-\[#fffefa\],
+[data-theme="liquid"] .bg-\[#f7f9f2\],
+[data-theme="liquid"] .bg-\[#f4f7ef\],
+[data-theme="liquid"] .bg-\[#fbfcf7\],
+[data-theme="liquid"] .bg-\[#f8fff5\],
+[data-theme="liquid"] .bg-\[#f0f8e8\] {
+  background-color: var(--bg-panel-alt) !important;
+}
+
+/* Hardcoded light borders */
+[data-theme="dark"] .border-\[#dfe7d7\],
+[data-theme="dark"] .border-\[#e7ecdf\],
+[data-theme="dark"] .border-\[#dce6d8\],
+[data-theme="dark"] .border-forest-100,
+[data-theme="dark"] .border-forest-200,
+[data-theme="liquid"] .border-\[#dfe7d7\],
+[data-theme="liquid"] .border-\[#e7ecdf\],
+[data-theme="liquid"] .border-\[#dce6d8\],
+[data-theme="liquid"] .border-forest-100,
+[data-theme="liquid"] .border-forest-200 {
+  border-color: var(--border-default) !important;
+}
+
+/* Forest bg colors → panel */
+[data-theme="dark"] .bg-forest-50,
+[data-theme="dark"] .bg-forest-100,
+[data-theme="liquid"] .bg-forest-50,
+[data-theme="liquid"] .bg-forest-100 {
+  background-color: var(--bg-panel-alt) !important;
+}
+
+[data-theme="dark"] .bg-forest-950,
+[data-theme="dark"] .bg-forest-900,
+[data-theme="liquid"] .bg-forest-950,
+[data-theme="liquid"] .bg-forest-900 {
+  background-color: var(--bg-sidebar) !important;
+}
+
+/* Sidebar stays dark on all themes — its own variable handles this */
+[data-theme="dark"] .t-sidebar,
+[data-theme="liquid"] .t-sidebar {
+  background: var(--bg-sidebar) !important;
 }
