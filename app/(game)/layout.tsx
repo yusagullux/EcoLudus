@@ -33,21 +33,15 @@ export default function GameLayout({
       {/* Sidebar (desktop: fixed left; mobile: top bar + bottom nav) */}
       <Sidebar user={user} profile={profile} />
 
-      {/* Main scroll area — offset for sidebar on desktop, top+bottom bar on mobile */}
-      <div
-        className="min-h-screen transition-colors duration-300"
-        style={{ background: "var(--bg-page)" }}
-      >
+      {/* Main scroll area */}
+      <div className="app-main-bg min-h-screen">
         <main
-          className={[
-            "mx-auto w-full max-w-4xl px-4 sm:px-6",
-            /* mobile: below top bar (52px) + above bottom nav (64px) */
-            "pt-[64px] pb-[80px]",
-            /* desktop: left sidebar (220px), no extra bottom padding */
-            "md:ml-[220px] md:pt-8 md:pb-10 md:max-w-none",
-          ].join(" ")}
+          className="mx-auto px-4 sm:px-6 pt-[60px] pb-[80px] md:ml-[220px] md:pt-8 md:pb-10 md:px-8"
+          style={{ maxWidth: "calc(100vw - 0px)" }}
         >
-          {children}
+          <div className="max-w-5xl">
+            {children}
+          </div>
         </main>
       </div>
     </ThemeProvider>
