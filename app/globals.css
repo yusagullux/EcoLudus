@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --font-serif: var(--font-heading), "Baloo 2", system-ui, sans-serif;
-  --font-sans: var(--font-body), "Manrope", system-ui, sans-serif;
+  /* Baloo 2 for all display/heading text — used via `font-serif` class in JSX */
+  --font-serif: var(--font-heading), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+  /* Inter for all body/paragraph/UI text — used via `font-sans` class in JSX */
+  --font-sans: var(--font-body), "Inter", ui-sans-serif, system-ui, sans-serif;
   --color-forest-50: #f5f7f0;
   --color-forest-100: #e9efe0;
   --color-forest-200: #d4dfc8;
@@ -42,187 +44,313 @@
   --color-earth-800: #462f1a;
   --color-earth-900: #2e1d10;
 
-  --animate-wiggle: wiggle 0.72s cubic-bezier(0.37, 0, 0.63, 1) infinite;
-  --animate-float-up: floatUp 1.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  --animate-soft-rise: softRise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
-
   @keyframes wiggle {
-    0%,
-    100% {
-      transform: rotate(-3deg);
-    }
-    50% {
-      transform: rotate(3deg);
-    }
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
   }
   @keyframes floatUp {
-    0% {
-      transform: translateY(10px);
-      opacity: 0;
-    }
-    20% {
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(-40px);
-      opacity: 0;
-    }
+    0% { transform: translateY(10px); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translateY(-40px); opacity: 0; }
   }
   @keyframes softRise {
-    from {
-      transform: translateY(12px) scale(0.985);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0) scale(1);
-      opacity: 1;
-    }
+    from { transform: translateY(12px) scale(0.985); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
   }
   @keyframes logoBreathe {
-    0%,
-    100% {
-      transform: translateY(0) scale(1);
-      filter: drop-shadow(0 12px 18px rgba(16, 33, 20, 0.14));
-    }
-    50% {
-      transform: translateY(-4px) scale(1.04);
-      filter: drop-shadow(0 18px 24px rgba(16, 33, 20, 0.2));
-    }
+    0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 12px 18px rgba(16,33,20,0.14)); }
+    50% { transform: translateY(-4px) scale(1.04); filter: drop-shadow(0 18px 24px rgba(16,33,20,0.2)); }
+  }
+  @keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUpSheet {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
   }
 }
 
-/* design tokens moved into :root for compatibility with LightningCSS/Turbopack */
+/* ── THEME VARIABLES ────────────────────────────────────── */
 
+/* Font wiring — these connect Next.js injected vars to our design tokens */
 :root {
+  /* --font-heading is injected by Next.js Baloo_2({ variable: "--font-heading" }) */
+  /* --font-body    is injected by Next.js Inter({ variable: "--font-body" }) */
+  --font-heading-font: var(--font-heading), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+  --font-body-font:    var(--font-body), "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root,
+[data-theme="light"] {
   color-scheme: light;
-  --font-sans: var(--font-body), "Manrope", system-ui, sans-serif;
-  --font-heading-font: var(--font-heading), "Baloo 2", system-ui, sans-serif;
-  --page-bg:
-    linear-gradient(135deg, rgba(232, 238, 224, 0.86) 0%, rgba(250, 248, 240, 0.94) 42%, rgba(226, 235, 218, 0.88) 100%);
+
+  /* backgrounds */
+  --bg-page:       linear-gradient(135deg, #e8eee0 0%, #faf8f0 48%, #e2ebda 100%);
+  --bg-sidebar:    #102016;
+  --bg-panel:      #fffefa;
+  --bg-panel-alt:  #f4f7ef;
+  --bg-input:      #fbfcf7;
+  --bg-card:       #fffefa;
+  --bg-hero:       linear-gradient(135deg, #112519 0%, #1f4d35 55%, #5d7250 100%);
+
+  /* borders */
+  --border-default: #dfe7d7;
+  --border-subtle:  #e7ecdf;
+  --border-input:   #d8e1d2;
+
+  /* text */
+  --text-primary:   #102016;
+  --text-secondary: #2f4f35;
+  --text-muted:     rgba(47,79,53,0.6);
+  --text-inverse:   #fcf9f2;
+  --text-sidebar:   #fcf9f2;
+  --text-sidebar-muted: rgba(252,249,242,0.55);
+  --text-accent:    #43653f;
+
+  /* sidebar active */
+  --sidebar-active-bg:   rgba(255,255,255,0.12);
+  --sidebar-active-text: #fcf9f2;
+  --sidebar-hover-bg:    rgba(255,255,255,0.07);
+
+  /* pill/tag */
+  --pill-bg:        #f4f7ef;
+  --pill-border:    #dce6d8;
+  --pill-text:      #2f4f35;
+  --pill-active-bg: #102016;
+  --pill-active-text: #fcf9f2;
 }
 
-html,
-body {
-  margin: 0;
-  min-height: 100%;
-  padding: 0;
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-page:       linear-gradient(135deg, #0c1a0e 0%, #111c12 48%, #0e1810 100%);
+  --bg-sidebar:    #070f08;
+  --bg-panel:      #141f15;
+  --bg-panel-alt:  #0f1810;
+  --bg-input:      #1a2b1c;
+  --bg-card:       #141f15;
+  --bg-hero:       linear-gradient(135deg, #0a120b 0%, #132018 55%, #1e3022 100%);
+
+  --border-default: #1e301f;
+  --border-subtle:  #19261a;
+  --border-input:   #243d26;
+
+  --text-primary:   #e8f0e4;
+  --text-secondary: #a8c8a0;
+  --text-muted:     rgba(168,200,160,0.55);
+  --text-inverse:   #102016;
+  --text-sidebar:   #e8f0e4;
+  --text-sidebar-muted: rgba(232,240,228,0.45);
+  --text-accent:    #88c878;
+
+  --sidebar-active-bg:   rgba(255,255,255,0.1);
+  --sidebar-active-text: #e8f0e4;
+  --sidebar-hover-bg:    rgba(255,255,255,0.05);
+
+  --pill-bg:        #1a2b1c;
+  --pill-border:    #243d26;
+  --pill-text:      #a8c8a0;
+  --pill-active-bg: #e8f0e4;
+  --pill-active-text: #102016;
 }
 
-body {
-  background: var(--page-bg);
-  color: #172419;
-  font-family: var(--font-sans);
-  line-height: 1.5;
+[data-theme="liquid"] {
+  color-scheme: light;
+
+  --bg-page:       linear-gradient(160deg, #0f2b4a 0%, #1a3d5c 30%, #0d3d3a 65%, #0f2b1e 100%);
+  --bg-sidebar:    #071828;
+  --bg-panel:      rgba(255,255,255,0.07);
+  --bg-panel-alt:  rgba(255,255,255,0.04);
+  --bg-input:      rgba(255,255,255,0.09);
+  --bg-card:       rgba(255,255,255,0.06);
+  --bg-hero:       linear-gradient(135deg, #071828 0%, #0d3540 55%, #0f3d2e 100%);
+
+  --border-default: rgba(255,255,255,0.12);
+  --border-subtle:  rgba(255,255,255,0.07);
+  --border-input:   rgba(255,255,255,0.18);
+
+  --text-primary:   #e4f4ff;
+  --text-secondary: #8ec8d8;
+  --text-muted:     rgba(228,244,255,0.5);
+  --text-inverse:   #071828;
+  --text-sidebar:   #e4f4ff;
+  --text-sidebar-muted: rgba(228,244,255,0.4);
+  --text-accent:    #5dcfe0;
+
+  --sidebar-active-bg:   rgba(93,207,224,0.15);
+  --sidebar-active-text: #e4f4ff;
+  --sidebar-hover-bg:    rgba(255,255,255,0.06);
+
+  --pill-bg:        rgba(255,255,255,0.08);
+  --pill-border:    rgba(255,255,255,0.14);
+  --pill-text:      #8ec8d8;
+  --pill-active-bg: rgba(93,207,224,0.2);
+  --pill-active-text: #e4f4ff;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-heading-font);
-}
+/* ── BASE ───────────────────────────────────────────────── */
 
-/* Normalize box sizing and responsive media */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-img,
-picture,
-video,
-svg {
+html, body {
+  margin: 0;
+  min-height: 100%;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+  /* Inter for all body/paragraph text */
+  font-family: var(--font-body-font);
+  line-height: 1.6;
+  /* Smooth theme transitions */
+  transition: background 400ms ease, color 300ms ease;
+}
+
+/* Baloo 2 for all heading elements */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading-font);
+  line-height: 1.15;
+}
+
+/* Labels, nav items, buttons — stay Inter */
+label, button, input, select, textarea, nav {
+  font-family: var(--font-body-font);
+}
+
+/* Explicit paragraph styling — Inter, relaxed line-height */
+p, li, td, th, blockquote, figcaption {
+  font-family: var(--font-body-font);
+  line-height: 1.65;
+}
+
+img, picture, video, svg {
   max-width: 100%;
   height: auto;
   display: block;
 }
 
-/* Helpful wrapper class for consistent page padding */
-.site-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
-a,
-button,
-input,
-textarea,
-select {
+a, button, input, textarea, select {
   transition:
-    color 240ms cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    color 240ms cubic-bezier(0.22,1,0.36,1),
+    background-color 240ms cubic-bezier(0.22,1,0.36,1),
+    border-color 240ms cubic-bezier(0.22,1,0.36,1),
+    box-shadow 280ms cubic-bezier(0.22,1,0.36,1),
+    transform 280ms cubic-bezier(0.22,1,0.36,1),
+    opacity 220ms cubic-bezier(0.22,1,0.36,1);
 }
 
-::selection {
-  background: rgba(47, 107, 70, 0.22);
-}
+::selection { background: rgba(47,107,70,0.22); }
 
-.text-balance {
-  text-wrap: balance;
-}
+/* ── UTILITY CLASSES ─────────────────────────────────────── */
+
+.text-balance { text-wrap: balance; }
 
 .reveal-card {
-  animation: softRise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: softRise 560ms cubic-bezier(0.22,1,0.36,1) both;
   will-change: transform;
 }
+.reveal-card:nth-child(2) { animation-delay: 35ms; }
+.reveal-card:nth-child(3) { animation-delay: 70ms; }
+.reveal-card:nth-child(4) { animation-delay: 105ms; }
+.reveal-card:nth-child(5) { animation-delay: 140ms; }
 
 .logo-breathe {
-  animation: logoBreathe 2.4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+  animation: logoBreathe 2.4s cubic-bezier(0.37,0,0.63,1) infinite;
   will-change: transform, filter;
 }
 
 .smooth-motion {
   transition-duration: 280ms;
-  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  transition-timing-function: cubic-bezier(0.22,1,0.36,1);
 }
 
-.reveal-card:nth-child(2) {
-  animation-delay: 35ms;
+.sidebar-slide { animation: slideInLeft 260ms cubic-bezier(0.22,1,0.36,1) both; }
+.sheet-slide   { animation: slideUpSheet 300ms cubic-bezier(0.22,1,0.36,1) both; }
+.fade-in       { animation: fadeIn 200ms ease both; }
+
+/* ── THEME-AWARE COMPONENT HELPERS ───────────────────────── */
+
+.t-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
 }
 
-.reveal-card:nth-child(3) {
-  animation-delay: 70ms;
+.t-panel-alt {
+  background: var(--bg-panel-alt);
 }
 
-.reveal-card:nth-child(4) {
-  animation-delay: 105ms;
+.t-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--text-primary);
 }
 
-.reveal-card:nth-child(5) {
-  animation-delay: 140ms;
+.t-input::placeholder { color: var(--text-muted); }
+.t-input:focus {
+  border-color: var(--text-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67,101,63,0.14);
 }
+
+[data-theme="liquid"] .t-input:focus {
+  box-shadow: 0 0 0 3px rgba(93,207,224,0.18);
+}
+
+/* Sidebar nav */
+.t-sidebar { background: var(--bg-sidebar); }
+.t-sidebar-link {
+  color: var(--text-sidebar-muted);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 200ms ease, color 200ms ease;
+}
+.t-sidebar-link:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--text-sidebar);
+}
+.t-sidebar-link.active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+}
+
+/* Liquid theme glass panels */
+[data-theme="liquid"] .t-panel {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+[data-theme="liquid"] .t-panel-alt {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── REDUCED MOTION ──────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 1ms !important;
   }
-
-  .reveal-card {
-    animation: none;
-    will-change: auto;
-  }
-
-  .logo-breathe {
-    animation: none;
-    will-change: auto;
-  }
+  .reveal-card, .logo-breathe { animation: none; will-change: auto; }
 }

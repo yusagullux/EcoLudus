@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel, Pill } from "@/components/game-ui";
-
 const badgeList = [
   { level: 1, name: "Cat", image: "/images/ecoquests-badges/cat-badge-removedbg.png" },
   { level: 2, name: "Fox", image: "/images/ecoquests-badges/fox-badge-removedbg.png" },
@@ -50,7 +49,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
   if (sorted.length === 0) {
     return (
       <Panel>
-        <div className="p-8 text-center text-forest-700">No players yet. Be the first to join!</div>
+        <div className="p-8 text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>No players yet. Be the first to join!</div>
       </Panel>
     );
   }
@@ -68,11 +67,11 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
             return (
               <article
                 key={player.id}
-                className={`flex flex-col items-center gap-3 rounded-[22px] border p-5 text-center shadow-[0_18px_48px_rgba(26,45,29,0.07)] transition hover:-translate-y-0.5 ${
-                  isGold
-                    ? "border-[#e6d3a6] bg-[#fbf4df] sm:-mt-3 sm:pb-7 sm:pt-7"
-                    : "border-[#dfe7d7] bg-[#fffefa]"
-                }`}
+                className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition hover:-translate-y-0.5 ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""}`}
+                style={{
+                  borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
+                  background: isGold ? "#fbf4df" : "var(--bg-panel)"
+                }}
               >
                 <span
                   className="font-serif text-3xl font-extrabold"
@@ -89,10 +88,10 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                   />
                 </span>
                 <div>
-                  <p className="font-serif text-lg font-extrabold leading-snug text-forest-950">
+                  <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "#102016" }}>
                     {player.displayName}
                   </p>
-                  <p className="text-xs font-semibold text-forest-700/58">
+                  <p className="text-xs font-semibold" style={{ color: "rgba(47,79,53,0.6)" }}>
                     {badge.name}, Lvl {player.level}
                   </p>
                 </div>
@@ -117,11 +116,11 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
       >
         <div className="-mx-5 -my-5 overflow-x-auto sm:-mx-6 sm:-my-6">
           <div className="min-w-[580px]">
-            <div className="grid grid-cols-[56px_1fr_100px_130px] items-center gap-4 border-b border-[#e7ecdf] bg-[#f4f7ef] px-5 py-3">
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">#</span>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">Player</span>
-              <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">Level</span>
-              <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">XP</span>
+            <div className="grid grid-cols-[56px_1fr_100px_130px] items-center gap-4 border-b px-5 py-3" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>#</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Player</span>
+              <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Level</span>
+              <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>XP</span>
             </div>
 
             {sorted.map((player, index) => {
@@ -132,9 +131,11 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
               return (
                 <div
                   key={player.id}
-                  className={`grid grid-cols-[56px_1fr_100px_130px] items-center gap-4 border-b border-[#edf1e8] px-5 py-4 last:border-0 transition hover:bg-[#f7f9f2] ${
-                    isCurrentUser ? "bg-[#eef5ea]" : "bg-[#fffefa]"
-                  }`}
+                  className={`grid grid-cols-[56px_1fr_100px_130px] items-center gap-4 border-b px-5 py-4 last:border-0 transition`}
+                  style={{
+                    borderColor: "var(--border-subtle)",
+                    background: isCurrentUser ? "var(--sidebar-active-bg)" : "var(--bg-panel)"
+                  }}
                 >
                   <div
                     className="text-center font-serif text-xl font-extrabold"
@@ -143,7 +144,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                     {rank}
                   </div>
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f4f7ef] p-1.5">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-1.5" style={{ background: "var(--bg-panel-alt)" }}>
                       <img
                         src={badge.image}
                         alt={`${badge.name} badge`}
@@ -152,21 +153,21 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                       />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-extrabold text-forest-950">
+                      <p className="truncate text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
                         {player.displayName}
                         {isCurrentUser ? " (You)" : ""}
                       </p>
-                      <p className="text-xs font-semibold text-forest-700/56">{badge.name} Badge</p>
+                      <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{badge.name} Badge</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <Pill>Lv {player.level}</Pill>
                   </div>
                   <div className="text-right">
-                    <p className="font-serif text-lg font-extrabold text-forest-800">
+                    <p className="font-serif text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>
                       {player.xp.toLocaleString()}
                     </p>
-                    <p className="text-[10px] font-bold text-forest-700/48">XP</p>
+                    <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>XP</p>
                   </div>
                 </div>
               );
@@ -182,10 +183,10 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
   if (teams.length === 0) {
     return (
       <Panel>
-        <div className="flex flex-col items-center gap-3 py-12 text-center text-forest-700/60">
+        <div className="flex flex-col items-center gap-3 py-12 text-center">
           <span className="text-4xl">🌿</span>
-          <p className="text-sm font-bold">No teams yet.</p>
-          <p className="text-xs">Create or join a team to compete here.</p>
+          <p className="text-sm font-bold" style={{ color: "var(--text-muted)" }}>No teams yet.</p>
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>Create or join a team to compete here.</p>
         </div>
       </Panel>
     );
@@ -202,12 +203,12 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
     >
       <div className="-mx-5 -my-5 overflow-x-auto sm:-mx-6 sm:-my-6">
         <div className="min-w-[600px]">
-          <div className="grid grid-cols-[56px_1fr_100px_120px_100px] items-center gap-4 border-b border-[#e7ecdf] bg-[#f4f7ef] px-5 py-3">
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">#</span>
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">Team</span>
-            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">Members</span>
-            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">Missions</span>
-            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-700/54">Team XP</span>
+          <div className="grid grid-cols-[56px_1fr_100px_120px_100px] items-center gap-4 border-b px-5 py-3" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>#</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Team</span>
+            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Members</span>
+            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Missions</span>
+            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Team XP</span>
           </div>
 
           {sorted.map((team, index) => {
@@ -216,17 +217,18 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
             return (
               <div
                 key={team.id}
-                className="grid grid-cols-[56px_1fr_100px_120px_100px] items-center gap-4 border-b border-[#edf1e8] bg-[#fffefa] px-5 py-4 last:border-0 transition hover:bg-[#f7f9f2]"
+                className="grid grid-cols-[56px_1fr_100px_120px_100px] items-center gap-4 border-b px-5 py-4 last:border-0 transition"
+                style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel)" }}
               >
                 <div
                   className="text-center font-serif text-xl font-extrabold"
-                  style={{ color: isTop3 ? medalColors[rank - 1] : "#8fa083" }}
+                  style={{ color: isTop3 ? medalColors[rank - 1] : "var(--text-muted)" }}
                 >
                   {rank}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-extrabold text-forest-950">{team.name}</p>
-                  <p className="text-xs font-semibold text-forest-700/56">Code: {team.joinCode}</p>
+                  <p className="truncate text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{team.name}</p>
+                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Code: {team.joinCode}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-extrabold text-forest-800">{team.memberCount}</p>
@@ -235,10 +237,10 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
                   <p className="text-sm font-extrabold text-forest-800">{team.missionsCompleted}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-serif text-base font-extrabold text-forest-800">
+                  <p className="font-serif text-base font-extrabold" style={{ color: "var(--text-primary)" }}>
                     {team.totalXP.toLocaleString()}
                   </p>
-                  <p className="text-[10px] font-bold text-forest-700/48">XP</p>
+                  <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>XP</p>
                 </div>
               </div>
             );
@@ -305,17 +307,16 @@ export default function LeaderboardPage() {
       />
 
       {/* Tab selector */}
-      <div className="flex rounded-xl bg-[#f4f7ef] p-1">
+      <div className="flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
         {(["individual", "team"] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-lg py-2.5 text-center text-xs font-extrabold uppercase tracking-wider transition ${
-              tab === t
-                ? "bg-white text-forest-950 shadow-sm"
-                : "text-forest-600 hover:text-forest-900"
-            }`}
+            className="flex-1 rounded-lg py-2.5 text-center text-xs font-extrabold uppercase tracking-wider transition"
+            style={tab === t
+              ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
+              : { color: "var(--text-muted)" }}
           >
             {t === "individual" ? "👤 Individual" : "🌿 Team"}
           </button>

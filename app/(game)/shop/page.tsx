@@ -4,9 +4,8 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { updateUserProfile } from "@/public/js/auth.js";
-import { HeroMetric, PageHero, Panel, Pill, primaryButton } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
-type Rarity = "common" | "rare" | "epic" | "legendary";
 type Mode = "plants" | "eggs";
 
 type ShopItem = {
@@ -16,13 +15,6 @@ type ShopItem = {
   price: number;
   image: string;
   hatchTime?: string;
-};
-
-const rarityStyle: Record<Rarity, { border: string; chip: string; accent: string }> = {
-  common: { border: "#d9e2d2", chip: "bg-[#eef2e8] text-[#344534]", accent: "#7c8b74" },
-  rare: { border: "#bed0dd", chip: "bg-[#edf5f8] text-[#27556b]", accent: "#2f5f86" },
-  epic: { border: "#d2c9df", chip: "bg-[#f2eff7] text-[#594174]", accent: "#62508f" },
-  legendary: { border: "#e6d3a6", chip: "bg-[#fbf4df] text-[#76511a]", accent: "#9a6b1f" }
 };
 
 const plants = [
@@ -133,12 +125,15 @@ export default function ShopPage() {
 
       <Panel>
         <div className="flex flex-col gap-4">
-          <div className="inline-flex w-fit rounded-full border border-[#dce6d8] bg-[#f4f7ef] p-1">
+          <div className="inline-flex w-fit rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
             {(["plants", "eggs"] as Mode[]).map((itemMode) => (
               <button
                 key={itemMode}
                 onClick={() => { setMode(itemMode); setFilter("all"); }}
-                className={`rounded-full px-5 py-2 text-sm font-extrabold capitalize transition ${mode === itemMode ? "bg-forest-950 text-cream-100 shadow-sm" : "text-forest-700 hover:text-forest-950"}`}
+                className="rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
+                style={mode === itemMode
+                  ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
+                  : { color: "var(--text-muted)" }}
               >
                 {itemMode}
               </button>
@@ -149,7 +144,10 @@ export default function ShopPage() {
               <button
                 key={rarity}
                 onClick={() => setFilter(rarity)}
-                className={`rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-[0.08em] transition ${filter === rarity ? "bg-forest-950 text-cream-100" : "border border-[#dce6d8] bg-[#f4f7ef] text-forest-700 hover:border-forest-500"}`}
+                className="rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
+                style={filter === rarity
+                  ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
+                  : { background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--pill-text)" }}
               >
                 {rarity}
               </button>
@@ -160,25 +158,37 @@ export default function ShopPage() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         {filtered.map((item) => {
-          const style = rarityStyle[item.rarity as Rarity];
+          const style = rarityStyle[item.rarity as Rarity] ?? rarityStyle.common;
+          const border = rarityBorder[item.rarity as Rarity] ?? rarityBorder.common;
           const canAfford = ecoPoints >= item.price;
           return (
-            <article key={item.id} className="reveal-card group flex flex-col overflow-hidden rounded-[22px] border bg-[#fffefa] shadow-[0_18px_48px_rgba(26,45,29,0.07)] transition hover:-translate-y-1 hover:shadow-[0_28px_64px_rgba(26,45,29,0.13)]" style={{ borderColor: style.border }}>
-              <div className="relative flex aspect-square min-h-44 items-center justify-center overflow-hidden p-5" style={{ background: `${style.accent}14` }}>
-                <div className="absolute inset-x-7 bottom-7 h-8 rounded-full bg-black/8 blur-xl transition group-hover:scale-110" />
+            <article
+              key={item.id}
+              className="reveal-card group flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
+              style={{ borderColor: border, background: "var(--bg-card)" }}
+            >
+              <div className="relative flex aspect-square min-h-36 items-center justify-center overflow-hidden p-4" style={{ background: `${style.accent}18` }}>
+                <div className="absolute inset-x-7 bottom-6 h-7 rounded-full bg-black/8 blur-xl transition group-hover:scale-110" />
                 <img
                   src={item.image}
                   alt={item.name}
                   loading="lazy"
-                  className="relative h-full max-h-36 w-full max-w-36 object-contain drop-shadow-[0_14px_18px_rgba(16,33,20,0.16)] transition duration-300 group-hover:scale-105"
+                  className="relative h-full max-h-32 w-full max-w-32 object-contain transition duration-300 group-hover:scale-105"
                 />
-                <span className={`absolute right-2 top-2 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
+                <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
               </div>
-              <div className="flex flex-1 flex-col gap-2 p-4">
-                <p className="font-serif text-lg font-extrabold leading-tight text-forest-950">{item.name}</p>
-                {(item as any).hatchTime && <p className="text-xs font-semibold text-forest-700/58">Hatches in {(item as any).hatchTime}</p>}
-                <p className="font-serif text-xl font-extrabold text-forest-800">{item.price} <span className="text-xs font-bold text-forest-600/58">EP</span></p>
-                <button onClick={() => handleBuy(item)} disabled={!canAfford} className={`mt-auto w-full ${canAfford ? primaryButton : "rounded-full bg-[#eef2e8] px-5 py-2.5 text-xs font-extrabold uppercase tracking-[0.1em] text-forest-500"}`}>
+              <div className="flex flex-1 flex-col gap-2 p-3">
+                <p className="font-serif text-sm font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>{item.name}</p>
+                {(item as any).hatchTime && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Hatches in {(item as any).hatchTime}</p>}
+                <p className="font-serif text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>
+                  {item.price} <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>EP</span>
+                </p>
+                <button
+                  onClick={() => handleBuy(item)}
+                  disabled={!canAfford}
+                  className={`mt-auto w-full ${canAfford ? primaryButton : "rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-[0.08em] cursor-not-allowed opacity-50"}`}
+                  style={!canAfford ? { background: "var(--bg-panel-alt)", color: "var(--text-muted)" } : undefined}
+                >
                   {canAfford ? "Buy" : "Can't afford"}
                 </button>
               </div>
@@ -188,7 +198,10 @@ export default function ShopPage() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-forest-950 px-6 py-3 text-sm font-extrabold text-cream-100 shadow-[0_20px_44px_rgba(16,33,20,0.3)]">
+        <div
+          className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl md:bottom-6"
+          style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}
+        >
           {toast}
         </div>
       )}

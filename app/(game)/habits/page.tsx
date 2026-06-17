@@ -120,11 +120,10 @@ function ConfidenceSelector({
             type="button"
             title={label}
             onClick={() => onChange(v)}
-            className={`flex-1 rounded-xl py-2 text-xs font-extrabold transition ${
-              active
-                ? "bg-forest-950 text-cream-100 shadow-sm"
-                : "bg-forest-50 text-forest-700 hover:bg-forest-100"
-            }`}
+            className="flex-1 rounded-xl py-2 text-xs font-extrabold transition"
+            style={active
+              ? { background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }
+              : { background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}
           >
             {v}
           </button>
@@ -336,21 +335,22 @@ export default function HabitsPage() {
               return (
                 <div
                   key={mission.id}
-                  className="flex items-start gap-4 px-5 py-4 hover:bg-[#f4f7ef] sm:px-6"
+                  className="flex items-start gap-4 px-5 py-4 sm:px-6 transition"
+                  style={{ borderBottom: "1px solid var(--border-subtle)" }}
                 >
                   <span
                     className="mt-1 h-2 w-2 shrink-0 rounded-full"
                     style={{ background: color }}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-forest-700/60">
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "var(--text-muted)" }}>
                       {mission.category}
                     </p>
-                    <p className="mt-0.5 text-sm font-extrabold text-forest-950">
+                    <p className="mt-0.5 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
                       {mission.title}
                     </p>
                     {unitHint && (
-                      <p className="mt-0.5 text-xs font-semibold text-forest-700/50">
+                      <p className="mt-0.5 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
                         Measure in: {unitHint}
                       </p>
                     )}
@@ -391,10 +391,10 @@ export default function HabitsPage() {
               desc: "Approved submissions give full XP. Trust score grows over time and unlocks multipliers."
             }
           ].map(({ icon, title, desc }) => (
-            <div key={title} className="rounded-2xl bg-[#f4f7ef] p-4">
+            <div key={title} className="rounded-2xl p-4" style={{ background: "var(--bg-panel-alt)" }}>
               <div className="mb-2 text-2xl">{icon}</div>
-              <p className="text-sm font-extrabold text-forest-950">{title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-forest-700/62">{desc}</p>
+              <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{title}</p>
+              <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{desc}</p>
             </div>
           ))}
         </div>
@@ -403,10 +403,11 @@ export default function HabitsPage() {
       {/* ── Submission Modal ── */}
       {activeMission && !result && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-[28px] border border-[#dce6d8] bg-[#fffefa] p-6 shadow-[0_24px_70px_rgba(16,33,20,0.25)]">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)]" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
             <button
               onClick={closeModal}
-              className="absolute right-5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-forest-100 text-forest-900 hover:bg-forest-200 transition text-lg font-bold"
+              className="absolute right-5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full transition text-lg font-bold"
+              style={{ background: "var(--bg-panel-alt)", color: "var(--text-primary)" }}
               aria-label="Close"
             >
               ×
@@ -414,13 +415,13 @@ export default function HabitsPage() {
 
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-forest-500">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
                   Log habit
                 </p>
-                <h3 className="mt-1 font-serif text-xl font-bold text-forest-950">
+                <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>
                   {activeMission.title}
                 </h3>
-                <p className="mt-1 text-xs font-semibold text-forest-700/54">
+                <p className="mt-1 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
                   Category: {activeMission.category} · Base reward: {activeMission.base_xp} XP
                 </p>
               </div>
@@ -428,7 +429,7 @@ export default function HabitsPage() {
               {activeMission.metadata?.preferredBeforeAfter && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.14em] text-forest-700/70">
+                    <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
                       Before{activeMission.metadata.unitHint ? ` (${activeMission.metadata.unitHint})` : ""}
                     </label>
                     <input
@@ -440,7 +441,7 @@ export default function HabitsPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.14em] text-forest-700/70">
+                    <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
                       After{activeMission.metadata.unitHint ? ` (${activeMission.metadata.unitHint})` : ""}
                     </label>
                     <input
@@ -455,7 +456,7 @@ export default function HabitsPage() {
               )}
 
               <div>
-                <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em] text-forest-700/70">
+                <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
                   Describe what you did *
                 </label>
                 <textarea
@@ -466,16 +467,15 @@ export default function HabitsPage() {
                   className={`${inputClass} resize-none`}
                 />
                 <p
-                  className={`mt-1 text-right text-[10px] font-bold ${
-                    description.trim().length >= 8 ? "text-forest-600" : "text-rose-500"
-                  }`}
+                  className={`mt-1 text-right text-[10px] font-bold ${description.trim().length >= 8 ? "" : "text-rose-500"}`}
+                  style={description.trim().length >= 8 ? { color: "var(--text-accent,#43653f)" } : undefined}
                 >
                   {description.trim().length}/8 min characters
                 </p>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em] text-forest-700/70">
+                <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
                   Self-confidence (1 = very unsure, 5 = very sure)
                 </label>
                 <ConfidenceSelector value={confidence} onChange={setConfidence} />
@@ -514,7 +514,7 @@ export default function HabitsPage() {
       {/* ── Result Modal ── */}
       {activeMission && result && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-[28px] border border-[#dce6d8] bg-[#fffefa] p-6 shadow-[0_24px_70px_rgba(16,33,20,0.25)]">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)]" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
             <div className="flex flex-col gap-5">
               {/* Verdict header */}
               {(() => {
@@ -549,8 +549,8 @@ export default function HabitsPage() {
               })()}
 
               {/* Gemini reasoning */}
-              <div className="rounded-xl bg-[#f4f7ef] px-4 py-3">
-                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-600">
+              <div className="rounded-xl px-4 py-3" style={{ background: "var(--bg-panel-alt)" }}>
+                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
                   Verification feedback
                 </p>
                 <p className="text-xs leading-relaxed text-forest-900">
@@ -571,17 +571,17 @@ export default function HabitsPage() {
               </div>
 
               {/* Trust delta */}
-              <div className="grid grid-cols-3 divide-x divide-[#e7ecdf] rounded-xl border border-[#e7ecdf] bg-white text-center">
+              <div className="grid grid-cols-3 divide-x rounded-xl border text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                 <div className="py-3">
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-forest-600">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
                     Trust before
                   </p>
-                  <p className="mt-0.5 text-sm font-extrabold text-forest-950">
+                  <p className="mt-0.5 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
                     {result.trust.previousScore.toFixed(1)}
                   </p>
                 </div>
                 <div className="py-3">
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-forest-600">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
                     Change
                   </p>
                   <p
@@ -594,10 +594,10 @@ export default function HabitsPage() {
                   </p>
                 </div>
                 <div className="py-3">
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-forest-600">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
                     Trust now
                   </p>
-                  <p className="mt-0.5 text-sm font-extrabold text-forest-950">
+                  <p className="mt-0.5 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
                     {result.trust.nextScore.toFixed(1)}
                   </p>
                 </div>
@@ -615,7 +615,7 @@ export default function HabitsPage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-forest-950 px-6 py-3 text-sm font-extrabold text-cream-100 shadow-[0_20px_44px_rgba(16,33,20,0.3)]">
+        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl md:bottom-6" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
           {toast}
         </div>
       )}

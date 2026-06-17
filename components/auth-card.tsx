@@ -158,15 +158,15 @@ export function AuthCard({ mode }: AuthCardProps) {
         </div>
       </aside>
 
-      <div className="flex items-center justify-center rounded-[28px] border border-[#dfe7d7] bg-[#fffefa]/94 px-6 py-12 shadow-[0_24px_70px_rgba(16,33,20,0.1)] backdrop-blur lg:rounded-l-none lg:px-14">
+      <div className="flex items-center justify-center rounded-[28px] border px-6 py-12 shadow-[0_24px_70px_rgba(16,33,20,0.1)] backdrop-blur lg:rounded-l-none lg:px-14" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
         <div className="w-full max-w-sm">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-forest-700/72">{content.eyebrow}</p>
-          <h1 className="mt-3 text-balance font-serif text-4xl font-extrabold leading-tight text-forest-950">{content.title}</h1>
-          <p className="mt-3 text-sm leading-6 text-forest-800/72">{content.subtitle}</p>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.24em]" style={{ color: "var(--text-muted)" }}>{content.eyebrow}</p>
+          <h1 className="mt-3 text-balance font-serif text-3xl font-extrabold leading-tight sm:text-4xl" style={{ color: "var(--text-primary)" }}>{content.title}</h1>
+          <p className="mt-3 text-sm leading-6" style={{ color: "var(--text-secondary)" }}>{content.subtitle}</p>
 
           <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-xs font-extrabold uppercase tracking-[0.14em] text-forest-800">
+              <label htmlFor="email" className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-secondary)" }}>
                 Email
               </label>
               <input
@@ -182,7 +182,7 @@ export function AuthCard({ mode }: AuthCardProps) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className="text-xs font-extrabold uppercase tracking-[0.14em] text-forest-800">
+              <label htmlFor="password" className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-secondary)" }}>
                 Password
               </label>
               <input
@@ -199,12 +199,12 @@ export function AuthCard({ mode }: AuthCardProps) {
             </div>
 
             {mode === "login" && (
-              <label className="flex items-center gap-3 text-sm font-bold text-forest-800">
+              <label className="flex items-center gap-3 text-sm font-bold" style={{ color: "var(--text-secondary)" }}>
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(event) => setRememberMe(event.target.checked)}
-                  className="h-4 w-4 rounded border-[#c8d5bf] text-forest-900 accent-forest-900"
+                  className="h-4 w-4 rounded accent-forest-900"
                 />
                 Remember me on this browser
               </label>
@@ -221,9 +221,9 @@ export function AuthCard({ mode }: AuthCardProps) {
             </button>
           </form>
 
-          <div className="mt-6 flex items-center justify-between border-t border-[#e7ecdf] pt-5 text-sm text-forest-700">
+          <div className="mt-6 flex items-center justify-between border-t pt-5 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>
             <span>{content.altPrompt}</span>
-            <Link href={content.altHref} className="font-extrabold text-forest-950 transition hover:text-forest-700">
+            <Link href={content.altHref} className="font-extrabold transition" style={{ color: "var(--text-primary)" }}>
               {content.altLabel}
             </Link>
           </div>

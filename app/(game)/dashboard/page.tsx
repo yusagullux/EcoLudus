@@ -383,7 +383,7 @@ export default function DashboardPage() {
         action={<Pill active>{pct}%</Pill>}
       >
         <ProgressBar value={pct} color="#2f6b46" />
-        <div className="mt-3 flex justify-between text-xs font-bold text-forest-700/70">
+        <div className="mt-3 flex justify-between text-xs font-bold" style={{ color: "var(--text-muted)" }}>
           <span>{(xp - curXP).toLocaleString()} XP earned this level</span>
           <span>{nextXP === Infinity ? "Max level" : `${(nextXP - curXP).toLocaleString()} XP total`}</span>
         </div>
@@ -395,14 +395,15 @@ export default function DashboardPage() {
         action={<Pill>Resets in {formatTime(timeLeft)}</Pill>}
         className="overflow-hidden"
       >
-        <div className="-mx-5 -mt-5 divide-y divide-[#e7ecdf] sm:-mx-6 sm:-mt-6">
+        <div className="-mx-5 -mt-5 divide-y sm:-mx-6 sm:-mt-6" style={{ borderColor: "var(--border-subtle)" }}>
           {quests.map((quest) => {
             const isSelected = selectedQuestIds.includes(quest.id);
             const isVerified = verifiedQuestIds.includes(quest.id);
             return (
               <label
                 key={quest.id}
-                className={`flex cursor-pointer items-start gap-4 px-5 py-4 transition hover:bg-[#f4f7ef] sm:px-6 ${quest.done ? "opacity-60" : ""} ${isSelected && !quest.done ? "bg-[#eef5ea]" : ""}`}
+                className={`flex cursor-pointer items-start gap-4 px-5 py-4 transition sm:px-6 ${quest.done ? "opacity-55" : ""}`}
+                style={{ background: isSelected && !quest.done ? "var(--sidebar-active-bg)" : "transparent" }}
               >
                 <input
                   type="checkbox"
@@ -414,14 +415,14 @@ export default function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: quest.categoryColor }} />
-                    <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-forest-700/70">{quest.category}</span>
+                    <span className="text-xs font-extrabold uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{quest.category}</span>
                   </div>
-                  <p className={`mt-1 text-sm font-extrabold text-forest-950 ${quest.done ? "line-through" : ""}`}>{quest.title}</p>
+                  <p className={`mt-1 text-sm font-extrabold ${quest.done ? "line-through" : ""}`} style={{ color: "var(--text-primary)" }}>{quest.title}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <div className="flex items-center gap-1.5">
                     <Pill>+{quest.xp} XP</Pill>
-                    <span className="text-[11px] font-bold text-forest-700/56">+{quest.eco} Eco</span>
+                    <span className="text-[11px] font-bold" style={{ color: "var(--text-muted)" }}>+{quest.eco} Eco</span>
                   </div>
                   {!quest.done && (
                     <button
@@ -436,11 +437,10 @@ export default function DashboardPage() {
                         setPhotoPreview(null);
                         setVerificationError(null);
                       }}
-                      className={`mt-1 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider transition ${
-                        isVerified
-                          ? "bg-[#eef5ea] text-forest-700"
-                          : "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                      }`}
+                      className="mt-1 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider transition"
+                      style={isVerified
+                        ? { background: "var(--sidebar-active-bg)", color: "var(--text-sidebar-muted)" }
+                        : { background: "#fef3c7", color: "#92400e" }}
                     >
                       {isVerified ? "Verified" : "Verify proof"}
                     </button>
@@ -463,7 +463,7 @@ export default function DashboardPage() {
       {/* ── Proof Verification Modal (Text + Photo) ── */}
       {activeTextVerifyQuest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-[28px] border border-[#dce6d8] bg-[#fffefa] p-6 shadow-[0_24px_70px_rgba(16,33,20,0.25)]">
+        <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)]" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
             <button
               onClick={() => {
                 setActiveTextVerifyQuest(null);
@@ -479,27 +479,29 @@ export default function DashboardPage() {
             </button>
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-forest-500">Quest verification</p>
-                <h3 className="mt-1 font-serif text-xl font-bold text-forest-950">Verify proof for: {activeTextVerifyQuest.title}</h3>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Quest verification</p>
+                <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Verify proof for: {activeTextVerifyQuest.title}</h3>
               </div>
 
               {/* Proof type tabs */}
-              <div className="flex rounded-xl bg-forest-50 p-1">
+              <div className="flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
                 <button
                   type="button"
                   onClick={() => { setProofType("text"); setVerificationError(null); }}
-                  className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition ${
-                    proofType === "text" ? "bg-white text-forest-900 shadow-sm" : "text-forest-600 hover:text-forest-900"
-                  }`}
+                  className="flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
+                  style={proofType === "text"
+                    ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
+                    : { color: "var(--text-muted)" }}
                 >
                   ✏️ Text Proof
                 </button>
                 <button
                   type="button"
                   onClick={() => { setProofType("photo"); setVerificationError(null); }}
-                  className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition ${
-                    proofType === "photo" ? "bg-white text-forest-900 shadow-sm" : "text-forest-600 hover:text-forest-900"
-                  }`}
+                  className="flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
+                  style={proofType === "photo"
+                    ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
+                    : { color: "var(--text-muted)" }}
                 >
                   📷 Photo Proof
                 </button>
@@ -507,7 +509,7 @@ export default function DashboardPage() {
 
               {proofType === "text" ? (
                 <div>
-                  <label htmlFor="quest-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                  <label htmlFor="quest-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
                     Describe what you did to complete this quest
                   </label>
                   <textarea
@@ -518,27 +520,29 @@ export default function DashboardPage() {
                     rows={4}
                     className={`${inputClass} resize-none`}
                   />
-                  <p className={`mt-1 text-right text-[10px] font-bold ${textProof.trim().length >= 8 ? "text-forest-600" : "text-rose-500"}`}>
+                  <p className={`mt-1 text-right text-[10px] font-bold ${textProof.trim().length >= 8 ? "" : "text-rose-500"}`} style={textProof.trim().length >= 8 ? { color: "var(--text-accent, #43653f)" } : undefined}>
                     {textProof.trim().length}/8 min characters
                   </p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.16em] text-forest-700/70">
+                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
                     Upload a photo showing quest completion
                   </label>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => document.getElementById("quest-photo-camera")?.click()}
-                      className="flex-1 rounded-xl border border-forest-200 bg-white py-3 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
+                      className="flex-1 rounded-xl border py-3 text-xs font-bold transition-all"
+                      style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}
                     >
                       📸 Take Photo
                     </button>
                     <button
                       type="button"
                       onClick={() => document.getElementById("quest-photo-gallery")?.click()}
-                      className="flex-1 rounded-xl border border-forest-200 bg-white py-3 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
+                      className="flex-1 rounded-xl border py-3 text-xs font-bold transition-all"
+                      style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}
                     >
                       🖼️ Gallery
                     </button>
@@ -645,19 +649,19 @@ export default function DashboardPage() {
       )}
 
       {completedPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6">
-          <div className="w-full max-w-2xl rounded-[28px] border border-white/20 bg-[#f8fff5] p-6 shadow-[0_28px_70px_rgba(16,33,20,0.25)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+          <div className="w-full max-w-lg rounded-[24px] border p-6 shadow-[0_28px_70px_rgba(0,0,0,0.3)]" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-forest-950 text-3xl font-extrabold text-cream-100">✓</div>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-forest-950 text-2xl font-extrabold text-cream-100">✓</div>
               <div>
-                <h3 className="text-xl font-extrabold text-forest-950">Mission complete!</h3>
-                <p className="mt-2 text-sm leading-6 text-forest-700">{completedPopup}</p>
+                <h3 className="text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>Mission complete!</h3>
+                <p className="mt-1 text-sm leading-6" style={{ color: "var(--text-muted)" }}>{completedPopup}</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setCompletedPopup(null)}
-              className="mt-6 inline-flex rounded-full bg-forest-950 px-5 py-3 text-sm font-extrabold text-cream-100 shadow-[0_12px_24px_rgba(16,33,20,0.2)] hover:bg-forest-800"
+              className="mt-5 inline-flex rounded-full bg-forest-950 px-5 py-2.5 text-sm font-extrabold text-cream-100 hover:bg-forest-800 transition"
             >
               Close
             </button>
@@ -671,15 +675,15 @@ export default function DashboardPage() {
           {categoryProgress.map(({ name, image, color, done, total }) => {
             const progress = Math.round((done / total) * 100);
             return (
-              <article key={name} className="reveal-card rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] p-4 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_16px_38px_rgba(26,45,29,0.08)]">
+              <article key={name} className="reveal-card rounded-2xl border p-4 transition hover:-translate-y-0.5" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
+                    <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl" style={{ background: "var(--bg-panel)" }}>
                       <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
                     </span>
                     <div>
-                      <p className="text-sm font-extrabold text-forest-950">{name}</p>
-                      <p className="text-xs font-semibold text-forest-700/62">{done}/{total} quests</p>
+                      <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</p>
+                      <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{done}/{total} quests</p>
                     </div>
                   </div>
                   {done === total && <Pill active>Done</Pill>}
@@ -693,7 +697,7 @@ export default function DashboardPage() {
       </Panel>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl bg-forest-950 px-6 py-3 text-sm font-extrabold text-cream-100 shadow-[0_20px_44px_rgba(16,33,20,0.3)]">
+        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl md:bottom-6" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
           {toast}
         </div>
       )}
