@@ -47,6 +47,11 @@ export async function POST(request: Request) {
       const buffer = Buffer.from(base64Data, "base64");
       const resolvedMimeType = mimeType || "image/jpeg";
 
+      // Log key status so we can see what's happening in server logs
+      const keyPresent = !!process.env.GEMINI_API_KEY?.trim();
+      const keyPrefix = process.env.GEMINI_API_KEY?.trim().slice(0, 6);
+      console.log(`[verify] photo proof — key present: ${keyPresent}, prefix: ${keyPrefix}, model: ${process.env.GEMINI_MODEL}`);
+
       const result = await verifyImageWithProvider(
         buffer,
         session.userId || "",
@@ -54,6 +59,8 @@ export async function POST(request: Request) {
         quest.title,
         resolvedMimeType
       );
+
+      console.log(`[verify] photo result — verified: ${result.verified}, provider: ${result.provider}, details: ${result.details?.slice(0, 100)}`);
 
       if (!result.verified) {
         return NextResponse.json(

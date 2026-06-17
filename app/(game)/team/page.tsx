@@ -647,7 +647,7 @@ export default function TeamPage() {
 
       {/* ── Toast ── */}
       {toast && (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold shadow-xl md:bottom-6" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold shadow-xl" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
           {toast}
         </div>
       )}

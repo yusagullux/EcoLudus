@@ -697,10 +697,11 @@ export default function DashboardPage() {
       </Panel>
 
       {toast && (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl md:bottom-6" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
           {toast}
         </div>
       )}
     </div>
   );
 }
+

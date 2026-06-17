@@ -8,20 +8,13 @@ import { sql } from "./db";
 // Both use the same Gemini API endpoint, just different auth methods.
 
 function getGeminiEndpoint(model: string, key: string): { url: string; headers: Record<string, string> } {
-  const base = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-  if (key.startsWith("AIza")) {
-    // Legacy standard key — query param auth
-    return {
-      url: `${base}?key=${encodeURIComponent(key)}`,
-      headers: { "Content-Type": "application/json" }
-    };
-  }
-  // New auth key (AQ. prefix) — Bearer token auth
+  // Try all auth methods — AQ. keys work differently depending on project setup
+  // Using x-goog-api-key header works for both AIzaSy (standard) and AQ. (auth) keys
   return {
-    url: base,
+    url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${key}`
+      "x-goog-api-key": key
     }
   };
 }
@@ -149,6 +142,8 @@ export async function verifyImageWithProvider(
 
     if (!response.ok) {
       const text = await response.text();
+      console.error(`[Gemini photo] HTTP ${response.status} — key prefix: ${geminiApiKey.slice(0,8)}, url: ${url.split("?")[0]}`);
+      console.error(`[Gemini photo] Response body: ${text.slice(0, 500)}`);
       throw new Error(`Gemini photo verification returned ${response.status}: ${text}`);
     }
 

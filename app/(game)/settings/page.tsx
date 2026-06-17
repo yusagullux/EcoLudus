@@ -29,7 +29,7 @@ const THEMES: { value: Theme; label: string; desc: string; preview: string }[] =
 function Toast({ message, type }: { message: string; type: "success" | "error" }) {
   return (
     <div
-      className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl md:bottom-6"
+      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl"
       style={{
         background: type === "success" ? "var(--bg-sidebar)" : "#ef4444",
         color: "var(--text-sidebar, #fcf9f2)"

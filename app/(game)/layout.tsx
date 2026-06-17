@@ -17,8 +17,8 @@ export default function GameLayout({
         style={{ background: "var(--bg-page, linear-gradient(135deg,#e8eee0,#faf8f0,#e2ebda))" }}
       >
         <div className="flex flex-col items-center gap-4">
-          <div className="logo-breathe relative h-16 w-16 overflow-hidden rounded-3xl bg-white shadow-[0_18px_38px_rgba(16,33,20,0.16)]">
-            <Image src="/images/logo.png" alt="EcoLudus" fill sizes="64px" className="object-cover" priority />
+          <div className="logo-breathe relative h-14 w-14 overflow-hidden rounded-2xl bg-white shadow-[0_18px_38px_rgba(16,33,20,0.16)]">
+            <Image src="/images/logo.png" alt="EcoLudus" fill sizes="56px" className="object-cover" priority />
           </div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--text-muted, #5f7c52)" }}>
             Loading…
@@ -30,16 +30,20 @@ export default function GameLayout({
 
   return (
     <ThemeProvider>
-      {/* Sidebar (desktop: fixed left; mobile: top bar + bottom nav) */}
       <Sidebar user={user} profile={profile} />
 
-      {/* Main scroll area */}
+      {/* ── Page wrapper ── */}
       <div className="app-main-bg min-h-screen">
         <main
-          className="mx-auto px-4 sm:px-6 pt-[60px] pb-[80px] md:ml-[220px] md:pt-8 md:pb-10 md:px-8"
-          style={{ maxWidth: "calc(100vw - 0px)" }}
+          className={[
+            /* Mobile: offset below top bar only (no bottom nav) */
+            "pt-[56px] pb-6 px-4 sm:px-5",
+            /* Desktop: offset for 240px sidebar, full available width */
+            "md:ml-[240px] md:pt-7 md:pb-8 md:px-8",
+          ].join(" ")}
         >
-          <div className="max-w-5xl">
+          {/* Content width: fills available space with a comfortable max */}
+          <div className="mx-auto w-full max-w-[1100px]">
             {children}
           </div>
         </main>

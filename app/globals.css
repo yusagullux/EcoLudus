@@ -343,16 +343,54 @@ a, button, input, textarea, select {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* ── REDUCED MOTION ──────────────────────────────────────── */
+/* ── DARK THEME: invert forest color scale ───────────────────
+   Tailwind text-forest-* classes resolve to var(--color-forest-*)
+   Redefining these per theme means EVERY hardcoded forest class
+   automatically becomes readable — no !important needed.
+   ─────────────────────────────────────────────────────────── */
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 1ms !important;
-  }
-  .reveal-card, .logo-breathe { animation: none; will-change: auto; }
+[data-theme="dark"] {
+  /* Flip the forest scale: darkest becomes lightest */
+  --color-forest-950: #e8f0e4;
+  --color-forest-900: #d4e8cc;
+  --color-forest-800: #b8d4b0;
+  --color-forest-700: #9cc098;
+  --color-forest-600: #80ac80;
+  --color-forest-500: #649864;
+  --color-forest-400: #4a7c4a;
+  --color-forest-300: #346034;
+  --color-forest-200: #204420;
+  --color-forest-100: #0f2810;
+  --color-forest-50:  #071408;
+
+  /* White → dark panel */
+  --color-white: #141f15;
+
+  /* Cream → dark inverse */
+  --color-cream-100: #e8f0e4;
+  --color-cream-200: #c8d8c4;
+}
+
+[data-theme="liquid"] {
+  /* Liquid uses blue-teal tones — flip forest to light blue */
+  --color-forest-950: #e4f4ff;
+  --color-forest-900: #c8e8f8;
+  --color-forest-800: #a8d4ec;
+  --color-forest-700: #8ec8d8;
+  --color-forest-600: #6ab8cc;
+  --color-forest-500: #4aa8bc;
+  --color-forest-400: #2e94a8;
+  --color-forest-300: #1a7890;
+  --color-forest-200: #0c5c74;
+  --color-forest-100: #04404e;
+  --color-forest-50:  #02282e;
+
+  /* White → glass panel */
+  --color-white: rgba(255,255,255,0.08);
+
+  /* Cream → light blue-white */
+  --color-cream-100: #e4f4ff;
+  --color-cream-200: #c0e0f4;
 }
 
 /* ── PAGE BACKGROUND ─────────────────────────────────────── */
@@ -375,107 +413,36 @@ a, button, input, textarea, select {
   --bg-page-solid: #0f2b3a;
 }
 
-/* ── DARK / LIQUID: remap hardcoded forest text colors ───────
-   Flat selectors (no nesting) for maximum browser compatibility
+/* ── BACKGROUND OVERRIDES for hardcoded hex values ──────────
+   The forest color variable approach handles text automatically.
+   These handle hardcoded bg hex values still present in pages.
    ─────────────────────────────────────────────────────────── */
 
-/* Primary */
-[data-theme="dark"] .text-forest-950,
-[data-theme="dark"] .text-forest-900,
-[data-theme="liquid"] .text-forest-950,
-[data-theme="liquid"] .text-forest-900 {
-  color: var(--text-primary) !important;
-}
-
-/* Secondary */
-[data-theme="dark"] .text-forest-800,
-[data-theme="dark"] .text-forest-700,
-[data-theme="liquid"] .text-forest-800,
-[data-theme="liquid"] .text-forest-700 {
-  color: var(--text-secondary) !important;
-}
-
-/* Muted */
-[data-theme="dark"] .text-forest-600,
-[data-theme="dark"] .text-forest-500,
-[data-theme="dark"] .text-forest-400,
-[data-theme="dark"] .text-forest-300,
-[data-theme="liquid"] .text-forest-600,
-[data-theme="liquid"] .text-forest-500,
-[data-theme="liquid"] .text-forest-400,
-[data-theme="liquid"] .text-forest-300 {
-  color: var(--text-muted) !important;
-}
-
-/* Accent */
-[data-theme="dark"] .text-forest-200,
-[data-theme="dark"] .text-forest-100,
-[data-theme="liquid"] .text-forest-200,
-[data-theme="liquid"] .text-forest-100 {
-  color: var(--text-accent) !important;
-}
-
-/* Inverse text (used on dark hero banners) */
-[data-theme="dark"] .text-white,
-[data-theme="dark"] .text-cream-100,
-[data-theme="liquid"] .text-white,
-[data-theme="liquid"] .text-cream-100 {
-  color: var(--text-sidebar) !important;
-}
-
-/* White backgrounds → panel */
 [data-theme="dark"] .bg-white,
-[data-theme="liquid"] .bg-white {
-  background-color: var(--bg-panel) !important;
-}
+[data-theme="liquid"] .bg-white { background-color: var(--bg-panel) !important; }
 
-/* Hardcoded light panel bg colors */
-[data-theme="dark"] .bg-\[#fffefa\],
-[data-theme="dark"] .bg-\[#f7f9f2\],
-[data-theme="dark"] .bg-\[#f4f7ef\],
-[data-theme="dark"] .bg-\[#fbfcf7\],
-[data-theme="dark"] .bg-\[#f8fff5\],
-[data-theme="dark"] .bg-\[#f0f8e8\],
-[data-theme="liquid"] .bg-\[#fffefa\],
-[data-theme="liquid"] .bg-\[#f7f9f2\],
-[data-theme="liquid"] .bg-\[#f4f7ef\],
-[data-theme="liquid"] .bg-\[#fbfcf7\],
-[data-theme="liquid"] .bg-\[#f8fff5\],
-[data-theme="liquid"] .bg-\[#f0f8e8\] {
+[data-theme="dark"] .bg-\[#fffefa\], [data-theme="dark"] .bg-\[#f7f9f2\],
+[data-theme="dark"] .bg-\[#f4f7ef\], [data-theme="dark"] .bg-\[#fbfcf7\],
+[data-theme="liquid"] .bg-\[#fffefa\], [data-theme="liquid"] .bg-\[#f7f9f2\],
+[data-theme="liquid"] .bg-\[#f4f7ef\], [data-theme="liquid"] .bg-\[#fbfcf7\] {
   background-color: var(--bg-panel-alt) !important;
 }
 
-/* Hardcoded light borders */
-[data-theme="dark"] .border-\[#dfe7d7\],
-[data-theme="dark"] .border-\[#e7ecdf\],
+[data-theme="dark"] .border-\[#dfe7d7\], [data-theme="dark"] .border-\[#e7ecdf\],
 [data-theme="dark"] .border-\[#dce6d8\],
-[data-theme="dark"] .border-forest-100,
-[data-theme="dark"] .border-forest-200,
-[data-theme="liquid"] .border-\[#dfe7d7\],
-[data-theme="liquid"] .border-\[#e7ecdf\],
-[data-theme="liquid"] .border-\[#dce6d8\],
-[data-theme="liquid"] .border-forest-100,
-[data-theme="liquid"] .border-forest-200 {
+[data-theme="liquid"] .border-\[#dfe7d7\], [data-theme="liquid"] .border-\[#e7ecdf\],
+[data-theme="liquid"] .border-\[#dce6d8\] {
   border-color: var(--border-default) !important;
 }
 
-/* Forest bg colors → panel */
-[data-theme="dark"] .bg-forest-50,
-[data-theme="dark"] .bg-forest-100,
-[data-theme="liquid"] .bg-forest-50,
-[data-theme="liquid"] .bg-forest-100 {
-  background-color: var(--bg-panel-alt) !important;
-}
+/* ── REDUCED MOTION ──────────────────────────────────────── */
 
-[data-theme="dark"] .bg-forest-950,
-[data-theme="dark"] .bg-forest-900,
-[data-theme="liquid"] .bg-forest-950,
-[data-theme="liquid"] .bg-forest-900 {
-  background-color: var(--bg-sidebar) !important;
-}
-
-/* Sidebar stays dark on all themes — its own variable handles this */
-[data-theme="dark"] .t-sidebar,
-[data-theme="liquid"] .t-sidebar {
-  background: var(--bg-sidebar) !important;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+  .reveal-card, .logo-breathe { animation: none; will-change: auto; }
 }
