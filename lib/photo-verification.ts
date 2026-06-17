@@ -1,6 +1,47 @@
-import { createHash, randomUUID } from "crypto";
+import { createHash } from "crypto";
 import { sql } from "./db";
 
+// ── Key format detection ──────────────────────────────────────────────────────
+// Google AI Studio now issues two key formats:
+//   - Legacy "standard" keys: start with "AIza" — sent via ?key= query param
+//   - New "auth" keys (June 2026+): start with "AQ."  — sent via Authorization: Bearer header
+// Both use the same Gemini API endpoint, just different auth methods.
+
+function getGeminiEndpoint(model: string, key: string): { url: string; headers: Record<string, string> } {
+  const base = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  if (key.startsWith("AIza")) {
+    // Legacy standard key — query param auth
+    return {
+      url: `${base}?key=${encodeURIComponent(key)}`,
+      headers: { "Content-Type": "application/json" }
+    };
+  }
+  // New auth key (AQ. prefix) — Bearer token auth
+  return {
+    url: base,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${key}`
+    }
+  };
+}
+
+// ── Startup warning ───────────────────────────────────────────────────────────
+function warnIfKeyMissing() {
+  const key = process.env.GEMINI_API_KEY?.trim();
+  if (!key) {
+    console.warn(
+      "[EcoLudus] GEMINI_API_KEY is not set — AI verification disabled. " +
+      "Get a free key at https://aistudio.google.com/app/apikey"
+    );
+  }
+}
+
+if (typeof process !== "undefined" && process.env) {
+  warnIfKeyMissing();
+}
+
+// ── DB helpers ────────────────────────────────────────────────────────────────
 type PhotoHashRecord = {
   id: string;
   image_hash: string;
@@ -18,7 +59,6 @@ export async function getExistingPhotoHash(imageHash: string) {
     "select id, image_hash, user_id, quest_id, created_at from photo_hashes where image_hash = $1 limit 1",
     [imageHash]
   );
-
   return result.rows[0] ?? null;
 }
 
@@ -29,6 +69,7 @@ export async function savePhotoHash(imageHash: string, userId: string, questId: 
   );
 }
 
+// ── Photo verification via Gemini ─────────────────────────────────────────────
 export async function verifyImageWithProvider(
   buffer: Buffer,
   userId: string,
@@ -36,180 +77,117 @@ export async function verifyImageWithProvider(
   questTitle: string | null = null,
   mimeType: string | null = null
 ) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-  if (geminiApiKey) {
-    try {
-      const base64Image = buffer.toString("base64");
-      const resolvedMimeType = mimeType || "image/jpeg";
-      
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-        geminiModel
-      )}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
-
-      let detailsText = "";
-      if (questId) {
-        try {
-          const { getQuestDefinition } = await import("./carbon-calc");
-          const questDef = await getQuestDefinition(questId);
-          if (questDef) {
-            detailsText = `\nQuest Category: ${questDef.categoryName}\nQuest Description: ${questDef.title}`;
-          }
-        } catch (e) {
-          // Ignore import/fetch errors
-        }
-      }
-
-      const prompt = [
-        "You are EcoLudus's automated environmental quest photo verifier.",
-        `Verify if the attached image provides plausible visual proof of completing the quest: "${questTitle || questId || 'Eco Quest'}".`,
-        detailsText,
-        "Analyze the image for: relevance to the quest, clarity of the proof, and potential mismatch.",
-        "CRITICAL RULES:",
-        "1. If the photo is not about the quest, is unrelated, or does not show completion of the quest, then verified must be false.",
-        "2. Do NOT mention anywhere in your reasoning or warnings that the validation is controlled by AI or Gemini. Keep explanations neutral, focusing purely on visual details.",
-        "Ensure the response is structured as JSON matching the schema."
-      ].join("\n");
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                { text: prompt },
-                {
-                  inlineData: {
-                    mimeType: resolvedMimeType,
-                    data: base64Image
-                  }
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.15,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                verified: {
-                  type: "BOOLEAN"
-                },
-                reasoning: {
-                  type: "STRING"
-                },
-                warnings: {
-                  type: "ARRAY",
-                  items: {
-                    type: "STRING"
-                  }
-                }
-              },
-              required: ["verified", "reasoning", "warnings"]
-            }
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Gemini photo verification returned ${response.status}: ${text}`);
-      }
-
-      const payload = await response.json();
-      const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      let jsonText = text;
-      if (typeof jsonText === "string") {
-        jsonText = jsonText.trim();
-        if (jsonText.startsWith("```json")) {
-          jsonText = jsonText.substring(7);
-        } else if (jsonText.startsWith("```")) {
-          jsonText = jsonText.substring(3);
-        }
-        if (jsonText.endsWith("```")) {
-          jsonText = jsonText.substring(0, jsonText.length - 3);
-        }
-        jsonText = jsonText.trim();
-      }
-
-      const parsed = typeof jsonText === "string" ? JSON.parse(jsonText) : payload;
-
-      return {
-        verified: Boolean(parsed.verified ?? true),
-        warnings: Array.isArray(parsed.warnings) ? parsed.warnings.map(String) : [],
-        provider: `google-gemini-photo:${geminiModel}`,
-        details: parsed.reasoning || null
-      };
-    } catch (error) {
-      console.error("Gemini photo verification failed, falling back:", error);
-    }
-  }
-
-  const endpoint = process.env.PHOTO_VERIFICATION_ENDPOINT;
-  const apiKey = process.env.PHOTO_VERIFICATION_API_KEY;
-
-  if (!endpoint || !apiKey) {
+  if (!geminiApiKey) {
     return {
-      verified: true,
+      verified: false,
       warnings: [],
-      provider: null
+      provider: null,
+      details: "Photo verification requires a Gemini API key. Please add GEMINI_API_KEY to your environment, or use text proof instead."
     };
   }
 
-  const base64Image = buffer.toString("base64");
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      image: base64Image,
-      userId,
-      questId
-    })
-  });
+  try {
+    const base64Image = buffer.toString("base64");
+    const resolvedMimeType = mimeType || "image/jpeg";
+    const { url, headers } = getGeminiEndpoint(geminiModel, geminiApiKey);
 
-  if (!response.ok) {
-    const payload = await response.text();
-    throw new Error(`Photo verification provider returned ${response.status}: ${payload}`);
+    let detailsText = "";
+    if (questId) {
+      try {
+        const { getQuestDefinition } = await import("./carbon-calc");
+        const questDef = await getQuestDefinition(questId);
+        if (questDef) {
+          detailsText = `\nQuest Category: ${questDef.categoryName}\nQuest Description: ${questDef.title}`;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const prompt = [
+      "You are EcoLudus's automated environmental quest photo verifier.",
+      `Verify if the attached image provides plausible visual proof of completing the quest: "${questTitle || questId || "Eco Quest"}".`,
+      detailsText,
+      "Analyze the image for: relevance to the quest, clarity of the proof, and potential mismatch.",
+      "CRITICAL RULES:",
+      "1. If the photo is not about the quest, is unrelated, or does not show completion of the quest, verified must be false.",
+      "2. Do NOT mention that validation is controlled by AI or Gemini. Keep explanations neutral, focusing on visual details.",
+      "Return JSON matching the schema."
+    ].join("\n");
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: resolvedMimeType, data: base64Image } }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.15,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              verified: { type: "BOOLEAN" },
+              reasoning: { type: "STRING" },
+              warnings: { type: "ARRAY", items: { type: "STRING" } }
+            },
+            required: ["verified", "reasoning", "warnings"]
+          }
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Gemini photo verification returned ${response.status}: ${text}`);
+    }
+
+    const payload = await response.json();
+    let jsonText = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (typeof jsonText === "string") {
+      jsonText = jsonText.trim().replace(/^```json\s*/,"").replace(/^```\s*/,"").replace(/\s*```$/,"").trim();
+    }
+
+    const parsed = typeof jsonText === "string" ? JSON.parse(jsonText) : payload;
+
+    return {
+      verified: Boolean(parsed.verified ?? false),
+      warnings: Array.isArray(parsed.warnings) ? parsed.warnings.map(String) : [],
+      provider: `google-gemini-photo:${geminiModel}`,
+      details: parsed.reasoning || null
+    };
+  } catch (error) {
+    console.error("Gemini photo verification failed:", error);
+    return {
+      verified: false,
+      warnings: [],
+      provider: "error",
+      details: "Photo verification is temporarily unavailable. Please try again or use text proof instead."
+    };
   }
-
-  const payload = await response.json();
-
-  return {
-    verified: Boolean(payload?.verified ?? true),
-    warnings: Array.isArray(payload?.warnings) ? payload.warnings.map(String) : [],
-    provider: String(payload?.provider ?? endpoint),
-    details: payload?.details ?? null
-  };
 }
 
+// ── Gibberish detection ───────────────────────────────────────────────────────
 function isObviousGibberish(text: string): boolean {
   const cleaned = text.trim().toLowerCase();
-  // Too short to be meaningful
   if (cleaned.length < 12) return true;
-  // Repeated single character (e.g. "aaaaaaaaaa", "xxxxxxxxxx")
   if (/^(.)\1{5,}$/.test(cleaned.replace(/\s/g, ""))) return true;
-  // No vowels at all (likely keyboard mashing like "dfghjkl")
   if (cleaned.length > 8 && !/[aeiou]/i.test(cleaned)) return true;
-  // Mostly non-letter characters (numbers/symbols spam)
   const letterCount = (cleaned.match(/[a-z]/gi) || []).length;
   if (letterCount / cleaned.length < 0.4) return true;
-  // Repeated word pattern (e.g. "test test test test")
   const words = cleaned.split(/\s+/);
-  if (words.length >= 3) {
-    const unique = new Set(words);
-    if (unique.size === 1) return true;
-  }
-  // Same 2-3 char substring repeated (e.g. "abcabcabcabc")
+  if (words.length >= 3 && new Set(words).size === 1) return true;
   const noSpaces = cleaned.replace(/\s/g, "");
   for (let len = 2; len <= 3; len++) {
     if (noSpaces.length >= len * 3) {
@@ -220,6 +198,7 @@ function isObviousGibberish(text: string): boolean {
   return false;
 }
 
+// ── Heuristic fallback (no Gemini key) ───────────────────────────────────────
 function heuristicTextVerification(
   textProof: string,
   questTitle: string
@@ -227,53 +206,49 @@ function heuristicTextVerification(
   const cleaned = textProof.trim().toLowerCase();
   const questWords = questTitle.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
 
-  // Too short
   if (cleaned.length < 15) {
-    return { verified: false, reasoning: "Your description is too short. Please explain specifically what you did to complete this quest." };
+    return { verified: false, reasoning: "Your description is too short. Please explain specifically what you did." };
   }
 
-  // Check if it's just the quest title repeated
-  const isJustTitle = questWords.length > 0 && questWords.every((word) => cleaned.includes(word)) && cleaned.split(/\s+/).length <= questWords.length + 2;
+  const isJustTitle =
+    questWords.length > 0 &&
+    questWords.every((w) => cleaned.includes(w)) &&
+    cleaned.split(/\s+/).length <= questWords.length + 2;
   if (isJustTitle) {
-    return { verified: false, reasoning: "Your description just repeats the quest name. Please describe the specific action you took." };
+    return { verified: false, reasoning: "Your description just repeats the quest name. Describe the specific action you took." };
   }
 
-  // Must contain at least some action words or specific details
   const actionWords = ["i ", "my ", "the ", "used ", "did ", "made ", "took ", "went ", "collected ", "sorted ", "reduced ", "switched ", "turned ", "walked ", "recycled ", "planted ", "cleaned ", "bought ", "avoided ", "replaced ", "unplugged ", "fixed "];
-  const hasActionWord = actionWords.some((word) => cleaned.includes(word));
-  if (!hasActionWord) {
-    return { verified: false, reasoning: "Please describe what you actually did — your proof should include specific actions you took." };
+  if (!actionWords.some((w) => cleaned.includes(w))) {
+    return { verified: false, reasoning: "Please describe what you actually did — include specific actions you took." };
   }
 
   return { verified: true, reasoning: "Your description provides a plausible account of completing this quest." };
 }
 
+// ── Text verification via Gemini ──────────────────────────────────────────────
 export async function verifyTextProofWithGemini(
   textProof: string,
   questTitle: string,
   questDescription?: string
 ): Promise<{ verified: boolean; reasoning: string }> {
-  // Pre-check: reject obvious gibberish before calling Gemini
   if (isObviousGibberish(textProof)) {
-    return { verified: false, reasoning: "Your description is too short or doesn't appear to be a real description. Please write a meaningful explanation of what you did." };
+    return { verified: false, reasoning: "Your description doesn't appear to be a real description. Please write a meaningful explanation of what you did." };
   }
 
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   if (!geminiApiKey) {
-    // Fall back to heuristic verification instead of blocking
     return heuristicTextVerification(textProof, questTitle);
   }
 
   try {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      geminiModel
-    )}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
+    const { url, headers } = getGeminiEndpoint(geminiModel, geminiApiKey);
 
     const prompt = [
       "You are a STRICT environmental quest proof verifier for the EcoLudus platform.",
-      `Your job is to determine if the user's text is a GENUINE, SPECIFIC description of completing this quest.`,
+      "Determine if the user's text is a GENUINE, SPECIFIC description of completing this quest.",
       "",
       `Quest Name: "${questTitle}"`,
       questDescription ? `Quest Description: "${questDescription}"` : "",
@@ -281,51 +256,36 @@ export async function verifyTextProofWithGemini(
       `User's Submitted Proof Text: "${textProof}"`,
       "",
       "=== STRICT VERIFICATION RULES ===",
-      "You MUST set verified to FALSE if ANY of these apply:",
-      "- The text is gibberish, random characters, or keyboard mashing (e.g. 'asdfghjkl', 'aaabbbccc', 'blah blah')",
-      "- The text just repeats or rephrases the quest name/title without describing a specific action",
-      "- The text is extremely vague with no specific details (e.g. 'I did it', 'done', 'completed the quest', 'yes I recycled')",
-      "- The text is completely unrelated to the quest topic",
-      "- The text is fewer than 5 meaningful words describing what was actually done",
-      "- The text is nonsensical, a joke, or clearly fake (e.g. 'I recycled 10 million bottles in 5 seconds')",
-      "- The text contains only filler words or generic statements without specifics",
+      "Set verified to FALSE if ANY apply:",
+      "- Gibberish, random characters, or keyboard mashing",
+      "- Just repeats/rephrases the quest name without describing a specific action",
+      "- Extremely vague: 'I did it', 'done', 'yes I recycled'",
+      "- Completely unrelated to the quest topic",
+      "- Fewer than 5 meaningful words describing what was done",
+      "- Physically implausible or clearly fake",
       "",
-      "You should ONLY set verified to TRUE if:",
-      "- The text describes a SPECIFIC action the user took that is directly related to the quest",
-      "- The description includes at least one concrete detail (what, where, when, or how)",
+      "Set verified to TRUE only if:",
+      "- Describes a SPECIFIC action directly related to the quest",
+      "- Includes at least one concrete detail (what, where, when, or how)",
       "- The described action is physically plausible",
       "",
-      "Examples of REJECTED text for a recycling quest: 'I recycled', 'recycling done', 'asdasd', 'test', 'yes', 'Recycle 15 Plastic Bottles', 'hello world'",
-      "Examples of ACCEPTED text for a recycling quest: 'I collected 5 plastic bottles from the kitchen and put them in the recycling bin at my apartment', 'Gathered water bottles after lunch at the office and sorted them into recycling'",
-      "",
-      "Do NOT reveal that this validation uses any automated system. Keep reasoning neutral.",
+      "Do NOT mention any automated system. Keep reasoning neutral.",
       "Respond with JSON matching the schema."
     ].filter(Boolean).join("\n");
 
-    const response = await fetch(endpoint, {
+    const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers,
       body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }]
-          }
-        ],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.05,
           responseMimeType: "application/json",
           responseSchema: {
             type: "OBJECT",
             properties: {
-              verified: {
-                type: "BOOLEAN"
-              },
-              reasoning: {
-                type: "STRING"
-              }
+              verified: { type: "BOOLEAN" },
+              reasoning: { type: "STRING" }
             },
             required: ["verified", "reasoning"]
           }
@@ -339,20 +299,10 @@ export async function verifyTextProofWithGemini(
     }
 
     const payload = await response.json();
-    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    let jsonText = text;
+    let jsonText = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+
     if (typeof jsonText === "string") {
-      jsonText = jsonText.trim();
-      if (jsonText.startsWith("```json")) {
-        jsonText = jsonText.substring(7);
-      } else if (jsonText.startsWith("```")) {
-        jsonText = jsonText.substring(3);
-      }
-      if (jsonText.endsWith("```")) {
-        jsonText = jsonText.substring(0, jsonText.length - 3);
-      }
-      jsonText = jsonText.trim();
+      jsonText = jsonText.trim().replace(/^```json\s*/,"").replace(/^```\s*/,"").replace(/\s*```$/,"").trim();
     }
 
     const parsed = typeof jsonText === "string" ? JSON.parse(jsonText) : payload;
@@ -369,4 +319,3 @@ export async function verifyTextProofWithGemini(
     };
   }
 }
-

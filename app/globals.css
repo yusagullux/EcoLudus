@@ -354,3 +354,79 @@ a, button, input, textarea, select {
   }
   .reveal-card, .logo-breathe { animation: none; will-change: auto; }
 }
+
+/* ── DARK / LIQUID: remap hardcoded forest text colors ───────
+   Tailwind's text-forest-* classes use static hex values.
+   On dark/liquid themes those values are unreadable (dark on dark).
+   These overrides swap them to the theme's text tokens.
+   ─────────────────────────────────────────────────────────── */
+
+[data-theme="dark"],
+[data-theme="liquid"] {
+  /* Primary text — forest-950, forest-900 */
+  .text-forest-950,
+  .text-forest-900 {
+    color: var(--text-primary) !important;
+  }
+
+  /* Secondary text — forest-800, forest-700 */
+  .text-forest-800,
+  .text-forest-700 {
+    color: var(--text-secondary) !important;
+  }
+
+  /* Muted text — forest-600, forest-500, forest-400 */
+  .text-forest-600,
+  .text-forest-500,
+  .text-forest-400,
+  .text-forest-300 {
+    color: var(--text-muted) !important;
+  }
+
+  /* Accent text */
+  .text-forest-200,
+  .text-forest-100 {
+    color: var(--text-accent) !important;
+  }
+
+  /* White backgrounds become panel backgrounds */
+  .bg-white {
+    background-color: var(--bg-panel) !important;
+  }
+
+  /* White text stays legible on dark bg */
+  .text-white { color: var(--text-sidebar) !important; }
+  .text-cream-100 { color: var(--text-sidebar) !important; }
+
+  /* Light panel backgrounds */
+  .bg-\[#fffefa\],
+  .bg-\[#f7f9f2\],
+  .bg-\[#f4f7ef\],
+  .bg-\[#fbfcf7\],
+  .bg-\[#f8fff5\],
+  .bg-\[#f0f8e8\] {
+    background-color: var(--bg-panel-alt) !important;
+  }
+
+  /* Light border colors */
+  .border-\[#dfe7d7\],
+  .border-\[#e7ecdf\],
+  .border-\[#dce6d8\],
+  .border-forest-100,
+  .border-forest-200 {
+    border-color: var(--border-default) !important;
+  }
+
+  /* Sidebar/app chrome backgrounds */
+  .bg-forest-50,
+  .bg-forest-100 { background-color: var(--bg-panel-alt) !important; }
+  .bg-forest-950,
+  .bg-forest-900 { background-color: var(--bg-sidebar) !important; }
+}
+
+/* ── ALL themes: text opacity variants (forest-700/60 etc) ───
+   These get their own CSS vars via the custom property trick  */
+[data-theme="dark"] body,
+[data-theme="liquid"] body {
+  --tw-text-opacity: 1;
+}
