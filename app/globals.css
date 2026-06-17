@@ -363,10 +363,7 @@ a, button, input, textarea, select {
   --color-forest-100: #0f2810;
   --color-forest-50:  #071408;
 
-  /* White → dark panel */
-  --color-white: #141f15;
-
-  /* Cream → dark inverse */
+  /* Cream stays light — used for text on dark hero banners */
   --color-cream-100: #e8f0e4;
   --color-cream-200: #c8d8c4;
 }
@@ -385,10 +382,7 @@ a, button, input, textarea, select {
   --color-forest-100: #04404e;
   --color-forest-50:  #02282e;
 
-  /* White → glass panel */
-  --color-white: rgba(255,255,255,0.08);
-
-  /* Cream → light blue-white */
+  /* Cream stays light */
   --color-cream-100: #e4f4ff;
   --color-cream-200: #c0e0f4;
 }
