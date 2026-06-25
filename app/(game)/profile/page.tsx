@@ -137,8 +137,10 @@ export default function ProfilePage() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             profilePlants.map((plant: any) => (
               <article key={plant.id} className="reveal-card group flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition hover:-translate-y-1" style={{ borderColor: rarityBorder[plant.rarity as Rarity] ?? "#d9e2d2", background: "var(--bg-card)" }}>
-                <span className="relative flex aspect-square w-full max-w-32 items-center justify-center rounded-2xl p-4" style={{ background: "var(--bg-panel-alt)" }}>
-                  <img src={getPlantImage(plant)} alt={plant.name} loading="lazy" className="h-full w-full object-contain transition group-hover:scale-105" />
+                <span className="relative flex aspect-square w-full max-w-32 items-center justify-center rounded-2xl p-4" style={{ background: `${rarityStyle[plant.rarity as Rarity]?.accent ?? "#2f6b46"}12` }}>
+                  <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white shadow-sm border border-forest-100/60 overflow-hidden p-2">
+                    <img src={getPlantImage(plant)} alt={plant.name} loading="lazy" className="h-full w-full object-contain transition group-hover:scale-110 mix-blend-multiply dark:mix-blend-normal" />
+                  </div>
                 </span>
                 <p className="text-sm font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>{plant.name}</p>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${rarityStyle[plant.rarity as Rarity]?.chip ?? rarityStyle.common.chip}`}>{plant.rarity}</span>
