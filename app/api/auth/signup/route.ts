@@ -12,6 +12,7 @@ const signUpSchema = z.object({
 
 function buildInitialProfile(email: string, displayName?: string) {
   const createdAt = new Date().toISOString();
+  const today = createdAt.slice(0, 10);
   const finalDisplayName = displayName?.trim() || email.split("@")[0];
 
   return {
@@ -30,9 +31,15 @@ function buildInitialProfile(email: string, displayName?: string) {
     dailyQuestCompletions: {},
     lastQuestCompletionTime: null,
     plants: [],
+    eggs: [],
+    chests: [],
     hatchings: [],
     animals: [],
     activePet: null,
+    currentStreak: 1,
+    longestStreak: 1,
+    lastLoginDate: today,
+    friends: [],
     bestRank: null,
     allQuestsCompleted: false,
     allQuestsCompletedCount: 0,

@@ -78,6 +78,24 @@ const navItems: NavItem[] = [
     )
   },
   {
+    name: "Pets",
+    href: "/pets",
+    icon: (
+      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 12.5c-1.2 0-2-1-2-2.2S5.8 8 7 8s2 1 2 2.3-.8 2.2-2 2.2Zm10 0c-1.2 0-2-1-2-2.2S15.8 8 17 8s2 1 2 2.3-.8 2.2-2 2.2ZM9.5 17.5c0-1.9 1.2-3.5 2.5-3.5s2.5 1.6 2.5 3.5c0 1.1-.8 1.8-2.5 1.8s-2.5-.7-2.5-1.8ZM9 5.5c0 1.1-.7 2-1.6 2s-1.6-.9-1.6-2 .7-2 1.6-2S9 4.4 9 5.5Zm9.2 0c0 1.1-.7 2-1.6 2s-1.6-.9-1.6-2 .7-2 1.6-2 1.6.9 1.6 2Z" />
+      </svg>
+    )
+  },
+  {
+    name: "Friends",
+    href: "/friends",
+    icon: (
+      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 11a3 3 0 100-6 3 3 0 000 6Zm8 0a3 3 0 100-6 3 3 0 000 6ZM3.5 20a4.5 4.5 0 019 0M11.5 20a4.5 4.5 0 019 0" />
+      </svg>
+    )
+  },
+  {
     name: "Profile",
     href: "/profile",
     icon: (

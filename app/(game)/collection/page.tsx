@@ -231,6 +231,7 @@ export default function CollectionPage() {
   const [chestReward, setChestReward] = useState<any>(null);
   const [chestState, setChestState] = useState<"closed" | "shaking" | "opened">("closed");
   const [chestParticles, setChestParticles] = useState<Array<{ id: number; dx: number; dy: number; color: string }>>([]);
+  const [selectingPetId, setSelectingPetId] = useState<string | null>(null);
 
   const profilePlants = Array.isArray(profile?.plants) ? profile.plants : [];
   const profileEggs = Array.isArray(profile?.eggs) ? profile.eggs : [];
@@ -572,6 +573,29 @@ export default function CollectionPage() {
     }
   };
 
+  const selectActivePet = async (animal: any) => {
+    if (!user?.uid || !profile) return;
+    setSelectingPetId(String(animal.id));
+    const nextAnimals = profileAnimals.map((entry) => ({
+      ...entry,
+      active: entry.id === animal.id
+    }));
+    const updates = {
+      animals: nextAnimals,
+      activePet: animal.id
+    };
+    const result = await updateUserProfile(user.uid, updates);
+    setSelectingPetId(null);
+    if (!result.success) {
+      showToast("Could not choose that companion. Please try again.");
+      return;
+    }
+    if (typeof setProfile === "function") {
+      setProfile({ ...profile, ...updates });
+    }
+    showToast(`${animal.name} is now your active companion.`);
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <PageHero eyebrow="Your nature collection" title="My Collection" description="Every plant, egg, companion, and chest you have earned.">
@@ -781,6 +805,16 @@ export default function CollectionPage() {
                       Open Chest
                     </button>
                   )}
+                  {mode === "animals" && (
+                    <button
+                      type="button"
+                      onClick={() => selectActivePet(item)}
+                      disabled={(item as any).active || selectingPetId === String(item.id)}
+                      className={`mt-auto w-full ${(item as any).active ? secondaryButton : primaryButton}`}
+                    >
+                      {(item as any).active ? "Active Pet" : selectingPetId === String(item.id) ? "Choosing..." : "Choose Pet"}
+                    </button>
+                  )}
                 </div>
               </article>
             );
@@ -943,12 +977,13 @@ export default function CollectionPage() {
                 >
                   <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.1),transparent_65%)]" />
 
-                  <div className={`relative h-44 w-44 transition ${chestState === "shaking" ? "animate-egg-shake" : ""}`}>
+                  <div className={`relative h-44 w-44 transition ${chestState === "shaking" ? "animate-chest-shake animate-chest-glow" : ""}`}>
                     <img
                       src={`/images/chests/${activeChest.name.toLowerCase().replace(" ", "-")}.png`}
                       alt={activeChest.name}
-                      className="h-full w-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
+                      className="h-full w-full object-contain drop-shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
                     />
+                    <div className="pointer-events-none absolute inset-x-6 top-8 h-10 rounded-full bg-yellow-300/25 blur-xl" />
                   </div>
                 </div>
 
