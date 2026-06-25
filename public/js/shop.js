@@ -74,7 +74,6 @@ const ANIMALS = {
 function getRandomAnimal(rarity) {
     const animals = ANIMALS[rarity] || ANIMALS.common;
     const totalWeight = animals.reduce((sum, animal) => sum + (animal.weight || 1), 0);
-    // Genereerib juhusliku arvu vahemikus 0 kuni totalWeight
     let random = Math.random() * totalWeight;
 
     // Leiab looma vastavalt kaalule

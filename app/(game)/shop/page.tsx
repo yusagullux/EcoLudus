@@ -167,18 +167,21 @@ export default function ShopPage() {
               className="reveal-card group flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
               style={{ borderColor: border, background: "var(--bg-card)" }}
             >
-              <div className="relative flex aspect-square min-h-36 items-center justify-center overflow-hidden p-4" style={{ background: `${style.accent}18` }}>
-                <div className="absolute inset-x-7 bottom-6 h-7 rounded-full bg-black/8 blur-xl transition group-hover:scale-110" />
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  loading="lazy"
-                  className="relative h-full max-h-32 w-full max-w-32 object-contain transition duration-300 group-hover:scale-105"
-                />
+              {/* Framed card image design (sticker/badge layout) */}
+              <div className="relative flex aspect-square items-center justify-center overflow-hidden p-4" style={{ background: `${style.accent}12` }}>
+                <div className="absolute inset-x-7 bottom-4 h-5 rounded-full bg-black/5 blur-md" />
+                <div className="relative flex h-28 w-28 items-center justify-center rounded-2xl bg-white shadow-sm border border-forest-100/60 overflow-hidden p-2">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    loading="lazy"
+                    className="h-20 w-20 object-contain transition duration-300 group-hover:scale-115 mix-blend-multiply dark:mix-blend-normal"
+                  />
+                </div>
                 <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
               </div>
               <div className="flex flex-1 flex-col gap-2 p-3">
-                <p className="font-serif text-sm font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>{item.name}</p>
+                <p className="font-serif text-sm font-extrabold leading-tight truncate" style={{ color: "var(--text-primary)" }}>{item.name}</p>
                 {(item as any).hatchTime && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Hatches in {(item as any).hatchTime}</p>}
                 <p className="font-serif text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>
                   {item.price} <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>EP</span>
