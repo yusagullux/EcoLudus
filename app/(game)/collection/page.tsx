@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/useAuth";
 import { updateUserProfile } from "@/public/js/auth.js";
 import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
-type CollMode = "plants" | "eggs" | "animals";
+type CollMode = "plants" | "eggs" | "animals" | "chests";
 
 const HATCH_DURATIONS: Record<Rarity, number> = {
   common: 60 * 60 * 1000,      // 1 hour
@@ -28,6 +28,10 @@ const assetByName: Record<string, string> = {
   "Rare Egg": "/images/eggs/rare-egg.png",
   "Epic Egg": "/images/eggs/epic-egg.png",
   "Legendary Egg": "/images/eggs/legendary-egg.png",
+  "Wooden Chest": "/images/chests/wooden-chest.png",
+  "Bronze Chest": "/images/chests/bronze-chest.png",
+  "Silver Chest": "/images/chests/silver-chest.png",
+  "Golden Chest": "/images/chests/golden-chest.png",
   Cat: "/images/pets/cat.png",
   Dog: "/images/pets/dog.png",
   Rabbit: "/images/pets/rabbit.png",
@@ -74,11 +78,91 @@ const animalRewards: Record<Rarity, Array<{ name: string; image: string; rarity:
   ]
 };
 
+const OPEN_CHEST_REWARDS: Record<string, () => { type: "points" | "plant" | "egg"; name: string; amount?: number; rarity: Rarity; image: string }> = {
+  "Wooden Chest": () => {
+    const rand = Math.random();
+    if (rand < 0.6) {
+      const amount = Math.floor(Math.random() * 151) + 100;
+      return { type: "points", name: "EcoPoints", amount, rarity: "common", image: "/images/logo.png" };
+    } else {
+      const plantPool = [
+        { name: "Mossy Fern", rarity: "common", image: "/images/plants/mint.png" },
+        { name: "Golden Daisy", rarity: "common", image: "/images/plants/sunflower.png" }
+      ];
+      const plant = plantPool[Math.floor(Math.random() * plantPool.length)];
+      return { type: "plant", name: plant.name, rarity: "common", image: plant.image };
+    }
+  },
+  "Bronze Chest": () => {
+    const rand = Math.random();
+    if (rand < 0.5) {
+      const amount = Math.floor(Math.random() * 301) + 200;
+      return { type: "points", name: "EcoPoints", amount, rarity: "rare", image: "/images/logo.png" };
+    } else if (rand < 0.8) {
+      const plantPool = [
+        { name: "Mossy Fern", rarity: "common", image: "/images/plants/mint.png" },
+        { name: "Golden Daisy", rarity: "common", image: "/images/plants/sunflower.png" },
+        { name: "Blue Orchid", rarity: "rare", image: "/images/plants/orchid.png" },
+        { name: "Spotted Aloe", rarity: "rare", image: "/images/plants/basil.png" }
+      ];
+      const plant = plantPool[Math.floor(Math.random() * plantPool.length)];
+      return { type: "plant", name: plant.name, rarity: plant.rarity, image: plant.image };
+    } else {
+      return { type: "egg", name: "Common Egg", rarity: "common", image: "/images/eggs/common-egg.png" };
+    }
+  },
+  "Silver Chest": () => {
+    const rand = Math.random();
+    if (rand < 0.4) {
+      const amount = Math.floor(Math.random() * 501) + 500;
+      return { type: "points", name: "EcoPoints", amount, rarity: "epic", image: "/images/logo.png" };
+    } else if (rand < 0.8) {
+      const plantPool = [
+        { name: "Blue Orchid", rarity: "rare", image: "/images/plants/orchid.png" },
+        { name: "Spotted Aloe", rarity: "rare", image: "/images/plants/basil.png" },
+        { name: "Mystic Bamboo", rarity: "epic", image: "/images/plants/bamboo.png" },
+        { name: "Crystal Lotus", rarity: "epic", image: "/images/plants/lotus.png" }
+      ];
+      const plant = plantPool[Math.floor(Math.random() * plantPool.length)];
+      return { type: "plant", name: plant.name, rarity: plant.rarity, image: plant.image };
+    } else {
+      const eggPool = [
+        { type: "egg", name: "Rare Egg", rarity: "rare", image: "/images/eggs/rare-egg.png" },
+        { type: "egg", name: "Epic Egg", rarity: "epic", image: "/images/eggs/epic-egg.png" }
+      ];
+      return eggPool[Math.floor(Math.random() * eggPool.length)];
+    }
+  },
+  "Golden Chest": () => {
+    const rand = Math.random();
+    if (rand < 0.3) {
+      const amount = Math.floor(Math.random() * 1501) + 1000;
+      return { type: "points", name: "EcoPoints", amount, rarity: "legendary", image: "/images/logo.png" };
+    } else if (rand < 0.7) {
+      const plantPool = [
+        { name: "Mystic Bamboo", rarity: "epic", image: "/images/plants/bamboo.png" },
+        { name: "Crystal Lotus", rarity: "epic", image: "/images/plants/lotus.png" },
+        { name: "Aurora Blossom", rarity: "legendary", image: "/images/plants/cherry_blossom.png" },
+        { name: "Ember Cactus", rarity: "legendary", image: "/images/plants/dragonfruit.png" }
+      ];
+      const plant = plantPool[Math.floor(Math.random() * plantPool.length)];
+      return { type: "plant", name: plant.name, rarity: plant.rarity, image: plant.image };
+    } else {
+      const eggPool = [
+        { type: "egg", name: "Epic Egg", rarity: "epic", image: "/images/eggs/epic-egg.png" },
+        { type: "egg", name: "Legendary Egg", rarity: "legendary", image: "/images/eggs/legendary-egg.png" }
+      ];
+      return eggPool[Math.floor(Math.random() * eggPool.length)];
+    }
+  }
+};
+
 function getAsset(item: any, mode: CollMode) {
   if (item.image) return item.image;
   if (assetByName[item.name]) return assetByName[item.name];
   if (mode === "plants") return "/images/plants/sunflower.png";
   if (mode === "eggs") return "/images/eggs/common-egg.png";
+  if (mode === "chests") return "/images/chests/wooden-chest.png";
   return "/images/pets/cat.png";
 }
 
@@ -89,7 +173,7 @@ function CardImage({ item, mode }: { item: any; mode: CollMode }) {
   if (mode === "animals" && (imgError || !src)) {
     const emoji = animalEmoji[item.name] || "🐾";
     return (
-      <div className="text-4xl select-none transition duration-300 group-hover:scale-120 drop-shadow-sm">
+      <div className="flex h-full w-full items-center justify-center text-5xl select-none transition duration-300 group-hover:scale-120 drop-shadow-sm">
         {emoji}
       </div>
     );
@@ -101,10 +185,28 @@ function CardImage({ item, mode }: { item: any; mode: CollMode }) {
       alt={item.name}
       loading="lazy"
       onError={() => setImgError(true)}
-      className="h-20 w-20 object-contain transition duration-300 group-hover:scale-115 mix-blend-multiply dark:mix-blend-normal"
+      className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
     />
   );
 }
+
+const plantsList = [
+  { id: 1, name: "Mossy Fern", rarity: "common", image: "/images/plants/mint.png" },
+  { id: 2, name: "Golden Daisy", rarity: "common", image: "/images/plants/sunflower.png" },
+  { id: 3, name: "Blue Orchid", rarity: "rare", image: "/images/plants/orchid.png" },
+  { id: 4, name: "Spotted Aloe", rarity: "rare", image: "/images/plants/basil.png" },
+  { id: 5, name: "Mystic Bamboo", rarity: "epic", image: "/images/plants/bamboo.png" },
+  { id: 6, name: "Crystal Lotus", rarity: "epic", image: "/images/plants/lotus.png" },
+  { id: 7, name: "Aurora Blossom", rarity: "legendary", image: "/images/plants/cherry_blossom.png" },
+  { id: 8, name: "Ember Cactus", rarity: "legendary", image: "/images/plants/dragonfruit.png" }
+];
+
+const eggsList = [
+  { id: 1, name: "Common Egg", rarity: "common", image: "/images/eggs/common-egg.png" },
+  { id: 2, name: "Rare Egg", rarity: "rare", image: "/images/eggs/rare-egg.png" },
+  { id: 3, name: "Epic Egg", rarity: "epic", image: "/images/eggs/epic-egg.png" },
+  { id: 4, name: "Legendary Egg", rarity: "legendary", image: "/images/eggs/legendary-egg.png" }
+];
 
 export default function CollectionPage() {
   const { user, profile, setProfile } = useAuth();
@@ -124,17 +226,25 @@ export default function CollectionPage() {
   const [particles, setParticles] = useState<Array<{ id: number; dx: number; dy: number; color: string }>>([]);
   const [revealedAnimal, setRevealedAnimal] = useState<any>(null);
 
+  // Fullscreen Chest Reveal State
+  const [activeChest, setActiveChest] = useState<any>(null);
+  const [chestReward, setChestReward] = useState<any>(null);
+  const [chestState, setChestState] = useState<"closed" | "shaking" | "opened">("closed");
+  const [chestParticles, setChestParticles] = useState<Array<{ id: number; dx: number; dy: number; color: string }>>([]);
+
   const profilePlants = Array.isArray(profile?.plants) ? profile.plants : [];
   const profileEggs = Array.isArray(profile?.eggs) ? profile.eggs : [];
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
   const profileHatchings = Array.isArray(profile?.hatchings) ? profile.hatchings : [];
+  const profileChests = Array.isArray(profile?.chests) ? profile.chests : [];
 
-  const items = mode === "plants" ? profilePlants : mode === "eggs" ? profileEggs : profileAnimals;
+  const items = mode === "plants" ? profilePlants : mode === "eggs" ? profileEggs : mode === "animals" ? profileAnimals : profileChests;
   const filtered = filter === "all" ? items : items.filter((item) => item.rarity === filter);
 
   const totalPlants = profilePlants.reduce((sum, plant) => sum + (plant.count ?? 1), 0);
   const totalEggs = profileEggs.reduce((sum, egg) => sum + (egg.count ?? 1), 0) + profileHatchings.length;
   const totalAnimals = profileAnimals.reduce((sum, animal) => sum + (animal.count ?? 1), 0);
+  const totalChests = profileChests.reduce((sum, chest) => sum + (chest.count ?? 1), 0);
   const tabs: ("all" | Rarity)[] = ["all", "common", "rare", "epic", "legendary"];
 
   // Countdown timer effect
@@ -362,12 +472,113 @@ export default function CollectionPage() {
     setMode("animals");
   };
 
+  const openChest = async (chest: any) => {
+    setActiveChest(chest);
+    setChestState("shaking");
+    setChestReward(null);
+    setChestParticles([]);
+
+    // Shake particles
+    const shakeInterval = setInterval(() => {
+      const p = Array.from({ length: 5 }).map((_, idx) => ({
+        id: Date.now() + idx + Math.random(),
+        dx: (Math.random() - 0.5) * 80,
+        dy: (Math.random() - 0.5) * 80 - 40,
+        color: ["#eab308", "#22c55e", "#3b82f6", "#ffffff"][Math.floor(Math.random() * 4)]
+      }));
+      setChestParticles((prev) => [...prev, ...p]);
+    }, 200);
+
+    setTimeout(async () => {
+      clearInterval(shakeInterval);
+      const generator = OPEN_CHEST_REWARDS[chest.name];
+      const reward = generator ? generator() : { type: "points", name: "EcoPoints", amount: 100, rarity: "common", image: "/images/logo.png" };
+      setChestReward(reward);
+      setChestState("opened");
+
+      // Exploding burst particles
+      const burst = Array.from({ length: 40 }).map((_, idx) => ({
+        id: Date.now() + idx + 100 + Math.random(),
+        dx: (Math.random() - 0.5) * 360,
+        dy: (Math.random() - 0.5) * 360 - 80,
+        color: ["#fbbf24", "#34d399", "#60a5fa", "#f472b6", "#c084fc", "#ffffff"][Math.floor(Math.random() * 6)]
+      }));
+      setChestParticles((prev) => [...prev, ...burst]);
+    }, 1200);
+  };
+
+  const claimChestReward = async () => {
+    if (!user?.uid || !profile || !activeChest || !chestReward) return;
+
+    const nextChests = profileChests
+      .map((c) => (c.id === activeChest.id ? { ...c, count: (c.count ?? 1) - 1 } : c))
+      .filter((c) => (c.count ?? 1) > 0);
+
+    const profileUpdates: Record<string, unknown> = {
+      chests: nextChests
+    };
+
+    if (chestReward.type === "points") {
+      profileUpdates.ecoPoints = ecoPoints + (chestReward.amount ?? 0);
+    } else if (chestReward.type === "plant") {
+      const nextPlants = [...profilePlants];
+      const existingIdx = nextPlants.findIndex((p) => p.name === chestReward.name);
+      if (existingIdx >= 0) {
+        nextPlants[existingIdx] = {
+          ...nextPlants[existingIdx],
+          count: (nextPlants[existingIdx].count ?? 1) + 1,
+          purchasedAt: new Date().toISOString()
+        };
+      } else {
+        const basePlant = plantsList.find((p) => p.name === chestReward.name) || { id: Date.now(), name: chestReward.name, rarity: chestReward.rarity, price: 0, image: chestReward.image };
+        nextPlants.push({ ...basePlant, count: 1, purchasedAt: new Date().toISOString() });
+      }
+      profileUpdates.plants = nextPlants;
+    } else if (chestReward.type === "egg") {
+      const nextEggs = [...profileEggs];
+      const existingIdx = nextEggs.findIndex((e) => e.name === chestReward.name);
+      if (existingIdx >= 0) {
+        nextEggs[existingIdx] = {
+          ...nextEggs[existingIdx],
+          count: (nextEggs[existingIdx].count ?? 1) + 1,
+          purchasedAt: new Date().toISOString()
+        };
+      } else {
+        const baseEgg = eggsList.find((e) => e.name === chestReward.name) || { id: Date.now(), name: chestReward.name, rarity: chestReward.rarity, price: 0, image: chestReward.image };
+        nextEggs.push({ ...baseEgg, count: 1, purchasedAt: new Date().toISOString() });
+      }
+      profileUpdates.eggs = nextEggs;
+    }
+
+    const result = await updateUserProfile(user.uid, profileUpdates);
+    if (!result.success) {
+      showToast("Failed to claim chest rewards. Please try again.");
+      return;
+    }
+
+    if (typeof setProfile === "function") {
+      setProfile({ ...profile, ...profileUpdates });
+    }
+
+    showToast(`Claimed reward: ${chestReward.type === "points" ? `${chestReward.amount} EcoPoints` : chestReward.name}!`);
+    setActiveChest(null);
+    setChestReward(null);
+    setChestState("closed");
+
+    if (chestReward.type === "plant") {
+      setMode("plants");
+    } else if (chestReward.type === "egg") {
+      setMode("eggs");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Your nature collection" title="My Collection" description="Every plant, egg, and companion you have earned.">
+      <PageHero eyebrow="Your nature collection" title="My Collection" description="Every plant, egg, companion, and chest you have earned.">
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Plants" value={totalPlants} />
           <HeroMetric label="Eggs" value={totalEggs} />
+          <HeroMetric label="Chests" value={totalChests} />
           <HeroMetric label="Animals" value={totalAnimals} />
           <HeroMetric label="Eco" value={ecoPoints.toLocaleString()} />
         </div>
@@ -377,7 +588,7 @@ export default function CollectionPage() {
         <div className="flex flex-col gap-4">
           {/* Mode tabs */}
           <div className="inline-flex w-fit rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
-            {(["plants", "eggs", "animals"] as CollMode[]).map((itemMode) => (
+            {(["plants", "eggs", "chests", "animals"] as CollMode[]).map((itemMode) => (
               <button
                 key={itemMode}
                 onClick={() => { setMode(itemMode); setFilter("all"); }}
@@ -544,17 +755,14 @@ export default function CollectionPage() {
                 {(item as any).active && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
                 {(item as any).count > 1 && <span className="absolute right-2 top-2 z-10 rounded-full bg-forest-950 px-2 py-0.5 text-[9px] font-extrabold text-cream-100">×{(item as any).count}</span>}
                 
-                {/* Framed card image design (looks like high-end sticker/badge) */}
-                <div className="relative flex aspect-square items-center justify-center overflow-hidden p-4" style={{ background: `${style.accent}12` }}>
-                  <div className="absolute inset-x-8 bottom-4 h-5 rounded-full bg-black/5 blur-md" />
-                  <div className="relative flex h-28 w-28 items-center justify-center rounded-2xl bg-white shadow-sm border border-forest-100/60 overflow-hidden p-2">
-                    <CardImage item={item} mode={mode} />
-                  </div>
+                {/* Framed card image design - full bleed aspect ratio */}
+                <div className="relative flex aspect-square items-center justify-center overflow-hidden" style={{ background: `${style.accent}12` }}>
+                  <CardImage item={item} mode={mode} />
+                  <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
                 </div>
 
                 <div className="flex flex-1 flex-col gap-2 p-3">
                   <p className="font-serif text-sm font-extrabold leading-tight truncate" style={{ color: "var(--text-primary)" }}>{item.name}</p>
-                  <span className={`w-fit rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
                   {mode === "eggs" && (
                     <button
                       type="button"
@@ -562,6 +770,15 @@ export default function CollectionPage() {
                       className={`mt-auto w-full ${primaryButton}`}
                     >
                       Incubate
+                    </button>
+                  )}
+                  {mode === "chests" && (
+                    <button
+                      type="button"
+                      onClick={() => openChest(item)}
+                      className={`mt-auto w-full ${primaryButton}`}
+                    >
+                      Open Chest
                     </button>
                   )}
                 </div>
@@ -683,6 +900,113 @@ export default function CollectionPage() {
             {tapsLeft > 0 && (
               <button
                 onClick={() => setActiveHatching(null)}
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 hover:text-white"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Interactive Chest Opening Modal ── */}
+      {activeChest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md fade-in">
+          <div className="relative w-full max-w-md rounded-[32px] border border-white/10 bg-gradient-to-b from-[#1c222e] to-[#0c1018] p-6 text-center text-white shadow-2xl animate-modal-in">
+            
+            {/* Sparkle Particles container */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
+              {chestParticles.map((p) => (
+                <div
+                  key={p.id}
+                  className="absolute left-1/2 top-1/2 h-2.5 w-2.5 rounded-full animate-particle pointer-events-none"
+                  style={{
+                    backgroundColor: p.color,
+                    "--dx": `${p.dx}px`,
+                    "--dy": `${p.dy}px`,
+                    boxShadow: `0 0 8px ${p.color}`
+                  } as any}
+                />
+              ))}
+            </div>
+
+            {chestState !== "opened" ? (
+              <div className="flex flex-col items-center gap-6 py-6">
+                <div>
+                  <h3 className="font-serif text-2xl font-black text-yellow-400">Opening Chest...</h3>
+                  <p className="mt-1.5 text-xs text-white/60">Brace yourself for mysterious rewards!</p>
+                </div>
+
+                <div
+                  className="relative flex h-60 w-60 items-center justify-center rounded-full bg-white/5 shadow-inner animate-pulse"
+                >
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.1),transparent_65%)]" />
+
+                  <div className={`relative h-44 w-44 transition ${chestState === "shaking" ? "animate-egg-shake" : ""}`}>
+                    <img
+                      src={`/images/chests/${activeChest.name.toLowerCase().replace(" ", "-")}.png`}
+                      alt={activeChest.name}
+                      className="h-full w-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-xs font-black uppercase text-yellow-500 animate-pulse">
+                  {chestState === "shaking" ? "Unlocking Magic..." : "Ready to Open"}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-6 py-6 animate-bounce-in">
+                <div>
+                  <span className="rounded-full bg-yellow-500/20 px-3.5 py-1 text-xs font-black uppercase tracking-widest text-yellow-400">
+                    Chest Opened!
+                  </span>
+                  <h3 className="mt-4 font-serif text-3xl font-black text-white">
+                    {chestReward.type === "points" ? `+${chestReward.amount} EcoPoints!` : `Unlocked ${chestReward.name}!`}
+                  </h3>
+                  <p className="mt-1 text-xs text-white/50">Your reward has been added to your profile.</p>
+                </div>
+
+                <div
+                  className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-white/10 bg-white/5 shadow-2xl p-6 overflow-hidden"
+                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)" }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/10 to-transparent pointer-events-none" />
+                  {chestReward.type === "points" ? (
+                    <div className="text-6xl select-none drop-shadow-md">🪙</div>
+                  ) : (
+                    <img
+                      src={chestReward.image}
+                      alt={chestReward.name}
+                      className="h-32 w-32 object-contain"
+                    />
+                  )}
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <span className={`rounded-full px-3.5 py-1 text-[10px] font-black uppercase tracking-widest ${rarityStyle[chestReward.rarity as Rarity]?.chip}`}>
+                    {chestReward.rarity}
+                  </span>
+                  <p className="mt-3 text-xs leading-relaxed max-w-[280px] text-white/70">
+                    {chestReward.type === "points" 
+                      ? "Spend these EcoPoints in the Plant Shop to buy more eggs and chests!" 
+                      : `${chestReward.name} is a ${chestReward.rarity} item that has been added to your inventory.`}
+                  </p>
+                </div>
+
+                <button
+                  onClick={claimChestReward}
+                  className="w-full max-w-[280px] rounded-full py-3.5 text-xs font-black uppercase tracking-wider transition bg-yellow-500 text-black hover:bg-yellow-600 shadow-lg shadow-yellow-500/25 active:scale-[0.98] font-bold"
+                >
+                  Claim & Continue
+                </button>
+              </div>
+            )}
+
+            {chestState === "closed" && (
+              <button
+                onClick={() => setActiveChest(null)}
                 className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 hover:text-white"
                 aria-label="Close modal"
               >

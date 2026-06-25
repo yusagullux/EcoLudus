@@ -986,6 +986,38 @@
           },
           "xp": 30,
           "ecoCoins": 20
+        },
+        {
+          "id": "gamified_pet_1",
+          "shortName": "Bond With Your Pet",
+          "description": "Show some love to your eco companions! Pet your companion animal once today.",
+          "carbonFootprintReduction": 0.2,
+          "carbonFootprintUnit": "kg CO2",
+          "progressLogic": {
+            "type": "boolean",
+            "current": 0,
+            "max": 1,
+            "increment": 1,
+            "unit": "day"
+          },
+          "xp": 40,
+          "ecoCoins": 30
+        },
+        {
+          "id": "gamified_hatch_1",
+          "shortName": "Hatch a New Egg",
+          "description": "Incubate and hatch any egg from your collection to welcome a new companion.",
+          "carbonFootprintReduction": 1.2,
+          "carbonFootprintUnit": "kg CO2",
+          "progressLogic": {
+            "type": "boolean",
+            "current": 0,
+            "max": 1,
+            "increment": 1,
+            "unit": "day"
+          },
+          "xp": 100,
+          "ecoCoins": 80
         }
       ]
     }
