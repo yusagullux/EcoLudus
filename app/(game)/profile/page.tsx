@@ -57,6 +57,9 @@ export default function ProfilePage() {
   const badge = getBadge(level);
   const profilePlants = Array.isArray(profile?.plants) ? profile.plants : [];
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
+  const currentStreak = Number(profile?.currentStreak ?? 0);
+  const longestStreak = Number(profile?.longestStreak ?? 0);
+  const lastLoginDate = String(profile?.lastLoginDate ?? "Not tracked yet");
 
   // Calculate category progress from completed quests
   const categoryProgress = categories.map(category => {
@@ -80,7 +83,8 @@ export default function ProfilePage() {
     { label: "Missions Done", value: missionsCompleted, accent: "#62508f" },
     { label: "CO₂ Reduced", value: `${carbonReduced.toFixed(1)} kg`, accent: "#237482", wide: true },
     { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "#4c7a3b" },
-    { label: "Trees Planted", value: Number(profile?.treesPlanted ?? 0), accent: "#2f6b46" }
+    { label: "Current Streak", value: `${currentStreak}d`, accent: "#9a6b1f" },
+    { label: "Best Streak", value: `${longestStreak}d`, accent: "#2f6b46" }
   ];
 
   return (
@@ -92,6 +96,7 @@ export default function ProfilePage() {
           </div>
           <HeroMetric label="XP" value={xp.toLocaleString()} />
           <HeroMetric label="Missions" value={missionsCompleted} />
+          <HeroMetric label="Streak" value={`${currentStreak}d`} />
         </div>
       </PageHero>
 
@@ -100,6 +105,19 @@ export default function ProfilePage() {
           <MetricCard key={card.label} {...card} />
         ))}
       </div>
+
+      <Panel eyebrow="Login activity" title="Streak Status" action={<Pill>Last login {lastLoginDate}</Pill>}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Current run</p>
+            <p className="mt-2 font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>{currentStreak} days</p>
+          </div>
+          <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Personal best</p>
+            <p className="mt-2 font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>{longestStreak} days</p>
+          </div>
+        </div>
+      </Panel>
 
       <Panel eyebrow="Achievement tracking" title="Quest Category Progress">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

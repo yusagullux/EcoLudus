@@ -192,6 +192,8 @@ export default function DashboardPage() {
   const carbonReduced = profile?.carbonReduced ?? 0;
   const missionsCompleted = profile?.missionsCompleted ?? 0;
   const completedQuests = profile?.completedQuests || [];
+  const currentStreak = Number(profile?.currentStreak ?? 0);
+  const longestStreak = Number(profile?.longestStreak ?? 0);
 
   const curXP = level <= 1 ? 0 : requiredXP(level - 1);
   const nextXP = requiredXP(level);
@@ -367,6 +369,7 @@ export default function DashboardPage() {
           <HeroMetric label="XP" value={xp.toLocaleString()} />
           <HeroMetric label="Eco" value={ecoPoints.toLocaleString()} />
           <HeroMetric label="Level" value={level} />
+          <HeroMetric label="Streak" value={`${currentStreak}d`} />
         </div>
       </PageHero>
 
@@ -374,8 +377,34 @@ export default function DashboardPage() {
         <MetricCard label="Current Level" value={`Level ${level}`} accent="#2f6b46" />
         <MetricCard label="Missions Done" value={missionsCompleted} accent="#2f5f86" />
         <MetricCard label="CO2 Reduced" value={`${(+carbonReduced || 0).toFixed(1)} kg`} accent="#237482" />
-        <MetricCard label="EcoPoints" value={ecoPoints.toLocaleString()} accent="#9a6b1f" />
+        <MetricCard label="Login Streak" value={`${currentStreak} day${currentStreak === 1 ? "" : "s"}`} accent="#9a6b1f" />
       </div>
+
+      <Panel eyebrow="Daily rhythm" title="Active Streak" action={<Pill active>Best {longestStreak}d</Pill>}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+              {currentStreak > 0 ? `${currentStreak} day streak` : "Start your first streak"}
+            </p>
+            <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
+              Log in each day to keep your eco momentum alive.
+            </p>
+          </div>
+          <div className="flex gap-1.5">
+            {Array.from({ length: 7 }).map((_, index) => (
+              <span
+                key={index}
+                className="h-8 w-8 rounded-full border"
+                style={{
+                  borderColor: "var(--border-default)",
+                  background: index < Math.min(currentStreak, 7) ? "var(--pill-active-bg)" : "var(--bg-panel-alt)"
+                }}
+                aria-label={index < currentStreak ? "Streak day active" : "Future streak day"}
+              />
+            ))}
+          </div>
+        </div>
+      </Panel>
 
       <Panel
         eyebrow="Level progress"

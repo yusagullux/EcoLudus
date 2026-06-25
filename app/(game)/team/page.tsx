@@ -16,6 +16,14 @@ const missionTemplates = [
   { id: "t9", title: "Community Energy Audit", desc: "Inspect and log energy usage parameters in your homes to identify major power-draining sources.", icon: "📊", difficulty: "Hard", xp: 550, eco: 340, needed: 4 }
 ];
 
+const expandedMissionTemplates = [
+  ...missionTemplates,
+  { id: "t10", title: "Shared Compost Starter", desc: "Set up or refresh a shared compost bin and have teammates add approved food scraps.", icon: "CP", difficulty: "Medium", xp: 420, eco: 250, needed: 3 },
+  { id: "t11", title: "Reusable Kit Relay", desc: "Each teammate prepares a reusable bottle, bag, and container kit for the week.", icon: "RK", difficulty: "Easy", xp: 280, eco: 170, needed: 3 },
+  { id: "t12", title: "Tree Care Patrol", desc: "Water, mulch, or clean around nearby trees and document care from multiple teammates.", icon: "TC", difficulty: "Medium", xp: 460, eco: 280, needed: 4 },
+  { id: "t13", title: "Repair Circle", desc: "Work together to repair clothes, gear, or household items instead of replacing them.", icon: "RC", difficulty: "Hard", xp: 600, eco: 380, needed: 4 }
+];
+
 const difficultyColor: Record<string, string> = {
   Easy: "bg-emerald-50 text-emerald-700",
   Medium: "bg-amber-50 text-amber-700",
@@ -154,7 +162,7 @@ export default function TeamPage() {
     }
   };
 
-  const handleAssignMission = async (t: typeof missionTemplates[0]) => {
+  const handleAssignMission = async (t: typeof expandedMissionTemplates[0]) => {
     if (!user?.uid || !team?.id) return;
     if (activeMissions.length >= 3) {
       showToast("Maximum 3 active missions allowed");
@@ -445,7 +453,7 @@ export default function TeamPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Mission library</p>
             <h2 className="mt-0.5 mb-5 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Assign New Mission</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              {missionTemplates.map((t) => {
+              {expandedMissionTemplates.map((t) => {
                 const isAssigning = assigningId === t.id;
                 const isAlreadyActive = activeMissions.some((m) => m.mission_id === t.id);
                 return (

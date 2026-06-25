@@ -988,6 +988,70 @@
           "ecoCoins": 20
         },
         {
+          "id": "sustainable_11",
+          "shortName": "Pack a Zero-Waste Snack",
+          "description": "Pack a snack in reusable packaging or a container without single-use wrappers.",
+          "carbonFootprintReduction": 0.4,
+          "carbonFootprintUnit": "kg CO2",
+          "progressLogic": {
+            "type": "boolean",
+            "current": 0,
+            "max": 1,
+            "increment": 1,
+            "unit": "snack"
+          },
+          "xp": 30,
+          "ecoCoins": 20
+        },
+        {
+          "id": "sustainable_12",
+          "shortName": "Share or Borrow an Item",
+          "description": "Borrow, lend, or share an item with someone instead of buying something new.",
+          "carbonFootprintReduction": 1.5,
+          "carbonFootprintUnit": "kg CO2",
+          "progressLogic": {
+            "type": "boolean",
+            "current": 0,
+            "max": 1,
+            "increment": 1,
+            "unit": "item"
+          },
+          "xp": 35,
+          "ecoCoins": 25
+        },
+        {
+          "id": "sustainable_13",
+          "shortName": "Air-Dry Laundry",
+          "description": "Air-dry one load of laundry instead of using a tumble dryer to save energy.",
+          "carbonFootprintReduction": 1.2,
+          "carbonFootprintUnit": "kg CO2",
+          "progressLogic": {
+            "type": "boolean",
+            "current": 0,
+            "max": 1,
+            "increment": 1,
+            "unit": "load"
+          },
+          "xp": 35,
+          "ecoCoins": 25
+        },
+        {
+          "id": "sustainable_14",
+          "shortName": "Plan a Low-Waste Day",
+          "description": "Plan tomorrow's meals, errands, and reusable items so you avoid avoidable waste.",
+          "carbonFootprintReduction": 0.8,
+          "carbonFootprintUnit": "kg CO2",
+          "progressLogic": {
+            "type": "boolean",
+            "current": 0,
+            "max": 1,
+            "increment": 1,
+            "unit": "plan"
+          },
+          "xp": 30,
+          "ecoCoins": 20
+        },
+        {
           "id": "gamified_pet_1",
           "shortName": "Bond With Your Pet",
           "description": "Show some love to your eco companions! Pet your companion animal once today.",
@@ -1026,7 +1090,7 @@
     "version": "2.5.0",
     "lastUpdated": "2024-12-19",
     "totalCategories": 7,
-    "totalQuests": 55,
+    "totalQuests": 63,
     "progressTypes": {
       "boolean": "One-time quest - becomes 1 when completed",
       "count": "Numerical quest - requires a specific number of actions",

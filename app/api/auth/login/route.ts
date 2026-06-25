@@ -8,6 +8,35 @@ const loginSchema = z.object({
   password: z.string().min(6).max(128)
 });
 
+function applyLoginStreak(payload: Record<string, unknown>): Record<string, unknown> {
+  const today = new Date().toISOString().slice(0, 10);
+  const lastLoginDate = typeof payload.lastLoginDate === "string" ? payload.lastLoginDate : null;
+  const currentStreak = Number(payload.currentStreak ?? 0);
+  const longestStreak = Number(payload.longestStreak ?? 0);
+
+  if (lastLoginDate === today) {
+    return {
+      ...payload,
+      currentStreak: Math.max(1, currentStreak),
+      longestStreak: Math.max(longestStreak, currentStreak, 1),
+      lastLoginDate: today
+    };
+  }
+
+  const yesterday = new Date();
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const nextCurrentStreak = lastLoginDate === yesterday.toISOString().slice(0, 10)
+    ? Math.max(1, currentStreak + 1)
+    : 1;
+
+  return {
+    ...payload,
+    currentStreak: nextCurrentStreak,
+    longestStreak: Math.max(longestStreak, nextCurrentStreak),
+    lastLoginDate: today
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const payload = loginSchema.parse(await request.json());
@@ -45,11 +74,17 @@ export async function POST(request: Request) {
       email: user.email
     });
 
+    const nextPayload = applyLoginStreak(user.payload || {});
+    await sql(
+      "update users set payload = $2::jsonb, updated_at = now() where id = $1",
+      [user.id, JSON.stringify(nextPayload)]
+    );
+
     return NextResponse.json({
       user: {
         uid: user.id,
         email: user.email,
-        displayName: String(user.payload.displayName ?? user.email.split("@")[0])
+        displayName: String(nextPayload.displayName ?? user.email.split("@")[0])
       }
     });
   } catch (error) {
