@@ -11,6 +11,9 @@ const missionTemplates = [
   { id: "t4", title: "Save 50 Liters of Water", desc: "Collectively save about 50 liters through shorter showers.", icon: "💧", difficulty: "Medium", xp: 320, eco: 190, needed: 3 },
   { id: "t5", title: "Night Power Down", desc: "Unplug unused chargers/devices across at least 3 households.", icon: "🔌", difficulty: "Easy", xp: 220, eco: 130, needed: 2 },
   { id: "t6", title: "Plant or Care for 3 Greens", desc: "Plant seeds or tend to three different plants as a joint effort.", icon: "🌱", difficulty: "Easy", xp: 210, eco: 120, needed: 3 },
+  { id: "t7", title: "Zero-Waste Group Feast", desc: "Organize a group meal where all food ingredients are package-free and zero waste is generated.", icon: "🍽️", difficulty: "Hard", xp: 500, eco: 300, needed: 4 },
+  { id: "t8", title: "Plastic Cleanup Blitz", desc: "Do a neighborhood walk together and clean up 50 items of plastic waste.", icon: "🚯", difficulty: "Medium", xp: 380, eco: 220, needed: 3 },
+  { id: "t9", title: "Community Energy Audit", desc: "Inspect and log energy usage parameters in your homes to identify major power-draining sources.", icon: "📊", difficulty: "Hard", xp: 550, eco: 340, needed: 4 }
 ];
 
 const difficultyColor: Record<string, string> = {

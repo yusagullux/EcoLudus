@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/useAuth";
 import { updateUserProfile } from "@/public/js/auth.js";
 import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
-type Mode = "plants" | "eggs";
+type Mode = "plants" | "eggs" | "chests";
 
 type ShopItem = {
   id: number;
@@ -15,6 +15,7 @@ type ShopItem = {
   price: number;
   image: string;
   hatchTime?: string;
+  description?: string;
 };
 
 const plants = [
@@ -35,6 +36,13 @@ const eggs = [
   { id: 4, name: "Legendary Egg", rarity: "legendary", price: 1800, image: "/images/eggs/legendary-egg.png", hatchTime: "24h" }
 ];
 
+const chests = [
+  { id: 1, name: "Wooden Chest", rarity: "common", price: 150, image: "/images/chests/wooden-chest.png", description: "Contains EcoCoins or Common Plants!" },
+  { id: 2, name: "Bronze Chest", rarity: "rare", price: 350, image: "/images/chests/bronze-chest.png", description: "Contains EcoCoins, Rare Plants, or Common Eggs!" },
+  { id: 3, name: "Silver Chest", rarity: "epic", price: 800, image: "/images/chests/silver-chest.png", description: "Contains a large amount of EcoCoins, Epic Plants, or Eggs!" },
+  { id: 4, name: "Golden Chest", rarity: "legendary", price: 2000, image: "/images/chests/golden-chest.png", description: "Contains massive EcoCoins, Legendary Plants, or Eggs!" }
+];
+
 export default function ShopPage() {
   const { user, profile, setProfile } = useAuth();
   const ecoPoints = profile?.ecoPoints ?? 0;
@@ -42,7 +50,7 @@ export default function ShopPage() {
   const [filter, setFilter] = useState<"all" | Rarity>("all");
   const [toast, setToast] = useState("");
 
-  const items = mode === "plants" ? plants : eggs;
+  const items = mode === "plants" ? plants : mode === "eggs" ? eggs : chests;
   const filtered = filter === "all" ? items : items.filter((item) => item.rarity === filter);
   const tabs: ("all" | Rarity)[] = ["all", "common", "rare", "epic", "legendary"];
 
@@ -61,6 +69,7 @@ export default function ShopPage() {
 
     const currentPlants = Array.isArray(profile.plants) ? profile.plants : [];
     const currentEggs = Array.isArray(profile.eggs) ? profile.eggs : [];
+    const currentChests = Array.isArray(profile.chests) ? profile.chests : [];
 
     const nextEcoPoints = ecoPoints - item.price;
     const profileUpdates: Record<string, unknown> = {
@@ -83,7 +92,7 @@ export default function ShopPage() {
       }
 
       profileUpdates.plants = nextPlants;
-    } else {
+    } else if (mode === "eggs") {
       const existingIndex = currentEggs.findIndex((entry) => entry.id === item.id);
       const nextEggs = [...currentEggs];
 
@@ -99,6 +108,22 @@ export default function ShopPage() {
       }
 
       profileUpdates.eggs = nextEggs;
+    } else {
+      const existingIndex = currentChests.findIndex((entry) => entry.id === item.id);
+      const nextChests = [...currentChests];
+
+      if (existingIndex >= 0) {
+        const existingChest = nextChests[existingIndex];
+        nextChests[existingIndex] = {
+          ...existingChest,
+          count: (existingChest.count ?? 1) + 1,
+          purchasedAt: new Date().toISOString()
+        };
+      } else {
+        nextChests.push({ ...item, count: 1, purchasedAt: new Date().toISOString() });
+      }
+
+      profileUpdates.chests = nextChests;
     }
 
     const result = await updateUserProfile(user.uid, profileUpdates);
@@ -119,14 +144,14 @@ export default function ShopPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Nature store" title="Plant Shop" description="Spend EcoPoints on rare plants and mysterious eggs.">
+      <PageHero eyebrow="Nature store" title="Plant Shop" description="Spend EcoPoints on rare plants, mysterious eggs, and magical chests.">
         <HeroMetric label="EcoPoints" value={ecoPoints.toLocaleString()} />
       </PageHero>
 
       <Panel>
         <div className="flex flex-col gap-4">
           <div className="inline-flex w-fit rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
-            {(["plants", "eggs"] as Mode[]).map((itemMode) => (
+            {(["plants", "eggs", "chests"] as Mode[]).map((itemMode) => (
               <button
                 key={itemMode}
                 onClick={() => { setMode(itemMode); setFilter("all"); }}
@@ -167,22 +192,20 @@ export default function ShopPage() {
               className="reveal-card group flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
               style={{ borderColor: border, background: "var(--bg-card)" }}
             >
-              {/* Framed card image design (sticker/badge layout) */}
-              <div className="relative flex aspect-square items-center justify-center overflow-hidden p-4" style={{ background: `${style.accent}12` }}>
-                <div className="absolute inset-x-7 bottom-4 h-5 rounded-full bg-black/5 blur-md" />
-                <div className="relative flex h-28 w-28 items-center justify-center rounded-2xl bg-white shadow-sm border border-forest-100/60 overflow-hidden p-2">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    loading="lazy"
-                    className="h-20 w-20 object-contain transition duration-300 group-hover:scale-115 mix-blend-multiply dark:mix-blend-normal"
-                  />
-                </div>
-                <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
+              {/* Framed card image design (sticker/badge layout with full bleed support) */}
+              <div className="relative flex aspect-square items-center justify-center overflow-hidden" style={{ background: `${style.accent}12` }}>
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
+                />
+                <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
               </div>
               <div className="flex flex-1 flex-col gap-2 p-3">
                 <p className="font-serif text-sm font-extrabold leading-tight truncate" style={{ color: "var(--text-primary)" }}>{item.name}</p>
-                {(item as any).hatchTime && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Hatches in {(item as any).hatchTime}</p>}
+                {item.hatchTime && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Hatches in {item.hatchTime}</p>}
+                {item.description && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{item.description}</p>}
                 <p className="font-serif text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>
                   {item.price} <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>EP</span>
                 </p>
