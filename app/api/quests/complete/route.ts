@@ -19,6 +19,69 @@ function dateKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function clampStat(value: unknown, fallback: number) {
+  return Math.max(0, Math.min(100, Number(value ?? fallback) || fallback));
+}
+
+function applyCompanionProgress(
+  profile: Record<string, unknown>,
+  missionCount: number,
+  baseXpReward: number
+) {
+  const animals = asArray(profile.animals) as Array<Record<string, unknown>>;
+  const activePetId = typeof profile.activePet === "string"
+    ? profile.activePet
+    : String(animals.find((pet) => pet.active)?.id ?? "");
+
+  if (!activePetId || animals.length === 0) {
+    return {
+      animals,
+      companion: null,
+      companionXpBonus: 0
+    };
+  }
+
+  const currentActivePet = animals.find((pet) => pet.id === activePetId) ?? null;
+  const canAssist = clampStat(currentActivePet?.energy, 50) >= 10;
+  const companion = currentActivePet
+    ? {
+        id: currentActivePet.id,
+        name: currentActivePet.name,
+        canAssist
+      }
+    : null;
+
+  const nextAnimals = animals.map((pet) => {
+    if (pet.id !== activePetId) return pet;
+
+    const happiness = clampStat(pet.happiness, 50);
+    const energy = clampStat(pet.energy, 50);
+    const bond = clampStat(pet.bond, 10);
+
+    return {
+      ...pet,
+      active: true,
+      happiness: Math.min(100, happiness + missionCount * 3),
+      energy: canAssist ? Math.max(0, energy - missionCount * 5) : energy,
+      bond: Math.min(100, bond + missionCount * 2),
+      missionsTogether: Number(pet.missionsTogether ?? 0) + missionCount,
+      lastMissionAt: new Date().toISOString()
+    };
+  });
+
+  const activePet = nextAnimals.find((pet) => pet.id === activePetId);
+  const bond = clampStat(activePet?.bond, 10);
+  const happiness = clampStat(activePet?.happiness, 50);
+  const bonusRate = canAssist ? Math.min(0.12, 0.03 + Math.floor(bond / 25) * 0.02 + Math.floor(happiness / 50) * 0.01) : 0;
+  const companionXpBonus = Math.round(baseXpReward * bonusRate);
+
+  return {
+    animals: nextAnimals,
+    companion,
+    companionXpBonus
+  };
+}
+
 export async function POST(request: Request) {
   const session = await getSession();
 
@@ -96,7 +159,8 @@ export async function POST(request: Request) {
     const xpReward = completionRecords.reduce((sum, quest) => sum + quest.xp, 0);
     const ecoReward = completionRecords.reduce((sum, quest) => sum + quest.ecoPoints, 0);
     const carbonReward = completionRecords.reduce((sum, quest) => sum + quest.carbonReduced, 0);
-    const nextXp = Number(profile.xp || 0) + xpReward;
+    const companionProgress = applyCompanionProgress(profile, completionRecords.length, xpReward);
+    const nextXp = Number(profile.xp || 0) + xpReward + companionProgress.companionXpBonus;
     const nextDailyCompletions = Array.from(new Set([...dailyQuestsCompleted, ...questIds]));
     const nextCompletedQuests = Array.from(new Set([...completedQuests, ...questIds]));
     const dailyQuestCompletions = {
@@ -115,6 +179,7 @@ export async function POST(request: Request) {
       xp: nextXp,
       ecoPoints: Number(profile.ecoPoints || 0) + ecoReward,
       level: nextLevel,
+      animals: companionProgress.animals,
       carbonReduced: Math.round((Number(profile.carbonReduced || 0) + carbonReward) * 100) / 100,
       missionsCompleted: Number(profile.missionsCompleted || 0) + completionRecords.length,
       completedQuests: nextCompletedQuests,
@@ -157,9 +222,11 @@ export async function POST(request: Request) {
       completed: completionRecords,
       totals: {
         xp: xpReward,
+        companionXpBonus: companionProgress.companionXpBonus,
         ecoPoints: ecoReward,
         carbonReduced: Math.round(carbonReward * 100) / 100
-      }
+      },
+      companion: companionProgress.companion
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

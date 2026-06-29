@@ -45,13 +45,26 @@ function checkIfQuestRequiresPhoto(id: string) {
   return photoQuestIds.includes(id);
 }
 
-function getTimeUntilNextReset(lastResetTime: string | null) {
-  if (!lastResetTime) return 0;
-  const now = new Date().getTime();
-  const lastResetTimestamp = new Date(lastResetTime).getTime();
-  const hoursInMilliseconds = 24 * 60 * 60 * 1000;
-  const nextResetTimestamp = lastResetTimestamp + hoursInMilliseconds;
-  return Math.max(0, nextResetTimestamp - now);
+function getTimeUntilNextReset(lastResetTime: string | null): number {
+  // Resets at midnight UTC each day, not on a rolling 24h window from last reset.
+  const now = new Date();
+  const tomorrow = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1,
+    0, 0, 0, 0
+  ));
+  return Math.max(0, tomorrow.getTime() - now.getTime());
+}
+
+function isAfterMidnightUTC(lastResetTime: string | null): boolean {
+  if (!lastResetTime) return true;
+  const lastReset = new Date(lastResetTime);
+  const now = new Date();
+  // Compare UTC date strings — if the day has rolled over, a reset is needed.
+  const lastDate = `${lastReset.getUTCFullYear()}-${lastReset.getUTCMonth()}-${lastReset.getUTCDate()}`;
+  const nowDate  = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}`;
+  return lastDate !== nowDate;
 }
 
 export default function DashboardPage() {
@@ -74,6 +87,7 @@ export default function DashboardPage() {
   const [pendingCompletion, setPendingCompletion] = useState(false);
   const [toast, setToast] = useState("");
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [streakReward, setStreakReward] = useState<{ day: number; label: string } | null>(null);
 
   // Load quests.json on mount
   useEffect(() => {
@@ -117,7 +131,7 @@ export default function DashboardPage() {
       });
     });
 
-    const isResetNeeded = !lastReset || currentDailyQuestIds.length === 0 || getTimeUntilNextReset(lastReset) <= 0;
+    const isResetNeeded = !lastReset || currentDailyQuestIds.length === 0 || isAfterMidnightUTC(lastReset);
 
     if (isResetNeeded) {
       async function resetDaily() {
@@ -131,12 +145,51 @@ export default function DashboardPage() {
         const selected = shuffled.slice(0, 5);
         const selectedIds = selected.map((q: any) => q.id);
 
+        // ── Streak reward calculation ──────────────────────────────────────
+        // Only grant when this is a genuine new-day reset (not first login ever).
+        const profileUpdates: Record<string, unknown> = {
+          lastQuestResetTime: new Date().toISOString(),
+          currentDailyQuests: selectedIds,
+          dailyQuestsCompleted: []
+        };
+
+        const streak = Number(profile.currentStreak ?? 0);
+        const lastStreakReward = Number(profile.lastStreakRewardDay ?? 0);
+
+        // Milestone rewards: day 3 → 20 EcoPoints, day 7 → common egg,
+        // day 14 → rare egg, day 30 → legendary egg. Each milestone fires once
+        // per streak (tracked by lastStreakRewardDay so re-logins don't double-grant).
+        const STREAK_MILESTONES = [
+          { day: 3,  type: "eco",  amount: 20,  label: "3-day streak: +20 EcoPoints" },
+          { day: 7,  type: "egg",  rarity: "common",    label: "7-day streak: Common Egg!" },
+          { day: 14, type: "egg",  rarity: "rare",      label: "14-day streak: Rare Egg!" },
+          { day: 30, type: "egg",  rarity: "legendary", label: "30-day streak: Legendary Egg!" }
+        ];
+
+        for (const milestone of STREAK_MILESTONES) {
+          if (streak >= milestone.day && lastStreakReward < milestone.day) {
+            if (milestone.type === "eco") {
+              profileUpdates.ecoPoints = Number(profile.ecoPoints ?? 0) + (milestone.amount ?? 0);
+            } else if (milestone.type === "egg") {
+              const currentEggs = Array.isArray(profile.eggs) ? [...profile.eggs] : [];
+              const eggName = `${milestone.rarity!.charAt(0).toUpperCase() + milestone.rarity!.slice(1)} Egg`;
+              const eggImage = `/images/eggs/${milestone.rarity}-egg.png`;
+              const existingIdx = currentEggs.findIndex((e: any) => e.name === eggName);
+              if (existingIdx >= 0) {
+                currentEggs[existingIdx] = { ...currentEggs[existingIdx], count: (currentEggs[existingIdx].count ?? 1) + 1 };
+              } else {
+                currentEggs.push({ id: Date.now(), name: eggName, rarity: milestone.rarity, price: 0, image: eggImage, count: 1, purchasedAt: new Date().toISOString() });
+              }
+              profileUpdates.eggs = currentEggs;
+            }
+            profileUpdates.lastStreakRewardDay = milestone.day;
+            setStreakReward({ day: milestone.day, label: milestone.label });
+            break; // grant one milestone at a time, highest applicable
+          }
+        }
+
         try {
-          const result = await updateUserProfile(user.uid, {
-            lastQuestResetTime: new Date().toISOString(),
-            currentDailyQuests: selectedIds,
-            dailyQuestsCompleted: []
-          });
+          const result = await updateUserProfile(user.uid, profileUpdates);
           if (result.success) {
             await refreshProfile();
           }
@@ -161,19 +214,13 @@ export default function DashboardPage() {
     }
   }, [profile, questsData, user?.uid]);
 
-  // Live ticking reset timer
+  // Live ticking reset timer (counts down to midnight UTC)
   useEffect(() => {
-    if (!profile?.lastQuestResetTime) return;
-
-    const updateTimer = () => {
-      const remaining = getTimeUntilNextReset(profile.lastQuestResetTime);
-      setTimeLeft(remaining);
-    };
-
+    const updateTimer = () => setTimeLeft(getTimeUntilNextReset(null));
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [profile?.lastQuestResetTime]);
+  }, []);
 
   const formatTime = (ms: number) => {
     if (ms <= 0) return "00:00:00";
@@ -194,6 +241,10 @@ export default function DashboardPage() {
   const completedQuests = profile?.completedQuests || [];
   const currentStreak = Number(profile?.currentStreak ?? 0);
   const longestStreak = Number(profile?.longestStreak ?? 0);
+  const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
+  const activePetId = profile?.activePet || profileAnimals.find((pet: any) => pet.active)?.id;
+  const activePet = profileAnimals.find((pet: any) => pet.id === activePetId) || null;
+  const activePetBond = Number(activePet?.bond ?? 0);
 
   const curXP = level <= 1 ? 0 : requiredXP(level - 1);
   const nextXP = requiredXP(level);
@@ -334,9 +385,12 @@ export default function DashboardPage() {
       setSelectedQuestIds([]);
       await refreshProfile();
       const completedTitles = selectedQuests.map((quest) => quest.title).join(", ");
-      setCompletedPopup(`Mission complete! ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"} finished: ${completedTitles}`);
+      const companionLine = result.companion?.name
+        ? ` ${result.companion.name} gained bond${result.totals.companionXpBonus ? ` and found +${result.totals.companionXpBonus} bonus XP` : ""}.`
+        : "";
+      setCompletedPopup(`Mission complete! ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"} finished: ${completedTitles}.${companionLine}`);
       showToast(
-        `Completed ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"}: +${result.totals.xp} XP, +${result.totals.ecoPoints} EcoPoints, ${Number(result.totals.carbonReduced || 0).toFixed(1)} kg CO2`
+        `Completed ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"}: +${result.totals.xp + (result.totals.companionXpBonus || 0)} XP, +${result.totals.ecoPoints} EcoPoints, ${Number(result.totals.carbonReduced || 0).toFixed(1)} kg CO2`
       );
       setVerifiedQuestIds((ids) => ids.filter((id) => !completedIds.includes(id)));
     } catch (error) {
@@ -370,6 +424,7 @@ export default function DashboardPage() {
           <HeroMetric label="Eco" value={ecoPoints.toLocaleString()} />
           <HeroMetric label="Level" value={level} />
           <HeroMetric label="Streak" value={`${currentStreak}d`} />
+          {activePet && <HeroMetric label="Pet" value={activePet.name} />}
         </div>
       </PageHero>
 
@@ -404,7 +459,43 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* Upcoming streak milestones */}
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { day: 3,  icon: "✨", label: "+20 Eco",        color: "#9a6b1f" },
+            { day: 7,  icon: "🥚", label: "Common Egg",     color: "#2f5f86" },
+            { day: 14, icon: "🥚", label: "Rare Egg",       color: "#62508f" },
+            { day: 30, icon: "🐉", label: "Legendary Egg",  color: "#c97c20" }
+          ].map(({ day, icon, label, color }) => {
+            const reached = currentStreak >= day;
+            const claimed = Number(profile?.lastStreakRewardDay ?? 0) >= day;
+            return (
+              <div key={day} className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs"
+                style={{ borderColor: reached ? color : "var(--border-default)", background: claimed ? `${color}18` : "var(--bg-panel-alt)", opacity: claimed ? 0.6 : 1 }}>
+                <span className="text-base">{icon}</span>
+                <div>
+                  <p className="font-extrabold" style={{ color: reached ? color : "var(--text-muted)" }}>Day {day}</p>
+                  <p className="font-semibold" style={{ color: "var(--text-muted)" }}>{claimed ? "Claimed" : label}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </Panel>
+
+      {/* Streak reward popup */}
+      {streakReward && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[24px] border p-8 text-center shadow-[0_24px_70px_rgba(0,0,0,0.3)]"
+            style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
+            <div className="text-5xl mb-4">🎉</div>
+            <h3 className="font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Streak Reward!</h3>
+            <p className="mt-2 text-sm font-semibold" style={{ color: "var(--text-muted)" }}>{streakReward.label}</p>
+            <button onClick={() => setStreakReward(null)} className={`mt-6 w-full ${primaryButton}`}>Claim & Continue</button>
+          </div>
+        </div>
+      )}
 
       <Panel
         eyebrow="Level progress"
@@ -417,6 +508,19 @@ export default function DashboardPage() {
           <span>{nextXP === Infinity ? "Max level" : `${(nextXP - curXP).toLocaleString()} XP total`}</span>
         </div>
       </Panel>
+
+      {activePet && (
+        <Panel eyebrow="Companion boost" title={`${activePet.name} is adventuring with you`} action={<Pill active>Bond {activePetBond}%</Pill>}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
+              Completing daily quests grows your active pet's bond. A cared-for companion can discover bonus XP during missions.
+            </p>
+            <div className="min-w-[180px]">
+              <ProgressBar value={activePetBond} color="#9a6b1f" />
+            </div>
+          </div>
+        </Panel>
+      )}
 
       <Panel
         eyebrow="Daily missions"

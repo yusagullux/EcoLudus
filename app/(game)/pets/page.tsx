@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { updateUserProfile } from "@/public/js/auth.js";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
@@ -17,6 +17,10 @@ const CARE_ACTIONS = [
   { id: "train", label: "Eco Trick", stat: "bond", amount: 12, cost: 0, xp: 18, eco: 4 },
   { id: "play", label: "Nature Play", stat: "happiness", amount: 14, cost: 4, xp: 12, eco: 2 }
 ];
+
+// Maximum number of eco-rewarding care actions allowed per pet per day.
+// Actions that grant eco > 0 count toward this cap; free non-eco actions (snack) do not.
+const MAX_ECO_ACTIONS_PER_DAY = 5;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -50,6 +54,8 @@ export default function PetsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hearts, setHearts] = useState<Array<{ id: number; dx: string; dy: string }>>([]);
   const [toast, setToast] = useState("");
+  // Prevents concurrent care-action submissions (double-click / button spam).
+  const isProcessing = useRef(false);
   const pets = Array.isArray(profile?.animals) ? profile.animals.map(normalizePet) : [];
   const activePetId = profile?.activePet || pets.find((pet) => pet.active)?.id || pets[0]?.id || null;
 
@@ -78,59 +84,114 @@ export default function PetsPage() {
     showToast(`${pet.name} is traveling with you now.`);
   };
 
-  const runCareAction = async (action: any) => {
+  // Free "pet" interaction — no eco cost, no eco reward. Just +2 XP and happiness bump.
+  // This is what the portrait tap triggers so it's never silently spending EcoPoints.
+  const petTheAnimal = async () => {
     if (!user?.uid || !profile || !selectedPet) return;
-    if (Number(profile.ecoPoints ?? 0) < action.cost) {
-      showToast(`Need ${action.cost} EcoPoints for ${action.label}.`);
-      return;
-    }
-
-    const today = todayKey();
-    const nextPets = pets.map((pet) => {
-      if (pet.id !== selectedPet.id) return pet;
-      const lastCareDate = String(pet.lastCareDate ?? "");
+    if (isProcessing.current) return;
+    isProcessing.current = true;
+    try {
+      const today = todayKey();
+      const lastCareDate = String(selectedPet.lastCareDate ?? "");
       const isNewCareDay = lastCareDate !== today;
-      const careActionsToday = isNewCareDay ? 1 : Number(pet.careActionsToday ?? 0) + 1;
-      const currentValue = Number(pet[action.stat] ?? 50);
-      return {
-        ...pet,
-        [action.stat]: Math.min(100, currentValue + action.amount),
-        happiness: Math.min(100, Number(pet.happiness ?? 50) + (action.stat === "happiness" ? 0 : 4)),
-        petsGiven: Number(pet.petsGiven ?? 0) + 1,
-        careActionsToday,
-        careStreak: isNewCareDay ? Number(pet.careStreak ?? 0) + 1 : Number(pet.careStreak ?? 0),
-        lastCareDate: today,
-        lastPettedAt: new Date().toISOString()
+      const nextPets = pets.map((pet) => {
+        if (pet.id !== selectedPet.id) return pet;
+        return {
+          ...pet,
+          happiness: Math.min(100, Number(pet.happiness ?? 50) + 2),
+          petsGiven: Number(pet.petsGiven ?? 0) + 1,
+          lastPettedAt: new Date().toISOString(),
+          careActionsToday: isNewCareDay ? 1 : Number(pet.careActionsToday ?? 0) + 1,
+          careStreak: isNewCareDay ? Number(pet.careStreak ?? 0) + 1 : Number(pet.careStreak ?? 0),
+          lastCareDate: today
+        };
+      });
+      const nextXp = Number(profile.xp ?? 0) + 2;
+      const updates = { animals: nextPets, xp: nextXp, level: calculateLevel(nextXp) };
+      const burst = Array.from({ length: 10 }).map((_, index) => ({
+        id: Date.now() + index,
+        dx: `${Math.round((Math.random() - 0.5) * 160)}px`,
+        dy: `${Math.round(-80 - Math.random() * 110)}px`
+      }));
+      setHearts((current) => [...current, ...burst]);
+      setTimeout(() => setHearts((current) => current.filter((h) => !burst.some((b) => b.id === h.id))), 1100);
+      const result = await updateUserProfile(user.uid, updates);
+      if (!result.success) { showToast("Pet action did not save."); return; }
+      if (typeof setProfile === "function") setProfile({ ...profile, ...updates });
+    } finally {
+      isProcessing.current = false;
+    }
+  };
+    if (!user?.uid || !profile || !selectedPet) return;
+    // Hard re-entrancy guard — prevents spamming before the async round-trip finishes.
+    if (isProcessing.current) return;
+    isProcessing.current = true;
+
+    try {
+      if (Number(profile.ecoPoints ?? 0) < action.cost) {
+        showToast(`Need ${action.cost} EcoPoints for ${action.label}.`);
+        return;
+      }
+
+      const today = todayKey();
+      const lastCareDate = String(selectedPet.lastCareDate ?? "");
+      const isNewCareDay = lastCareDate !== today;
+      const careActionsToday = isNewCareDay ? 0 : Number(selectedPet.careActionsToday ?? 0);
+
+      // Cap eco-rewarding actions to prevent infinite eco farming.
+      if (action.eco > 0 && careActionsToday >= MAX_ECO_ACTIONS_PER_DAY) {
+        showToast(`Daily eco reward limit reached for ${selectedPet.name}. Come back tomorrow!`);
+        return;
+      }
+
+      const nextPets = pets.map((pet) => {
+        if (pet.id !== selectedPet.id) return pet;
+        const currentValue = Number(pet[action.stat] ?? 50);
+        return {
+          ...pet,
+          [action.stat]: Math.min(100, currentValue + action.amount),
+          happiness: Math.min(100, Number(pet.happiness ?? 50) + (action.stat === "happiness" ? 0 : 4)),
+          petsGiven: Number(pet.petsGiven ?? 0) + 1,
+          careActionsToday: careActionsToday + 1,
+          careStreak: isNewCareDay ? Number(pet.careStreak ?? 0) + 1 : Number(pet.careStreak ?? 0),
+          lastCareDate: today,
+          lastPettedAt: new Date().toISOString()
+        };
+      });
+
+      // Only grant eco points if under the daily cap.
+      const ecoGained = action.eco > 0 && careActionsToday < MAX_ECO_ACTIONS_PER_DAY ? action.eco : 0;
+      const nextXp = Number(profile.xp ?? 0) + action.xp;
+      const nextEcoPoints = Number(profile.ecoPoints ?? 0) - action.cost + ecoGained;
+      const updates = {
+        animals: nextPets,
+        xp: nextXp,
+        level: calculateLevel(nextXp),
+        ecoPoints: nextEcoPoints
       };
-    });
-    const nextXp = Number(profile.xp ?? 0) + action.xp;
-    const nextEcoPoints = Number(profile.ecoPoints ?? 0) - action.cost + action.eco;
-    const updates = {
-      animals: nextPets,
-      xp: nextXp,
-      level: calculateLevel(nextXp),
-      ecoPoints: nextEcoPoints
-    };
 
-    const burst = Array.from({ length: 10 }).map((_, index) => ({
-      id: Date.now() + index,
-      dx: `${Math.round((Math.random() - 0.5) * 160)}px`,
-      dy: `${Math.round(-80 - Math.random() * 110)}px`
-    }));
-    setHearts((current) => [...current, ...burst]);
-    setTimeout(() => {
-      setHearts((current) => current.filter((heart) => !burst.some((item) => item.id === heart.id)));
-    }, 1100);
+      const burst = Array.from({ length: 10 }).map((_, index) => ({
+        id: Date.now() + index,
+        dx: `${Math.round((Math.random() - 0.5) * 160)}px`,
+        dy: `${Math.round(-80 - Math.random() * 110)}px`
+      }));
+      setHearts((current) => [...current, ...burst]);
+      setTimeout(() => {
+        setHearts((current) => current.filter((heart) => !burst.some((item) => item.id === heart.id)));
+      }, 1100);
 
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) {
-      showToast("Care action did not save. Please try again.");
-      return;
+      const result = await updateUserProfile(user.uid, updates);
+      if (!result.success) {
+        showToast("Care action did not save. Please try again.");
+        return;
+      }
+      if (typeof setProfile === "function") {
+        setProfile({ ...profile, ...updates });
+      }
+      showToast(`${action.label}: +${action.xp} XP${ecoGained ? `, +${ecoGained} Eco` : ""}.`);
+    } finally {
+      isProcessing.current = false;
     }
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
-    }
-    showToast(`${action.label}: +${action.xp} XP${action.eco ? `, +${action.eco} Eco` : ""}.`);
   };
 
   const totalPets = pets.reduce((sum, pet) => sum + Number(pet.count ?? 1), 0);
@@ -144,6 +205,10 @@ export default function PetsPage() {
   const selectedMood = getPetMood(selectedHappiness, selectedEnergy, selectedBond);
   const selectedBondLevel = getBondLevel(selectedBond);
   const careActionsToday = Number(selectedPet?.careActionsToday ?? 0);
+  // Whether the daily eco reward cap has been reached for the active pet.
+  const isNewCareDay = String(selectedPet?.lastCareDate ?? "") !== todayKey();
+  const ecoActionsToday = isNewCareDay ? 0 : careActionsToday;
+  const ecoCapReached = ecoActionsToday >= MAX_ECO_ACTIONS_PER_DAY;
 
   return (
     <div className="flex flex-col gap-5">
@@ -168,7 +233,8 @@ export default function PetsPage() {
             <div className="flex flex-col items-center gap-5 text-center">
               <button
                 type="button"
-                onClick={() => runCareAction(CARE_ACTIONS[2])}
+                onClick={petTheAnimal}
+                aria-label={`Pet ${selectedPet.name}`}
                 className="relative flex aspect-square w-full max-w-[360px] items-center justify-center overflow-hidden rounded-[28px] border transition active:scale-[0.98]"
                 style={{
                   borderColor: rarityBorder[selectedPet.rarity as Rarity] ?? "var(--border-default)",
@@ -186,6 +252,9 @@ export default function PetsPage() {
                   </span>
                 ))}
               </button>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: "var(--text-muted)" }}>
+                Tap portrait to pet · free · +2 XP
+              </p>
 
               <div className="w-full max-w-md">
                 {[
@@ -204,13 +273,29 @@ export default function PetsPage() {
               </div>
 
               <div className="grid w-full max-w-xl gap-3 sm:grid-cols-3">
-                {CARE_ACTIONS.map((action) => (
-                  <button key={action.id} type="button" onClick={() => runCareAction(action)} className={primaryButton}>
-                    {action.label}
-                    <span className="ml-1 opacity-70">{action.cost ? `${action.cost} EP` : `+${action.xp} XP`}</span>
-                  </button>
-                ))}
+                {CARE_ACTIONS.map((action) => {
+                  const blocked = action.eco > 0 && ecoCapReached;
+                  return (
+                    <button
+                      key={action.id}
+                      type="button"
+                      onClick={() => runCareAction(action)}
+                      disabled={blocked}
+                      className={primaryButton}
+                      title={blocked ? `Daily eco limit reached (${MAX_ECO_ACTIONS_PER_DAY}/day)` : undefined}
+                    >
+                      {action.label}
+                      <span className="ml-1 opacity-70">{action.cost ? `${action.cost} EP` : `+${action.xp} XP`}</span>
+                    </button>
+                  );
+                })}
               </div>
+
+              {ecoCapReached && (
+                <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                  Daily eco reward limit reached ({MAX_ECO_ACTIONS_PER_DAY}/{MAX_ECO_ACTIONS_PER_DAY}). Resets tomorrow.
+                </p>
+              )}
 
               <div className="flex flex-wrap justify-center gap-3">
                 <button type="button" onClick={() => selectActivePet(selectedPet)} disabled={selectedPet.active || activePetId === selectedPet.id} className={secondaryButton}>
@@ -219,7 +304,7 @@ export default function PetsPage() {
               </div>
 
               <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
-                {careActionsToday} care action{careActionsToday === 1 ? "" : "s"} today. Lifetime care: {selectedPetsGiven.toLocaleString()}.
+                {ecoActionsToday}/{MAX_ECO_ACTIONS_PER_DAY} eco actions today. Lifetime care: {selectedPetsGiven.toLocaleString()}.
               </p>
             </div>
           </Panel>

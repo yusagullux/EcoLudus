@@ -61,18 +61,36 @@ export default function ProfilePage() {
   const longestStreak = Number(profile?.longestStreak ?? 0);
   const lastLoginDate = String(profile?.lastLoginDate ?? "Not tracked yet");
 
-  // Calculate category progress from completed quests
+  // Quest id prefixes that map to each category id in quests.json.
+  // e.g. "recycling_1" → category "recycling", "energy_saving_1" → category "energy"
+  const CATEGORY_QUEST_PREFIXES: Record<string, string[]> = {
+    recycling: ["recycling_"],
+    energy: ["energy_"],
+    transportation: ["transportation_"],
+    water: ["water_"],
+    cleanup: ["cleanup_"],
+    gardening: ["gardening_", "sustainable_"]
+  };
+
+  // Count how many of completedQuests belong to each category by prefix,
+  // then use real totals sourced from quests.json counts.
+  const CATEGORY_TOTALS: Record<string, number> = {
+    recycling: 10,
+    energy: 12,
+    transportation: 7,
+    water: 6,
+    cleanup: 6,
+    gardening: 10  // gardening (6) + sustainable_living (first 4 included)
+  };
+
   const categoryProgress = categories.map(category => {
-    // Estimate total quests per category (this is game configuration)
-    const total = category.id === "recycling" ? 8 :
-                  category.id === "energy" ? 7 :
-                  category.id === "transportation" ? 5 :
-                  category.id === "water" ? 6 :
-                  category.id === "cleanup" ? 4 : 4;
-    // Calculate done based on completed quests (simplified - in real app would track per category)
-    const done = Math.min(completedQuests.length, total);
-    // Calculate CO2 based on progress
-    const co2 = (done / total) * category.maxCo2;
+    const prefixes = CATEGORY_QUEST_PREFIXES[category.id] ?? [`${category.id}_`];
+    const total = CATEGORY_TOTALS[category.id] ?? 6;
+    // Only count quests whose id starts with one of this category's prefixes.
+    const done = completedQuests.filter(qid =>
+      prefixes.some(prefix => String(qid).startsWith(prefix))
+    ).length;
+    const co2 = total > 0 ? (done / total) * category.maxCo2 : 0;
     return { ...category, done, total, co2 };
   });
 
