@@ -17,7 +17,9 @@ export async function GET() {
         status: "error",
         database: "unavailable",
         code: setupError ? "database-not-configured" : "database-unavailable",
-        message: error instanceof Error ? error.message : "Database connection failed"
+        message: setupError
+          ? "The production database is not configured."
+          : "Database connection failed."
       },
       { status: setupError ? 503 : 500 }
     );

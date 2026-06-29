@@ -466,7 +466,7 @@ export default function DashboardPage() {
                         setPhotoPreview(null);
                         setVerificationError(null);
                       }}
-                      className="mt-1 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider transition"
+                      className="mt-1 min-h-11 rounded-full px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider transition"
                       style={isVerified
                         ? { background: "var(--sidebar-active-bg)", color: "var(--text-sidebar-muted)" }
                         : { background: "#fef3c7", color: "#92400e" }}
@@ -517,7 +517,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => { setProofType("text"); setVerificationError(null); }}
-                  className="flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
+                  className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
                   style={proofType === "text"
                     ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
                     : { color: "var(--text-muted)" }}
@@ -527,7 +527,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => { setProofType("photo"); setVerificationError(null); }}
-                  className="flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
+                  className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
                   style={proofType === "photo"
                     ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
                     : { color: "var(--text-muted)" }}

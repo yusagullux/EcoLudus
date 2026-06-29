@@ -56,7 +56,6 @@ export async function POST(request: Request) {
               "This photo has already been used by another user. Please provide a unique photo proof for your mission.",
             details: {
               questId: existing.quest_id,
-              usedBy: existing.user_id,
               usedAt: existing.created_at
             }
           }
@@ -90,9 +89,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ verified: true, warnings: providerResult.warnings ?? [], questId, questTitle });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Server error during photo verification.";
+    console.error("Photo verification error:", error);
     return NextResponse.json(
-      { error: { code: "internal", message } },
+      { error: { code: "internal", message: "Server error during photo verification." } },
       { status: 500 }
     );
   }

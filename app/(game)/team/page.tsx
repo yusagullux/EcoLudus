@@ -59,7 +59,7 @@ export default function TeamPage() {
     }
 
     try {
-      const response = await fetch(`/api/teams?userId=${user.uid}`);
+      const response = await fetch("/api/teams", { credentials: "include" });
       const data = await response.json();
 
       if (data.team) {
@@ -102,7 +102,8 @@ export default function TeamPage() {
       const response = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", userId: user.uid, teamName })
+        credentials: "include",
+        body: JSON.stringify({ action: "create", teamName })
       });
       const data = await response.json();
 
@@ -126,7 +127,8 @@ export default function TeamPage() {
       const response = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "join", userId: user.uid, teamCode: inputVal.trim() })
+        credentials: "include",
+        body: JSON.stringify({ action: "join", teamCode: inputVal.trim() })
       });
       const data = await response.json();
 
@@ -147,7 +149,7 @@ export default function TeamPage() {
     if (!user?.uid) return;
 
     try {
-      const response = await fetch(`/api/teams?userId=${user.uid}`, { method: "DELETE" });
+      const response = await fetch("/api/teams", { method: "DELETE", credentials: "include" });
       if (response.ok) {
         setJoined(false);
         setTeam(null);
@@ -179,9 +181,9 @@ export default function TeamPage() {
       const response = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           action: "assign",
-          userId: user.uid,
           teamId: team.id,
           missionId: t.id,
           title: t.title,
@@ -242,9 +244,9 @@ export default function TeamPage() {
       const response = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           action: "submit_progress",
-          userId: user.uid,
           teamId: team.id,
           activeMissionId: activeProofMission.id,
           textProof: proofType === "text" ? teamTextProof.trim() : undefined,
@@ -298,15 +300,15 @@ export default function TeamPage() {
           <div className="flex flex-wrap gap-3">
             {!joined ? (
               <>
-                <button onClick={() => setShowCreateModal(true)} className="rounded-xl bg-cream-100 px-5 py-2.5 text-sm font-bold tracking-wide text-forest-950 hover:bg-white active:scale-[0.98] transition-all">
+                <button onClick={() => setShowCreateModal(true)} className="min-h-11 rounded-xl bg-cream-100 px-5 py-2.5 text-sm font-bold tracking-wide text-forest-950 hover:bg-white active:scale-[0.98] transition-all">
                   Create Team
                 </button>
-                <button onClick={() => setShowJoinModal(true)} className="rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-white/12 transition-all">
+                <button onClick={() => setShowJoinModal(true)} className="min-h-11 rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-white/12 transition-all">
                   Join via Code
                 </button>
               </>
             ) : (
-              <button onClick={handleLeaveTeam} className="rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-semibold text-cream-100/80 hover:bg-white/12 transition-all">
+              <button onClick={handleLeaveTeam} className="min-h-11 rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-semibold text-cream-100/80 hover:bg-white/12 transition-all">
                 Leave Team
               </button>
             )}
@@ -323,10 +325,10 @@ export default function TeamPage() {
             <p className="mt-1 text-sm max-w-xs mx-auto" style={{ color: "var(--text-muted)" }}>Create a cozy squad or join with a 6-character code.</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setShowCreateModal(true)} className="rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all">
+            <button onClick={() => setShowCreateModal(true)} className="min-h-11 rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all">
               Start a Team
             </button>
-            <button onClick={() => setShowJoinModal(true)} className="rounded-xl border px-5 py-2.5 text-sm font-bold transition" style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}>
+            <button onClick={() => setShowJoinModal(true)} className="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-bold transition" style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}>
               Have a Code?
             </button>
           </div>
@@ -350,7 +352,7 @@ export default function TeamPage() {
               </div>
               <button
                 onClick={() => { navigator.clipboard?.writeText(team?.code || ""); showToast("Code copied!"); }}
-                className="self-start rounded-xl border border-forest-200 bg-white px-4 py-2 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
+                className="min-h-11 self-start rounded-xl border border-forest-200 bg-white px-4 py-2 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
               >
                 Copy Code
               </button>
@@ -437,7 +439,7 @@ export default function TeamPage() {
                           setTeamPhotoPreview(null);
                           setProofError(null);
                         }}
-                        className="mt-4 rounded-xl bg-forest-950 px-5 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
+                        className="mt-4 min-h-11 rounded-xl bg-forest-950 px-5 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
                       >
                         Submit Progress
                       </button>
@@ -474,7 +476,7 @@ export default function TeamPage() {
                     <button
                       onClick={() => handleAssignMission(t)}
                       disabled={isAssigning || isAlreadyActive || activeMissions.length >= 3}
-                      className="mt-auto rounded-xl bg-forest-950 px-4 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-auto min-h-11 rounded-xl bg-forest-950 px-4 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isAssigning ? "Assigning…" : isAlreadyActive ? "Already Active" : activeMissions.length >= 3 ? "Limit Reached" : "Assign"}
                     </button>
@@ -541,14 +543,14 @@ export default function TeamPage() {
             <div className="mt-5 flex justify-end gap-3">
               <button
                 onClick={closeModals}
-                className="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
+                className="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
                 style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
               >
                 Cancel
               </button>
               <button
                 onClick={showCreateModal ? handleCreateTeam : handleJoinTeam}
-                className="rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
+                className="min-h-11 rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
               >
                 {showCreateModal ? "Create" : "Join"}
               </button>
@@ -569,12 +571,12 @@ export default function TeamPage() {
             {/* Tab selector */}
             <div className="mt-5 flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
               <button type="button" onClick={() => { setProofType("text"); setProofError(null); }}
-                className="flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
+                className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
                 style={proofType === "text" ? { background: "var(--bg-panel)", color: "var(--text-primary)" } : { color: "var(--text-muted)" }}>
                 Text Description
               </button>
               <button type="button" onClick={() => { setProofType("photo"); setProofError(null); }}
-                className="flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
+                className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
                 style={proofType === "photo" ? { background: "var(--bg-panel)", color: "var(--text-primary)" } : { color: "var(--text-muted)" }}>
                 Photo Upload
               </button>
@@ -642,13 +644,13 @@ export default function TeamPage() {
 
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={() => setActiveProofMission(null)}
-                className="rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
+                className="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
                 style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}>
                 Cancel
               </button>
               <button type="button" onClick={handleSubmitProgress}
                 disabled={submittingProof || (proofType==="text" && teamTextProof.trim().length < 8) || (proofType==="photo" && !teamPhotoFile)}
-                className="rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                className="min-h-11 rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                 {submittingProof ? "Verifying…" : "Submit Proof"}
               </button>
             </div>

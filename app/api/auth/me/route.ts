@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isDatabaseSetupError, sql } from "@/lib/db";
+import { applyDailyStreak } from "@/lib/streak";
 
 export async function GET() {
   try {
@@ -21,11 +22,24 @@ export async function GET() {
       return NextResponse.json({ user: null });
     }
 
+    const nextPayload = applyDailyStreak(user.payload || {});
+    const streakChanged =
+      nextPayload.currentStreak !== user.payload.currentStreak ||
+      nextPayload.longestStreak !== user.payload.longestStreak ||
+      nextPayload.lastLoginDate !== user.payload.lastLoginDate;
+
+    if (streakChanged) {
+      await sql(
+        "update users set payload = $2::jsonb, updated_at = now() where id = $1",
+        [user.id, JSON.stringify(nextPayload)]
+      );
+    }
+
     return NextResponse.json({
       user: {
         uid: user.id,
         email: user.email,
-        displayName: String(user.payload.displayName ?? user.email.split("@")[0])
+        displayName: String(nextPayload.displayName ?? user.email.split("@")[0])
       }
     });
   } catch (error) {

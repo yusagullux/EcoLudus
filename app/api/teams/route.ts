@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { verifyImageWithProvider, verifyTextProofWithGemini } from "@/lib/photo-verification";
 
@@ -14,10 +15,28 @@ function calculateLevel(xp: number) {
   return 1;
 }
 
+async function getUserTeamId(userId: string) {
+  const result = await sql(
+    "select team_id from team_active_missions where payload->>'user_id' = $1 limit 1",
+    [userId]
+  );
+
+  return result.rows[0]?.team_id ? String(result.rows[0].team_id) : null;
+}
+
+async function isTeamMember(teamId: string, userId: string) {
+  return (await getUserTeamId(userId)) === teamId;
+}
+
 export async function GET(request: Request) {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const userId = session.userId;
 
     if (userId) {
       // Get user's team from team_active_missions (where mission_id is null, indicating user-team linkage)
@@ -126,9 +145,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
-    const { action, userId, teamName, teamCode, teamId, missionId, activeMissionId, title, icon, xp, eco, needed, textProof, photoProof, mimeType } = body;
+    const { action, teamName, teamCode, teamId, missionId, activeMissionId, title, icon, xp, eco, needed, textProof, photoProof, mimeType } = body;
+    const userId = session.userId;
 
     // Create a new team
     if (action === "create" && teamName && userId) {
@@ -206,7 +232,13 @@ export async function POST(request: Request) {
 
     // Assign a new mission to the team
     if (action === "assign" && userId && teamId && missionId) {
-      // Verify team exists and user is part of it
+      if (!(await isTeamMember(teamId, userId))) {
+        return NextResponse.json(
+          { error: { code: "permission-denied" } },
+          { status: 403 }
+        );
+      }
+
       const activeCountResult = await sql(
         "select count(*) as count from team_active_missions where team_id = $1 and mission_id is not null",
         [teamId]
@@ -255,6 +287,13 @@ export async function POST(request: Request) {
 
     // Submit progress on an active mission
     if (action === "submit_progress" && userId && teamId && activeMissionId) {
+      if (!(await isTeamMember(teamId, userId))) {
+        return NextResponse.json(
+          { error: { code: "permission-denied" } },
+          { status: 403 }
+        );
+      }
+
       const activeMissionResult = await sql(
         "select payload, mission_id from team_active_missions where team_id = $1 and id = $2 limit 1",
         [teamId, activeMissionId]
@@ -408,9 +447,14 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const userId = session.userId;
 
     if (userId) {
       await sql("delete from team_active_missions where payload->>'user_id' = $1", [userId]);

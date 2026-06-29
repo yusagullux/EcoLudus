@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json(
-        { error: { code: "auth/database-error", message: `Failed to create user profile: ${dbError.message || dbError}` } },
+        { error: { code: "auth/database-error", message: "Failed to create user profile. Please try again." } },
         { status: 500 }
       );
     }
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: { code: "auth/internal-error", message: error instanceof Error ? error.message : String(error) } },
+      { error: { code: "auth/internal-error", message: "Signup failed. Please try again." } },
       { status: 500 }
     );
   }

@@ -313,7 +313,7 @@ export default function LeaderboardPage() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className="flex-1 rounded-lg py-2.5 text-center text-xs font-extrabold uppercase tracking-wider transition"
+            className="min-h-11 flex-1 rounded-lg py-2.5 text-center text-xs font-extrabold uppercase tracking-wider transition"
             style={tab === t
               ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
               : { color: "var(--text-muted)" }}

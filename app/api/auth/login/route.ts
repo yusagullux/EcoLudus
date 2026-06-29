@@ -2,40 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { setSessionCookie, verifyPassword } from "@/lib/auth";
 import { isDatabaseSetupError, sql } from "@/lib/db";
+import { applyDailyStreak } from "@/lib/streak";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6).max(128)
 });
-
-function applyLoginStreak(payload: Record<string, unknown>): Record<string, unknown> {
-  const today = new Date().toISOString().slice(0, 10);
-  const lastLoginDate = typeof payload.lastLoginDate === "string" ? payload.lastLoginDate : null;
-  const currentStreak = Number(payload.currentStreak ?? 0);
-  const longestStreak = Number(payload.longestStreak ?? 0);
-
-  if (lastLoginDate === today) {
-    return {
-      ...payload,
-      currentStreak: Math.max(1, currentStreak),
-      longestStreak: Math.max(longestStreak, currentStreak, 1),
-      lastLoginDate: today
-    };
-  }
-
-  const yesterday = new Date();
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  const nextCurrentStreak = lastLoginDate === yesterday.toISOString().slice(0, 10)
-    ? Math.max(1, currentStreak + 1)
-    : 1;
-
-  return {
-    ...payload,
-    currentStreak: nextCurrentStreak,
-    longestStreak: Math.max(longestStreak, nextCurrentStreak),
-    lastLoginDate: today
-  };
-}
 
 export async function POST(request: Request) {
   try {
@@ -74,7 +46,7 @@ export async function POST(request: Request) {
       email: user.email
     });
 
-    const nextPayload = applyLoginStreak(user.payload || {});
+    const nextPayload = applyDailyStreak(user.payload || {});
     await sql(
       "update users set payload = $2::jsonb, updated_at = now() where id = $1",
       [user.id, JSON.stringify(nextPayload)]
@@ -116,7 +88,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: { code: "auth/internal-error", message: error instanceof Error ? error.message : String(error) } },
+      { error: { code: "auth/internal-error", message: "Login failed. Please try again." } },
       { status: 500 }
     );
   }

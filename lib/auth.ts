@@ -11,13 +11,17 @@ type SessionPayload = {
 };
 
 function getSessionSecret() {
-  const secret = process.env.SESSION_SECRET || "development-fallback-session-secret-at-least-32-chars-long";
+  const secret = process.env.SESSION_SECRET;
 
-  if (!process.env.SESSION_SECRET) {
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET is required in production");
+  }
+
+  if (!secret) {
     console.warn("WARNING: SESSION_SECRET env variable is not configured. Using a fallback secret for development.");
   }
 
-  return new TextEncoder().encode(secret);
+  return new TextEncoder().encode(secret || "development-fallback-session-secret-at-least-32-chars-long");
 }
 
 export async function hashPassword(password: string) {
