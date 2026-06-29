@@ -6,12 +6,11 @@ import Script from "next/script";
 import { useAuth } from "@/lib/useAuth";
 import {
   HeroMetric, MetricCard, PageHero, Panel, Pill,
-  primaryButton, secondaryButton, inputClass
+  primaryButton, secondaryButton
 } from "@/components/game-ui";
 import { calculateLevel } from "@/lib/level-system";
 
 type StopType = "park" | "recycling" | "community_garden" | "repair_cafe" | "bike_station" | "nature_trail";
-type ProofType = "text" | "photo";
 
 type EcoStop = {
   id: string;
@@ -36,7 +35,7 @@ const TYPE_META: Record<StopType, { icon: string; symbol: string; color: string;
   nature_trail:     { icon: "\u{1F97E}", symbol: "Trail", color: "#62508f", tint: "#ece8f6", label: "Nature Trail" }
 };
 
-const CHECKIN_RADIUS_M = 150;
+const CHECKIN_RADIUS_M = 100;
 const DEFAULT_CENTER: [number, number] = [59.437, 24.745];
 
 function distM(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -87,8 +86,6 @@ export default function EcoMapPage() {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [selectedStop, setSelectedStop] = useState<EcoStop | null>(null);
-  const [proofType, setProofType] = useState<ProofType>("text");
-  const [textProof, setTextProof] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -150,8 +147,9 @@ export default function EcoMapPage() {
       const visited = !!lastCI;
       const dist = userLat !== null && userLng !== null ? distM(userLat, userLng, stop.lat, stop.lng) : null;
       const distStr = distanceLabel(dist);
-      const statusStr = onCD ? "On cooldown" : visited ? "Ready again" : "Not yet visited";
-      const markerColor = onCD ? "#737373" : meta.color;
+      const tooFar = dist === null || dist > CHECKIN_RADIUS_M;
+      const statusStr = onCD ? "On cooldown" : visited ? "Ready again" : "Photo check-in ready";
+      const markerColor = onCD || tooFar ? "#737373" : meta.color;
 
       const icon = L.divIcon({
         className: "",
@@ -170,7 +168,7 @@ export default function EcoMapPage() {
                 color:${markerColor};font-size:9px;font-weight:900;line-height:1;text-transform:uppercase;
               ">${meta.symbol}</span>
             </div>
-            ${visited ? `<div style="position:absolute;right:-2px;top:-2px;width:17px;height:17px;border-radius:50%;background:#f5b942;border:2px solid #fff;color:#513600;font-size:10px;font-weight:900;text-align:center;line-height:13px;">✓</div>` : ""}
+            ${visited ? `<div style="position:absolute;right:-2px;top:-2px;width:17px;height:17px;border-radius:50%;background:#f5b942;border:2px solid #fff;color:#513600;font-size:10px;font-weight:900;text-align:center;line-height:13px;">&check;</div>` : ""}
           </div>`,
         iconSize: [46, 54],
         iconAnchor: [21, 50],
@@ -193,12 +191,12 @@ export default function EcoMapPage() {
             <span style="border-radius:999px;background:#e8f4f6;padding:4px 7px;font-size:10px;font-weight:900;color:#237482;">+${stop.ecoReward} Eco</span>
             ${distStr ? `<span style="border-radius:999px;background:#f4f0e8;padding:4px 7px;font-size:10px;font-weight:900;color:#6e5524;">${distStr}</span>` : ""}
           </div>
-          <div style="font-size:11px;font-weight:800;color:${onCD ? "#9a6b1f" : meta.color};margin-bottom:9px;">${statusStr}</div>
+          <div style="font-size:11px;font-weight:800;color:${onCD || tooFar ? "#9a6b1f" : meta.color};margin-bottom:9px;">${dist !== null && dist > CHECKIN_RADIUS_M ? `Move ${Math.round(dist - CHECKIN_RADIUS_M)}m closer` : statusStr}</div>
           <button
             onclick="window.__ecoCheckin('${stop.id}')"
-            style="display:block;width:100%;padding:8px;border:none;border-radius:10px;background:${onCD ? "#c8c8c8" : meta.color};color:#fff;font-size:11px;font-weight:900;cursor:${onCD ? "not-allowed" : "pointer"};"
-            ${onCD ? "disabled" : ""}
-          >${onCD ? "On Cooldown" : "Check In"}</button>
+            style="display:block;width:100%;padding:8px;border:none;border-radius:10px;background:${onCD || tooFar ? "#c8c8c8" : meta.color};color:#fff;font-size:11px;font-weight:900;cursor:${onCD || tooFar ? "not-allowed" : "pointer"};"
+            ${onCD || tooFar ? "disabled" : ""}
+          >${onCD ? "On Cooldown" : dist === null ? "Enable Location" : dist > CHECKIN_RADIUS_M ? "Too Far" : "Check In"}</button>
         </div>
       `);
       markersLayerRef.current.addLayer(marker);
@@ -241,7 +239,7 @@ export default function EcoMapPage() {
     };
     return () => { delete (window as any).__ecoCheckin; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stops]);
+  }, [stops, userLat, userLng]);
 
   useEffect(() => {
     (async () => {
@@ -275,9 +273,18 @@ export default function EcoMapPage() {
   };
 
   const openCheckin = (stop: EcoStop) => {
+    const d = userLat !== null && userLng !== null ? distM(userLat, userLng, stop.lat, stop.lng) : null;
+    if (d === null) {
+      setSubmitError("Enable location before checking in.");
+      locate();
+      return;
+    }
+    if (d > CHECKIN_RADIUS_M) {
+      setSubmitError(`Move within ${CHECKIN_RADIUS_M}m of this EcoStop before checking in.`);
+      focusStop(stop);
+      return;
+    }
     setSelectedStop(stop);
-    setProofType("text");
-    setTextProof("");
     setPhotoFile(null);
     setPhotoPreview(null);
     setSubmitError(null);
@@ -285,25 +292,28 @@ export default function EcoMapPage() {
 
   const submitCheckin = async () => {
     if (!selectedStop || !user?.uid || !profile || submitting || isProcessing.current) return;
-    if (proofType === "text" && textProof.trim().length < 8) { setSubmitError("Minimum 8 characters."); return; }
-    if (proofType === "photo" && !photoFile) { setSubmitError("Please attach a photo."); return; }
+    if (userLat === null || userLng === null) { setSubmitError("Enable location before checking in."); return; }
+    const currentDistance = distM(userLat, userLng, selectedStop.lat, selectedStop.lng);
+    if (currentDistance > CHECKIN_RADIUS_M) { setSubmitError(`Move within ${CHECKIN_RADIUS_M}m of this EcoStop before checking in.`); return; }
+    if (!photoFile) { setSubmitError("Please attach a photo for AI verification."); return; }
 
     setSubmitting(true);
     setSubmitError(null);
     isProcessing.current = true;
     try {
-      const body: Record<string, unknown> = { stopId: selectedStop.id };
-      if (proofType === "text") {
-        body.textProof = textProof.trim();
-      } else if (photoFile) {
-        body.photoProof = await new Promise<string>((res, rej) => {
-          const r = new FileReader();
-          r.onload = () => typeof r.result === "string" ? res(r.result) : rej(new Error("read failed"));
-          r.onerror = () => rej(r.error);
-          r.readAsDataURL(photoFile);
-        });
-        body.mimeType = photoFile.type;
-      }
+      const photoProof = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => typeof r.result === "string" ? res(r.result) : rej(new Error("read failed"));
+        r.onerror = () => rej(r.error);
+        r.readAsDataURL(photoFile);
+      });
+      const body: Record<string, unknown> = {
+        stopId: selectedStop.id,
+        lat: userLat,
+        lng: userLng,
+        photoProof,
+        mimeType: photoFile.type
+      };
 
       const resp = await fetch("/api/ecostops", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(body) });
       const data = await resp.json();
@@ -320,7 +330,6 @@ export default function EcoMapPage() {
       if (typeof setProfile === "function") setProfile({ ...profile, ...updates });
       showToast(`Checked in at ${selectedStop.name}! +${data.xpAwarded ?? selectedStop.xpReward} XP, +${data.ecoAwarded ?? selectedStop.ecoReward} Eco`);
       setSelectedStop(null);
-      setTextProof("");
       setPhotoFile(null);
       setPhotoPreview(null);
     } catch (e: any) {
@@ -349,7 +358,7 @@ export default function EcoMapPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Explore your city" title="EcoMap" description="Walk to EcoStops: real-world eco locations near you. Check in, prove your visit, and earn XP.">
+      <PageHero eyebrow="Explore your city" title="EcoMap" description="Walk to EcoStops, check in within 100m, and use photo proof to earn XP.">
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Stops Visited" value={uniqueVisited} />
           <HeroMetric label="Total Check-ins" value={checkins.length} />
@@ -361,7 +370,7 @@ export default function EcoMapPage() {
         <MetricCard label="Stops Visited" value={uniqueVisited} accent="#2f6b46" />
         <MetricCard label="Check-ins" value={checkins.length} accent="#237482" />
         <MetricCard label="In Range Now" value={withMeta.filter(s => s.inRange).length} accent="#9a6b1f" />
-        <MetricCard label="Ready to Visit" value={withMeta.filter(s => !s.onCooldown).length} accent="#2f5f86" />
+        <MetricCard label="Ready Nearby" value={withMeta.filter(s => s.inRange && !s.onCooldown).length} accent="#2f5f86" />
       </div>
 
       <Panel
@@ -412,7 +421,7 @@ export default function EcoMapPage() {
               CARTO Voyager
             </span>
             <span className="rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] shadow-sm" style={{ color: "var(--text-muted)" }}>
-              150m check-in radius
+              100m check-in radius
             </span>
           </div>
 
@@ -436,7 +445,12 @@ export default function EcoMapPage() {
         </div>
         {geoError && (
           <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-700">
-            {geoError}. You can still browse stops below and check in with proof.
+            {geoError}. Enable location to check in within 100m.
+          </div>
+        )}
+        {submitError && !selectedStop && (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-700">
+            {submitError}
           </div>
         )}
       </Panel>
@@ -454,41 +468,49 @@ export default function EcoMapPage() {
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
-            {withMeta.map(stop => (
-              <div key={stop.id} className="flex items-start gap-3 rounded-2xl border p-3" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ background: stop.meta.tint, color: stop.meta.color }}>
-                  {stop.meta.icon}
+            {withMeta.map(stop => {
+              const needsLocation = stop.dist === null;
+              const tooFar = stop.dist !== null && stop.dist > CHECKIN_RADIUS_M;
+              const disabled = stop.onCooldown || tooFar;
+              return (
+                <div key={stop.id} className="flex items-start gap-3 rounded-2xl border p-3" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ background: stop.meta.tint, color: stop.meta.color }}>
+                    {stop.meta.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-serif text-sm font-bold" style={{ color: "var(--text-primary)" }}>{stop.name}</p>
+                      <Pill>{stop.meta.label}</Pill>
+                      {stop.inRange && <Pill active>In range</Pill>}
+                      {stop.visited && !stop.onCooldown && <Pill active>Ready</Pill>}
+                      {stop.onCooldown && <Pill>Cooldown</Pill>}
+                      {tooFar && <Pill>Too far</Pill>}
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{stop.description}</p>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
+                      <span>+{stop.xpReward} XP</span>
+                      <span>+{stop.ecoReward} Eco</span>
+                      {stop.distLabel && <span>{stop.distLabel}</span>}
+                      {tooFar && <span className="text-amber-600">Move {Math.round(stop.dist! - CHECKIN_RADIUS_M)}m closer</span>}
+                      {needsLocation && <span className="text-amber-600">Location needed</span>}
+                      {stop.onCooldown && <span className="text-amber-600">Ready in {stop.cooldownStr}</span>}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => focusStop(stop)} className={secondaryButton}>Show on Map</button>
+                      <button
+                        type="button"
+                        onClick={() => needsLocation ? locate() : openCheckin(stop)}
+                        disabled={disabled}
+                        className={disabled ? secondaryButton : primaryButton}
+                        style={disabled ? { opacity: 0.5 } : undefined}
+                      >
+                        {stop.onCooldown ? "Cooldown" : needsLocation ? "Enable Location" : tooFar ? "Too Far" : "Check In"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-serif text-sm font-bold" style={{ color: "var(--text-primary)" }}>{stop.name}</p>
-                    <Pill>{stop.meta.label}</Pill>
-                    {stop.inRange && <Pill active>In range</Pill>}
-                    {stop.visited && !stop.onCooldown && <Pill active>Ready</Pill>}
-                    {stop.onCooldown && <Pill>Cooldown</Pill>}
-                  </div>
-                  <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{stop.description}</p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
-                    <span>+{stop.xpReward} XP</span>
-                    <span>+{stop.ecoReward} Eco</span>
-                    {stop.distLabel && <span>{stop.distLabel}</span>}
-                    {stop.onCooldown && <span className="text-amber-600">Ready in {stop.cooldownStr}</span>}
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => focusStop(stop)} className={secondaryButton}>Show on Map</button>
-                    <button
-                      type="button"
-                      onClick={() => openCheckin(stop)}
-                      disabled={stop.onCooldown}
-                      className={stop.onCooldown ? secondaryButton : primaryButton}
-                      style={stop.onCooldown ? { opacity: 0.5 } : undefined}
-                    >
-                      {stop.onCooldown ? "Cooldown" : "Check In"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Panel>
@@ -500,50 +522,31 @@ export default function EcoMapPage() {
             <div className="mb-4 flex items-center gap-3">
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ background: TYPE_META[selectedStop.type]?.tint }}>{TYPE_META[selectedStop.type]?.icon}</span>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>EcoStop Check-in</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Photo Check-in</p>
                 <h3 className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>{selectedStop.name}</h3>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>+{selectedStop.xpReward} XP | +{selectedStop.ecoReward} EcoPoints | {selectedStop.cooldownHours}h cooldown</p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Within 100m | +{selectedStop.xpReward} XP | +{selectedStop.ecoReward} EcoPoints</p>
               </div>
             </div>
-            {userLat !== null && distM(userLat, userLng!, selectedStop.lat, selectedStop.lng) > CHECKIN_RADIUS_M && (
-              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-700">
-                You appear to be {Math.round(distM(userLat, userLng!, selectedStop.lat, selectedStop.lng))}m away. The normal check-in radius is {CHECKIN_RADIUS_M}m, so stronger proof may be needed.
-              </div>
-            )}
-            <div className="mb-4 flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
-              {(["text", "photo"] as ProofType[]).map(t => (
-                <button key={t} type="button" onClick={() => { setProofType(t); setSubmitError(null); }} className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition" style={proofType === t ? { background: "var(--bg-panel)", color: "var(--text-primary)" } : { color: "var(--text-muted)" }}>
-                  {t === "text" ? "Text Proof" : "Photo Proof"}
-                </button>
-              ))}
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700">
+              Take or upload a photo from this EcoStop. The photo is checked automatically before rewards are awarded.
             </div>
-            {proofType === "text" ? (
-              <div className="mb-4">
-                <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Describe your visit *</label>
-                <textarea value={textProof} onChange={e => setTextProof(e.target.value)} placeholder={`e.g. I visited ${selectedStop.name} and recycled...`} rows={4} className={`${inputClass} resize-none`} />
-                <p className={`mt-1 text-right text-[10px] font-bold ${textProof.trim().length >= 8 ? "" : "text-rose-500"}`} style={textProof.trim().length >= 8 ? { color: "var(--text-accent,#43653f)" } : undefined}>
-                  {textProof.trim().length}/8 min
-                </p>
+            <div className="mb-4 flex flex-col gap-3">
+              <label className="block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Photo proof *</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => document.getElementById("ecostop-cam")?.click()} className="flex-1 rounded-xl border py-3 text-xs font-bold" style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}>Camera</button>
+                <button type="button" onClick={() => document.getElementById("ecostop-gal")?.click()} className="flex-1 rounded-xl border py-3 text-xs font-bold" style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}>Gallery</button>
+                {photoFile && <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); }} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700">Clear</button>}
               </div>
-            ) : (
-              <div className="mb-4 flex flex-col gap-3">
-                <label className="block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Photo proof *</label>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => document.getElementById("ecostop-cam")?.click()} className="flex-1 rounded-xl border py-3 text-xs font-bold" style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}>Camera</button>
-                  <button type="button" onClick={() => document.getElementById("ecostop-gal")?.click()} className="flex-1 rounded-xl border py-3 text-xs font-bold" style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}>Gallery</button>
-                  {photoFile && <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); }} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700">Clear</button>}
-                </div>
-                <input id="ecostop-cam" type="file" accept="image/*" capture="environment" className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (!f) return; setPhotoFile(f); const r = new FileReader(); r.onload = () => setPhotoPreview(r.result as string); r.readAsDataURL(f); }} />
-                <input id="ecostop-gal" type="file" accept="image/*" className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (!f) return; setPhotoFile(f); const r = new FileReader(); r.onload = () => setPhotoPreview(r.result as string); r.readAsDataURL(f); }} />
-                {photoPreview && <img src={photoPreview} alt="Preview" className="mx-auto max-h-40 rounded-xl object-cover" />}
-              </div>
-            )}
+              <input id="ecostop-cam" type="file" accept="image/*" capture="environment" className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (!f) return; setPhotoFile(f); const r = new FileReader(); r.onload = () => setPhotoPreview(r.result as string); r.readAsDataURL(f); }} />
+              <input id="ecostop-gal" type="file" accept="image/*" className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (!f) return; setPhotoFile(f); const r = new FileReader(); r.onload = () => setPhotoPreview(r.result as string); r.readAsDataURL(f); }} />
+              {photoPreview && <img src={photoPreview} alt="Preview" className="mx-auto max-h-44 rounded-xl object-cover" />}
+            </div>
             {submitError && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">{submitError}</div>}
             <div className="flex gap-3">
-              <button onClick={submitCheckin} disabled={submitting || (proofType === "text" && textProof.trim().length < 8) || (proofType === "photo" && !photoFile)} className={`flex-1 ${primaryButton}`}>
+              <button onClick={submitCheckin} disabled={submitting || !photoFile} className={`flex-1 ${primaryButton}`}>
                 {submitting
-                  ? <span className="flex items-center justify-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />Verifying...</span>
-                  : "Submit Check-in"}
+                  ? <span className="flex items-center justify-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />Checking photo...</span>
+                  : "Submit Photo Check-in"}
               </button>
               <button onClick={() => setSelectedStop(null)} className={secondaryButton}>Cancel</button>
             </div>

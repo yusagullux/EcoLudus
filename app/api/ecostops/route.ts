@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { createImageHash, getExistingPhotoHash, savePhotoHash, verifyImageWithProvider } from "@/lib/photo-verification";
 
 // ── Seed stops (used when table is empty / file-store mode) ──────────────────
 const SEED_STOPS = [
@@ -145,6 +146,7 @@ const SEED_STOPS = [
 ];
 
 type Stop = typeof SEED_STOPS[number];
+const CHECKIN_RADIUS_M = 100;
 
 // Haversine distance in metres
 function distM(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -153,6 +155,22 @@ function distM(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function parsePhotoProof(photoProof: unknown, mimeType: unknown): { buffer: Buffer; mimeType: string } | null {
+  if (typeof photoProof !== "string" || photoProof.length < 100) return null;
+
+  const dataUrlMatch = photoProof.match(/^data:([^;]+);base64,(.+)$/);
+  const resolvedMimeType = dataUrlMatch?.[1] || (typeof mimeType === "string" ? mimeType : "image/jpeg");
+  const base64 = dataUrlMatch?.[2] || photoProof;
+
+  try {
+    const buffer = Buffer.from(base64, "base64");
+    if (buffer.length < 1024) return null;
+    return { buffer, mimeType: resolvedMimeType };
+  } catch {
+    return null;
+  }
 }
 
 // ── GET /api/ecostops?lat=X&lng=Y&radius=N ────────────────────────────────────
@@ -191,11 +209,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: { code: "ecostop/not-found", message: "EcoStop not found." } }, { status: 404 });
     }
 
-    // Proof validation
-    const hasTextProof  = typeof body.textProof === "string" && body.textProof.trim().length >= 8;
-    const hasPhotoProof = typeof body.photoProof === "string" && body.photoProof.length > 100;
-    if (!hasTextProof && !hasPhotoProof) {
-      return NextResponse.json({ success: false, error: { code: "ecostop/missing-proof", message: "A text description (8+ chars) or photo is required." } }, { status: 422 });
+    const userLat = Number(body.lat);
+    const userLng = Number(body.lng);
+    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) {
+      return NextResponse.json({ success: false, error: { code: "ecostop/location-required", message: "Location is required for EcoStop check-in." } }, { status: 422 });
+    }
+
+    const distanceM = distM(userLat, userLng, stop.lat, stop.lng);
+    if (distanceM > CHECKIN_RADIUS_M) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: "ecostop/out-of-range",
+          message: `Move within ${CHECKIN_RADIUS_M}m of this EcoStop before checking in.`,
+          distanceM: Math.round(distanceM)
+        }
+      }, { status: 403 });
+    }
+
+    const photo = parsePhotoProof(body.photoProof, body.mimeType);
+    if (!photo) {
+      return NextResponse.json({ success: false, error: { code: "ecostop/photo-required", message: "Photo proof is required for EcoStop check-in." } }, { status: 422 });
     }
 
     // Load user to check cooldown and apply rewards
@@ -220,13 +254,52 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const imageHash = createImageHash(photo.buffer);
+    const existingPhoto = await getExistingPhotoHash(imageHash);
+    if (existingPhoto && existingPhoto.user_id !== userId) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: "ecostop/photo-already-used",
+          message: "This photo has already been used by another user. Please submit a unique photo."
+        }
+      }, { status: 409 });
+    }
+
+    const verification = await verifyImageWithProvider(
+      photo.buffer,
+      userId,
+      `ecostop:${stop.id}`,
+      `EcoStop check-in at ${stop.name}: ${stop.description}`,
+      photo.mimeType
+    );
+
+    if (!verification.verified) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: "ecostop/photo-verification-failed",
+          message: verification.details || "Photo verification failed. Please take a clearer photo at this EcoStop.",
+          warnings: verification.warnings ?? []
+        }
+      }, { status: 422 });
+    }
+
+    await savePhotoHash(imageHash, userId, `ecostop:${stop.id}`);
+
     // Grant rewards
     const xpAwarded  = stop.xpReward;
     const ecoAwarded = stop.ecoReward;
     const nextXp      = Number(payload.xp ?? 0) + xpAwarded;
     const nextEco     = Number(payload.ecoPoints ?? 0) + ecoAwarded;
     const nextLevel   = calculateLevelServer(nextXp);
-    const newCheckin  = { stopId: stop.id, checkedInAt: new Date().toISOString() };
+    const newCheckin  = {
+      stopId: stop.id,
+      checkedInAt: new Date().toISOString(),
+      distanceM: Math.round(distanceM),
+      proof: "photo",
+      verificationProvider: verification.provider
+    };
     const nextCheckins = [...checkins, newCheckin].slice(-200); // keep last 200
 
     const nextPayload = {
