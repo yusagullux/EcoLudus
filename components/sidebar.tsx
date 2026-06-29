@@ -96,6 +96,24 @@ const navItems: NavItem[] = [
     )
   },
   {
+    name: "Garden",
+    href: "/garden",
+    icon: (
+      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 22V12m0 0C12 7 8 4 4 5c0 4 3 7 8 7zm0 0c0-5 4-8 8-7-1 4-4 7-8 7z" />
+      </svg>
+    )
+  },
+  {
+    name: "EcoMap",
+    href: "/ecomap",
+    icon: (
+      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6-10l6 3m0 7l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 10m0 10V10" />
+      </svg>
+    )
+  },
+  {
     name: "Profile",
     href: "/profile",
     icon: (

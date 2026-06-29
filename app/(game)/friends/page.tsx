@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { getAllUsers, updateUserProfile } from "@/public/js/auth.js";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
@@ -63,6 +63,8 @@ export default function FriendsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState("");
+  // Tracks which friend is currently being cheered to prevent concurrent submissions.
+  const cheeringRef = useRef<string | null>(null);
 
   const friends = Array.isArray(profile?.friends) ? profile.friends : [];
   const friendIds = new Set(friends.map(friendKey));
@@ -76,15 +78,40 @@ export default function FriendsPage() {
       setLoading(true);
       const result = await getAllUsers();
       if (!cancelled) {
-        setPlayers(result.success ? result.data || [] : []);
+        const livePlayers: any[] = result.success ? result.data || [] : [];
+        setPlayers(livePlayers);
+
+        // Refresh stale XP/level snapshots stored in profile.friends using live data.
+        // We do this in the effect so the friend board always shows current stats.
+        if (livePlayers.length > 0 && profile && user?.uid) {
+          const liveMap = new Map(livePlayers.map((p: any) => [p.id, p]));
+          const currentFriends: any[] = Array.isArray(profile?.friends) ? profile.friends : [];
+          const refreshed = currentFriends.map((f: any) => {
+            const live = liveMap.get(f.id || f.uid);
+            if (!live) return f;
+            return {
+              ...f,
+              displayName: live.displayName ?? f.displayName,
+              xp: Number(live.xp ?? f.xp ?? 0),
+              level: Number(live.level ?? f.level ?? 1),
+              ecoPoints: Number(live.ecoPoints ?? f.ecoPoints ?? 0)
+            };
+          });
+          // Only write back if something actually changed to avoid unnecessary saves.
+          const changed = refreshed.some((r: any, i: number) =>
+            r.xp !== currentFriends[i]?.xp || r.level !== currentFriends[i]?.level
+          );
+          if (changed && typeof setProfile === "function") {
+            setProfile({ ...profile, friends: refreshed });
+          }
+        }
+
         setLoading(false);
       }
     }
 
     loadPlayers();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const candidates = useMemo(() => {
@@ -135,48 +162,62 @@ export default function FriendsPage() {
 
   const cheerFriend = async (friend: any) => {
     if (!user?.uid || !profile) return;
+    const key = friendKey(friend);
 
-    const today = todayKey();
-    const sameDay = socialStats.lastCheerDate === today;
-    const cheersToday = sameDay ? socialStats.cheersToday : 0;
-    if (cheersToday >= 5) {
-      showToast("Daily cheer limit reached. Come back tomorrow.");
-      return;
-    }
+    // In-flight guard — prevents spamming before the async round-trip completes.
+    if (cheeringRef.current !== null) return;
+    cheeringRef.current = key;
 
-    const nextFriends = friends.map((item) => {
-      if (friendKey(item) !== friendKey(friend)) return item;
-      return {
-        ...item,
-        cheers: Number(item.cheers ?? 0) + 1,
-        lastCheeredAt: new Date().toISOString()
-      };
-    });
-    const xpReward = 10;
-    const ecoReward = 3;
-    const nextXp = Number(profile.xp ?? 0) + xpReward;
-    const updates = {
-      friends: nextFriends,
-      xp: nextXp,
-      level: calculateLevel(nextXp),
-      ecoPoints: Number(profile.ecoPoints ?? 0) + ecoReward,
-      socialStats: {
-        ...profile.socialStats,
-        cheersGiven: socialStats.cheersGiven + 1,
-        cheersToday: cheersToday + 1,
-        lastCheerDate: today
+    try {
+      // Read cheersToday fresh from the *current* profile reference rather than
+      // the stale closure value captured at render time — this is what prevents
+      // the rapid-click bypass.
+      const currentSocialStats = getSocialStats(profile);
+      const today = todayKey();
+      const sameDay = currentSocialStats.lastCheerDate === today;
+      const cheersToday = sameDay ? currentSocialStats.cheersToday : 0;
+
+      if (cheersToday >= 5) {
+        showToast("Daily cheer limit reached. Come back tomorrow.");
+        return;
       }
-    };
 
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) {
-      showToast("Could not send cheer. Please try again.");
-      return;
+      const nextFriends = friends.map((item) => {
+        if (friendKey(item) !== key) return item;
+        return {
+          ...item,
+          cheers: Number(item.cheers ?? 0) + 1,
+          lastCheeredAt: new Date().toISOString()
+        };
+      });
+      const xpReward = 10;
+      const ecoReward = 3;
+      const nextXp = Number(profile.xp ?? 0) + xpReward;
+      const updates = {
+        friends: nextFriends,
+        xp: nextXp,
+        level: calculateLevel(nextXp),
+        ecoPoints: Number(profile.ecoPoints ?? 0) + ecoReward,
+        socialStats: {
+          ...profile.socialStats,
+          cheersGiven: currentSocialStats.cheersGiven + 1,
+          cheersToday: cheersToday + 1,
+          lastCheerDate: today
+        }
+      };
+
+      const result = await updateUserProfile(user.uid, updates);
+      if (!result.success) {
+        showToast("Could not send cheer. Please try again.");
+        return;
+      }
+      if (typeof setProfile === "function") {
+        setProfile({ ...profile, ...updates });
+      }
+      showToast(`Cheered ${friend.displayName || "friend"}: +${xpReward} XP, +${ecoReward} Eco.`);
+    } finally {
+      cheeringRef.current = null;
     }
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
-    }
-    showToast(`Cheered ${friend.displayName || "friend"}: +${xpReward} XP, +${ecoReward} Eco.`);
   };
 
   const claimSocialQuest = async (quest: any, progress: number) => {
@@ -221,6 +262,8 @@ export default function FriendsPage() {
   const averageFriendLevel = friends.length
     ? Math.round(friends.reduce((sum, friend) => sum + Number(friend.level || 1), 0) / friends.length)
     : 0;
+  // Derived from current render of profile — safe to use for display only (not for cap logic in the handler).
+  const cheersTodayDisplay = socialStats.lastCheerDate === todayKey() ? socialStats.cheersToday : 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -236,7 +279,7 @@ export default function FriendsPage() {
         <MetricCard label="Your XP" value={myXp.toLocaleString()} accent="#2f6b46" />
         <MetricCard label="Your EcoPoints" value={myEcoPoints.toLocaleString()} accent="#9a6b1f" />
         <MetricCard label="Friends Added" value={friends.length} accent="#2f5f86" />
-        <MetricCard label="Cheers Today" value={`${socialStats.lastCheerDate === todayKey() ? socialStats.cheersToday : 0}/5`} accent="#62508f" />
+        <MetricCard label="Cheers Today" value={`${cheersTodayDisplay}/5`} accent="#62508f" />
       </div>
 
       <Panel eyebrow="Social quests" title="Friend Challenges">
@@ -333,7 +376,13 @@ export default function FriendsPage() {
                   </div>
                   <div className="flex gap-2">
                     <Pill active={Number(friend.xp || 0) <= myXp}>{Number(friend.xp || 0) <= myXp ? "You lead" : "Ahead"}</Pill>
-                    <button type="button" onClick={() => cheerFriend(friend)} className={primaryButton}>
+                    <button
+                      type="button"
+                      onClick={() => cheerFriend(friend)}
+                      disabled={cheersTodayDisplay >= 5}
+                      className={primaryButton}
+                      title={cheersTodayDisplay >= 5 ? "Daily cheer limit reached" : undefined}
+                    >
                       Cheer
                     </button>
                     <button type="button" onClick={() => removeFriend(friend)} className={secondaryButton}>

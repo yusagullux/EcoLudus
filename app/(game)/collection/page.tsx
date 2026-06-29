@@ -78,81 +78,83 @@ const animalRewards: Record<Rarity, Array<{ name: string; image: string; rarity:
   ]
 };
 
-const OPEN_CHEST_REWARDS: Record<string, () => { type: "points" | "plant" | "egg"; name: string; amount?: number; rarity: Rarity; image: string }> = {
+const OPEN_CHEST_REWARDS: Record<string, () => { type: "points" | "seed" | "egg"; name: string; amount?: number; rarity: Rarity; image: string; seedName: string }> = {
   "Wooden Chest": () => {
     const rand = Math.random();
-    if (rand < 0.6) {
+    if (rand < 0.55) {
       const amount = Math.floor(Math.random() * 151) + 100;
-      return { type: "points", name: "EcoPoints", amount, rarity: "common", image: "/images/logo.png" };
+      return { type: "points", name: "EcoPoints", amount, rarity: "common", image: "/images/logo.png", seedName: "" };
     } else {
-      const plantPool = [
-        { name: "Mossy Fern", rarity: "common", image: "/images/plants/mint.png" },
-        { name: "Golden Daisy", rarity: "common", image: "/images/plants/sunflower.png" }
+      const seedPool = [
+        { seedName: "Mossy Fern Seed", rarity: "common" as Rarity, image: "/images/plants/mint.png" },
+        { seedName: "Golden Daisy Seed", rarity: "common" as Rarity, image: "/images/plants/sunflower.png" }
       ];
-      const plant = plantPool[Math.floor(Math.random() * plantPool.length)];
-      return { type: "plant", name: plant.name, rarity: "common", image: plant.image };
+      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
+      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
     }
   },
   "Bronze Chest": () => {
     const rand = Math.random();
-    if (rand < 0.5) {
+    if (rand < 0.45) {
       const amount = Math.floor(Math.random() * 301) + 200;
-      return { type: "points", name: "EcoPoints", amount, rarity: "rare", image: "/images/logo.png" };
+      return { type: "points", name: "EcoPoints", amount, rarity: "rare", image: "/images/logo.png", seedName: "" };
     } else if (rand < 0.8) {
-      const plantPool = [
-        { name: "Mossy Fern", rarity: "common", image: "/images/plants/mint.png" },
-        { name: "Golden Daisy", rarity: "common", image: "/images/plants/sunflower.png" },
-        { name: "Blue Orchid", rarity: "rare", image: "/images/plants/orchid.png" },
-        { name: "Spotted Aloe", rarity: "rare", image: "/images/plants/basil.png" }
+      const seedPool = [
+        { seedName: "Mossy Fern Seed",   rarity: "common" as Rarity, image: "/images/plants/mint.png" },
+        { seedName: "Golden Daisy Seed", rarity: "common" as Rarity, image: "/images/plants/sunflower.png" },
+        { seedName: "Blue Orchid Seed",  rarity: "rare"   as Rarity, image: "/images/plants/orchid.png" },
+        { seedName: "Spotted Aloe Seed", rarity: "rare"   as Rarity, image: "/images/plants/basil.png" }
       ];
-      const plant = plantPool[Math.floor(Math.random() * plantPool.length)];
-      return { type: "plant", name: plant.name, rarity: plant.rarity, image: plant.image };
+      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
+      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
     } else {
-      return { type: "egg", name: "Common Egg", rarity: "common", image: "/images/eggs/common-egg.png" };
+      return { type: "egg", name: "Common Egg", seedName: "", rarity: "common", image: "/images/eggs/common-egg.png" };
     }
   },
   "Silver Chest": () => {
     const rand = Math.random();
-    if (rand < 0.4) {
+    if (rand < 0.35) {
       const amount = Math.floor(Math.random() * 501) + 500;
-      return { type: "points", name: "EcoPoints", amount, rarity: "epic", image: "/images/logo.png" };
-    } else if (rand < 0.8) {
-      const plantPool = [
-        { name: "Blue Orchid", rarity: "rare", image: "/images/plants/orchid.png" },
-        { name: "Spotted Aloe", rarity: "rare", image: "/images/plants/basil.png" },
-        { name: "Mystic Bamboo", rarity: "epic", image: "/images/plants/bamboo.png" },
-        { name: "Crystal Lotus", rarity: "epic", image: "/images/plants/lotus.png" }
+      return { type: "points", name: "EcoPoints", amount, rarity: "epic", image: "/images/logo.png", seedName: "" };
+    } else if (rand < 0.75) {
+      const seedPool = [
+        { seedName: "Blue Orchid Seed",    rarity: "rare" as Rarity, image: "/images/plants/orchid.png" },
+        { seedName: "Spotted Aloe Seed",   rarity: "rare" as Rarity, image: "/images/plants/basil.png" },
+        { seedName: "Mystic Bamboo Seed",  rarity: "epic" as Rarity, image: "/images/plants/bamboo.png" },
+        { seedName: "Crystal Lotus Seed",  rarity: "epic" as Rarity, image: "/images/plants/lotus.png" }
       ];
-      const plant = plantPool[Math.floor(Math.random() * plantPool.length)];
-      return { type: "plant", name: plant.name, rarity: plant.rarity, image: plant.image };
+      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
+      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
     } else {
       const eggPool = [
-        { type: "egg", name: "Rare Egg", rarity: "rare", image: "/images/eggs/rare-egg.png" },
-        { type: "egg", name: "Epic Egg", rarity: "epic", image: "/images/eggs/epic-egg.png" }
+        { name: "Rare Egg", rarity: "rare" as Rarity, image: "/images/eggs/rare-egg.png" },
+        { name: "Epic Egg", rarity: "epic" as Rarity, image: "/images/eggs/epic-egg.png" }
       ];
-      return eggPool[Math.floor(Math.random() * eggPool.length)];
+      const e = eggPool[Math.floor(Math.random() * eggPool.length)];
+      return { type: "egg", name: e.name, seedName: "", rarity: e.rarity, image: e.image };
     }
   },
   "Golden Chest": () => {
     const rand = Math.random();
-    if (rand < 0.3) {
+    if (rand < 0.25) {
       const amount = Math.floor(Math.random() * 1501) + 1000;
-      return { type: "points", name: "EcoPoints", amount, rarity: "legendary", image: "/images/logo.png" };
-    } else if (rand < 0.7) {
-      const plantPool = [
-        { name: "Mystic Bamboo", rarity: "epic", image: "/images/plants/bamboo.png" },
-        { name: "Crystal Lotus", rarity: "epic", image: "/images/plants/lotus.png" },
-        { name: "Aurora Blossom", rarity: "legendary", image: "/images/plants/cherry_blossom.png" },
-        { name: "Ember Cactus", rarity: "legendary", image: "/images/plants/dragonfruit.png" }
+      return { type: "points", name: "EcoPoints", amount, rarity: "legendary", image: "/images/logo.png", seedName: "" };
+    } else if (rand < 0.65) {
+      const seedPool = [
+        { seedName: "Mystic Bamboo Seed",  rarity: "epic"      as Rarity, image: "/images/plants/bamboo.png" },
+        { seedName: "Crystal Lotus Seed",  rarity: "epic"      as Rarity, image: "/images/plants/lotus.png" },
+        { seedName: "Aurora Blossom Seed", rarity: "legendary" as Rarity, image: "/images/plants/cherry_blossom.png" },
+        { seedName: "Ember Cactus Seed",   rarity: "legendary" as Rarity, image: "/images/plants/dragonfruit.png" }
       ];
-      const plant = plantPool[Math.floor(Math.random() * plantPool.length)];
-      return { type: "plant", name: plant.name, rarity: plant.rarity, image: plant.image };
+      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
+      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
     } else {
       const eggPool = [
-        { type: "egg", name: "Epic Egg", rarity: "epic", image: "/images/eggs/epic-egg.png" },
-        { type: "egg", name: "Legendary Egg", rarity: "legendary", image: "/images/eggs/legendary-egg.png" }
+        { name: "Epic Egg",      rarity: "epic"      as Rarity, image: "/images/eggs/epic-egg.png" },
+        { name: "Legendary Egg", rarity: "legendary" as Rarity, image: "/images/eggs/legendary-egg.png" }
       ];
-      return eggPool[Math.floor(Math.random() * eggPool.length)];
+      const e = eggPool[Math.floor(Math.random() * eggPool.length)];
+      return { type: "egg", name: e.name, seedName: "", rarity: e.rarity, image: e.image };
     }
   }
 };
@@ -515,26 +517,31 @@ export default function CollectionPage() {
       .map((c) => (c.id === activeChest.id ? { ...c, count: (c.count ?? 1) - 1 } : c))
       .filter((c) => (c.count ?? 1) > 0);
 
-    const profileUpdates: Record<string, unknown> = {
-      chests: nextChests
-    };
+    const profileUpdates: Record<string, unknown> = { chests: nextChests };
 
     if (chestReward.type === "points") {
       profileUpdates.ecoPoints = ecoPoints + (chestReward.amount ?? 0);
-    } else if (chestReward.type === "plant") {
-      const nextPlants = [...profilePlants];
-      const existingIdx = nextPlants.findIndex((p) => p.name === chestReward.name);
+    } else if (chestReward.type === "seed") {
+      // Seeds go to profile.seeds — separate from profile.plants (which come from the Shop).
+      const currentSeeds: any[] = Array.isArray(profile.seeds) ? [...profile.seeds] : [];
+      const existingIdx = currentSeeds.findIndex((s: any) => s.name === chestReward.seedName);
       if (existingIdx >= 0) {
-        nextPlants[existingIdx] = {
-          ...nextPlants[existingIdx],
-          count: (nextPlants[existingIdx].count ?? 1) + 1,
-          purchasedAt: new Date().toISOString()
+        currentSeeds[existingIdx] = {
+          ...currentSeeds[existingIdx],
+          count: (currentSeeds[existingIdx].count ?? 1) + 1,
+          obtainedAt: new Date().toISOString()
         };
       } else {
-        const basePlant = plantsList.find((p) => p.name === chestReward.name) || { id: Date.now(), name: chestReward.name, rarity: chestReward.rarity, price: 0, image: chestReward.image };
-        nextPlants.push({ ...basePlant, count: 1, purchasedAt: new Date().toISOString() });
+        currentSeeds.push({
+          id: `seed-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          name: chestReward.seedName,
+          rarity: chestReward.rarity,
+          image: chestReward.image,
+          count: 1,
+          obtainedAt: new Date().toISOString()
+        });
       }
-      profileUpdates.plants = nextPlants;
+      profileUpdates.seeds = currentSeeds;
     } else if (chestReward.type === "egg") {
       const nextEggs = [...profileEggs];
       const existingIdx = nextEggs.findIndex((e) => e.name === chestReward.name);
@@ -561,14 +568,19 @@ export default function CollectionPage() {
       setProfile({ ...profile, ...profileUpdates });
     }
 
-    showToast(`Claimed reward: ${chestReward.type === "points" ? `${chestReward.amount} EcoPoints` : chestReward.name}!`);
+    if (chestReward.type === "points") {
+      showToast(`Claimed ${chestReward.amount} EcoPoints!`);
+    } else if (chestReward.type === "seed") {
+      showToast(`Got a ${chestReward.seedName}! 🌱 Plant it in your Garden.`);
+    } else {
+      showToast(`Got a ${chestReward.name}! Check your eggs.`);
+    }
+
     setActiveChest(null);
     setChestReward(null);
     setChestState("closed");
 
-    if (chestReward.type === "plant") {
-      setMode("plants");
-    } else if (chestReward.type === "egg") {
+    if (chestReward.type === "egg") {
       setMode("eggs");
     }
   };
@@ -998,9 +1010,17 @@ export default function CollectionPage() {
                     Chest Opened!
                   </span>
                   <h3 className="mt-4 font-serif text-3xl font-black text-white">
-                    {chestReward.type === "points" ? `+${chestReward.amount} EcoPoints!` : `Unlocked ${chestReward.name}!`}
+                    {chestReward.type === "points"
+                      ? `+${chestReward.amount} EcoPoints!`
+                      : chestReward.type === "seed"
+                      ? `${chestReward.seedName}!`
+                      : `Unlocked ${chestReward.name}!`}
                   </h3>
-                  <p className="mt-1 text-xs text-white/50">Your reward has been added to your profile.</p>
+                  <p className="mt-1 text-xs text-white/50">
+                    {chestReward.type === "seed"
+                      ? "Head to your Garden and plant it — it grows over 7 days! 🌱"
+                      : "Your reward has been added to your profile."}
+                  </p>
                 </div>
 
                 <div
@@ -1024,8 +1044,10 @@ export default function CollectionPage() {
                     {chestReward.rarity}
                   </span>
                   <p className="mt-3 text-xs leading-relaxed max-w-[280px] text-white/70">
-                    {chestReward.type === "points" 
-                      ? "Spend these EcoPoints in the Plant Shop to buy more eggs and chests!" 
+                    {chestReward.type === "points"
+                      ? "Spend these EcoPoints in the Plant Shop to buy more eggs and chests!"
+                      : chestReward.type === "seed"
+                      ? `A ${chestReward.rarity} seed. Plant it in your Virtual Garden and wait ~7 days for it to bloom into rewards.`
                       : `${chestReward.name} is a ${chestReward.rarity} item that has been added to your inventory.`}
                   </p>
                 </div>
