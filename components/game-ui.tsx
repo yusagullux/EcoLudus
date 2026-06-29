@@ -152,7 +152,7 @@ export function Pill({ children, active = false }: { children: ReactNode; active
 
 // ── Buttons ───────────────────────────────────────────────────
 export const buttonBase =
-  "inline-flex items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+  "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
 export const primaryButton =
   `${buttonBase} bg-forest-950 text-cream-100 shadow-[0_8px_24px_rgba(16,33,20,0.18)] hover:-translate-y-0.5 hover:bg-forest-800 focus-visible:ring-forest-600`;

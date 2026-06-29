@@ -259,7 +259,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
         className="md:hidden fixed left-0 right-0 top-0 z-40 flex items-center justify-between px-4 py-3 t-sidebar"
         style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
       >
-        <Link href="/dashboard" className="flex items-center gap-2.5">
+        <Link href="/dashboard" className="flex min-h-11 items-center gap-2.5">
           <div className="relative h-8 w-8 overflow-hidden rounded-xl bg-white/10">
             <Image src="/images/logo.png" alt="EcoLudus" fill className="object-cover" sizes="32px" />
           </div>
@@ -279,7 +279,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
           )}
           <button
             onClick={() => setMobileOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl"
+            className="flex h-11 w-11 items-center justify-center rounded-xl"
             style={{ background: "var(--sidebar-active-bg)", color: "var(--text-sidebar)" }}
             aria-label="Open menu"
             aria-expanded={mobileOpen}
@@ -306,7 +306,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
             <div className="flex justify-end p-3">
               <button
                 onClick={() => setMobileOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{ background: "var(--sidebar-active-bg)", color: "var(--text-sidebar)" }}
                 aria-label="Close menu"
               >

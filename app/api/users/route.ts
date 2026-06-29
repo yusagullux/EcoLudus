@@ -9,8 +9,7 @@ export async function GET() {
 
     const users = result.rows.map((row) => ({
       id: row.id,
-      email: row.email,
-      displayName: (row.payload as any)?.displayName || row.email?.split("@")[0] || "Anonymous",
+      displayName: (row.payload as any)?.displayName || "Anonymous",
       xp: (row.payload as any)?.xp || 0,
       level: (row.payload as any)?.level || 1,
       ecoPoints: (row.payload as any)?.ecoPoints || 0

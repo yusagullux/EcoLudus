@@ -5,9 +5,56 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { getAllUsers, updateUserProfile } from "@/public/js/auth.js";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
+import { calculateLevel } from "@/lib/level-system";
 
 function friendKey(friend: any) {
   return friend?.id || friend?.uid || friend?.email;
+}
+
+const SOCIAL_QUESTS = [
+  {
+    id: "first_friend",
+    title: "Add your first friend",
+    description: "Build your social garden by adding one player.",
+    target: 1,
+    metric: "friends",
+    xp: 35,
+    eco: 20
+  },
+  {
+    id: "give_three_cheers",
+    title: "Give 3 cheers",
+    description: "Encourage friends three times.",
+    target: 3,
+    metric: "cheersGiven",
+    xp: 55,
+    eco: 30
+  },
+  {
+    id: "squad_of_five",
+    title: "Form a squad of 5",
+    description: "Add five friends to unlock a bigger social bonus.",
+    target: 5,
+    metric: "friends",
+    xp: 100,
+    eco: 75
+  }
+];
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getClaimedSocialRewards(profile: any) {
+  return Array.isArray(profile?.claimedSocialRewards) ? profile.claimedSocialRewards : [];
+}
+
+function getSocialStats(profile: any) {
+  return {
+    cheersGiven: Number(profile?.socialStats?.cheersGiven ?? 0),
+    cheersToday: Number(profile?.socialStats?.cheersToday ?? 0),
+    lastCheerDate: String(profile?.socialStats?.lastCheerDate ?? "")
+  };
 }
 
 export default function FriendsPage() {
@@ -19,6 +66,8 @@ export default function FriendsPage() {
 
   const friends = Array.isArray(profile?.friends) ? profile.friends : [];
   const friendIds = new Set(friends.map(friendKey));
+  const socialStats = getSocialStats(profile);
+  const claimedSocialRewards = getClaimedSocialRewards(profile);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +95,7 @@ export default function FriendsPage() {
       .filter((player) => {
         if (!normalized) return true;
         return String(player.displayName || "").toLowerCase().includes(normalized)
-          || String(player.email || "").toLowerCase().includes(normalized);
+          || String(player.id || "").toLowerCase().includes(normalized);
       })
       .slice(0, 8);
   }, [players, query, user?.uid, friendIds]);
@@ -63,11 +112,11 @@ export default function FriendsPage() {
       ...friends,
       {
         id: player.id,
-        email: player.email,
         displayName: player.displayName,
         xp: Number(player.xp || 0),
         level: Number(player.level || 1),
         ecoPoints: Number(player.ecoPoints || 0),
+        cheers: 0,
         addedAt: new Date().toISOString()
       }
     ];
@@ -82,6 +131,74 @@ export default function FriendsPage() {
       setProfile({ ...profile, friends: nextFriends });
     }
     showToast(`${player.displayName || "Friend"} added.`);
+  };
+
+  const cheerFriend = async (friend: any) => {
+    if (!user?.uid || !profile) return;
+
+    const today = todayKey();
+    const sameDay = socialStats.lastCheerDate === today;
+    const cheersToday = sameDay ? socialStats.cheersToday : 0;
+    if (cheersToday >= 5) {
+      showToast("Daily cheer limit reached. Come back tomorrow.");
+      return;
+    }
+
+    const nextFriends = friends.map((item) => {
+      if (friendKey(item) !== friendKey(friend)) return item;
+      return {
+        ...item,
+        cheers: Number(item.cheers ?? 0) + 1,
+        lastCheeredAt: new Date().toISOString()
+      };
+    });
+    const xpReward = 10;
+    const ecoReward = 3;
+    const nextXp = Number(profile.xp ?? 0) + xpReward;
+    const updates = {
+      friends: nextFriends,
+      xp: nextXp,
+      level: calculateLevel(nextXp),
+      ecoPoints: Number(profile.ecoPoints ?? 0) + ecoReward,
+      socialStats: {
+        ...profile.socialStats,
+        cheersGiven: socialStats.cheersGiven + 1,
+        cheersToday: cheersToday + 1,
+        lastCheerDate: today
+      }
+    };
+
+    const result = await updateUserProfile(user.uid, updates);
+    if (!result.success) {
+      showToast("Could not send cheer. Please try again.");
+      return;
+    }
+    if (typeof setProfile === "function") {
+      setProfile({ ...profile, ...updates });
+    }
+    showToast(`Cheered ${friend.displayName || "friend"}: +${xpReward} XP, +${ecoReward} Eco.`);
+  };
+
+  const claimSocialQuest = async (quest: any, progress: number) => {
+    if (!user?.uid || !profile || progress < quest.target || claimedSocialRewards.includes(quest.id)) return;
+    const nextClaimed = [...claimedSocialRewards, quest.id];
+    const nextXp = Number(profile.xp ?? 0) + quest.xp;
+    const updates = {
+      claimedSocialRewards: nextClaimed,
+      xp: nextXp,
+      level: calculateLevel(nextXp),
+      ecoPoints: Number(profile.ecoPoints ?? 0) + quest.eco
+    };
+
+    const result = await updateUserProfile(user.uid, updates);
+    if (!result.success) {
+      showToast("Could not claim reward. Please try again.");
+      return;
+    }
+    if (typeof setProfile === "function") {
+      setProfile({ ...profile, ...updates });
+    }
+    showToast(`${quest.title} claimed: +${quest.xp} XP, +${quest.eco} Eco.`);
   };
 
   const removeFriend = async (friend: any) => {
@@ -107,11 +224,11 @@ export default function FriendsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Social garden" title="Friends" description="Add other EcoLudus players and compare progress across quests, levels, and EcoPoints.">
+      <PageHero eyebrow="Social garden" title="Friends" description="Add players, send cheers, and complete social quests that turn encouragement into progress.">
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Friends" value={friends.length} />
           <HeroMetric label="Your Level" value={myLevel} />
-          <HeroMetric label="Avg Level" value={averageFriendLevel || "-"} />
+          <HeroMetric label="Cheers" value={socialStats.cheersGiven} />
         </div>
       </PageHero>
 
@@ -119,8 +236,41 @@ export default function FriendsPage() {
         <MetricCard label="Your XP" value={myXp.toLocaleString()} accent="#2f6b46" />
         <MetricCard label="Your EcoPoints" value={myEcoPoints.toLocaleString()} accent="#9a6b1f" />
         <MetricCard label="Friends Added" value={friends.length} accent="#2f5f86" />
-        <MetricCard label="Best Friend Level" value={friends.length ? Math.max(...friends.map((friend) => Number(friend.level || 1))) : "-"} accent="#62508f" />
+        <MetricCard label="Cheers Today" value={`${socialStats.lastCheerDate === todayKey() ? socialStats.cheersToday : 0}/5`} accent="#62508f" />
       </div>
+
+      <Panel eyebrow="Social quests" title="Friend Challenges">
+        <div className="grid gap-3 lg:grid-cols-3">
+          {SOCIAL_QUESTS.map((quest) => {
+            const progress = quest.metric === "friends" ? friends.length : socialStats.cheersGiven;
+            const pct = Math.min(100, Math.round((progress / quest.target) * 100));
+            const claimed = claimedSocialRewards.includes(quest.id);
+            const ready = progress >= quest.target && !claimed;
+            return (
+              <article key={quest.id} className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{quest.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{quest.description}</p>
+                  </div>
+                  <Pill active={ready || claimed}>{claimed ? "Claimed" : `${progress}/${quest.target}`}</Pill>
+                </div>
+                <div className="mt-4 h-2 overflow-hidden rounded-full" style={{ background: "var(--border-subtle)" }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: ready ? "#9a6b1f" : "#2f6b46" }} />
+                </div>
+                <button
+                  type="button"
+                  disabled={!ready}
+                  onClick={() => claimSocialQuest(quest, progress)}
+                  className={`mt-4 w-full ${ready ? primaryButton : secondaryButton}`}
+                >
+                  {claimed ? "Reward Claimed" : ready ? `Claim +${quest.xp} XP` : `Reward: +${quest.xp} XP`}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </Panel>
 
       <Panel eyebrow="Add friends" title="Find Players">
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -140,7 +290,7 @@ export default function FriendsPage() {
               <article key={player.id} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                 <div className="min-w-0">
                   <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{player.displayName}</p>
-                  <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>{player.email}</p>
+                  <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>EcoLudus player</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Pill>Lv {player.level || 1}</Pill>
                     <Pill>{Number(player.xp || 0).toLocaleString()} XP</Pill>
@@ -177,12 +327,15 @@ export default function FriendsPage() {
                     <div>
                       <p className="font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{friend.displayName || friend.email}</p>
                       <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        Level {friend.level || 1} - {Number(friend.xp || 0).toLocaleString()} XP - {Number(friend.ecoPoints || 0).toLocaleString()} EP
+                        Level {friend.level || 1} - {Number(friend.xp || 0).toLocaleString()} XP - {Number(friend.cheers || 0)} cheers sent
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <Pill active={Number(friend.xp || 0) <= myXp}>{Number(friend.xp || 0) <= myXp ? "You lead" : "Ahead"}</Pill>
+                    <button type="button" onClick={() => cheerFriend(friend)} className={primaryButton}>
+                      Cheer
+                    </button>
                     <button type="button" onClick={() => removeFriend(friend)} className={secondaryButton}>
                       Remove
                     </button>
