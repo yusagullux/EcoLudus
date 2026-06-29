@@ -122,6 +122,8 @@ export default function PetsPage() {
       isProcessing.current = false;
     }
   };
+
+  const runCareAction = async (action: any) => {
     if (!user?.uid || !profile || !selectedPet) return;
     // Hard re-entrancy guard — prevents spamming before the async round-trip finishes.
     if (isProcessing.current) return;
