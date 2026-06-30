@@ -9,6 +9,13 @@ import {
   primaryButton, secondaryButton
 } from "@/components/game-ui";
 import { calculateLevel } from "@/lib/level-system";
+import {
+  CHECKIN_RADIUS_M,
+  MAX_GPS_ACCURACY_M,
+  checkinRangeError,
+  distM,
+  isWithinCheckinRange
+} from "@/lib/ecomap-geo";
 
 type StopType = "park" | "recycling" | "community_garden" | "repair_cafe" | "bike_station" | "nature_trail";
 
@@ -35,15 +42,39 @@ const TYPE_META: Record<StopType, { icon: string; symbol: string; color: string;
   nature_trail:     { icon: "\u{1F97E}", symbol: "Trail", color: "#62508f", tint: "#ece8f6", label: "Nature Trail" }
 };
 
-const CHECKIN_RADIUS_M = 100;
 const DEFAULT_CENTER: [number, number] = [59.437, 24.745];
 
-function distM(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6_371_000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+function getFreshPosition(): Promise<{ lat: number; lng: number; accuracyM: number }> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported by this browser."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracyM: pos.coords.accuracy
+      }),
+      err => reject(new Error(`Location unavailable: ${err.message}`)),
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 }
+    );
+  });
+}
+
+function stopInRange(
+  userLat: number | null,
+  userLng: number | null,
+  accuracyM: number | null,
+  stopLat: number,
+  stopLng: number
+): { dist: number | null; inRange: boolean; rangeError: string | null } {
+  if (userLat === null || userLng === null) {
+    return { dist: null, inRange: false, rangeError: "Enable location before checking in." };
+  }
+  const dist = distM(userLat, userLng, stopLat, stopLng);
+  const rangeError = checkinRangeError(dist, accuracyM);
+  return { dist, inRange: isWithinCheckinRange(dist, accuracyM), rangeError };
 }
 
 function isOnCooldown(r: CheckinRecord, h: number): boolean {
@@ -53,7 +84,9 @@ function isOnCooldown(r: CheckinRecord, h: number): boolean {
 function cooldownLabel(r: CheckinRecord, h: number): string {
   const rem = h * 3_600_000 - (Date.now() - new Date(r.checkedInAt).getTime());
   if (rem <= 0) return "Ready";
-  return `${Math.floor(rem / 3_600_000)}h ${Math.floor((rem % 3_600_000) / 60_000)}m`;
+  const hours = Math.ceil(rem / 3_600_000);
+  if (hours >= 1) return `${hours}h`;
+  return `${Math.ceil(rem / 60_000)}m`;
 }
 
 function distanceLabel(dist: number | null): string | null {
@@ -83,6 +116,7 @@ export default function EcoMapPage() {
   const [stopsError, setStopsError] = useState<string | null>(null);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const [geoAccuracy, setGeoAccuracy] = useState<number | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [selectedStop, setSelectedStop] = useState<EcoStop | null>(null);
@@ -107,9 +141,14 @@ export default function EcoMapPage() {
     setLocating(true);
     setGeoError(null);
     navigator.geolocation.getCurrentPosition(
-      pos => { setUserLat(pos.coords.latitude); setUserLng(pos.coords.longitude); setLocating(false); },
+      pos => {
+        setUserLat(pos.coords.latitude);
+        setUserLng(pos.coords.longitude);
+        setGeoAccuracy(pos.coords.accuracy);
+        setLocating(false);
+      },
       err => { setGeoError(`Location unavailable: ${err.message}`); setLocating(false); },
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 }
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 5_000 }
     );
   }, []);
 
@@ -145,10 +184,10 @@ export default function EcoMapPage() {
       const lastCI = latestCheckin(checkins, stop.id);
       const onCD = lastCI ? isOnCooldown(lastCI, stop.cooldownHours) : false;
       const visited = !!lastCI;
-      const dist = userLat !== null && userLng !== null ? distM(userLat, userLng, stop.lat, stop.lng) : null;
+      const { dist, inRange, rangeError } = stopInRange(userLat, userLng, geoAccuracy, stop.lat, stop.lng);
       const distStr = distanceLabel(dist);
-      const tooFar = dist === null || dist > CHECKIN_RADIUS_M;
-      const statusStr = onCD ? "On cooldown" : visited ? "Ready again" : "Photo check-in ready";
+      const tooFar = !inRange;
+      const statusStr = onCD ? "On cooldown" : visited ? "Ready again" : rangeError && dist !== null ? rangeError : "Photo check-in ready";
       const markerColor = onCD || tooFar ? "#737373" : meta.color;
 
       const icon = L.divIcon({
@@ -191,12 +230,12 @@ export default function EcoMapPage() {
             <span style="border-radius:999px;background:#e8f4f6;padding:4px 7px;font-size:10px;font-weight:900;color:#237482;">+${stop.ecoReward} Eco</span>
             ${distStr ? `<span style="border-radius:999px;background:#f4f0e8;padding:4px 7px;font-size:10px;font-weight:900;color:#6e5524;">${distStr}</span>` : ""}
           </div>
-          <div style="font-size:11px;font-weight:800;color:${onCD || tooFar ? "#9a6b1f" : meta.color};margin-bottom:9px;">${dist !== null && dist > CHECKIN_RADIUS_M ? `Move ${Math.round(dist - CHECKIN_RADIUS_M)}m closer` : statusStr}</div>
+          <div style="font-size:11px;font-weight:800;color:${onCD || tooFar ? "#9a6b1f" : meta.color};margin-bottom:9px;">${tooFar && dist !== null ? statusStr : statusStr}</div>
           <button
             onclick="window.__ecoCheckin('${stop.id}')"
             style="display:block;width:100%;padding:8px;border:none;border-radius:10px;background:${onCD || tooFar ? "#c8c8c8" : meta.color};color:#fff;font-size:11px;font-weight:900;cursor:${onCD || tooFar ? "not-allowed" : "pointer"};"
             ${onCD || tooFar ? "disabled" : ""}
-          >${onCD ? "On Cooldown" : dist === null ? "Enable Location" : dist > CHECKIN_RADIUS_M ? "Too Far" : "Check In"}</button>
+          >${onCD ? "On Cooldown" : dist === null ? "Enable Location" : tooFar ? (geoAccuracy !== null && geoAccuracy > MAX_GPS_ACCURACY_M ? "GPS Too Weak" : "Too Far") : "Check In"}</button>
         </div>
       `);
       markersLayerRef.current.addLayer(marker);
@@ -207,7 +246,7 @@ export default function EcoMapPage() {
       mapInstanceRef.current.fitBounds(group.getBounds().pad(0.18), { maxZoom: 13 });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stops, checkins, leafletReady, userLat, userLng]);
+  }, [stops, checkins, leafletReady, userLat, userLng, geoAccuracy]);
 
   useEffect(() => {
     const L = (window as any).L;
@@ -242,12 +281,11 @@ export default function EcoMapPage() {
   }, [stops, userLat, userLng]);
 
   useEffect(() => {
+    if (userLat === null || userLng === null) return;
     (async () => {
       setLoadingStops(true);
       try {
-        const p = new URLSearchParams();
-        if (userLat !== null) p.set("lat", String(userLat));
-        if (userLng !== null) p.set("lng", String(userLng));
+        const p = new URLSearchParams({ lat: String(userLat), lng: String(userLng) });
         const res = await fetch(`/api/ecostops?${p}`, { credentials: "include" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         setStops((await res.json()).stops ?? []);
@@ -273,15 +311,16 @@ export default function EcoMapPage() {
   };
 
   const openCheckin = (stop: EcoStop) => {
-    const d = userLat !== null && userLng !== null ? distM(userLat, userLng, stop.lat, stop.lng) : null;
-    if (d === null) {
-      setSubmitError("Enable location before checking in.");
-      locate();
+    const lastCI = latestCheckin(checkins, stop.id);
+    if (lastCI && isOnCooldown(lastCI, stop.cooldownHours)) {
+      setSubmitError(`You already checked in here. Come back in ${cooldownLabel(lastCI, stop.cooldownHours)}.`);
       return;
     }
-    if (d > CHECKIN_RADIUS_M) {
-      setSubmitError(`Move within ${CHECKIN_RADIUS_M}m of this EcoStop before checking in.`);
-      focusStop(stop);
+    const { inRange, rangeError } = stopInRange(userLat, userLng, geoAccuracy, stop.lat, stop.lng);
+    if (!inRange) {
+      setSubmitError(rangeError ?? `Move within ${CHECKIN_RADIUS_M}m of this EcoStop before checking in.`);
+      if (userLat === null || userLng === null) locate();
+      else focusStop(stop);
       return;
     }
     setSelectedStop(stop);
@@ -292,15 +331,31 @@ export default function EcoMapPage() {
 
   const submitCheckin = async () => {
     if (!selectedStop || !user?.uid || !profile || submitting || isProcessing.current) return;
-    if (userLat === null || userLng === null) { setSubmitError("Enable location before checking in."); return; }
-    const currentDistance = distM(userLat, userLng, selectedStop.lat, selectedStop.lng);
-    if (currentDistance > CHECKIN_RADIUS_M) { setSubmitError(`Move within ${CHECKIN_RADIUS_M}m of this EcoStop before checking in.`); return; }
     if (!photoFile) { setSubmitError("Please attach a photo for AI verification."); return; }
 
     setSubmitting(true);
     setSubmitError(null);
     isProcessing.current = true;
     try {
+      let freshLat: number;
+      let freshLng: number;
+      let freshAccuracy: number;
+      try {
+        const fix = await getFreshPosition();
+        freshLat = fix.lat;
+        freshLng = fix.lng;
+        freshAccuracy = fix.accuracyM;
+        setUserLat(freshLat);
+        setUserLng(freshLng);
+        setGeoAccuracy(freshAccuracy);
+      } catch (e: any) {
+        throw new Error(e.message ?? "Could not get a fresh GPS fix. Try moving to an open area.");
+      }
+
+      const currentDistance = distM(freshLat, freshLng, selectedStop.lat, selectedStop.lng);
+      const rangeError = checkinRangeError(currentDistance, freshAccuracy);
+      if (rangeError) throw new Error(rangeError);
+
       const photoProof = await new Promise<string>((res, rej) => {
         const r = new FileReader();
         r.onload = () => typeof r.result === "string" ? res(r.result) : rej(new Error("read failed"));
@@ -309,8 +364,9 @@ export default function EcoMapPage() {
       });
       const body: Record<string, unknown> = {
         stopId: selectedStop.id,
-        lat: userLat,
-        lng: userLng,
+        lat: freshLat,
+        lng: freshLng,
+        accuracyM: freshAccuracy,
         photoProof,
         mimeType: photoFile.type
       };
@@ -343,15 +399,16 @@ export default function EcoMapPage() {
   const withMeta = stops.map(s => {
     const lastCI = latestCheckin(checkins, s.id);
     const onCD = lastCI ? isOnCooldown(lastCI, s.cooldownHours) : false;
-    const d = userLat !== null && userLng !== null ? distM(userLat, userLng, s.lat, s.lng) : null;
+    const { dist, inRange, rangeError } = stopInRange(userLat, userLng, geoAccuracy, s.lat, s.lng);
     return {
       ...s,
       meta: TYPE_META[s.type] ?? TYPE_META.park,
       onCooldown: onCD,
       cooldownStr: lastCI ? cooldownLabel(lastCI, s.cooldownHours) : null,
-      dist: d,
-      distLabel: distanceLabel(d),
-      inRange: d !== null && d <= CHECKIN_RADIUS_M,
+      dist,
+      distLabel: distanceLabel(dist),
+      inRange,
+      rangeError,
       visited: !!lastCI
     };
   }).sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
@@ -437,7 +494,9 @@ export default function EcoMapPage() {
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
-            {userLat !== null ? `Location: ${userLat.toFixed(5)}, ${userLng!.toFixed(5)}` : "Location not acquired"}
+            {userLat !== null
+              ? `Location: ${userLat.toFixed(5)}, ${userLng!.toFixed(5)}${geoAccuracy !== null ? ` (±${Math.round(geoAccuracy)}m)` : ""}`
+              : "Location not acquired"}
           </p>
           <button onClick={locate} disabled={locating} className={secondaryButton}>
             {locating ? "Locating..." : "Refresh Location"}
@@ -470,7 +529,8 @@ export default function EcoMapPage() {
           <div className="grid gap-3 md:grid-cols-2">
             {withMeta.map(stop => {
               const needsLocation = stop.dist === null;
-              const tooFar = stop.dist !== null && stop.dist > CHECKIN_RADIUS_M;
+              const tooFar = !stop.inRange;
+              const poorGps = geoAccuracy !== null && geoAccuracy > MAX_GPS_ACCURACY_M;
               const disabled = stop.onCooldown || tooFar;
               return (
                 <div key={stop.id} className="flex items-start gap-3 rounded-2xl border p-3" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
@@ -491,7 +551,12 @@ export default function EcoMapPage() {
                       <span>+{stop.xpReward} XP</span>
                       <span>+{stop.ecoReward} Eco</span>
                       {stop.distLabel && <span>{stop.distLabel}</span>}
-                      {tooFar && <span className="text-amber-600">Move {Math.round(stop.dist! - CHECKIN_RADIUS_M)}m closer</span>}
+                      {tooFar && !needsLocation && !poorGps && stop.dist !== null && (
+                        <span className="text-amber-600">{stop.rangeError}</span>
+                      )}
+                      {poorGps && !needsLocation && (
+                        <span className="text-amber-600">GPS accuracy ±{Math.round(geoAccuracy!)}m — move outdoors</span>
+                      )}
                       {needsLocation && <span className="text-amber-600">Location needed</span>}
                       {stop.onCooldown && <span className="text-amber-600">Ready in {stop.cooldownStr}</span>}
                     </div>
@@ -504,7 +569,7 @@ export default function EcoMapPage() {
                         className={disabled ? secondaryButton : primaryButton}
                         style={disabled ? { opacity: 0.5 } : undefined}
                       >
-                        {stop.onCooldown ? "Cooldown" : needsLocation ? "Enable Location" : tooFar ? "Too Far" : "Check In"}
+                        {stop.onCooldown ? "Cooldown" : needsLocation ? "Enable Location" : poorGps ? "GPS Too Weak" : tooFar ? "Too Far" : "Check In"}
                       </button>
                     </div>
                   </div>

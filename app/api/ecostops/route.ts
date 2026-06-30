@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { createImageHash, getExistingPhotoHash, savePhotoHash, verifyImageWithProvider } from "@/lib/photo-verification";
+import {
+  CHECKIN_RADIUS_M,
+  checkinRangeError,
+  distM,
+  isWithinCheckinRange,
+  parseGeoFix
+} from "@/lib/ecomap-geo";
 
 // ── Seed stops (used when table is empty / file-store mode) ──────────────────
 const SEED_STOPS = [
@@ -146,16 +153,6 @@ const SEED_STOPS = [
 ];
 
 type Stop = typeof SEED_STOPS[number];
-const CHECKIN_RADIUS_M = 100;
-
-// Haversine distance in metres
-function distM(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6_371_000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 function parsePhotoProof(photoProof: unknown, mimeType: unknown): { buffer: Buffer; mimeType: string } | null {
   if (typeof photoProof !== "string" || photoProof.length < 100) return null;
@@ -209,20 +206,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: { code: "ecostop/not-found", message: "EcoStop not found." } }, { status: 404 });
     }
 
-    const userLat = Number(body.lat);
-    const userLng = Number(body.lng);
-    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) {
-      return NextResponse.json({ success: false, error: { code: "ecostop/location-required", message: "Location is required for EcoStop check-in." } }, { status: 422 });
-    }
-
-    const distanceM = distM(userLat, userLng, stop.lat, stop.lng);
-    if (distanceM > CHECKIN_RADIUS_M) {
+    const geoFix = parseGeoFix(body.lat, body.lng, body.accuracyM);
+    if (!geoFix) {
       return NextResponse.json({
         success: false,
         error: {
-          code: "ecostop/out-of-range",
-          message: `Move within ${CHECKIN_RADIUS_M}m of this EcoStop before checking in.`,
-          distanceM: Math.round(distanceM)
+          code: "ecostop/location-required",
+          message: "A fresh GPS fix with accuracy is required for EcoStop check-in."
+        }
+      }, { status: 422 });
+    }
+
+    const { lat: userLat, lng: userLng, accuracyM } = geoFix;
+    const distanceM = distM(userLat, userLng, stop.lat, stop.lng);
+    const rangeError = checkinRangeError(distanceM, accuracyM);
+    if (!isWithinCheckinRange(distanceM, accuracyM)) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: rangeError?.includes("accuracy") ? "ecostop/poor-accuracy" : "ecostop/out-of-range",
+          message: rangeError ?? `Move within ${CHECKIN_RADIUS_M}m of this EcoStop before checking in.`,
+          distanceM: Math.round(distanceM),
+          accuracyM: Math.round(accuracyM)
         }
       }, { status: 403 });
     }
@@ -256,12 +261,14 @@ export async function POST(req: NextRequest) {
 
     const imageHash = createImageHash(photo.buffer);
     const existingPhoto = await getExistingPhotoHash(imageHash);
-    if (existingPhoto && existingPhoto.user_id !== userId) {
+    if (existingPhoto) {
       return NextResponse.json({
         success: false,
         error: {
           code: "ecostop/photo-already-used",
-          message: "This photo has already been used by another user. Please submit a unique photo."
+          message: existingPhoto.user_id === userId
+            ? "You already used this photo for an EcoStop check-in. Please take a new photo."
+            : "This photo has already been used by another user. Please submit a unique photo."
         }
       }, { status: 409 });
     }
@@ -271,7 +278,8 @@ export async function POST(req: NextRequest) {
       userId,
       `ecostop:${stop.id}`,
       `EcoStop check-in at ${stop.name}: ${stop.description}`,
-      photo.mimeType
+      photo.mimeType,
+      { allowHeuristicFallback: false }
     );
 
     if (!verification.verified) {
@@ -297,6 +305,7 @@ export async function POST(req: NextRequest) {
       stopId: stop.id,
       checkedInAt: new Date().toISOString(),
       distanceM: Math.round(distanceM),
+      accuracyM: Math.round(accuracyM),
       proof: "photo",
       verificationProvider: verification.provider
     };

@@ -68,8 +68,10 @@ export async function verifyImageWithProvider(
   userId: string,
   questId: string | null,
   questTitle: string | null = null,
-  mimeType: string | null = null
+  mimeType: string | null = null,
+  options: { allowHeuristicFallback?: boolean } = {}
 ) {
+  const { allowHeuristicFallback = true } = options;
   const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
   const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
@@ -160,6 +162,14 @@ export async function verifyImageWithProvider(
     };
   } catch (error) {
     console.error("Gemini photo verification failed:", error);
+    if (!allowHeuristicFallback) {
+      return {
+        verified: false,
+        warnings: ["verification_unavailable"],
+        provider: "google-gemini-photo:failed",
+        details: "Photo verification is temporarily unavailable. Please try again in a moment."
+      };
+    }
     // Gemini unavailable — fall back to basic heuristic rather than blocking users
     return heuristicPhotoVerification(buffer, mimeType);
   }
