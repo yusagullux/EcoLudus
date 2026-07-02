@@ -11,6 +11,43 @@ const completeQuestSchema = z.object({
   questIds: z.array(z.string().min(1)).min(1).max(5)
 });
 
+const DAILY_CLEAR_CHEST_CHANCE = 0.35;
+
+const DAILY_CLEAR_CHEST_POOL = [
+  {
+    id: 1,
+    name: "Wooden Chest",
+    rarity: "common",
+    price: 0,
+    image: "/images/chests/wooden-chest.png",
+    weight: 60
+  },
+  {
+    id: 2,
+    name: "Bronze Chest",
+    rarity: "rare",
+    price: 0,
+    image: "/images/chests/bronze-chest.png",
+    weight: 30
+  },
+  {
+    id: 3,
+    name: "Silver Chest",
+    rarity: "epic",
+    price: 0,
+    image: "/images/chests/silver-chest.png",
+    weight: 9
+  },
+  {
+    id: 4,
+    name: "Golden Chest",
+    rarity: "legendary",
+    price: 0,
+    image: "/images/chests/golden-chest.png",
+    weight: 1
+  }
+];
+
 function asArray(value: unknown) {
   return Array.isArray(value) ? value : [];
 }
@@ -21,6 +58,44 @@ function dateKey(date: Date) {
 
 function clampStat(value: unknown, fallback: number) {
   return Math.max(0, Math.min(100, Number(value ?? fallback) || fallback));
+}
+
+function pickDailyClearChest() {
+  const totalWeight = DAILY_CLEAR_CHEST_POOL.reduce((sum, chest) => sum + chest.weight, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const chest of DAILY_CLEAR_CHEST_POOL) {
+    roll -= chest.weight;
+    if (roll <= 0) {
+      const { weight, ...reward } = chest;
+      return reward;
+    }
+  }
+
+  const { weight, ...fallback } = DAILY_CLEAR_CHEST_POOL[0];
+  return fallback;
+}
+
+function addChest(chests: unknown, chest: ReturnType<typeof pickDailyClearChest>) {
+  const nextChests = asArray(chests).map((entry) => ({ ...(entry as Record<string, unknown>) }));
+  const existingIdx = nextChests.findIndex((entry) => entry.name === chest.name || entry.id === chest.id);
+  const awardedAt = new Date().toISOString();
+
+  if (existingIdx >= 0) {
+    nextChests[existingIdx] = {
+      ...nextChests[existingIdx],
+      count: Number(nextChests[existingIdx].count ?? 1) + 1,
+      awardedAt
+    };
+  } else {
+    nextChests.push({
+      ...chest,
+      count: 1,
+      awardedAt
+    });
+  }
+
+  return nextChests;
 }
 
 function applyCompanionProgress(
@@ -163,6 +238,26 @@ export async function POST(request: Request) {
     const nextXp = Number(profile.xp || 0) + xpReward + companionProgress.companionXpBonus;
     const nextDailyCompletions = Array.from(new Set([...dailyQuestsCompleted, ...questIds]));
     const nextCompletedQuests = Array.from(new Set([...completedQuests, ...questIds]));
+    const dailyClearChestRewards = {
+      ...((profile.dailyClearChestRewards as Record<string, unknown>) || {})
+    };
+    const didClearAllDailyQuests =
+      currentDailyQuests.length > 0 &&
+      currentDailyQuests.every((questId) => nextDailyCompletions.includes(questId));
+    const wasAlreadyClear =
+      currentDailyQuests.length > 0 &&
+      currentDailyQuests.every((questId) => dailyQuestsCompleted.includes(questId));
+    const canRollDailyChest = didClearAllDailyQuests && !wasAlreadyClear && !dailyClearChestRewards[todayKey];
+    const bonusChest = canRollDailyChest && Math.random() < DAILY_CLEAR_CHEST_CHANCE
+      ? pickDailyClearChest()
+      : null;
+
+    if (canRollDailyChest) {
+      dailyClearChestRewards[todayKey] = bonusChest
+        ? { awarded: true, chest: bonusChest.name, awardedAt: completedAt.toISOString() }
+        : { awarded: false, rolledAt: completedAt.toISOString() };
+    }
+
     const dailyQuestCompletions = {
       ...((profile.dailyQuestCompletions as Record<string, string[]>) || {}),
       [todayKey]: Array.from(
@@ -185,6 +280,8 @@ export async function POST(request: Request) {
       completedQuests: nextCompletedQuests,
       dailyQuestsCompleted: nextDailyCompletions,
       dailyQuestCompletions,
+      dailyClearChestRewards,
+      ...(bonusChest ? { chests: addChest(profile.chests, bonusChest) } : {}),
       lastQuestCompletionTime: completedAt.toISOString()
     };
 
@@ -226,6 +323,7 @@ export async function POST(request: Request) {
         ecoPoints: ecoReward,
         carbonReduced: Math.round(carbonReward * 100) / 100
       },
+      bonusChest,
       companion: companionProgress.companion
     });
   } catch (error) {

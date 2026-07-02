@@ -388,9 +388,14 @@ export default function DashboardPage() {
       const companionLine = result.companion?.name
         ? ` ${result.companion.name} gained bond${result.totals.companionXpBonus ? ` and found +${result.totals.companionXpBonus} bonus XP` : ""}.`
         : "";
-      setCompletedPopup(`Mission complete! ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"} finished: ${completedTitles}.${companionLine}`);
+      const bonusChestLine = result.bonusChest?.name
+        ? ` Daily clear bonus: ${result.bonusChest.name} added to your Collection.`
+        : "";
+      setCompletedPopup(`Mission complete! ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"} finished: ${completedTitles}.${companionLine}${bonusChestLine}`);
       showToast(
-        `Completed ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"}: +${result.totals.xp + (result.totals.companionXpBonus || 0)} XP, +${result.totals.ecoPoints} EcoPoints, ${Number(result.totals.carbonReduced || 0).toFixed(1)} kg CO2`
+        result.bonusChest?.name
+          ? `Daily clear bonus: ${result.bonusChest.name} found!`
+          : `Completed ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"}: +${result.totals.xp + (result.totals.companionXpBonus || 0)} XP, +${result.totals.ecoPoints} EcoPoints, ${Number(result.totals.carbonReduced || 0).toFixed(1)} kg CO2`
       );
       setVerifiedQuestIds((ids) => ids.filter((id) => !completedIds.includes(id)));
     } catch (error) {
@@ -837,4 +842,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
