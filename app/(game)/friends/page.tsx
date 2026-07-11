@@ -58,7 +58,7 @@ function getSocialStats(profile: any) {
 }
 
 export default function FriendsPage() {
-  const { user, profile, setProfile } = useAuth();
+  const { user, profile, setProfile, refreshProfile } = useAuth();
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -70,6 +70,11 @@ export default function FriendsPage() {
   const friendIds = new Set(friends.map(friendKey));
   const socialStats = getSocialStats(profile);
   const claimedSocialRewards = getClaimedSocialRewards(profile);
+
+  const friendRequests = Array.isArray(profile?.friendRequests) ? profile.friendRequests : [];
+  const sentRequests = Array.isArray(profile?.sentRequests) ? profile.sentRequests : [];
+  const friendRequestsSet = new Set(friendRequests.map((r: any) => r.id || r.uid));
+  const sentRequestsSet = new Set(sentRequests);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,32 +137,90 @@ export default function FriendsPage() {
     setTimeout(() => setToast(""), 3000);
   };
 
-  const addFriend = async (player: any) => {
+  const sendFriendRequest = async (player: any) => {
     if (!user?.uid || !profile) return;
 
-    const nextFriends = [
-      ...friends,
-      {
-        id: player.id,
-        displayName: player.displayName,
-        xp: Number(player.xp || 0),
-        level: Number(player.level || 1),
-        ecoPoints: Number(player.ecoPoints || 0),
-        cheers: 0,
-        addedAt: new Date().toISOString()
+    try {
+      const res = await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "request", targetUserId: player.id })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showToast(typeof data.error === "string" ? data.error : "Could not send friend request.");
+        return;
       }
-    ];
 
-    const result = await updateUserProfile(user.uid, { friends: nextFriends });
-    if (!result.success) {
-      showToast("Could not add friend. Please try again.");
-      return;
+      // The API may auto-accept if the target already sent us a request
+      if (data.message === "Friend request accepted") {
+        await refreshProfile();
+        showToast(`You and ${player.displayName || "player"} are now friends!`);
+      } else {
+        const nextSent = [...sentRequests, player.id];
+        if (typeof setProfile === "function") {
+          setProfile({ ...profile, sentRequests: nextSent });
+        }
+        showToast(`Friend request sent to ${player.displayName || "player"}.`);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Could not send friend request.");
     }
+  };
 
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, friends: nextFriends });
+  const acceptFriendRequest = async (request: any) => {
+    if (!user?.uid || !profile) return;
+
+    try {
+      const res = await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "accept", targetUserId: request.id || request.uid })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showToast(typeof data.error === "string" ? data.error : "Could not accept friend request.");
+        return;
+      }
+
+      // Refresh the full profile from server to get clean state
+      await refreshProfile();
+      showToast(`Accepted friend request from ${request.displayName || "player"}.`);
+    } catch (err) {
+      console.error(err);
+      showToast("Could not accept friend request.");
     }
-    showToast(`${player.displayName || "Friend"} added.`);
+  };
+
+  const declineFriendRequest = async (request: any) => {
+    if (!user?.uid || !profile) return;
+
+    try {
+      const res = await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "decline", targetUserId: request.id || request.uid })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showToast(typeof data.error === "string" ? data.error : "Could not decline friend request.");
+        return;
+      }
+
+      const nextRequests = friendRequests.filter((r: any) => (r.id || r.uid) !== (request.id || request.uid));
+      const nextSent = sentRequests.filter((id) => id !== (request.id || request.uid));
+      if (typeof setProfile === "function") {
+        setProfile({ ...profile, friendRequests: nextRequests, sentRequests: nextSent });
+      }
+      showToast(`Declined friend request from ${request.displayName || "player"}.`);
+    } catch (err) {
+      console.error(err);
+      showToast("Could not decline friend request.");
+    }
   };
 
   const cheerFriend = async (friend: any) => {
@@ -244,16 +307,27 @@ export default function FriendsPage() {
 
   const removeFriend = async (friend: any) => {
     if (!user?.uid || !profile) return;
-    const nextFriends = friends.filter((item) => friendKey(item) !== friendKey(friend));
-    const result = await updateUserProfile(user.uid, { friends: nextFriends });
-    if (!result.success) {
-      showToast("Could not remove friend. Please try again.");
-      return;
+
+    try {
+      const res = await fetch("/api/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "remove", targetUserId: friendKey(friend) })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showToast(typeof data.error === "string" ? data.error : "Could not remove friend.");
+        return;
+      }
+
+      // Refresh full profile for clean state (server also cleans stale request artifacts)
+      await refreshProfile();
+      showToast("Friend removed.");
+    } catch (err) {
+      console.error(err);
+      showToast("Could not remove friend.");
     }
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, friends: nextFriends });
-    }
-    showToast("Friend removed.");
   };
 
   const myXp = Number(profile?.xp ?? 0);
@@ -315,6 +389,33 @@ export default function FriendsPage() {
         </div>
       </Panel>
 
+      {friendRequests.length > 0 && (
+        <Panel eyebrow="Pending connections" title="Friend Requests">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {friendRequests.map((req: any) => (
+              <article key={req.id || req.uid} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+                <div className="min-w-0">
+                  <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{req.displayName || "Anonymous"}</p>
+                  <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>Wants to add you</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Pill>Lv {req.level || 1}</Pill>
+                    <Pill>{Number(req.xp || 0).toLocaleString()} XP</Pill>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button type="button" onClick={() => acceptFriendRequest(req)} className={primaryButton}>
+                    Accept
+                  </button>
+                  <button type="button" onClick={() => declineFriendRequest(req)} className={secondaryButton}>
+                    Decline
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+      )}
+
       <Panel eyebrow="Add friends" title="Find Players">
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
@@ -329,21 +430,38 @@ export default function FriendsPage() {
           {loading ? (
             <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Loading players...</p>
           ) : candidates.length > 0 ? (
-            candidates.map((player) => (
-              <article key={player.id} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <div className="min-w-0">
-                  <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{player.displayName}</p>
-                  <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>EcoLudus player</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Pill>Lv {player.level || 1}</Pill>
-                    <Pill>{Number(player.xp || 0).toLocaleString()} XP</Pill>
+            candidates.map((player) => {
+              const isSent = sentRequestsSet.has(player.id);
+              const isIncoming = friendRequestsSet.has(player.id);
+
+              return (
+                <article key={player.id} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+                  <div className="min-w-0">
+                    <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{player.displayName}</p>
+                    <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>EcoLudus player</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Pill>Lv {player.level || 1}</Pill>
+                      <Pill>{Number(player.xp || 0).toLocaleString()} XP</Pill>
+                    </div>
                   </div>
-                </div>
-                <button type="button" onClick={() => addFriend(player)} className={primaryButton}>
-                  Add
-                </button>
-              </article>
-            ))
+                  <div className="shrink-0">
+                    {isSent ? (
+                      <button type="button" disabled className={secondaryButton}>
+                        Sent
+                      </button>
+                    ) : isIncoming ? (
+                      <button type="button" onClick={() => acceptFriendRequest(player)} className={primaryButton}>
+                        Accept
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => sendFriendRequest(player)} className={primaryButton}>
+                        Add
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })
           ) : (
             <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>No matching players found.</p>
           )}

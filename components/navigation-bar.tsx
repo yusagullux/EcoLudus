@@ -155,6 +155,20 @@ export function NavigationBar({ user, profile, refreshProfile }: NavigationBarPr
         <div className="hidden items-center gap-1.5 lg:flex">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
+            let badge = null;
+            if (link.name === "Impact") {
+              const unreadCount = Array.isArray(profile?.notifications)
+                ? profile.notifications.filter((n: any) => !n.read).length
+                : 0;
+              if (unreadCount > 0) {
+                badge = (
+                  <span className="ml-1 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[8px] font-black text-white leading-none">
+                    {unreadCount}
+                  </span>
+                );
+              }
+            }
+
             return (
               <Link
                 key={link.href}
@@ -169,6 +183,7 @@ export function NavigationBar({ user, profile, refreshProfile }: NavigationBarPr
                   {link.icon}
                 </span>
                 {link.name}
+                {badge}
               </Link>
             );
           })}
@@ -233,6 +248,20 @@ export function NavigationBar({ user, profile, refreshProfile }: NavigationBarPr
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
+              let badge = null;
+              if (link.name === "Impact") {
+                const unreadCount = Array.isArray(profile?.notifications)
+                  ? profile.notifications.filter((n: any) => !n.read).length
+                  : 0;
+                if (unreadCount > 0) {
+                  badge = (
+                    <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[8px] font-black text-white leading-none">
+                      {unreadCount}
+                    </span>
+                  );
+                }
+              }
+
               return (
                 <Link
                   key={link.href}
@@ -246,6 +275,7 @@ export function NavigationBar({ user, profile, refreshProfile }: NavigationBarPr
                     <span className={isActive ? "text-moss-300" : "text-forest-500"}>{link.icon}</span>
                     <span>{link.name}</span>
                   </div>
+                  {badge}
                 </Link>
               );
             })}

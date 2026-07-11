@@ -198,7 +198,19 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
               <span className="shrink-0" style={{ color: isActive ? "var(--text-sidebar)" : "var(--text-sidebar-muted)" }}>
                 {item.icon}
               </span>
-              <span className="truncate">{item.name}</span>
+              <span className="flex-1 truncate">{item.name}</span>
+              {item.name === "Friends" && (
+                (() => {
+                  const requestsCount = Array.isArray(profile?.friendRequests)
+                    ? profile.friendRequests.length
+                    : 0;
+                  return requestsCount > 0 ? (
+                    <span className="rounded-full bg-emerald-500/80 px-1.5 py-0.5 text-[8.5px] font-black text-white leading-none shrink-0">
+                      {requestsCount}
+                    </span>
+                  ) : null;
+                })()
+              )}
             </Link>
           );
         })}
