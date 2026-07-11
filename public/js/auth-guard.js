@@ -1,7 +1,3 @@
-/**
- * Autentimise kontroll
- * Suunab automaatselt sisselogimislehele, kui kasutaja pole sisse logitud
- */
 import { onAuthChange } from "./auth.js";
 
 export function requireAuth() {
