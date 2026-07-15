@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import { getQuestCarbonReduction, getQuestDefinition } from "@/lib/carbon-calc";
 import { sql } from "@/lib/db";
 import { calculateLevel } from "@/lib/level-system";
+import { getMissingVerifiedQuestProofIds, removeVerifiedQuestProofs } from "@/lib/quest-proof";
 import { checkAndProcessMilestones } from "@/lib/rewards-sync";
 
 const completeQuestSchema = z.object({
@@ -201,6 +202,20 @@ export async function POST(request: Request) {
       );
     }
 
+    const missingVerifiedProofIds = getMissingVerifiedQuestProofIds(profile, questIds);
+    if (missingVerifiedProofIds.length > 0) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "quests/proof-required",
+            message: "Please verify proof for each selected quest before completing it.",
+            questIds: missingVerifiedProofIds
+          }
+        },
+        { status: 422 }
+      );
+    }
+
     const completedAt = new Date();
     const todayKey = dateKey(completedAt);
     const completionRecords = [];
@@ -270,7 +285,7 @@ export async function POST(request: Request) {
 
     const nextLevel = calculateLevel(nextXp);
     const nextProfile = {
-      ...profile,
+      ...removeVerifiedQuestProofs(profile, questIds),
       xp: nextXp,
       ecoPoints: Number(profile.ecoPoints || 0) + ecoReward,
       level: nextLevel,

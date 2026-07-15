@@ -35,6 +35,10 @@ const CATEGORY_IMAGES: Record<string, string> = {
   sustainable_living: "/images/mountains.png"
 };
 
+const MAX_PROOF_PHOTO_BYTES = 10 * 1024 * 1024;
+const MIN_PROOF_PHOTO_BYTES = 5 * 1024;
+const ACCEPTED_PROOF_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+
 function checkIfQuestRequiresPhoto(id: string) {
   const photoQuestIds = [
     "recycling_2", "recycling_3", "recycling_4",
@@ -150,7 +154,8 @@ export default function DashboardPage() {
         const profileUpdates: Record<string, unknown> = {
           lastQuestResetTime: new Date().toISOString(),
           currentDailyQuests: selectedIds,
-          dailyQuestsCompleted: []
+          dailyQuestsCompleted: [],
+          verifiedQuestProofs: {}
         };
 
         const streak = Number(profile.currentStreak ?? 0);
@@ -214,6 +219,35 @@ export default function DashboardPage() {
     }
   }, [profile, questsData, user?.uid]);
 
+  useEffect(() => {
+    if (!profile) {
+      setVerifiedQuestIds([]);
+      return;
+    }
+
+    const proofs = profile.verifiedQuestProofs && typeof profile.verifiedQuestProofs === "object"
+      ? profile.verifiedQuestProofs as Record<string, any>
+      : {};
+    const resetKey = typeof profile.lastQuestResetTime === "string" ? profile.lastQuestResetTime : null;
+    const currentDailyQuestIds = Array.isArray(profile.currentDailyQuests) ? profile.currentDailyQuests.map(String) : [];
+    const dailyQuestsCompleted = Array.isArray(profile.dailyQuestsCompleted) ? profile.dailyQuestsCompleted.map(String) : [];
+    const verifiedIds = currentDailyQuestIds.filter((questId) => {
+      if (dailyQuestsCompleted.includes(questId)) return false;
+      const proof = proofs[questId];
+      return proof?.verifiedAt && proof?.resetKey === resetKey;
+    });
+
+    setVerifiedQuestIds(verifiedIds);
+  }, [profile]);
+
+  useEffect(() => {
+    if (!activeTextVerifyQuest) return;
+
+    const requiresPhoto = checkIfQuestRequiresPhoto(activeTextVerifyQuest.id);
+    setProofType(requiresPhoto ? "photo" : "text");
+    setVerificationError(null);
+  }, [activeTextVerifyQuest]);
+
   // Live ticking reset timer (counts down to midnight UTC)
   useEffect(() => {
     const updateTimer = () => setTimeLeft(getTimeUntilNextReset(null));
@@ -265,6 +299,47 @@ export default function DashboardPage() {
   const showToast = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(""), 3000);
+  };
+
+  const handleProofPhotoSelected = (file: File | null) => {
+    setVerificationError(null);
+
+    if (!file) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      return;
+    }
+
+    const fileType = file.type.toLowerCase();
+    if (!ACCEPTED_PROOF_PHOTO_TYPES.includes(fileType)) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setVerificationError("Please upload a JPEG, PNG, WebP, HEIC, or HEIF photo.");
+      return;
+    }
+
+    if (file.size > MAX_PROOF_PHOTO_BYTES) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setVerificationError("Image too large. Maximum size is 10MB.");
+      return;
+    }
+
+    if (file.size < MIN_PROOF_PHOTO_BYTES) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setVerificationError("The uploaded file appears to be empty or corrupt. Please upload a real photo.");
+      return;
+    }
+
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setPhotoPreview(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const toggleSelection = (quest: any) => {
@@ -378,7 +453,7 @@ export default function DashboardPage() {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok || !result.success) {
-        throw new Error(result?.error?.code || "Failed to complete selected missions.");
+        throw new Error(result?.error?.message || result?.error?.code || "Failed to complete selected missions.");
       }
 
       setQuests((items) => items.map((item) => (completedIds.includes(item.id) ? { ...item, done: true } : item)));
@@ -400,7 +475,7 @@ export default function DashboardPage() {
       setVerifiedQuestIds((ids) => ids.filter((id) => !completedIds.includes(id)));
     } catch (error) {
       console.error("Mission completion error:", error);
-      showToast("Unable to complete missions. Please try again.");
+      showToast(error instanceof Error ? error.message : "Unable to complete missions. Please try again.");
     } finally {
       setPendingCompletion(false);
     }
@@ -565,11 +640,11 @@ export default function DashboardPage() {
                   {!quest.done && (
                     <button
                       type="button"
-                      onClick={(e) => {
+                    onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         setActiveTextVerifyQuest(quest);
-                        setProofType("text");
+                        setProofType(checkIfQuestRequiresPhoto(quest.id) ? "photo" : "text");
                         setTextProof("");
                         setPhotoFile(null);
                         setPhotoPreview(null);
@@ -619,16 +694,24 @@ export default function DashboardPage() {
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Quest verification</p>
                 <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Verify proof for: {activeTextVerifyQuest.title}</h3>
+                <p className="mt-2 text-sm leading-6" style={{ color: "var(--text-muted)" }}>
+                  {checkIfQuestRequiresPhoto(activeTextVerifyQuest.id)
+                    ? "This quest needs a photo proof upload."
+                    : "You can verify with either text or a photo."}
+                </p>
               </div>
 
               {/* Proof type tabs */}
               <div className="flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
                 <button
                   type="button"
+                  disabled={checkIfQuestRequiresPhoto(activeTextVerifyQuest.id)}
                   onClick={() => { setProofType("text"); setVerificationError(null); }}
                   className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
                   style={proofType === "text"
                     ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
+                    : checkIfQuestRequiresPhoto(activeTextVerifyQuest.id)
+                    ? { color: "var(--text-muted)", opacity: 0.45 }
                     : { color: "var(--text-muted)" }}
                 >
                   ✏️ Text Proof
@@ -698,20 +781,11 @@ export default function DashboardPage() {
                   <input
                     id="quest-photo-camera"
                     type="file"
-                    accept="image/*"
+                    accept={ACCEPTED_PROOF_PHOTO_TYPES.join(",")}
                     capture="environment"
                     onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      if (file) {
-                        setPhotoFile(file);
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          if (typeof reader.result === "string") {
-                            setPhotoPreview(reader.result);
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }
+                      handleProofPhotoSelected(e.target.files?.[0] || null);
+                      e.currentTarget.value = "";
                     }}
                     className="sr-only"
                   />
@@ -719,19 +793,10 @@ export default function DashboardPage() {
                   <input
                     id="quest-photo-gallery"
                     type="file"
-                    accept="image/*"
+                    accept={ACCEPTED_PROOF_PHOTO_TYPES.join(",")}
                     onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      if (file) {
-                        setPhotoFile(file);
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          if (typeof reader.result === "string") {
-                            setPhotoPreview(reader.result);
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }
+                      handleProofPhotoSelected(e.target.files?.[0] || null);
+                      e.currentTarget.value = "";
                     }}
                     className="sr-only"
                   />

@@ -1,4 +1,8 @@
 // EXIF andmete lugemine failist
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const MIN_PHOTO_BYTES = 5 * 1024;
+const VALID_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+
 function readEXIFData(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -215,18 +219,23 @@ export async function verifyPhoto(file, quest, userId) {
             return result;
         }
 
-        // Kontrolli faili suurust (max 15MB)
-        if (file.size > 15 * 1024 * 1024) {
+        // Kontrolli faili suurust (max 10MB)
+        if (file.size > MAX_PHOTO_BYTES) {
             result.verified = false;
-            result.errors.push('Image is too large. Maximum size is 15MB.');
+            result.errors.push('Image is too large. Maximum size is 10MB.');
+            return result;
+        }
+
+        if (file.size < MIN_PHOTO_BYTES) {
+            result.verified = false;
+            result.errors.push('The uploaded file appears to be empty or corrupt. Please upload a real photo.');
             return result;
         }
 
         // Kontrolli faili tüüpi
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
-        if (!validTypes.includes(file.type.toLowerCase()) && !file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/)) {
+        if (!VALID_PHOTO_TYPES.includes(file.type.toLowerCase()) && !file.name.toLowerCase().match(/\.(jpg|jpeg|png|webp|heic|heif)$/)) {
             result.verified = false;
-            result.errors.push('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
+            result.errors.push('Invalid file type. Please upload a JPEG, PNG, WebP, HEIC, or HEIF image.');
             return result;
         }
 

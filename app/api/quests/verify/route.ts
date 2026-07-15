@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getQuestDefinition } from "@/lib/carbon-calc";
-import { verifyTextProofWithGemini, verifyImageWithProvider } from "@/lib/photo-verification";
+import { MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, verifyTextProofWithGemini, verifyImageWithProvider } from "@/lib/photo-verification";
+import { markQuestProofVerified } from "@/lib/quest-proof";
+
+function isValidBase64ImagePayload(value: string) {
+  const normalized = value.replace(/\s/g, "");
+  return normalized.length > 0 && normalized.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(normalized);
+}
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -40,11 +46,40 @@ export async function POST(request: Request) {
 
     // Photo proof verification
     if (photoProof) {
+      if (typeof photoProof !== "string") {
+        return NextResponse.json(
+          { error: { code: "invalid-argument", message: "Photo proof must be a base64 image." } },
+          { status: 400 }
+        );
+      }
+
       let base64Data = photoProof;
       if (base64Data.includes(";base64,")) {
         base64Data = base64Data.split(";base64,").pop() || "";
       }
+      base64Data = base64Data.replace(/\s/g, "");
+      if (!isValidBase64ImagePayload(base64Data)) {
+        return NextResponse.json(
+          { error: { code: "invalid-argument", message: "Photo proof must be a valid base64 image." } },
+          { status: 400 }
+        );
+      }
+
       const buffer = Buffer.from(base64Data, "base64");
+      if (buffer.length > MAX_PHOTO_BYTES) {
+        return NextResponse.json(
+          { error: { code: "invalid-argument", message: "Image too large. Maximum size is 10MB." } },
+          { status: 400 }
+        );
+      }
+
+      if (buffer.length < MIN_PHOTO_BYTES) {
+        return NextResponse.json(
+          { error: { code: "invalid-argument", message: "The uploaded file appears to be empty or corrupt. Please upload a real photo." } },
+          { status: 400 }
+        );
+      }
+
       const resolvedMimeType = mimeType || "image/jpeg";
 
       const result = await verifyImageWithProvider(
@@ -72,6 +107,19 @@ export async function POST(request: Request) {
       // Confidence: Gemini's warnings count as partial confidence deductions
       const warningCount = result.warnings?.length ?? 0;
       const confidence = Math.max(60, 100 - warningCount * 12);
+      const nextProfile = await markQuestProofVerified(session.userId, questId, {
+        method: "photo",
+        confidence,
+        provider: result.provider,
+        warnings: result.warnings ?? []
+      });
+
+      if (!nextProfile) {
+        return NextResponse.json(
+          { error: { code: "auth/user-not-found", message: "User profile was not found." } },
+          { status: 404 }
+        );
+      }
 
       return NextResponse.json({
         verified: true,
@@ -106,6 +154,18 @@ export async function POST(request: Request) {
     // Text confidence: based on length and specificity heuristic
     const wordCount = textProof.trim().split(/\s+/).length;
     const textConfidence = Math.min(100, Math.max(70, 70 + wordCount * 2));
+    const nextProfile = await markQuestProofVerified(session.userId, questId, {
+      method: "text",
+      confidence: textConfidence,
+      provider: "google-gemini-text"
+    });
+
+    if (!nextProfile) {
+      return NextResponse.json(
+        { error: { code: "auth/user-not-found", message: "User profile was not found." } },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       verified: true,

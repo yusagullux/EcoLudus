@@ -3,6 +3,10 @@
 import { useRef, useState } from "react";
 import { Panel, primaryButton, secondaryButton, Pill } from "@/components/game-ui";
 
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const MIN_PHOTO_BYTES = 5 * 1024;
+const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+
 type PhotoVerificationProps = {
   questId: string;
   questTitle: string;
@@ -32,14 +36,20 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload a valid image file.");
+    if (!ACCEPTED_PHOTO_TYPES.includes(file.type.toLowerCase())) {
+      setError("Please upload a JPEG, PNG, WebP, HEIC, or HEIF photo.");
       setSelectedFile(null);
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      setError("Image too large. Maximum size is 15MB.");
+    if (file.size > MAX_PHOTO_BYTES) {
+      setError("Image too large. Maximum size is 10MB.");
+      setSelectedFile(null);
+      return;
+    }
+
+    if (file.size < MIN_PHOTO_BYTES) {
+      setError("The uploaded file appears to be empty or corrupt. Please upload a real photo.");
       setSelectedFile(null);
       return;
     }
@@ -137,7 +147,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
           <input
             ref={cameraInputRef}
             type="file"
-            accept="image/*"
+            accept={ACCEPTED_PHOTO_TYPES.join(",")}
             capture="environment"
             onChange={handleFileChange}
             className="sr-only"
@@ -145,7 +155,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
           <input
             ref={galleryInputRef}
             type="file"
-            accept="image/*"
+            accept={ACCEPTED_PHOTO_TYPES.join(",")}
             onChange={handleFileChange}
             className="sr-only"
           />
@@ -184,7 +194,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
 
         <div className="flex flex-wrap gap-3">
           <button onClick={verifyPhoto} disabled={isSubmitting || !selectedFile} className={primaryButton}>
-            {isSubmitting ? "Verifying…" : "Verify Photo"}
+            {isSubmitting ? "Verifying..." : "Verify Photo"}
           </button>
           <button
             type="button"
