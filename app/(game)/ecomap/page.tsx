@@ -43,6 +43,9 @@ const TYPE_META: Record<StopType, { icon: string; symbol: string; color: string;
 };
 
 const DEFAULT_CENTER: [number, number] = [59.437, 24.745];
+const MAX_ECOSTOP_PHOTO_BYTES = 10 * 1024 * 1024;
+const MIN_ECOSTOP_PHOTO_BYTES = 5 * 1024;
+const ACCEPTED_ECOSTOP_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 function getFreshPosition(): Promise<{ lat: number; lng: number; accuracyM: number }> {
   return new Promise((resolve, reject) => {
@@ -329,6 +332,42 @@ export default function EcoMapPage() {
     setSubmitError(null);
   };
 
+  const handleEcoStopPhotoSelected = (file: File | null) => {
+    setSubmitError(null);
+
+    if (!file) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      return;
+    }
+
+    if (!ACCEPTED_ECOSTOP_PHOTO_TYPES.includes(file.type.toLowerCase())) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setSubmitError("Please upload a JPEG, PNG, WebP, HEIC, or HEIF photo.");
+      return;
+    }
+
+    if (file.size > MAX_ECOSTOP_PHOTO_BYTES) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setSubmitError("Image too large. Maximum size is 10MB.");
+      return;
+    }
+
+    if (file.size < MIN_ECOSTOP_PHOTO_BYTES) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setSubmitError("The uploaded file appears to be empty or corrupt. Please upload a real photo.");
+      return;
+    }
+
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const submitCheckin = async () => {
     if (!selectedStop || !user?.uid || !profile || submitting || isProcessing.current) return;
     if (!photoFile) { setSubmitError("Please attach a photo for AI verification."); return; }
@@ -602,8 +641,27 @@ export default function EcoMapPage() {
                 <button type="button" onClick={() => document.getElementById("ecostop-gal")?.click()} className="flex-1 rounded-xl border py-3 text-xs font-bold" style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}>Gallery</button>
                 {photoFile && <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); }} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700">Clear</button>}
               </div>
-              <input id="ecostop-cam" type="file" accept="image/*" capture="environment" className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (!f) return; setPhotoFile(f); const r = new FileReader(); r.onload = () => setPhotoPreview(r.result as string); r.readAsDataURL(f); }} />
-              <input id="ecostop-gal" type="file" accept="image/*" className="sr-only" onChange={e => { const f = e.target.files?.[0]; if (!f) return; setPhotoFile(f); const r = new FileReader(); r.onload = () => setPhotoPreview(r.result as string); r.readAsDataURL(f); }} />
+              <input
+                id="ecostop-cam"
+                type="file"
+                accept={ACCEPTED_ECOSTOP_PHOTO_TYPES.join(",")}
+                capture="environment"
+                className="sr-only"
+                onChange={e => {
+                  handleEcoStopPhotoSelected(e.target.files?.[0] || null);
+                  e.currentTarget.value = "";
+                }}
+              />
+              <input
+                id="ecostop-gal"
+                type="file"
+                accept={ACCEPTED_ECOSTOP_PHOTO_TYPES.join(",")}
+                className="sr-only"
+                onChange={e => {
+                  handleEcoStopPhotoSelected(e.target.files?.[0] || null);
+                  e.currentTarget.value = "";
+                }}
+              />
               {photoPreview && <img src={photoPreview} alt="Preview" className="mx-auto max-h-44 rounded-xl object-cover" />}
             </div>
             {submitError && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">{submitError}</div>}

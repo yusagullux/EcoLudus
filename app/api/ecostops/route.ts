@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { createImageHash, getExistingPhotoHash, savePhotoHash, verifyImageWithProvider } from "@/lib/photo-verification";
+import { createImageHash, getExistingPhotoHash, MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, savePhotoHash, verifyImageWithProvider } from "@/lib/photo-verification";
 import {
   CHECKIN_RADIUS_M,
   checkinRangeError,
@@ -153,17 +153,178 @@ const SEED_STOPS = [
 ];
 
 type Stop = typeof SEED_STOPS[number];
+type StopType = Stop["type"];
+
+const OSM_RADIUS_LIMIT_M = 10000;
+const OSM_STOP_LIMIT = 80;
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter"
+];
+
+const TYPE_REWARDS: Record<StopType, Pick<Stop, "xpReward" | "ecoReward" | "cooldownHours">> = {
+  park: { xpReward: 42, ecoReward: 24, cooldownHours: 24 },
+  recycling: { xpReward: 35, ecoReward: 20, cooldownHours: 12 },
+  community_garden: { xpReward: 52, ecoReward: 29, cooldownHours: 24 },
+  repair_cafe: { xpReward: 60, ecoReward: 35, cooldownHours: 48 },
+  bike_station: { xpReward: 28, ecoReward: 16, cooldownHours: 8 },
+  nature_trail: { xpReward: 55, ecoReward: 32, cooldownHours: 24 }
+};
+
+type OverpassElement = {
+  type: "node" | "way" | "relation";
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat?: number; lon?: number };
+  tags?: Record<string, string>;
+};
+
+function stopTypeFromTags(tags: Record<string, string>): StopType | null {
+  if (tags.amenity === "recycling") return "recycling";
+  if (tags.amenity === "repair_cafe" || tags.shop === "repair") return "repair_cafe";
+  if (tags.amenity === "bicycle_rental" || tags.amenity === "bicycle_parking" || tags["service:bicycle:repair"] === "yes") {
+    return "bike_station";
+  }
+  if (tags.leisure === "garden" || tags.leisure === "community_garden" || tags["garden:type"] === "community") {
+    return "community_garden";
+  }
+  if (tags.route === "hiking" || tags.route === "foot" || tags.highway === "path") return "nature_trail";
+  if (tags.leisure === "park" || tags.leisure === "nature_reserve" || tags.boundary === "protected_area") return "park";
+  return null;
+}
+
+function stopDescription(type: StopType, tags: Record<string, string>) {
+  const operator = tags.operator ? ` Operated by ${tags.operator}.` : "";
+  const openingHours = tags.opening_hours ? ` Hours: ${tags.opening_hours}.` : "";
+
+  switch (type) {
+    case "recycling":
+      return `Mapped recycling point from OpenStreetMap.${operator}${openingHours}`;
+    case "community_garden":
+      return `Mapped garden or community growing space from OpenStreetMap.${operator}${openingHours}`;
+    case "repair_cafe":
+      return `Mapped repair location from OpenStreetMap.${operator}${openingHours}`;
+    case "bike_station":
+      return `Mapped bike parking, rental, or repair point from OpenStreetMap.${operator}${openingHours}`;
+    case "nature_trail":
+      return `Mapped walking or nature trail from OpenStreetMap.${operator}${openingHours}`;
+    default:
+      return `Mapped green space from OpenStreetMap.${operator}${openingHours}`;
+  }
+}
+
+function fallbackStopName(type: StopType, id: number) {
+  const labels: Record<StopType, string> = {
+    park: "Mapped Park",
+    recycling: "Mapped Recycling Point",
+    community_garden: "Mapped Garden",
+    repair_cafe: "Mapped Repair Point",
+    bike_station: "Mapped Bike Point",
+    nature_trail: "Mapped Trail"
+  };
+  return `${labels[type]} ${id}`;
+}
+
+function overpassQuery(lat: number, lng: number, radius: number) {
+  const around = `(around:${Math.round(radius)},${lat},${lng})`;
+  return `
+    [out:json][timeout:8];
+    (
+      node${around}["amenity"="recycling"];
+      way${around}["amenity"="recycling"];
+      relation${around}["amenity"="recycling"];
+      node${around}["leisure"~"^(park|nature_reserve|garden|community_garden)$"];
+      way${around}["leisure"~"^(park|nature_reserve|garden|community_garden)$"];
+      relation${around}["leisure"~"^(park|nature_reserve|garden|community_garden)$"];
+      node${around}["boundary"="protected_area"];
+      way${around}["boundary"="protected_area"];
+      relation${around}["boundary"="protected_area"];
+      node${around}["amenity"~"^(bicycle_rental|bicycle_parking|repair_cafe)$"];
+      way${around}["amenity"~"^(bicycle_rental|bicycle_parking|repair_cafe)$"];
+      node${around}["service:bicycle:repair"="yes"];
+      way${around}["service:bicycle:repair"="yes"];
+      node${around}["shop"="repair"];
+      way${around}["shop"="repair"];
+      way${around}["route"~"^(hiking|foot)$"];
+      relation${around}["route"~"^(hiking|foot)$"];
+      way${around}["highway"="path"]["name"];
+    );
+    out center tags ${OSM_STOP_LIMIT * 3};
+  `;
+}
+
+async function fetchOsmStops(lat: number, lng: number, radius: number): Promise<Stop[]> {
+  const query = overpassQuery(lat, lng, radius);
+  let lastError: unknown = null;
+
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ data: query }),
+        next: { revalidate: 60 * 60 * 24 * 7 }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Overpass returned ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const seen = new Set<string>();
+      const stops = ((payload.elements || []) as OverpassElement[])
+        .map((element): Stop | null => {
+          const tags = element.tags || {};
+          const type = stopTypeFromTags(tags);
+          const stopLat = element.lat ?? element.center?.lat;
+          const stopLng = element.lon ?? element.center?.lon;
+          if (!type || !Number.isFinite(stopLat) || !Number.isFinite(stopLng)) return null;
+
+          const dedupeKey = `${type}:${Math.round(stopLat! * 10000)}:${Math.round(stopLng! * 10000)}`;
+          if (seen.has(dedupeKey)) return null;
+          seen.add(dedupeKey);
+
+          return {
+            id: `osm_${element.type}_${element.id}`,
+            name: tags.name || fallbackStopName(type, element.id),
+            type,
+            lat: Number(stopLat),
+            lng: Number(stopLng),
+            ...TYPE_REWARDS[type],
+            description: stopDescription(type, tags)
+          };
+        })
+        .filter(Boolean) as Stop[];
+
+      return stops
+        .sort((a, b) => distM(lat, lng, a.lat, a.lng) - distM(lat, lng, b.lat, b.lng))
+        .slice(0, OSM_STOP_LIMIT);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.warn("OpenStreetMap EcoStop lookup failed, using seed stops:", lastError);
+  return [];
+}
+
+function isValidBase64ImagePayload(value: string) {
+  const normalized = value.replace(/\s/g, "");
+  return normalized.length > 0 && normalized.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(normalized);
+}
 
 function parsePhotoProof(photoProof: unknown, mimeType: unknown): { buffer: Buffer; mimeType: string } | null {
   if (typeof photoProof !== "string" || photoProof.length < 100) return null;
 
   const dataUrlMatch = photoProof.match(/^data:([^;]+);base64,(.+)$/);
   const resolvedMimeType = dataUrlMatch?.[1] || (typeof mimeType === "string" ? mimeType : "image/jpeg");
-  const base64 = dataUrlMatch?.[2] || photoProof;
+  const base64 = (dataUrlMatch?.[2] || photoProof).replace(/\s/g, "");
+  if (!isValidBase64ImagePayload(base64)) return null;
 
   try {
     const buffer = Buffer.from(base64, "base64");
-    if (buffer.length < 1024) return null;
+    if (buffer.length < MIN_PHOTO_BYTES || buffer.length > MAX_PHOTO_BYTES) return null;
     return { buffer, mimeType: resolvedMimeType };
   } catch {
     return null;
@@ -175,15 +336,23 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const lat    = parseFloat(searchParams.get("lat") ?? "NaN");
   const lng    = parseFloat(searchParams.get("lng") ?? "NaN");
-  const radius = parseFloat(searchParams.get("radius") ?? "25000"); // metres, default 25km
+  const radius = Math.min(
+    Math.max(parseFloat(searchParams.get("radius") ?? String(OSM_RADIUS_LIMIT_M)), 500),
+    OSM_RADIUS_LIMIT_M
+  );
 
-  // Always return the seed stops (in production you'd query a DB table).
-  // Filter by radius when a location is provided.
+  if (!isNaN(lat) && !isNaN(lng)) {
+    const osmStops = await fetchOsmStops(lat, lng, radius);
+    if (osmStops.length > 0) {
+      return NextResponse.json({ stops: osmStops, total: osmStops.length, source: "openstreetmap", radius });
+    }
+  }
+
   const stops: Stop[] = isNaN(lat) || isNaN(lng)
     ? SEED_STOPS
     : SEED_STOPS.filter(s => distM(lat, lng, s.lat, s.lng) <= radius);
 
-  return NextResponse.json({ stops, total: stops.length });
+  return NextResponse.json({ stops, total: stops.length, source: "seed", radius });
 }
 
 // ── POST /api/ecostops (check-in) ─────────────────────────────────────────────
@@ -201,11 +370,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: { code: "ecostop/missing-stop-id", message: "stopId is required." } }, { status: 400 });
     }
 
-    const stop = SEED_STOPS.find(s => s.id === body.stopId);
-    if (!stop) {
-      return NextResponse.json({ success: false, error: { code: "ecostop/not-found", message: "EcoStop not found." } }, { status: 404 });
-    }
-
     const geoFix = parseGeoFix(body.lat, body.lng, body.accuracyM);
     if (!geoFix) {
       return NextResponse.json({
@@ -218,6 +382,17 @@ export async function POST(req: NextRequest) {
     }
 
     const { lat: userLat, lng: userLng, accuracyM } = geoFix;
+    let stop = SEED_STOPS.find(s => s.id === body.stopId);
+
+    if (!stop && typeof body.stopId === "string" && body.stopId.startsWith("osm_")) {
+      const nearbyOsmStops = await fetchOsmStops(userLat, userLng, 1000);
+      stop = nearbyOsmStops.find(s => s.id === body.stopId);
+    }
+
+    if (!stop) {
+      return NextResponse.json({ success: false, error: { code: "ecostop/not-found", message: "EcoStop not found. Refresh the map and try again." } }, { status: 404 });
+    }
+
     const distanceM = distM(userLat, userLng, stop.lat, stop.lng);
     const rangeError = checkinRangeError(distanceM, accuracyM);
     if (!isWithinCheckinRange(distanceM, accuracyM)) {

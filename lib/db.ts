@@ -848,6 +848,37 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
 
   if (
     normalized ===
+    "insert into users (id, email, password_hash, xp, level, payload) values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $4, $5, $3::jsonb) on conflict (id) do update set email = excluded.email, xp = excluded.xp, level = excluded.level, payload = excluded.payload, updated_at = now()"
+  ) {
+    const [id, email, payloadRaw, xp, level] = params;
+    const nextPayload = {
+      ...(parseJsonObject(payloadRaw) as Record<string, unknown>),
+      xp: Number(xp),
+      level: Number(level)
+    };
+    const existing = store.users.find((user) => user.id === id);
+
+    if (existing) {
+      existing.email = String(email);
+      existing.payload = nextPayload;
+      existing.updated_at = nowIso();
+    } else {
+      store.users.push({
+        id: String(id),
+        email: String(email),
+        password_hash: "",
+        payload: nextPayload,
+        created_at: nowIso(),
+        updated_at: nowIso()
+      });
+    }
+
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
     "insert into teams (id, join_code, created_by, payload) values ($1, $2, $3, $4::jsonb) on conflict (id) do update set join_code = excluded.join_code, payload = excluded.payload, updated_at = now()"
   ) {
     const [id, joinCode, createdBy, payloadRaw] = params;

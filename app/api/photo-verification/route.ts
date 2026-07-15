@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { createImageHash, getExistingPhotoHash, savePhotoHash, verifyImageWithProvider } from "@/lib/photo-verification";
+import {
+  createImageHash,
+  GEMINI_SUPPORTED_IMAGE_MIME_TYPES,
+  getExistingPhotoHash,
+  MAX_PHOTO_BYTES,
+  MIN_PHOTO_BYTES,
+  savePhotoHash,
+  verifyImageWithProvider
+} from "@/lib/photo-verification";
 
-const VALID_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"];
-const MAX_FILE_SIZE = 15 * 1024 * 1024;
+const VALID_TYPES = new Set([...GEMINI_SUPPORTED_IMAGE_MIME_TYPES, "image/jpg"]);
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -28,16 +35,23 @@ export async function POST(request: Request) {
   }
 
   const file = photo as File;
-  if (!VALID_TYPES.includes(file.type.toLowerCase())) {
+  if (!VALID_TYPES.has(file.type.toLowerCase())) {
     return NextResponse.json(
-      { error: { code: "invalid-argument", message: "Image type must be JPG, PNG, GIF, or WebP." } },
+      { error: { code: "invalid-argument", message: "Image type must be JPEG, PNG, WebP, HEIC, or HEIF." } },
       { status: 400 }
     );
   }
 
-  if (file.size > MAX_FILE_SIZE) {
+  if (file.size > MAX_PHOTO_BYTES) {
     return NextResponse.json(
-      { error: { code: "invalid-argument", message: "Image too large. Maximum size is 15MB." } },
+      { error: { code: "invalid-argument", message: "Image too large. Maximum size is 10MB." } },
+      { status: 400 }
+    );
+  }
+
+  if (file.size < MIN_PHOTO_BYTES) {
+    return NextResponse.json(
+      { error: { code: "invalid-argument", message: "The uploaded file appears to be empty or corrupt. Please upload a real photo." } },
       { status: 400 }
     );
   }
@@ -77,7 +91,7 @@ export async function POST(request: Request) {
         {
           error: {
             code: "verification-failed",
-            message: "External photo verification failed.",
+            message: providerResult.details || "Photo verification failed.",
             details: { warnings: providerResult.warnings, provider: providerResult.provider }
           }
         },
