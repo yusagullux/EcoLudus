@@ -229,7 +229,7 @@ section {
 }
 
 #call-to-action {
-  background: url("../images/mountains.png") no-repeat center center/cover;
+  background: radial-gradient(circle at 70% 15%, rgba(255, 255, 255, 0.12), transparent 55%), linear-gradient(160deg, #1f3f5b 0%, #2f5f86 60%, #3a7ca5 100%);
   color: white;
   box-shadow: var(--shadow-light);
   transition: var(--transition);

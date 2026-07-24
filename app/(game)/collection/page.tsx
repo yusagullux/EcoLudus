@@ -1,9 +1,9 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/useAuth";
-import { updateUserProfile } from "@/public/js/auth.js";
+import { updateUserProfile } from "@/lib/auth-client";
 import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
 type CollMode = "plants" | "eggs" | "animals" | "chests";
@@ -52,111 +52,6 @@ const animalEmoji: Record<string, string> = {
   Deer: "🦌", Owl: "🦉", Panda: "🐼", Cobra: "🐍", Jaguar: "🐆",
   Wolf: "🐺", Bear: "🐻", Eagle: "🦅", Lynx: "🐱", Shark: "🦈", Whale: "🐋",
   Tiger: "🐯", Lion: "🦁", Phoenix: "🔥", Dragon: "🐉", Kraken: "🐙", Octapus: "🐙"
-};
-
-const animalRewards: Record<Rarity, Array<{ name: string; image: string; rarity: Rarity }>> = {
-  common: [
-    { name: "Cat", image: "/images/pets/cat.png", rarity: "common" },
-    { name: "Dog", image: "/images/pets/dog.png", rarity: "common" },
-    { name: "Rabbit", image: "/images/pets/rabbit.png", rarity: "common" },
-    { name: "Bee", image: "/images/pets/bee.png", rarity: "common" }
-  ],
-  rare: [
-    { name: "Deer", image: "/images/pets/deer.png", rarity: "rare" },
-    { name: "Owl", image: "/images/pets/owl.png", rarity: "rare" },
-    { name: "Panda", image: "/images/pets/panda.png", rarity: "rare" }
-  ],
-  epic: [
-    { name: "Wolf", image: "/images/pets/wolf.png", rarity: "epic" },
-    { name: "Bear", image: "/images/pets/bear.png", rarity: "epic" },
-    { name: "Eagle", image: "/images/pets/eagle.png", rarity: "epic" }
-  ],
-  legendary: [
-    { name: "Tiger", image: "/images/pets/tiger.png", rarity: "legendary" },
-    { name: "Lion", image: "/images/pets/lion.png", rarity: "legendary" },
-    { name: "Dragon", image: "/images/pets/dragon.png", rarity: "legendary" }
-  ]
-};
-
-const OPEN_CHEST_REWARDS: Record<string, () => { type: "points" | "seed" | "egg"; name: string; amount?: number; rarity: Rarity; image: string; seedName: string }> = {
-  "Wooden Chest": () => {
-    const rand = Math.random();
-    if (rand < 0.55) {
-      const amount = Math.floor(Math.random() * 151) + 100;
-      return { type: "points", name: "EcoPoints", amount, rarity: "common", image: "/images/logo.png", seedName: "" };
-    } else {
-      const seedPool = [
-        { seedName: "Mossy Fern Seed", rarity: "common" as Rarity, image: "/images/plants/mint.png" },
-        { seedName: "Golden Daisy Seed", rarity: "common" as Rarity, image: "/images/plants/sunflower.png" }
-      ];
-      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
-    }
-  },
-  "Bronze Chest": () => {
-    const rand = Math.random();
-    if (rand < 0.45) {
-      const amount = Math.floor(Math.random() * 301) + 200;
-      return { type: "points", name: "EcoPoints", amount, rarity: "rare", image: "/images/logo.png", seedName: "" };
-    } else if (rand < 0.8) {
-      const seedPool = [
-        { seedName: "Mossy Fern Seed",   rarity: "common" as Rarity, image: "/images/plants/mint.png" },
-        { seedName: "Golden Daisy Seed", rarity: "common" as Rarity, image: "/images/plants/sunflower.png" },
-        { seedName: "Blue Orchid Seed",  rarity: "rare"   as Rarity, image: "/images/plants/orchid.png" },
-        { seedName: "Spotted Aloe Seed", rarity: "rare"   as Rarity, image: "/images/plants/basil.png" }
-      ];
-      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
-    } else {
-      return { type: "egg", name: "Common Egg", seedName: "", rarity: "common", image: "/images/eggs/common-egg.png" };
-    }
-  },
-  "Silver Chest": () => {
-    const rand = Math.random();
-    if (rand < 0.35) {
-      const amount = Math.floor(Math.random() * 501) + 500;
-      return { type: "points", name: "EcoPoints", amount, rarity: "epic", image: "/images/logo.png", seedName: "" };
-    } else if (rand < 0.75) {
-      const seedPool = [
-        { seedName: "Blue Orchid Seed",    rarity: "rare" as Rarity, image: "/images/plants/orchid.png" },
-        { seedName: "Spotted Aloe Seed",   rarity: "rare" as Rarity, image: "/images/plants/basil.png" },
-        { seedName: "Mystic Bamboo Seed",  rarity: "epic" as Rarity, image: "/images/plants/bamboo.png" },
-        { seedName: "Crystal Lotus Seed",  rarity: "epic" as Rarity, image: "/images/plants/lotus.png" }
-      ];
-      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
-    } else {
-      const eggPool = [
-        { name: "Rare Egg", rarity: "rare" as Rarity, image: "/images/eggs/rare-egg.png" },
-        { name: "Epic Egg", rarity: "epic" as Rarity, image: "/images/eggs/epic-egg.png" }
-      ];
-      const e = eggPool[Math.floor(Math.random() * eggPool.length)];
-      return { type: "egg", name: e.name, seedName: "", rarity: e.rarity, image: e.image };
-    }
-  },
-  "Golden Chest": () => {
-    const rand = Math.random();
-    if (rand < 0.25) {
-      const amount = Math.floor(Math.random() * 1501) + 1000;
-      return { type: "points", name: "EcoPoints", amount, rarity: "legendary", image: "/images/logo.png", seedName: "" };
-    } else if (rand < 0.65) {
-      const seedPool = [
-        { seedName: "Mystic Bamboo Seed",  rarity: "epic"      as Rarity, image: "/images/plants/bamboo.png" },
-        { seedName: "Crystal Lotus Seed",  rarity: "epic"      as Rarity, image: "/images/plants/lotus.png" },
-        { seedName: "Aurora Blossom Seed", rarity: "legendary" as Rarity, image: "/images/plants/cherry_blossom.png" },
-        { seedName: "Ember Cactus Seed",   rarity: "legendary" as Rarity, image: "/images/plants/dragonfruit.png" }
-      ];
-      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
-    } else {
-      const eggPool = [
-        { name: "Epic Egg",      rarity: "epic"      as Rarity, image: "/images/eggs/epic-egg.png" },
-        { name: "Legendary Egg", rarity: "legendary" as Rarity, image: "/images/eggs/legendary-egg.png" }
-      ];
-      const e = eggPool[Math.floor(Math.random() * eggPool.length)];
-      return { type: "egg", name: e.name, seedName: "", rarity: e.rarity, image: e.image };
-    }
-  }
 };
 
 function getAsset(item: any, mode: CollMode) {
@@ -211,7 +106,7 @@ const eggsList = [
 ];
 
 export default function CollectionPage() {
-  const { user, profile, setProfile } = useAuth();
+  const { user, profile, setProfile, refreshProfile } = useAuth();
   const ecoPoints = profile?.ecoPoints ?? 0;
   const [mode, setMode] = useState<CollMode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
@@ -272,35 +167,20 @@ export default function CollectionPage() {
       return;
     }
 
-    const nextEggs = profileEggs
-      .map((entry) => (entry.id === egg.id ? { ...entry, count: (entry.count ?? 1) - 1 } : entry))
-      .filter((entry) => (entry.count ?? 1) > 0);
-
-    const newHatching = {
-      id: `hatch-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      eggId: egg.id,
-      name: egg.name,
-      rarity: egg.rarity,
-      startTime: Date.now(),
-      endTime: Date.now() + (HATCH_DURATIONS[egg.rarity as Rarity] ?? HATCH_DURATIONS.common),
-      warmedCount: 0
-    };
-
-    const updates = {
-      eggs: nextEggs,
-      hatchings: [...profileHatchings, newHatching]
-    };
-
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) {
-      showToast("Could not place egg in incubator. Please try again.");
+    // Placement (egg spend + slot claim) is owned by the server so a client
+    // can't duplicate eggs or exceed the 3-slot cap.
+    const res = await fetch("/api/eggs/incubate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "incubate", eggId: egg.id })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      showToast(data?.error?.message || "Could not place egg in incubator. Please try again.");
       return;
     }
 
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
-    }
-
+    await refreshProfile();
     showToast(`${egg.name} is now incubating in the Hatching Chamber!`);
   };
 
@@ -312,36 +192,21 @@ export default function CollectionPage() {
       return;
     }
 
-    const nextEcoPoints = ecoPoints - 10;
-    const nextHatchings = profileHatchings.map((h) => {
-      if (h.id === hatching.id) {
-        return {
-          ...h,
-          endTime: Math.max(h.startTime, h.endTime - 15 * 60 * 1000), // Reduce by 15 mins
-          warmedCount: (h.warmedCount ?? 0) + 1
-        };
-      }
-      return h;
-    });
-
-    const updates = {
-      ecoPoints: nextEcoPoints,
-      hatchings: nextHatchings
-    };
-
     setWarmingId(hatching.id);
     setTimeout(() => setWarmingId(null), 500);
 
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) {
-      showToast("Failed to warm egg. Please try again.");
+    const res = await fetch("/api/eggs/incubate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "warm", hatchingId: hatching.id })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      showToast(data?.error?.message || "Failed to warm egg. Please try again.");
       return;
     }
 
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
-    }
-
+    await refreshProfile();
     showToast("Warmed the egg! 15 minutes shaved off hatching time.");
   };
 
@@ -358,33 +223,42 @@ export default function CollectionPage() {
 
     if (!confirm(`Hatch this egg instantly for ${cost} EcoPoints?`)) return;
 
-    const nextEcoPoints = ecoPoints - cost;
-    const nextHatchings = profileHatchings.map((h) => {
-      if (h.id === hatching.id) {
-        return { ...h, endTime: Date.now() };
-      }
-      return h;
+    const res = await fetch("/api/eggs/incubate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "instant", hatchingId: hatching.id })
     });
-
-    const updates = {
-      ecoPoints: nextEcoPoints,
-      hatchings: nextHatchings
-    };
-
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) {
-      showToast("Instant hatching failed. Please try again.");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      showToast(data?.error?.message || "Instant hatching failed. Please try again.");
       return;
     }
 
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
-    }
-
+    await refreshProfile();
     showToast("Egg incubated! Ready to hatch.");
   };
 
-  const startHatchingReveal = (hatching: any) => {
+  // The hatching reveal is purely cosmetic — the actual hatch (timing check,
+  // animal roll, pet mint, Impact grant) already happened on the server the
+  // moment the user committed to hatching. The rolled animal is held in a ref
+  // and only surfaced after the 5-tap reveal animation finishes, so the client
+  // can't forge or preview the pet.
+  const pendingAnimalRef = useRef<any>(null);
+
+  const startHatchingReveal = async (hatching: any) => {
+    const res = await fetch("/api/eggs/incubate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hatch", hatchingId: hatching.id })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      showToast(data?.error?.message || "This egg is not ready to hatch yet.");
+      await refreshProfile();
+      return;
+    }
+
+    pendingAnimalRef.current = data.animal;
     setActiveHatching(hatching);
     setTapsLeft(5);
     setRevealedAnimal(null);
@@ -415,11 +289,8 @@ export default function CollectionPage() {
     setTapsLeft(nextTaps);
 
     if (nextTaps === 0) {
-      const rarity = activeHatching.rarity as Rarity;
-      const rewardPool = animalRewards[rarity] ?? animalRewards.common;
-      const reward = rewardPool[Math.floor(Math.random() * rewardPool.length)];
-
-      setRevealedAnimal(reward);
+      // Reveal the animal the server already rolled and minted.
+      setRevealedAnimal(pendingAnimalRef.current);
 
       // Mega burst sparks
       const explosionParticles = Array.from({ length: 45 }).map((_, idx) => ({
@@ -435,40 +306,10 @@ export default function CollectionPage() {
   const claimAnimal = async () => {
     if (!user?.uid || !profile || !activeHatching || !revealedAnimal) return;
 
-    const nextHatchings = profileHatchings.filter((h) => h.id !== activeHatching.id);
-    const nextAnimals = [...profileAnimals];
-    const existingIndex = nextAnimals.findIndex((a) => a.name === revealedAnimal.name);
-
-    if (existingIndex >= 0) {
-      nextAnimals[existingIndex] = {
-        ...nextAnimals[existingIndex],
-        count: (nextAnimals[existingIndex].count ?? 1) + 1,
-        hatchedAt: new Date().toISOString()
-      };
-    } else {
-      nextAnimals.push({
-        id: `${revealedAnimal.name.toLowerCase()}-${Date.now()}`,
-        ...revealedAnimal,
-        count: 1,
-        active: false,
-        hatchedAt: new Date().toISOString()
-      });
-    }
-
-    const updates = {
-      hatchings: nextHatchings,
-      animals: nextAnimals
-    };
-
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) {
-      showToast("Could not claim your pet. Please try again.");
-      return;
-    }
-
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
-    }
+    // The pet was already minted server-side when the reveal started. Just
+    // sync local state, dismiss, and surface the toast.
+    pendingAnimalRef.current = null;
+    await refreshProfile();
 
     showToast(`${revealedAnimal.name} was added to your collection book!`);
     setActiveHatching(null);
@@ -492,12 +333,26 @@ export default function CollectionPage() {
       setChestParticles((prev) => [...prev, ...p]);
     }, 200);
 
+    // Roll + consume the chest on the server immediately, so the reward can't be
+    // forged from the client. The reveal just surfaces what the server rolled.
+    const resultPromise = fetch("/api/chests/open", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chestId: chest.id })
+    }).then((r) => r.json().then((data) => ({ ok: r.ok, data })));
+
     setTimeout(async () => {
       clearInterval(shakeInterval);
-      const generator = OPEN_CHEST_REWARDS[chest.name];
-      const reward = generator ? generator() : { type: "points", name: "EcoPoints", amount: 100, rarity: "common", image: "/images/logo.png" };
-      setChestReward(reward);
+      const { ok, data } = await resultPromise;
+      if (!ok || !data?.success) {
+        setChestState("closed");
+        setActiveChest(null);
+        showToast(data?.error?.message || "Failed to open chest. Please try again.");
+        return;
+      }
+      setChestReward(data.reward);
       setChestState("opened");
+      await refreshProfile();
 
       // Exploding burst particles
       const burst = Array.from({ length: 40 }).map((_, idx) => ({
@@ -510,63 +365,10 @@ export default function CollectionPage() {
     }, 1200);
   };
 
+  // The chest and its reward were already consumed/granted server-side on open.
+  // This just dismisses the reveal and surfaces a toast.
   const claimChestReward = async () => {
-    if (!user?.uid || !profile || !activeChest || !chestReward) return;
-
-    const nextChests = profileChests
-      .map((c) => (c.id === activeChest.id ? { ...c, count: (c.count ?? 1) - 1 } : c))
-      .filter((c) => (c.count ?? 1) > 0);
-
-    const profileUpdates: Record<string, unknown> = { chests: nextChests };
-
-    if (chestReward.type === "points") {
-      profileUpdates.ecoPoints = ecoPoints + (chestReward.amount ?? 0);
-    } else if (chestReward.type === "seed") {
-      // Seeds go to profile.seeds — separate from profile.plants (which come from the Shop).
-      const currentSeeds: any[] = Array.isArray(profile.seeds) ? [...profile.seeds] : [];
-      const existingIdx = currentSeeds.findIndex((s: any) => s.name === chestReward.seedName);
-      if (existingIdx >= 0) {
-        currentSeeds[existingIdx] = {
-          ...currentSeeds[existingIdx],
-          count: (currentSeeds[existingIdx].count ?? 1) + 1,
-          obtainedAt: new Date().toISOString()
-        };
-      } else {
-        currentSeeds.push({
-          id: `seed-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-          name: chestReward.seedName,
-          rarity: chestReward.rarity,
-          image: chestReward.image,
-          count: 1,
-          obtainedAt: new Date().toISOString()
-        });
-      }
-      profileUpdates.seeds = currentSeeds;
-    } else if (chestReward.type === "egg") {
-      const nextEggs = [...profileEggs];
-      const existingIdx = nextEggs.findIndex((e) => e.name === chestReward.name);
-      if (existingIdx >= 0) {
-        nextEggs[existingIdx] = {
-          ...nextEggs[existingIdx],
-          count: (nextEggs[existingIdx].count ?? 1) + 1,
-          purchasedAt: new Date().toISOString()
-        };
-      } else {
-        const baseEgg = eggsList.find((e) => e.name === chestReward.name) || { id: Date.now(), name: chestReward.name, rarity: chestReward.rarity, price: 0, image: chestReward.image };
-        nextEggs.push({ ...baseEgg, count: 1, purchasedAt: new Date().toISOString() });
-      }
-      profileUpdates.eggs = nextEggs;
-    }
-
-    const result = await updateUserProfile(user.uid, profileUpdates);
-    if (!result.success) {
-      showToast("Failed to claim chest rewards. Please try again.");
-      return;
-    }
-
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...profileUpdates });
-    }
+    if (!chestReward) return;
 
     if (chestReward.type === "points") {
       showToast(`Claimed ${chestReward.amount} EcoPoints!`);
@@ -789,12 +591,13 @@ export default function CollectionPage() {
                 style={{ borderColor: border, background: "var(--bg-card)" }}
               >
                 {(item as any).active && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
-                {(item as any).count > 1 && <span className="absolute right-2 top-2 z-10 rounded-full bg-forest-950 px-2 py-0.5 text-[9px] font-extrabold text-cream-100">×{(item as any).count}</span>}
+                
                 
                 {/* Framed card image design - full bleed aspect ratio */}
                 <div className="relative flex aspect-square items-center justify-center overflow-hidden" style={{ background: `${style.accent}12` }}>
                   <CardImage item={item} mode={mode} />
                   <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
+                  {(item as any).count > 1 && <span className="absolute bottom-2 right-2 z-10 rounded-full bg-forest-950 px-2 py-0.5 text-[9px] font-extrabold text-cream-100">×{(item as any).count}</span>}
                 </div>
 
                 <div className="flex flex-1 flex-col gap-2 p-3">

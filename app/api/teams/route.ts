@@ -3,17 +3,7 @@ import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { verifyImageWithProvider, verifyTextProofWithGemini } from "@/lib/photo-verification";
-
-function calculateLevel(xp: number) {
-  const milestones = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 50000];
-  if (typeof xp !== "number" || xp < 0) return 1;
-  for (let i = milestones.length - 1; i >= 0; i--) {
-    if (xp >= milestones[i]) {
-      return i + 1;
-    }
-  }
-  return 1;
-}
+import { grantImpact } from "@/lib/impact-service";
 
 async function getUserTeamId(userId: string) {
   const result = await sql(
@@ -67,7 +57,9 @@ export async function GET(request: Request) {
           id: row.id,
           name: userPayload?.displayName || row.email?.split("@")[0] || "Anonymous",
           role: row.id === team.created_by ? "leader" : "member",
-          xp: userPayload?.xp || 0
+          xp: userPayload?.xp || 0,
+          level: Number(userPayload?.level ?? 1),
+          profileImage: typeof userPayload?.profileImage === "string" ? userPayload.profileImage : null
         };
       });
 
@@ -388,30 +380,28 @@ export async function POST(request: Request) {
           [teamId]
         );
 
+        const teamXp = Math.max(0, Math.floor(Number(missionPayload.xp || 0)));
+        const teamEco = Math.max(0, Math.floor(Number(missionPayload.eco || 0)));
+
         for (const member of membersResult.rows) {
           const payload = member.payload as any;
-          const newXp = (payload.xp || 0) + (missionPayload.xp || 0);
-          const newEco = (payload.ecoPoints || 0) + (missionPayload.eco || 0);
-          const newMissions = (payload.missionsCompleted || 0) + 1;
-          const newLevel = calculateLevel(newXp);
+          const nextMissions = Math.max(0, Math.floor(Number(payload.missionsCompleted || 0))) + 1;
 
-          const nextPayload = {
-            ...payload,
-            xp: newXp,
-            ecoPoints: newEco,
-            level: newLevel,
-            missionsCompleted: newMissions
-          };
-
-          await sql(
-            `insert into users (id, email, password_hash, payload)
-             values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
-             on conflict (id) do update
-             set email = excluded.email,
-                 payload = excluded.payload,
-                 updated_at = now()`,
-            [member.id, member.email, JSON.stringify(nextPayload)]
-          );
+          // Route through the spine so XP/level/Impact are server-validated and
+          // every team completion feeds the same Impact number the hooks consume.
+          await grantImpact({
+            userId: String(member.id),
+            source: "team",
+            baseXp: teamXp,
+            baseImpact: teamXp,
+            eco: teamEco,
+            meta: {
+              teamId,
+              missionId: currentMissionId,
+              missionTitle: missionPayload.title || "Team Mission"
+            },
+            payloadPatch: { missionsCompleted: nextMissions }
+          });
         }
 
         return NextResponse.json({ success: true, completed: true });

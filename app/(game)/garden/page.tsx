@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
-import { updateUserProfile } from "@/public/js/auth.js";
+import { updateUserProfile } from "@/lib/auth-client";
 import {
   HeroMetric,
   PageHero,
@@ -16,7 +16,6 @@ import {
   rarityBorder,
   type Rarity
 } from "@/components/game-ui";
-import { calculateLevel } from "@/lib/level-system";
 
 const GRID_COLS = 6;
 const GRID_ROWS = 4;
@@ -178,7 +177,7 @@ function sortByRarityThenName(a: PlantableItem, b: PlantableItem): number {
 }
 
 export default function GardenPage() {
-  const { user, profile, setProfile } = useAuth();
+  const { user, profile, setProfile, refreshProfile } = useAuth();
   const isProcessing = useRef(false);
 
   const [now, setNow] = useState(() => Date.now());
@@ -346,27 +345,29 @@ export default function GardenPage() {
 
     isProcessing.current = true;
     try {
-      const ts = Date.now();
       setHarvestAnim(tileId);
       setTimeout(() => setHarvestAnim(null), 800);
 
-      const rarity = tileRarity(tile);
-      const ep = HARVEST_REWARDS[rarity] ?? HARVEST_REWARDS.common;
-      const xpGain = HARVEST_XP[rarity] ?? HARVEST_XP.common;
-      const nextXp = Number(profile.xp ?? 0) + xpGain;
-      const nextGarden: GardenState = {
-        ...garden,
-        [tileId]: { ...tile, lastHarvestAt: ts }
-      };
-
-      const ok = await saveProfile({
-        garden: nextGarden,
-        ecoPoints: Number(profile.ecoPoints ?? 0) + ep,
-        xp: nextXp,
-        level: calculateLevel(nextXp)
+      const res = await fetch("/api/garden/harvest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tileIds: [tileId] })
       });
-
-      showToast(ok ? `Harvested ${tileName(tile)}. +${ep} EcoPoints, +${xpGain} XP.` : "Harvest failed. Please try again.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        showToast(data?.error?.message || data?.message || "Harvest failed. Please try again.");
+        return;
+      }
+      if (typeof setProfile === "function" && profile) {
+        setProfile({
+          ...profile,
+          level: data.level ?? Number(profile.level ?? 1),
+          ecoPoints: data.ecoPoints ?? Number(profile.ecoPoints ?? 0) + Number(data.eco ?? 0),
+          garden: { ...garden, [tileId]: { ...tile, lastHarvestAt: Date.now() } }
+        });
+      }
+      await refreshProfile();
+      showToast(`Harvested ${tileName(tile)}. +${data.eco} EcoPoints, +${data.xp} XP.`);
     } finally {
       isProcessing.current = false;
     }
@@ -377,27 +378,31 @@ export default function GardenPage() {
 
     isProcessing.current = true;
     try {
-      const ts = Date.now();
-      const nextGarden: GardenState = { ...garden };
-      let ep = 0;
-      let xpGain = 0;
-
-      harvestableTiles.forEach((tile) => {
-        const rarity = tileRarity(tile);
-        nextGarden[tile.tileId] = { ...tile, lastHarvestAt: ts };
-        ep += HARVEST_REWARDS[rarity] ?? HARVEST_REWARDS.common;
-        xpGain += HARVEST_XP[rarity] ?? HARVEST_XP.common;
+      const res = await fetch("/api/garden/harvest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tileIds: harvestableTiles.map((t) => t.tileId) })
       });
-
-      const nextXp = Number(profile.xp ?? 0) + xpGain;
-      const ok = await saveProfile({
-        garden: nextGarden,
-        ecoPoints: Number(profile.ecoPoints ?? 0) + ep,
-        xp: nextXp,
-        level: calculateLevel(nextXp)
-      });
-
-      showToast(ok ? `Harvested ${harvestableTiles.length} plants. +${ep} EcoPoints, +${xpGain} XP.` : "Harvest failed. Please try again.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        showToast(data?.error?.message || data?.message || "Harvest failed. Please try again.");
+        return;
+      }
+      if (typeof setProfile === "function" && profile) {
+        const ts = Date.now();
+        const nextGarden: GardenState = { ...garden };
+        harvestableTiles.forEach((tile) => {
+          nextGarden[tile.tileId] = { ...tile, lastHarvestAt: ts };
+        });
+        setProfile({
+          ...profile,
+          level: data.level ?? Number(profile.level ?? 1),
+          ecoPoints: data.ecoPoints ?? Number(profile.ecoPoints ?? 0) + Number(data.eco ?? 0),
+          garden: nextGarden
+        });
+      }
+      await refreshProfile();
+      showToast(`Harvested ${data.harvested} plants. +${data.eco} EcoPoints, +${data.xp} XP.`);
     } finally {
       isProcessing.current = false;
     }
@@ -465,10 +470,7 @@ export default function GardenPage() {
       </div>
 
       <Panel eyebrow="Your garden" title="Tile Grid" action={<Pill>{totalPlanted}/{TOTAL_TILES} tiles used</Pill>}>
-        <div
-          className="grid gap-2"
-          style={{ gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))` }}
-        >
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
           {Array.from({ length: TOTAL_TILES }).map((_, tileId) => {
             const tile = garden[tileId];
             const stage = tile ? getGrowthStage(tile, now) : null;
@@ -488,13 +490,13 @@ export default function GardenPage() {
                 }}
                 className={[
                   "relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-2xl border text-center transition",
-                  selectingTile === tileId ? "ring-2 ring-offset-1" : "",
+                  selectingTile === tileId ? "ring-2 ring-forest-600 ring-offset-2" : "",
                   tile ? "cursor-default" : "cursor-pointer hover:-translate-y-0.5"
                 ].join(" ")}
                 style={{
                   borderColor: tile ? (rarityBorder[rarity] ?? "var(--border-default)") : "var(--border-default)",
                   background: tile ? `${rStyle.accent}14` : "var(--bg-panel-alt)",
-                  ringColor: "#2f6b46"
+                  "--tw-ring-offset-color": "var(--bg-panel)"
                 }}
                 aria-label={tile ? `${tileName(tile)} - ${stage}` : `Empty tile ${tileId + 1}`}
               >

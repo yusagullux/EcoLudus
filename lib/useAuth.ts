@@ -22,7 +22,7 @@ export function useAuth() {
 
   const refreshProfile = useCallback(async (uid: string) => {
     try {
-      const res = await fetch("/api/firestore", {
+      const res = await fetch("/api/store", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

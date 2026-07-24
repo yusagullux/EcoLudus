@@ -12,7 +12,8 @@ export async function GET() {
       displayName: (row.payload as any)?.displayName || "Anonymous",
       xp: (row.payload as any)?.xp || 0,
       level: (row.payload as any)?.level || 1,
-      ecoPoints: (row.payload as any)?.ecoPoints || 0
+      ecoPoints: (row.payload as any)?.ecoPoints || 0,
+      profileImage: (row.payload as any)?.profileImage || null
     }));
 
     return NextResponse.json({ users });

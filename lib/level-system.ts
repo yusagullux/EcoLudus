@@ -9,7 +9,7 @@ export type LevelProgress = {
 
 export type LevelUpReward = {
   level: number;
-  rewardType: "badge" | "garden_item" | "team_boost";
+  rewardType: "level_up" | "garden_item" | "team_boost";
   label: string;
 };
 
@@ -54,9 +54,61 @@ export function getLevelUpRewards(previousLevel: number, nextLevel: number) {
     } else if (level % 5 === 0) {
       rewards.push({ level, rewardType: "garden_item", label: `Level ${level} garden item` });
     } else {
-      rewards.push({ level, rewardType: "badge", label: `Level ${level} habit badge` });
+      rewards.push({ level, rewardType: "level_up", label: `Level ${level} reached` });
     }
   }
 
   return rewards;
+}
+
+// ── XP-progress helpers (ported from the legacy public/js/levels.js) ──
+
+export function getXPRequiredForLevel(level: number) {
+  const activeLevel = Math.max(1, Math.floor(level));
+  return requiredXP(activeLevel) - (activeLevel <= 1 ? 0 : requiredXP(activeLevel - 1));
+}
+
+export function getTotalXPForLevel(level: number) {
+  if (level <= 1) return 0;
+  return requiredXP(level - 1);
+}
+
+export function getXPProgress(xp: number, currentLevel: number | null = null) {
+  const safeXP = Math.max(0, Math.floor(Number.isFinite(xp) ? xp : 0));
+  const level = currentLevel ?? calculateLevel(safeXP);
+
+  const totalXPForCurrentLevel = level <= 1 ? 0 : requiredXP(level - 1);
+  const totalXPForNextLevel = requiredXP(level);
+  const xpInCurrentLevel = safeXP - totalXPForCurrentLevel;
+  const requiredXPInLevel = totalXPForNextLevel - totalXPForCurrentLevel;
+
+  const percentage = requiredXPInLevel > 0
+    ? Math.min(100, (xpInCurrentLevel / requiredXPInLevel) * 100)
+    : 100;
+
+  return {
+    current: xpInCurrentLevel,
+    required: requiredXPInLevel,
+    percentage: Math.max(0, percentage)
+  };
+}
+
+export function calculateEcoPoints(xp: number, level: number, badgesCount = 0) {
+  if (xp < 0 || level < 1 || badgesCount < 0) {
+    return 0;
+  }
+
+  let basePoints = 0;
+  if (level <= 3) {
+    basePoints = Math.floor(xp / 10);
+  } else if (level <= 5) {
+    basePoints = Math.floor(xp / 15);
+  } else if (level <= 7) {
+    basePoints = Math.floor(xp / 25);
+  } else {
+    basePoints = Math.floor(xp / 50);
+  }
+
+  const badgeBonus = badgesCount * 10;
+  return Math.max(0, basePoints + badgeBonus);
 }

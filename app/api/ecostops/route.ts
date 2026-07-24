@@ -9,6 +9,7 @@ import {
   isWithinCheckinRange,
   parseGeoFix
 } from "@/lib/ecomap-geo";
+import { grantImpact } from "@/lib/impact-service";
 
 // ── Seed stops (used when table is empty / file-store mode) ──────────────────
 const SEED_STOPS = [
@@ -470,13 +471,11 @@ export async function POST(req: NextRequest) {
 
     await savePhotoHash(imageHash, userId, `ecostop:${stop.id}`);
 
-    // Grant rewards
+    // Grant rewards via the spine so XP/level/Impact are server-validated and
+    // every EcoMap check-in feeds the same Impact number the hooks consume.
     const xpAwarded  = stop.xpReward;
     const ecoAwarded = stop.ecoReward;
-    const nextXp      = Number(payload.xp ?? 0) + xpAwarded;
-    const nextEco     = Number(payload.ecoPoints ?? 0) + ecoAwarded;
-    const nextLevel   = calculateLevelServer(nextXp);
-    const newCheckin  = {
+    const newCheckin = {
       stopId: stop.id,
       checkedInAt: new Date().toISOString(),
       distanceM: Math.round(distanceM),
@@ -486,32 +485,22 @@ export async function POST(req: NextRequest) {
     };
     const nextCheckins = [...checkins, newCheckin].slice(-200); // keep last 200
 
-    const nextPayload = {
-      ...payload,
-      xp: nextXp,
-      level: nextLevel,
-      ecoPoints: nextEco,
-      ecoMapCheckins: nextCheckins,
-      missionsCompleted: Number(payload.missionsCompleted ?? 0) + 1
-    };
-
-    await sql(
-      `INSERT INTO users (id, email, password_hash, payload)
-       VALUES ($1, $2, COALESCE((SELECT password_hash FROM users WHERE id = $1), ''), $3::jsonb)
-       ON CONFLICT (id) DO UPDATE SET email = excluded.email, payload = excluded.payload, updated_at = now()`,
-      [userId, user.email, JSON.stringify(nextPayload)]
-    );
+    await grantImpact({
+      userId,
+      source: "ecomap",
+      baseXp: xpAwarded,
+      baseImpact: xpAwarded,
+      eco: ecoAwarded,
+      meta: { stopId: stop.id, stopName: stop.name, stopType: stop.type, distanceM: Math.round(distanceM) },
+      payloadPatch: {
+        ecoMapCheckins: nextCheckins,
+        missionsCompleted: Number(payload.missionsCompleted ?? 0) + 1
+      }
+    });
 
     return NextResponse.json({ success: true, xpAwarded, ecoAwarded, stopName: stop.name });
   } catch (err: any) {
     console.error("EcoStop check-in error:", err);
     return NextResponse.json({ success: false, error: { code: "internal", message: err.message ?? "Server error" } }, { status: 500 });
   }
-}
-
-// Simple level calculator (mirrors lib/level-system.ts, no import needed here)
-function calculateLevelServer(xp: number): number {
-  let level = 1;
-  while (xp >= 100 * level + 25 * level * level) level++;
-  return level;
 }

@@ -3,6 +3,8 @@
 
 import { useAuth } from "@/lib/useAuth";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Avatar } from "@/components/avatar";
 
 const missionTemplates = [
   { id: "t1", title: "Recycle 15 Plastic Bottles", desc: "Split the work and recycle at least 15 plastic bottles as a team.", icon: "♻️", difficulty: "Easy", xp: 240, eco: 140, needed: 3 },
@@ -378,15 +380,15 @@ export default function TeamPage() {
               <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-forest-500">Members</p>
               <div className="flex flex-col divide-y overflow-hidden rounded-xl border" style={{ borderColor: "var(--border-default)" }}>
                 {team?.members?.length > 0 ? team.members.map((m: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-3 transition" style={{ background: "var(--bg-panel)" }}>
+                  <Link key={i} href={`/profile/${m.id}`} className="flex items-center justify-between px-4 py-3 transition hover:opacity-80" style={{ background: "var(--bg-panel)" }}>
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg text-base" style={{ background: "var(--bg-panel-alt)" }}>
-                        {m.role === "leader" ? "👑" : "🌿"}
-                      </div>
-                      <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{m.name}</span>
+                      <Avatar name={m.name || "Member"} src={m.profileImage} size={32} />
+                      <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                        {m.role === "leader" ? "👑 " : ""}{m.name}
+                      </span>
                     </div>
                     <span className="text-xs font-bold" style={{ color: "var(--text-secondary)" }}>{(m.xp || 0).toLocaleString()} XP</span>
-                  </div>
+                  </Link>
                 )) : (
                   <div className="px-4 py-4 text-sm text-center" style={{ color: "var(--text-muted)" }}>No members yet</div>
                 )}
@@ -494,17 +496,15 @@ export default function TeamPage() {
             </div>
             <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
               {[...(team?.members || [])].sort((a: any, b: any) => (b.xp || 0) - (a.xp || 0)).map((m: any, i: number) => (
-                <div key={i} className="flex items-center gap-4 px-6 py-3.5 transition" style={{ borderColor: "var(--border-subtle)" }}>
+                <Link key={i} href={`/profile/${m.id}`} className="flex items-center gap-4 px-6 py-3.5 transition hover:opacity-80" style={{ borderColor: "var(--border-subtle)" }}>
                   <span className="w-6 text-center font-serif text-base font-black" style={{ color: "var(--text-muted)" }}>#{i + 1}</span>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg text-base" style={{ background: "var(--bg-panel-alt)" }}>
-                    {m.role === "leader" ? "👑" : "🌿"}
-                  </div>
+                  <Avatar name={m.name || "Member"} src={m.profileImage} size={32} />
                   <div className="flex-1">
                     <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{m.name}</p>
                     <p className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>{m.role}</p>
                   </div>
                   <span className="font-serif text-base font-bold" style={{ color: "var(--text-secondary)" }}>{(m.xp || 0).toLocaleString()} XP</span>
-                </div>
+                </Link>
               ))}
               {(!team?.members || team.members.length === 0) && (
                 <div className="px-6 py-6 text-sm text-center" style={{ color: "var(--text-muted)" }}>No members to rank yet</div>

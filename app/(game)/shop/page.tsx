@@ -3,10 +3,36 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
-import { updateUserProfile } from "@/public/js/auth.js";
 import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
 type Mode = "plants" | "eggs" | "chests";
+
+// Mirrors the collection page's CardImage so shop item photos fill the card
+// the same way (full-bleed object-cover, not letterboxed object-contain). Falls
+// back to an emoji if the asset is missing so the card never shows a broken image.
+const FALLBACK_EMOJI: Record<Mode, string> = { plants: "🌿", eggs: "🥚", chests: "🎁" };
+
+function ShopCardImage({ item, mode }: { item: ShopItem; mode: Mode }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (imgError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-5xl select-none transition duration-300 group-hover:scale-110">
+        {FALLBACK_EMOJI[mode]}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={item.image}
+      alt={item.name}
+      loading="lazy"
+      onError={() => setImgError(true)}
+      className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
+    />
+  );
+}
 
 type ShopItem = {
   id: number;
@@ -44,7 +70,7 @@ const chests = [
 ];
 
 export default function ShopPage() {
-  const { user, profile, setProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const ecoPoints = profile?.ecoPoints ?? 0;
   const [mode, setMode] = useState<Mode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
@@ -67,77 +93,22 @@ export default function ShopPage() {
       return;
     }
 
-    const currentPlants = Array.isArray(profile.plants) ? profile.plants : [];
-    const currentEggs = Array.isArray(profile.eggs) ? profile.eggs : [];
-    const currentChests = Array.isArray(profile.chests) ? profile.chests : [];
-
-    const nextEcoPoints = ecoPoints - item.price;
-    const profileUpdates: Record<string, unknown> = {
-      ecoPoints: nextEcoPoints
-    };
-
-    if (mode === "plants") {
-      const existingIndex = currentPlants.findIndex((entry) => entry.id === item.id);
-      const nextPlants = [...currentPlants];
-
-      if (existingIndex >= 0) {
-        const existingPlant = nextPlants[existingIndex];
-        nextPlants[existingIndex] = {
-          ...existingPlant,
-          count: (existingPlant.count ?? 1) + 1,
-          purchasedAt: new Date().toISOString()
-        };
-      } else {
-        nextPlants.push({ ...item, count: 1, purchasedAt: new Date().toISOString() });
-      }
-
-      profileUpdates.plants = nextPlants;
-    } else if (mode === "eggs") {
-      const existingIndex = currentEggs.findIndex((entry) => entry.id === item.id);
-      const nextEggs = [...currentEggs];
-
-      if (existingIndex >= 0) {
-        const existingEgg = nextEggs[existingIndex];
-        nextEggs[existingIndex] = {
-          ...existingEgg,
-          count: (existingEgg.count ?? 1) + 1,
-          purchasedAt: new Date().toISOString()
-        };
-      } else {
-        nextEggs.push({ ...item, count: 1, purchasedAt: new Date().toISOString() });
-      }
-
-      profileUpdates.eggs = nextEggs;
-    } else {
-      const existingIndex = currentChests.findIndex((entry) => entry.id === item.id);
-      const nextChests = [...currentChests];
-
-      if (existingIndex >= 0) {
-        const existingChest = nextChests[existingIndex];
-        nextChests[existingIndex] = {
-          ...existingChest,
-          count: (existingChest.count ?? 1) + 1,
-          purchasedAt: new Date().toISOString()
-        };
-      } else {
-        nextChests.push({ ...item, count: 1, purchasedAt: new Date().toISOString() });
-      }
-
-      profileUpdates.chests = nextChests;
-    }
-
-    const result = await updateUserProfile(user.uid, profileUpdates);
-
-    if (!result.success) {
-      setToast("Purchase failed. Please try again.");
+    // The price, eco spend, and item mint are owned by the server so a client
+    // can't buy without paying or forge the item. The catalog on this page is
+    // display-only; the route is the source of truth for prices.
+    const res = await fetch("/api/shop/buy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode, itemId: item.id })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      setToast(data?.error?.message || "Purchase failed. Please try again.");
       setTimeout(() => setToast(""), 3000);
       return;
     }
 
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...profileUpdates });
-    }
-
+    await refreshProfile();
     setToast(`${item.name} added to collection!`);
     setTimeout(() => setToast(""), 3000);
   };
@@ -192,14 +163,9 @@ export default function ShopPage() {
               className="reveal-card group flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
               style={{ borderColor: border, background: "var(--bg-card)" }}
             >
-              {/* Framed card image design (sticker/badge layout with full bleed support) */}
+              {/* Framed card image design - full bleed aspect ratio (matches Collection) */}
               <div className="relative flex aspect-square items-center justify-center overflow-hidden" style={{ background: `${style.accent}12` }}>
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
-                />
+                <ShopCardImage item={item} mode={mode} />
                 <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
               </div>
               <div className="flex flex-1 flex-col gap-2 p-3">
@@ -212,7 +178,7 @@ export default function ShopPage() {
                 <button
                   onClick={() => handleBuy(item)}
                   disabled={!canAfford}
-                  className={`mt-auto w-full ${canAfford ? primaryButton : "rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-[0.08em] cursor-not-allowed opacity-50"}`}
+                  className={`mt-auto w-full ${canAfford ? primaryButton : "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] cursor-not-allowed opacity-50"}`}
                   style={!canAfford ? { background: "var(--bg-panel-alt)", color: "var(--text-muted)" } : undefined}
                 >
                   {canAfford ? "Buy" : "Can't afford"}

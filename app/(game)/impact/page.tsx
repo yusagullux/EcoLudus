@@ -261,7 +261,7 @@ export default function ImpactPage() {
       </Panel>
 
       {/* How trees are planted */}
-      <Panel eyebrow="Partners" title="How Trees Are Planted">
+      <Panel eyebrow="Partners" title="How Tree Planting Will Work">
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             {
@@ -271,8 +271,8 @@ export default function ImpactPage() {
             },
             {
               icon: "🌱",
-              title: "Ecologi plants the tree",
-              desc: "EcoLudus uses the Ecologi API to plant real trees in certified reforestation projects."
+              title: "Ecologi plants the tree (soon)",
+              desc: "EcoLudus is partnering with Ecologi to plant real trees in certified reforestation projects. This integration is coming soon — until then, your milestones are tracked here as a preview of your impact."
             },
             {
               icon: "📊",

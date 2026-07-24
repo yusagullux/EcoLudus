@@ -10,7 +10,9 @@ const settingsSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(32, "Name must be 32 characters or fewer")
     .optional(),
-  emailWeeklyReport: z.boolean().optional()
+  emailWeeklyReport: z.boolean().optional(),
+  // null removes the picture; a string sets it (a Supabase Storage public URL).
+  profileImage: z.string().max(2048).nullable().optional()
 });
 
 export async function POST(request: Request) {
@@ -39,6 +41,13 @@ export async function POST(request: Request) {
     }
     if (body.emailWeeklyReport !== undefined) {
       nextPayload.emailWeeklyReport = body.emailWeeklyReport;
+    }
+    if (body.profileImage !== undefined) {
+      if (body.profileImage === null) {
+        delete nextPayload.profileImage;
+      } else {
+        nextPayload.profileImage = body.profileImage;
+      }
     }
 
     await sql(

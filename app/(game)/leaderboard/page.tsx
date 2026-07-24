@@ -2,23 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel, Pill } from "@/components/game-ui";
-const badgeList = [
-  { level: 1, name: "Cat", image: "/images/ecoquests-badges/cat-badge-removedbg.png" },
-  { level: 2, name: "Fox", image: "/images/ecoquests-badges/fox-badge-removedbg.png" },
-  { level: 3, name: "Rabbit", image: "/images/ecoquests-badges/rabbit-badge-removedbg.png" },
-  { level: 4, name: "Deer", image: "/images/ecoquests-badges/deer-badge-removedbg.png" },
-  { level: 5, name: "Wolf", image: "/images/ecoquests-badges/wolf-badge-removedbg.png" },
-  { level: 6, name: "Bear", image: "/images/ecoquests-badges/bear-badge-removedbg.png" },
-  { level: 7, name: "Eagle", image: "/images/ecoquests-badges/eagle-badge-removedbg.png" },
-  { level: 8, name: "Tiger", image: "/images/ecoquests-badges/tiger-badge-removedbg.png" },
-  { level: 9, name: "Lion", image: "/images/ecoquests-badges/lion-badge-removedbg.png" }
-];
-
-function getBadge(level: number) {
-  return badgeList[Math.min(Math.max(level, 1), 9) - 1];
-}
+import { Avatar } from "@/components/avatar";
 
 const medalLabel = ["1st", "2nd", "3rd"];
 const medalColors = ["#9a6b1f", "#5d6f7a", "#8a4f25"];
@@ -29,6 +16,7 @@ type Player = {
   xp: number;
   level: number;
   ecoPoints: number;
+  profileImage?: string | null;
 };
 
 type Team = {
@@ -62,11 +50,11 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
           {podium.map((player, index) => {
             if (!player) return <div key={index} />;
             const rank = podiumRank[index];
-            const badge = getBadge(player.level);
             const isGold = rank === 1;
             return (
-              <article
+              <Link
                 key={player.id}
+                href={`/profile/${player.id}`}
                 className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition hover:-translate-y-0.5 ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""}`}
                 style={{
                   borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
@@ -79,20 +67,13 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                 >
                   {medalLabel[rank - 1]}
                 </span>
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-2 shadow-sm">
-                  <img
-                    src={badge.image}
-                    alt={`${badge.name} badge`}
-                    className="h-full w-full object-contain"
-                    loading="lazy"
-                  />
-                </span>
+                <Avatar name={player.displayName} src={player.profileImage} size={64} className="shadow-sm" />
                 <div>
                   <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "#102016" }}>
                     {player.displayName}
                   </p>
                   <p className="text-xs font-semibold" style={{ color: "rgba(47,79,53,0.6)" }}>
-                    {badge.name}, Lvl {player.level}
+                    Lvl {player.level}
                   </p>
                 </div>
                 <p
@@ -101,7 +82,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                 >
                   {player.xp.toLocaleString()} XP
                 </p>
-              </article>
+              </Link>
             );
           })}
         </div>
@@ -125,13 +106,13 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
 
             {sorted.map((player, index) => {
               const rank = index + 1;
-              const badge = getBadge(player.level);
               const isCurrentUser = currentUserId && player.id === currentUserId;
               const isTop3 = rank <= 3;
               return (
-                <div
+                <Link
                   key={player.id}
-                  className={`grid grid-cols-[56px_1fr_100px_130px] items-center gap-4 border-b px-5 py-4 last:border-0 transition`}
+                  href={`/profile/${player.id}`}
+                  className={`grid grid-cols-[56px_1fr_100px_130px] items-center gap-4 border-b px-5 py-4 last:border-0 transition hover:opacity-80`}
                   style={{
                     borderColor: "var(--border-subtle)",
                     background: isCurrentUser ? "var(--sidebar-active-bg)" : "var(--bg-panel)"
@@ -144,20 +125,13 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                     {rank}
                   </div>
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-1.5" style={{ background: "var(--bg-panel-alt)" }}>
-                      <img
-                        src={badge.image}
-                        alt={`${badge.name} badge`}
-                        className="h-full w-full object-contain"
-                        loading="lazy"
-                      />
-                    </span>
+                    <Avatar name={player.displayName} src={player.profileImage} size={44} />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
                         {player.displayName}
                         {isCurrentUser ? " (You)" : ""}
                       </p>
-                      <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{badge.name} Badge</p>
+                      <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Lvl {player.level}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -169,7 +143,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                     </p>
                     <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>XP</p>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

@@ -243,6 +243,7 @@ export async function submitPrivateMission(
   const trustHistoryId = randomUUID();
   const xpTransactionId = randomUUID();
   const teamProgressId = randomUUID();
+  const impactEventId = randomUUID();
   const manualReviewProbability = getManualReviewProbability(
     trustUpdate.nextScore,
     verification.risk_flags.length
@@ -363,13 +364,28 @@ export async function submitPrivateMission(
         );
       }
 
+      // Spine: bump Impact in lockstep with the verified XP so private missions feed
+      // the same number the hooks consume. 1:1 with finalXp (post trust/verification).
+      const previousImpact = Math.max(0, Math.floor(Number(user.payload?.impact ?? 0) || 0));
+      const prevImpactBySource =
+        (user.payload?.impactBySource && typeof user.payload.impactBySource === "object"
+          ? user.payload.impactBySource
+          : {}) as Record<string, number>;
+      const nextImpact = previousImpact + finalXp;
+      const nextImpactBySource = {
+        ...prevImpactBySource,
+        private: Math.max(0, Math.floor(Number(prevImpactBySource.private ?? 0))) + finalXp
+      };
+
       const nextPayload = {
         ...user.payload,
         xp: nextXp,
         level: nextLevel,
         trustScore: trustUpdate.nextScore,
         missionsCompleted: Number(user.payload?.missionsCompleted ?? 0) + (finalXp > 0 ? 1 : 0),
-        lastPrivateMissionAt: submittedAt.toISOString()
+        lastPrivateMissionAt: submittedAt.toISOString(),
+        impact: nextImpact,
+        impactBySource: nextImpactBySource
       };
 
       await query(
@@ -382,6 +398,25 @@ export async function submitPrivateMission(
          where id = $5`,
         [nextXp, nextLevel, trustUpdate.nextScore, JSON.stringify(nextPayload), body.userId]
       );
+
+      if (finalXp > 0) {
+        await query(
+          `insert into impact_events (id, user_id, source, amount, meta)
+           values ($1, $2, $3, $4, $5::jsonb)`,
+          [
+            impactEventId,
+            body.userId,
+            "private",
+            finalXp,
+            JSON.stringify({
+              submissionId,
+              missionId: body.missionId,
+              verification: verification.status,
+              trustMultiplier: getTrustMultiplier(trustUpdate.nextScore)
+            })
+          ]
+        );
+      }
     });
   } catch (error) {
     const code = typeof error === "object" && error && "code" in error ? String((error as { code: unknown }).code) : "";

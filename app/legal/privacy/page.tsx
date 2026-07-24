@@ -56,7 +56,7 @@ export default function PrivacyPage() {
               <li><strong>Climatiq:</strong> Carbon calculation API - see their privacy policy</li>
               <li><strong>Ecologi:</strong> Tree planting service - see their privacy policy</li>
               <li><strong>SendGrid:</strong> Email delivery (optional) - see their privacy policy</li>
-              <li><strong>Firebase:</strong> Authentication and data storage</li>
+              <li><strong>Supabase Postgres:</strong> Database storage</li>
             </ul>
           </section>
 
