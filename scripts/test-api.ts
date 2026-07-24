@@ -1,4 +1,4 @@
-akkasync function testSignup() {
+async function testSignup() {
   console.log("Testing API signup endpoint...");
   try {
     const signupResponse = await fetch("http://localhost:3000/api/auth/signup", {
