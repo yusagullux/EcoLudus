@@ -4,8 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { logOut } from "@/public/js/auth.js";
-import { getBadgeImageForLevel, getBadgeNameForLevel } from "@/public/js/levels.js";
+import { logOut } from "@/lib/auth-client";
+import { Avatar } from "@/components/avatar";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SidebarProps = { user: any; profile: any };
@@ -150,8 +150,7 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
   const xp = Number(profile?.xp) || 0;
   const ecoPoints = Number(profile?.ecoPoints) || 0;
   const displayName = String(profile?.displayName || user?.email?.split("@")[0] || "Explorer");
-  const badgeImg = getBadgeImageForLevel(level);
-  const badgeName = getBadgeNameForLevel(level);
+  const profileImage = typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -170,9 +169,7 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
       {profile && (
         <div className="mx-3 mb-4 shrink-0">
           <div className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: "var(--sidebar-active-bg)" }}>
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10">
-              <Image src={badgeImg} alt={badgeName} width={18} height={18} className="object-contain" />
-            </div>
+            <Avatar name={displayName} src={profileImage} size={28} className="ring-2 ring-white/10" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[11px] font-bold leading-tight" style={{ color: "var(--text-sidebar)" }}>{displayName}</p>
               <p className="text-[9px]" style={{ color: "var(--text-sidebar-muted)" }}>Lv {level} · {xp.toLocaleString()} XP</p>
@@ -301,7 +298,11 @@ export function Sidebar({ user, profile }: SidebarProps) {
         <div className="flex items-center gap-2">
           {profile && (
             <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5" style={{ background: "var(--sidebar-active-bg)" }}>
-              <Image src={getBadgeImageForLevel(Number(profile.level) || 1)} alt="" width={14} height={14} className="object-contain" />
+              <Avatar
+                name={String(profile?.displayName || user?.email?.split("@")[0] || "Explorer")}
+                src={typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null}
+                size={20}
+              />
               <span className="text-[11px] font-bold" style={{ color: "var(--text-sidebar)" }}>
                 Lv {Number(profile.level) || 1}
               </span>

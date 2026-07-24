@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/send-weekly-reports",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/keep-alive",
+      "schedule": "0 4 * * *"
     }
   ]
 }

@@ -4,9 +4,9 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { getQuestCarbonReduction, getQuestDefinition } from "@/lib/carbon-calc";
 import { sql } from "@/lib/db";
-import { calculateLevel } from "@/lib/level-system";
 import { getMissingVerifiedQuestProofIds, removeVerifiedQuestProofs } from "@/lib/quest-proof";
 import { checkAndProcessMilestones } from "@/lib/rewards-sync";
+import { grantImpact } from "@/lib/impact-service";
 
 const completeQuestSchema = z.object({
   questIds: z.array(z.string().min(1)).min(1).max(5)
@@ -250,7 +250,6 @@ export async function POST(request: Request) {
     const ecoReward = completionRecords.reduce((sum, quest) => sum + quest.ecoPoints, 0);
     const carbonReward = completionRecords.reduce((sum, quest) => sum + quest.carbonReduced, 0);
     const companionProgress = applyCompanionProgress(profile, completionRecords.length, xpReward);
-    const nextXp = Number(profile.xp || 0) + xpReward + companionProgress.companionXpBonus;
     const nextDailyCompletions = Array.from(new Set([...dailyQuestsCompleted, ...questIds]));
     const nextCompletedQuests = Array.from(new Set([...completedQuests, ...questIds]));
     const dailyClearChestRewards = {
@@ -283,34 +282,48 @@ export async function POST(request: Request) {
       )
     };
 
-    const nextLevel = calculateLevel(nextXp);
-    const nextProfile = {
-      ...removeVerifiedQuestProofs(profile, questIds),
-      xp: nextXp,
-      ecoPoints: Number(profile.ecoPoints || 0) + ecoReward,
-      level: nextLevel,
+    // Route the reward write through the spine. XP includes the companion bonus
+    // (a perk for the active pet); Impact is the base quest XP only, so the spine
+    // measures the actual eco activity, not the companion perk on top of it.
+    const baseXp = xpReward + companionProgress.companionXpBonus;
+    const patch: Record<string, unknown> = {
       animals: companionProgress.animals,
-      carbonReduced: Math.round((Number(profile.carbonReduced || 0) + carbonReward) * 100) / 100,
       missionsCompleted: Number(profile.missionsCompleted || 0) + completionRecords.length,
       completedQuests: nextCompletedQuests,
       dailyQuestsCompleted: nextDailyCompletions,
       dailyQuestCompletions,
       dailyClearChestRewards,
+      verifiedQuestProofs: removeVerifiedQuestProofs(profile, questIds).verifiedQuestProofs,
       ...(bonusChest ? { chests: addChest(profile.chests, bonusChest) } : {}),
       lastQuestCompletionTime: completedAt.toISOString()
     };
 
-    await sql(
-      `insert into users (id, email, password_hash, xp, level, payload)
-       values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $4, $5, $3::jsonb)
-       on conflict (id) do update
-       set email = excluded.email,
-           xp = excluded.xp,
-           level = excluded.level,
-           payload = excluded.payload,
-           updated_at = now()`,
-      [session.userId, session.email, JSON.stringify(nextProfile), nextXp, nextLevel]
-    );
+    const granted = await grantImpact({
+      userId: session.userId,
+      source: "quests",
+      baseXp,
+      baseImpact: xpReward,
+      eco: ecoReward,
+      carbon: carbonReward,
+      meta: {
+        questIds,
+        count: completionRecords.length,
+        companionXpBonus: companionProgress.companionXpBonus
+      },
+      payloadPatch: patch
+    });
+
+    const nextProfile = granted
+      ? {
+          ...profile,
+          ...patch,
+          xp: granted.xp,
+          level: granted.level,
+          ecoPoints: granted.ecoPoints,
+          carbonReduced: granted.carbonReduced,
+          impact: granted.impact
+        }
+      : { ...removeVerifiedQuestProofs(profile, questIds), ...patch };
 
     for (const completion of completionRecords) {
       await sql(

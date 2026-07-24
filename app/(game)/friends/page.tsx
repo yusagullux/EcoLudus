@@ -2,10 +2,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
-import { getAllUsers, updateUserProfile } from "@/public/js/auth.js";
+import { getAllUsers } from "@/lib/auth-client";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
-import { calculateLevel } from "@/lib/level-system";
+import { Avatar } from "@/components/avatar";
 
 function friendKey(friend: any) {
   return friend?.id || friend?.uid || friend?.email;
@@ -232,52 +233,20 @@ export default function FriendsPage() {
     cheeringRef.current = key;
 
     try {
-      // Read cheersToday fresh from the *current* profile reference rather than
-      // the stale closure value captured at render time — this is what prevents
-      // the rapid-click bypass.
-      const currentSocialStats = getSocialStats(profile);
-      const today = todayKey();
-      const sameDay = currentSocialStats.lastCheerDate === today;
-      const cheersToday = sameDay ? currentSocialStats.cheersToday : 0;
-
-      if (cheersToday >= 5) {
-        showToast("Daily cheer limit reached. Come back tomorrow.");
-        return;
-      }
-
-      const nextFriends = friends.map((item) => {
-        if (friendKey(item) !== key) return item;
-        return {
-          ...item,
-          cheers: Number(item.cheers ?? 0) + 1,
-          lastCheeredAt: new Date().toISOString()
-        };
+      // The cap, the friend-relationship check, the XP/eco grant, and the
+      // one-shot Impact to both users are all owned by the server route.
+      const res = await fetch("/api/friends/cheer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friendId: friend.id })
       });
-      const xpReward = 10;
-      const ecoReward = 3;
-      const nextXp = Number(profile.xp ?? 0) + xpReward;
-      const updates = {
-        friends: nextFriends,
-        xp: nextXp,
-        level: calculateLevel(nextXp),
-        ecoPoints: Number(profile.ecoPoints ?? 0) + ecoReward,
-        socialStats: {
-          ...profile.socialStats,
-          cheersGiven: currentSocialStats.cheersGiven + 1,
-          cheersToday: cheersToday + 1,
-          lastCheerDate: today
-        }
-      };
-
-      const result = await updateUserProfile(user.uid, updates);
-      if (!result.success) {
-        showToast("Could not send cheer. Please try again.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        showToast(data?.error?.message || "Could not send cheer. Please try again.");
         return;
       }
-      if (typeof setProfile === "function") {
-        setProfile({ ...profile, ...updates });
-      }
-      showToast(`Cheered ${friend.displayName || "friend"}: +${xpReward} XP, +${ecoReward} Eco.`);
+      await refreshProfile();
+      showToast(`Cheered ${friend.displayName || "friend"}: +${data.xpAwarded} XP, +${data.ecoAwarded} Eco.`);
     } finally {
       cheeringRef.current = null;
     }
@@ -285,24 +254,22 @@ export default function FriendsPage() {
 
   const claimSocialQuest = async (quest: any, progress: number) => {
     if (!user?.uid || !profile || progress < quest.target || claimedSocialRewards.includes(quest.id)) return;
-    const nextClaimed = [...claimedSocialRewards, quest.id];
-    const nextXp = Number(profile.xp ?? 0) + quest.xp;
-    const updates = {
-      claimedSocialRewards: nextClaimed,
-      xp: nextXp,
-      level: calculateLevel(nextXp),
-      ecoPoints: Number(profile.ecoPoints ?? 0) + quest.eco
-    };
 
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) {
-      showToast("Could not claim reward. Please try again.");
+    // The progress check, re-claim guard, and reward grant are owned by the
+    // server so they can't be forged. The route re-derives progress from
+    // stored state (cheersGiven / friends count).
+    const res = await fetch("/api/friends/claim-quest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questId: quest.id })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      showToast(data?.error?.message || "Could not claim reward. Please try again.");
       return;
     }
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
-    }
-    showToast(`${quest.title} claimed: +${quest.xp} XP, +${quest.eco} Eco.`);
+    await refreshProfile();
+    showToast(`${quest.title} claimed: +${data.xpAwarded} XP, +${data.ecoAwarded} Eco.`);
   };
 
   const removeFriend = async (friend: any) => {
@@ -394,14 +361,17 @@ export default function FriendsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {friendRequests.map((req: any) => (
               <article key={req.id || req.uid} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <div className="min-w-0">
-                  <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{req.displayName || "Anonymous"}</p>
-                  <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>Wants to add you</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Pill>Lv {req.level || 1}</Pill>
-                    <Pill>{Number(req.xp || 0).toLocaleString()} XP</Pill>
+                <Link href={`/profile/${req.id || req.uid}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
+                  <Avatar name={req.displayName || "Anonymous"} src={req.profileImage} size={44} />
+                  <div className="min-w-0">
+                    <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{req.displayName || "Anonymous"}</p>
+                    <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>Wants to add you</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Pill>Lv {req.level || 1}</Pill>
+                      <Pill>{Number(req.xp || 0).toLocaleString()} XP</Pill>
+                    </div>
                   </div>
-                </div>
+                </Link>
                 <div className="flex gap-2 shrink-0">
                   <button type="button" onClick={() => acceptFriendRequest(req)} className={primaryButton}>
                     Accept
@@ -436,14 +406,17 @@ export default function FriendsPage() {
 
               return (
                 <article key={player.id} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                  <div className="min-w-0">
-                    <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{player.displayName}</p>
-                    <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>EcoLudus player</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Pill>Lv {player.level || 1}</Pill>
-                      <Pill>{Number(player.xp || 0).toLocaleString()} XP</Pill>
+                  <Link href={`/profile/${player.id}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
+                    <Avatar name={player.displayName} src={player.profileImage} size={44} />
+                    <div className="min-w-0">
+                      <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{player.displayName}</p>
+                      <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>EcoLudus player</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Pill>Lv {player.level || 1}</Pill>
+                        <Pill>{Number(player.xp || 0).toLocaleString()} XP</Pill>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                   <div className="shrink-0">
                     {isSent ? (
                       <button type="button" disabled className={secondaryButton}>
@@ -485,12 +458,15 @@ export default function FriendsPage() {
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl font-serif text-lg font-black" style={{ background: "var(--bg-panel)", color: "var(--text-primary)" }}>
                       #{index + 1}
                     </span>
-                    <div>
-                      <p className="font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{friend.displayName || friend.email}</p>
-                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        Level {friend.level || 1} - {Number(friend.xp || 0).toLocaleString()} XP - {Number(friend.cheers || 0)} cheers sent
-                      </p>
-                    </div>
+                    <Link href={`/profile/${friendKey(friend)}`} className="flex items-center gap-3 hover:opacity-80">
+                      <Avatar name={friend.displayName || friend.email || "Explorer"} src={friend.profileImage} size={40} />
+                      <div>
+                        <p className="font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{friend.displayName || friend.email}</p>
+                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          Level {friend.level || 1} - {Number(friend.xp || 0).toLocaleString()} XP - {Number(friend.cheers || 0)} cheers sent
+                        </p>
+                      </div>
+                    </Link>
                   </div>
                   <div className="flex gap-2">
                     <Pill active={Number(friend.xp || 0) <= myXp}>{Number(friend.xp || 0) <= myXp ? "You lead" : "Ahead"}</Pill>

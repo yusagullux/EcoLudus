@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useTheme, type Theme } from "@/lib/useTheme";
 import { PageHero, Panel, primaryButton, inputClass } from "@/components/game-ui";
+import { Avatar } from "@/components/avatar";
 
 const THEMES: { value: Theme; label: string; desc: string; preview: string }[] = [
   {
@@ -40,6 +41,43 @@ function Toast({ message, type }: { message: string; type: "success" | "error" }
   );
 }
 
+// Downscale an image file to a square of `max` px on a canvas, returned as a
+// JPEG blob. Keeps uploads tiny and avoids needing server-side image processing.
+function resizeImage(file: File, max: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read the image file."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("That file is not a valid image."));
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = max;
+        canvas.height = max;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Could not process the image in this browser."));
+          return;
+        }
+        // Cover-fit (center-crop) into the square canvas — matches the Avatar.
+        const scale = Math.max(max / img.width, max / img.height);
+        const drawW = img.width * scale;
+        const drawH = img.height * scale;
+        ctx.drawImage(img, (max - drawW) / 2, (max - drawH) / 2, drawW, drawH);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error("Could not process the image."));
+            return;
+          }
+          resolve(blob);
+        }, "image/jpeg", 0.85);
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function SettingsPage() {
   const { user, profile, refreshProfile } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -51,6 +89,12 @@ export default function SettingsPage() {
   // UI states
   const [savingProfile, setSavingProfile] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Profile picture
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const profileImage = typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null;
+  const avatarName = displayName || user?.email?.split("@")[0] || "Explorer";
 
   // Populate from profile once loaded
   useEffect(() => {
@@ -96,6 +140,56 @@ export default function SettingsPage() {
     }
   }
 
+  // Resize the chosen image to 256×256 on a canvas and upload it as a JPEG,
+  // so we never store a huge raw photo. Falls back to the original bytes if
+  // canvas isn't available.
+  async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!user?.uid || uploadingPicture) return;
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+
+    setUploadingPicture(true);
+    try {
+      const blob = await resizeImage(file, 256);
+      const form = new FormData();
+      form.append("file", blob, "avatar.jpg");
+
+      const res = await fetch("/api/users/avatar", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error?.message || "Upload failed.");
+      }
+      await refreshProfile();
+      showToast("Profile picture updated!");
+    } catch (err: unknown) {
+      showToast((err as Error).message || "Could not upload picture.", "error");
+    } finally {
+      setUploadingPicture(false);
+    }
+  }
+
+  async function handleRemovePicture() {
+    if (!user?.uid || uploadingPicture || !profileImage) return;
+    setUploadingPicture(true);
+    try {
+      const res = await fetch("/api/users/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ profileImage: null })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error?.message || "Remove failed.");
+      await refreshProfile();
+      showToast("Profile picture removed.");
+    } catch (err: unknown) {
+      showToast((err as Error).message || "Could not remove picture.", "error");
+    } finally {
+      setUploadingPicture(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <PageHero
@@ -107,6 +201,44 @@ export default function SettingsPage() {
       {/* ── Profile ── */}
       <Panel eyebrow="Profile" title="Your Info">
         <div className="flex flex-col gap-4">
+          {/* Profile picture */}
+          <div className="flex items-center gap-4">
+            <Avatar name={avatarName} src={profileImage} size={80} />
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPicture}
+                  className={primaryButton}
+                >
+                  {uploadingPicture ? "Uploading…" : profileImage ? "Change picture" : "Add picture"}
+                </button>
+                {profileImage && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePicture}
+                    disabled={uploadingPicture}
+                    className="inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] transition hover:opacity-80"
+                    style={{ background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                PNG, JPEG, or WebP. We resize it to a square automatically.
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handlePictureChange}
+                className="hidden"
+              />
+            </div>
+          </div>
+
           <div>
             <label
               htmlFor="display-name"

@@ -102,6 +102,7 @@ type FileStore = {
   team_progress: Array<Record<string, unknown>>;
   xp_transactions: Array<Record<string, unknown>>;
   trust_history: Array<Record<string, unknown>>;
+  impact_events: Array<Record<string, unknown>>;
 };
 
 declare global {
@@ -174,7 +175,8 @@ const EMPTY_STORE: FileStore = {
   ai_verification_results: [],
   team_progress: [],
   xp_transactions: [],
-  trust_history: []
+  trust_history: [],
+  impact_events: []
 };
 
 function nowIso() {
@@ -1268,6 +1270,62 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result(rows as T[]);
   }
 
+  // ── Impact spine: append-only ledger ───────────────────────────────────────
+  if (
+    normalized ===
+    "insert into impact_events (id, user_id, source, amount, meta) values ($1, $2, $3, $4, $5::jsonb)"
+  ) {
+    const [id, userId, source, amount, metaRaw] = params;
+    store.impact_events.push({
+      id: String(id),
+      user_id: String(userId),
+      source: String(source),
+      amount: Number(amount),
+      meta: parseJsonObject(metaRaw) as Record<string, unknown>,
+      created_at: nowIso()
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (
+    normalized ===
+    "select coalesce(sum(amount), 0) as week_impact from impact_events where user_id = $1 and created_at >= $2"
+  ) {
+    const [userId, sinceRaw] = [String(params[0] ?? ""), params[1]];
+    const since = typeof sinceRaw === "string" ? new Date(sinceRaw).getTime() : 0;
+    const weekImpact = store.impact_events
+      .filter(
+        (entry) =>
+          entry.user_id === userId && new Date(entry.created_at).getTime() >= since
+      )
+      .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+    return result([{ week_impact: weekImpact }] as T[]);
+  }
+
+  if (
+    normalized ===
+    "select id, source, amount, meta, created_at from impact_events where user_id = $1 and created_at >= $2 order by created_at desc limit $3"
+  ) {
+    const [userId, sinceRaw, limitValue] = [String(params[0] ?? ""), params[1], Number(params[2] ?? 100)];
+    const since = typeof sinceRaw === "string" ? new Date(sinceRaw).getTime() : 0;
+    const rows = store.impact_events
+      .filter(
+        (entry) =>
+          entry.user_id === userId && new Date(entry.created_at).getTime() >= since
+      )
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limitValue)
+      .map((entry) => ({
+        id: entry.id,
+        source: entry.source,
+        amount: Number(entry.amount),
+        meta: clone(entry.meta),
+        created_at: entry.created_at
+      }));
+    return result(rows as T[]);
+  }
+
   throw new Error(`Unsupported file database query: ${text}`);
 }
 
@@ -1469,6 +1527,18 @@ create table if not exists trust_history (
   risk_flags jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
+
+create table if not exists impact_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  source text not null,
+  amount integer not null check (amount >= 0),
+  meta jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_impact_events_user_created on impact_events(user_id, created_at desc);
+create index if not exists idx_impact_events_source on impact_events(source);
 
 insert into missions (id, title, category, mission_type, visibility, base_xp, repeat_window_seconds, metadata)
 values

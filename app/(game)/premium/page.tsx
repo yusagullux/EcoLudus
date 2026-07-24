@@ -234,7 +234,7 @@ export default function PremiumPage() {
             },
             {
               q: "Do free users get trees planted?",
-              a: "Yes. Tree planting milestones are available to all users. Premium just makes it happen faster."
+              a: "Tree planting milestones are tracked for all users. Real tree planting via our Ecologi partnership is coming soon — premium will make it faster once live."
             }
           ].map(({ q, a }) => (
             <div key={q} className="py-4 first:pt-0 last:pb-0">

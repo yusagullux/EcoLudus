@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { MetricCard, PageHero, Panel, Pill, ProgressBar } from "@/components/game-ui";
+import { CategoryIcon } from "@/components/category-icon";
 
 const CATEGORIES_FALLBACK = [
   { id: "recycling", name: "Recycling", image: "/images/forest.png", color: "#2f6b46", done: 0, total: 1 },
@@ -142,7 +143,7 @@ export default function InsightsPage() {
               <div key={name} className="grid grid-cols-[minmax(120px,160px)_1fr_44px_44px] items-center gap-3 rounded-xl px-2 py-1.5 transition" style={{ background: "transparent" }}>
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: "var(--bg-panel-alt)" }}>
-                    <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    <CategoryIcon name={name} color={color} className="h-5 w-5" />
                   </span>
                   <span className="truncate text-xs font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</span>
                 </div>

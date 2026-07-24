@@ -4,9 +4,10 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
+import { CategoryIcon } from "@/components/category-icon";
 import PhotoVerification from "@/components/photo-verification";
-import { updateUserProfile } from "@/public/js/auth.js";
-import { requiredXP } from "@/public/js/levels.js";
+import { updateUserProfile } from "@/lib/auth-client";
+import { requiredXP } from "@/lib/level-system";
 
 const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string; icon: string; label: string }> = {
   APPROVED: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", icon: "✓", label: "Approved" },
@@ -92,6 +93,8 @@ export default function DashboardPage() {
   const [toast, setToast] = useState("");
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [streakReward, setStreakReward] = useState<{ day: number; label: string } | null>(null);
+  // Read-only "Impact this week" — the first visible surface for the spine.
+  const [weekImpact, setWeekImpact] = useState<number | null>(null);
 
   // Load quests.json on mount
   useEffect(() => {
@@ -107,6 +110,24 @@ export default function DashboardPage() {
       }
     }
     loadQuests();
+  }, []);
+
+  // Load weekly Impact (the spine's first visible surface) on mount.
+  useEffect(() => {
+    async function loadImpact() {
+      try {
+        const res = await fetch("/api/stats/impact");
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data?.weekImpact === "number") {
+            setWeekImpact(data.weekImpact);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading weekly impact:", err);
+      }
+    }
+    loadImpact();
   }, []);
 
 
@@ -149,49 +170,29 @@ export default function DashboardPage() {
         const selected = shuffled.slice(0, 5);
         const selectedIds = selected.map((q: any) => q.id);
 
-        // ── Streak reward calculation ──────────────────────────────────────
-        // Only grant when this is a genuine new-day reset (not first login ever).
+        // ── Streak milestone rewards (server-granted) ───────────────────────
+        // Eco/egg streak rewards are granted by /api/streak/apply so they can't
+        // be forged from the client. The route runs the streak counter + milestone
+        // logic and returns the granted milestone (if any) for the toast. Quest
+        // *selection* (below) still happens client-side; only the *reward* moved.
+        try {
+          const streakRes = await fetch("/api/streak/apply", { method: "POST" });
+          if (streakRes.ok) {
+            const streakData = await streakRes.json();
+            if (streakData?.granted) {
+              setStreakReward({ day: streakData.granted.day, label: streakData.granted.label });
+            }
+          }
+        } catch (err) {
+          console.error("Error applying streak rewards:", err);
+        }
+
         const profileUpdates: Record<string, unknown> = {
           lastQuestResetTime: new Date().toISOString(),
           currentDailyQuests: selectedIds,
           dailyQuestsCompleted: [],
           verifiedQuestProofs: {}
         };
-
-        const streak = Number(profile.currentStreak ?? 0);
-        const lastStreakReward = Number(profile.lastStreakRewardDay ?? 0);
-
-        // Milestone rewards: day 3 → 20 EcoPoints, day 7 → common egg,
-        // day 14 → rare egg, day 30 → legendary egg. Each milestone fires once
-        // per streak (tracked by lastStreakRewardDay so re-logins don't double-grant).
-        const STREAK_MILESTONES = [
-          { day: 3,  type: "eco",  amount: 20,  label: "3-day streak: +20 EcoPoints" },
-          { day: 7,  type: "egg",  rarity: "common",    label: "7-day streak: Common Egg!" },
-          { day: 14, type: "egg",  rarity: "rare",      label: "14-day streak: Rare Egg!" },
-          { day: 30, type: "egg",  rarity: "legendary", label: "30-day streak: Legendary Egg!" }
-        ];
-
-        for (const milestone of STREAK_MILESTONES) {
-          if (streak >= milestone.day && lastStreakReward < milestone.day) {
-            if (milestone.type === "eco") {
-              profileUpdates.ecoPoints = Number(profile.ecoPoints ?? 0) + (milestone.amount ?? 0);
-            } else if (milestone.type === "egg") {
-              const currentEggs = Array.isArray(profile.eggs) ? [...profile.eggs] : [];
-              const eggName = `${milestone.rarity!.charAt(0).toUpperCase() + milestone.rarity!.slice(1)} Egg`;
-              const eggImage = `/images/eggs/${milestone.rarity}-egg.png`;
-              const existingIdx = currentEggs.findIndex((e: any) => e.name === eggName);
-              if (existingIdx >= 0) {
-                currentEggs[existingIdx] = { ...currentEggs[existingIdx], count: (currentEggs[existingIdx].count ?? 1) + 1 };
-              } else {
-                currentEggs.push({ id: Date.now(), name: eggName, rarity: milestone.rarity, price: 0, image: eggImage, count: 1, purchasedAt: new Date().toISOString() });
-              }
-              profileUpdates.eggs = currentEggs;
-            }
-            profileUpdates.lastStreakRewardDay = milestone.day;
-            setStreakReward({ day: milestone.day, label: milestone.label });
-            break; // grant one milestone at a time, highest applicable
-          }
-        }
 
         try {
           const result = await updateUserProfile(user.uid, profileUpdates);
@@ -504,6 +505,7 @@ export default function DashboardPage() {
           <HeroMetric label="Eco" value={ecoPoints.toLocaleString()} />
           <HeroMetric label="Level" value={level} />
           <HeroMetric label="Streak" value={`${currentStreak}d`} />
+          <HeroMetric label="Impact this week" value={weekImpact === null ? "—" : weekImpact.toLocaleString()} />
           {activePet && <HeroMetric label="Pet" value={activePet.name} />}
         </div>
       </PageHero>
@@ -608,7 +610,7 @@ export default function DashboardPage() {
         action={<Pill>Resets in {formatTime(timeLeft)}</Pill>}
         className="overflow-hidden"
       >
-        <div className="-mx-5 -mt-5 divide-y sm:-mx-6 sm:-mt-6" style={{ borderColor: "var(--border-subtle)" }}>
+        <div className="-mx-5 -mt-5 divide-y divide-[var(--border-subtle)] sm:-mx-6 sm:-mt-6">
           {quests.map((quest) => {
             const isSelected = selectedQuestIds.includes(quest.id);
             const isVerified = verifiedQuestIds.includes(quest.id);
@@ -882,7 +884,7 @@ export default function DashboardPage() {
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl" style={{ background: "var(--bg-panel)" }}>
-                      <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      <CategoryIcon name={name} color={color} className="h-6 w-6" />
                     </span>
                     <div>
                       <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</p>
