@@ -5,6 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { updateUserProfile } from "@/lib/auth-client";
 import {
+  GARDEN_MAX_TILES,
+  resolveGardenTiles,
+  nextTileCost
+} from "@/lib/garden-config";
+import {
   HeroMetric,
   PageHero,
   Panel,
@@ -17,9 +22,7 @@ import {
   type Rarity
 } from "@/components/game-ui";
 
-const GRID_COLS = 6;
-const GRID_ROWS = 4;
-const TOTAL_TILES = GRID_COLS * GRID_ROWS;
+const TOTAL_TILES = GARDEN_MAX_TILES;
 
 const GROW_DURATION: Record<Rarity, number> = {
   common: 8 * 60 * 60 * 1000,
@@ -87,16 +90,19 @@ const PLANT_IMAGES: Record<string, string> = {
   "Ember Cactus": "/images/plants/dragonfruit.png"
 };
 
-const STAGE_SYMBOL: Record<GrowthStage, string> = {
-  sprout: "*",
-  growing: "**",
-  bloomed: "***"
-};
-
 const STAGE_COLOR: Record<GrowthStage, string> = {
   sprout: "#4c7a3b",
   growing: "#2f6b46",
   bloomed: "#9a6b1f"
+};
+
+// Plants render as their real photo at every stage (no asterisk placeholders);
+// opacity rises with growth so sprouts read as "just planted" and bloomed reads
+// as full/striking. The progress bar overlay still communicates growth %.
+const STAGE_OPACITY: Record<GrowthStage, number> = {
+  sprout: 0.45,
+  growing: 0.72,
+  bloomed: 1
 };
 
 function normalizeRarity(value: unknown): Rarity {
@@ -193,6 +199,13 @@ export default function GardenPage() {
   const garden: GardenState = (profile?.garden as GardenState) ?? {};
   const ownedPlants: any[] = Array.isArray(profile?.plants) ? profile.plants : [];
   const ownedSeeds: any[] = Array.isArray(profile?.seeds) ? profile.seeds : [];
+
+  // Unlocked tile count — derived (and migrated) server-side too, so the
+  // client and /api/garden/buy-tile always agree. Tiles 0..unlocked-1 are
+  // usable; tiles unlocked..15 can be bought one at a time (increasing cost).
+  const unlocked = resolveGardenTiles(profile);
+  const canBuyMore = unlocked < GARDEN_MAX_TILES;
+  const nextCost = canBuyMore ? nextTileCost(unlocked) : 0;
 
   const plantableInventory = useMemo(() => {
     const plants: PlantableItem[] = ownedPlants
@@ -408,12 +421,46 @@ export default function GardenPage() {
     }
   };
 
+  // Buy the next garden tile with EcoPoints. Server owns the price and cap
+  // (see /api/garden/buy-tile), so we never write gardenTiles/ecoPoints
+  // directly here — we just send the request and refresh from the response.
+  const buyTile = async () => {
+    if (!user?.uid || !profile || isProcessing.current || !canBuyMore) return;
+    const balance = Number(profile.ecoPoints ?? 0) || 0;
+    if (balance < nextCost) {
+      showToast(`Need ${nextCost} EcoPoints to unlock a tile; you have ${balance}.`);
+      return;
+    }
+
+    isProcessing.current = true;
+    try {
+      const res = await fetch("/api/garden/buy-tile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({})
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        showToast(data?.error?.message || "Could not unlock tile. Please try again.");
+        return;
+      }
+      if (typeof setProfile === "function" && profile) {
+        setProfile({ ...profile, ecoPoints: data.ecoPoints, gardenTiles: data.gardenTiles });
+      }
+      await refreshProfile();
+      showToast(`Tile unlocked! −${nextCost} EcoPoints.`);
+    } finally {
+      isProcessing.current = false;
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <PageHero
         eyebrow="Your living world"
         title="Virtual Garden"
-        description="Plant shop plants and chest seeds, let them bloom, then come back for repeat EcoPoints and XP."
+        description="Plant shop plants and chest seeds, let them bloom, then come back for repeat EcoPoints and XP. Start with 4 tiles — unlock more with EcoPoints, up to 16."
       >
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Planted" value={totalPlanted} />
@@ -469,10 +516,16 @@ export default function GardenPage() {
         </Panel>
       </div>
 
-      <Panel eyebrow="Your garden" title="Tile Grid" action={<Pill>{totalPlanted}/{TOTAL_TILES} tiles used</Pill>}>
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+      <Panel
+        eyebrow="Your garden"
+        title="Tile Grid"
+        action={<Pill>{totalPlanted}/{unlocked} used · {unlocked}/{GARDEN_MAX_TILES} unlocked</Pill>}
+      >
+        <div className="grid grid-cols-4 gap-2">
           {Array.from({ length: TOTAL_TILES }).map((_, tileId) => {
             const tile = garden[tileId];
+            const isUnlocked = tileId < unlocked;
+            const isBuyable = tileId === unlocked && canBuyMore;
             const stage = tile ? getGrowthStage(tile, now) : null;
             const pct = tile ? getGrowthPct(tile, now) : 0;
             const ready = tile ? canHarvest(tile, now) : false;
@@ -480,6 +533,47 @@ export default function GardenPage() {
             const rarity = tile ? tileRarity(tile) : "common";
             const rStyle = rarityStyle[rarity] ?? rarityStyle.common;
 
+            // Locked tiles beyond the next-buyable one: render a placeholder
+            // so the 4×4 grid stays intact, but they're not interactive.
+            if (!isUnlocked && !isBuyable) {
+              return (
+                <div
+                  key={tileId}
+                  className="flex aspect-square flex-col items-center justify-center rounded-2xl border border-dashed"
+                  style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", opacity: 0.5 }}
+                  aria-label={`Locked tile ${tileId + 1}`}
+                >
+                  <span className="text-base" style={{ color: "var(--text-muted)" }}>🔒</span>
+                </div>
+              );
+            }
+
+            // The next locked tile: buy it with EcoPoints (increasing cost).
+            if (isBuyable) {
+              const balance = Number(profile?.ecoPoints ?? 0) || 0;
+              const affordable = balance >= nextCost;
+              return (
+                <button
+                  key={tileId}
+                  type="button"
+                  onClick={buyTile}
+                  disabled={!affordable || isProcessing.current}
+                  className="group flex aspect-square flex-col items-center justify-center rounded-2xl border text-center transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  style={{
+                    borderColor: affordable ? "var(--text-accent, #43653f)" : "var(--border-default)",
+                    background: affordable ? "color-mix(in srgb, var(--text-accent, #43653f) 10%, var(--bg-panel-alt))" : "var(--bg-panel-alt)"
+                  }}
+                  aria-label={`Unlock tile ${tileId + 1} for ${nextCost} EcoPoints`}
+                >
+                  <span className="text-lg font-black" style={{ color: affordable ? "var(--text-accent, #43653f)" : "var(--text-muted)" }}>+</span>
+                  <span className="mt-0.5 text-[10px] font-extrabold uppercase tracking-wide" style={{ color: affordable ? "var(--text-primary)" : "var(--text-muted)" }}>
+                    {nextCost} EP
+                  </span>
+                </button>
+              );
+            }
+
+            // Unlocked tile: planted or empty (clickable to plant).
             return (
               <button
                 key={tileId}
@@ -501,25 +595,44 @@ export default function GardenPage() {
                 aria-label={tile ? `${tileName(tile)} - ${stage}` : `Empty tile ${tileId + 1}`}
               >
                 {tile ? (
-                  <div className="flex h-full w-full flex-col items-center justify-between p-1.5">
-                    <span
-                      className={[
-                        "flex h-full w-full items-center justify-center text-xl transition-transform duration-300",
-                        isAnimating ? "scale-150" : ""
-                      ].join(" ")}
-                      style={{ filter: stage === "bloomed" ? "drop-shadow(0 0 6px gold)" : "none" }}
+                  <div className="relative h-full w-full">
+                    {/* Framed image — object-contain (like Collection's creature
+                        displays) so the whole plant fits in the tile instead of
+                        being cropped, letterboxed on the rarity accent color. */}
+                    <div
+                      className="absolute inset-0 flex items-center justify-center overflow-hidden"
+                      style={{ background: `${rStyle.accent}12` }}
                     >
-                      {stage === "bloomed"
-                        ? <img src={tileImage(tile)} alt={tileName(tile)} className="h-full w-full object-contain p-1" />
-                        : STAGE_SYMBOL[stage!]}
+                      <img
+                        src={tileImage(tile)}
+                        alt={tileName(tile)}
+                        className={[
+                          "h-full w-full object-contain p-1 transition duration-300",
+                          isAnimating ? "scale-150" : ""
+                        ].join(" ")}
+                        style={{
+                          filter: stage === "bloomed" ? "drop-shadow(0 0 6px gold)" : "drop-shadow(0 2px 5px rgba(0,0,0,0.35))",
+                          opacity: STAGE_OPACITY[stage!]
+                        }}
+                      />
+                    </div>
+
+                    {/* Rarity chip, top-right — matches the Shop/Collection card overlay. */}
+                    <span className={`absolute right-1 top-1 z-10 rounded-full px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wide ${rStyle.chip}`}>
+                      {rarity}
                     </span>
-                    {stage !== "bloomed" && (
-                      <div className="mt-1 h-1 w-full overflow-hidden rounded-full" style={{ background: "var(--border-subtle)" }}>
+
+                    {/* Status overlay along the bottom. */}
+                    {stage !== "bloomed" ? (
+                      <div className="absolute inset-x-1 bottom-1 z-10 h-1 overflow-hidden rounded-full" style={{ background: "var(--border-subtle)" }}>
                         <div className="h-full rounded-full" style={{ width: `${pct}%`, background: STAGE_COLOR[stage!] }} />
                       </div>
-                    )}
-                    {stage === "bloomed" && (
-                      <span className="text-[8px] font-black uppercase tracking-wide text-amber-600">
+                    ) : (
+                      <span
+                        className={`absolute bottom-1 left-1 z-10 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ${
+                          ready ? "bg-amber-500 text-white" : "bg-black/55 text-white"
+                        }`}
+                      >
                         {ready ? "Harvest" : "Resting"}
                       </span>
                     )}
@@ -534,6 +647,12 @@ export default function GardenPage() {
           })}
         </div>
 
+        {canBuyMore && (
+          <p className="mt-3 text-center text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+            Unlock your next tile for <strong style={{ color: "var(--text-primary)" }}>{nextCost} EcoPoints</strong> · {unlocked}/{GARDEN_MAX_TILES} unlocked
+          </p>
+        )}
+
         {selectingTile !== null && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
@@ -543,6 +662,77 @@ export default function GardenPage() {
               Cancel
             </button>
           </div>
+        )}
+      </Panel>
+
+      <Panel eyebrow="Inventory" title="Your Plantables" action={<Pill>{totalPlantables} available</Pill>}>
+        {plantableInventory.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <span className="text-4xl">*</span>
+            <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>No plantables yet</p>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              Buy plants in the Shop or open chests in your Collection to find seeds.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <a href="/shop" className={primaryButton}>Go to Shop</a>
+              <a href="/collection" className={secondaryButton}>Open Chests</a>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {plantableInventory.map((item) => {
+              const rStyle = rarityStyle[item.rarity] ?? rarityStyle.common;
+              const rBorder = rarityBorder[item.rarity] ?? "var(--border-default)";
+              const canPlantHere = selectingTile !== null && !occupiedTiles.has(selectingTile);
+              return (
+                <button
+                  key={item.inventoryKey}
+                  type="button"
+                  disabled={!canPlantHere}
+                  onClick={() => canPlantHere && placePlant(item)}
+                  className="group flex min-h-[172px] flex-col items-center gap-2 rounded-2xl border p-3 text-center transition hover:-translate-y-0.5"
+                  style={{
+                    borderColor: canPlantHere ? rStyle.accent : rBorder,
+                    background: canPlantHere ? `${rStyle.accent}18` : "var(--bg-card)",
+                    cursor: canPlantHere ? "pointer" : "default",
+                    opacity: canPlantHere ? 1 : 0.78
+                  }}
+                >
+                  <div
+                    className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl"
+                    style={{ background: `${rStyle.accent}14` }}
+                  >
+                    <img
+                      src={item.image}
+                      alt={item.itemName}
+                      className="h-full w-full object-cover transition group-hover:scale-110"
+                    />
+                  </div>
+                  <p className="text-xs font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>
+                    {item.itemName}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-1.5">
+                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${rStyle.chip}`}>
+                      {item.rarity}
+                    </span>
+                    <span className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
+                      x{item.count}
+                    </span>
+                    <Pill>{item.source === "seed" ? "Seed" : "Plant"}</Pill>
+                  </div>
+                  <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
+                    Blooms in {formatDuration(GROW_DURATION[item.rarity])}
+                  </p>
+                  {canPlantHere && <span className="text-[10px] font-extrabold text-emerald-600">Tap to plant</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {selectingTile === null && plantableInventory.length > 0 && (
+          <p className="mt-4 text-center text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+            Select an empty tile first, then choose a plant or seed here.
+          </p>
         )}
       </Panel>
 
@@ -566,9 +756,12 @@ export default function GardenPage() {
                       className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border"
                       style={{ borderColor: rarityBorder[rarity] ?? "var(--border-default)", background: `${rStyle.accent}14` }}
                     >
-                      {stage === "bloomed"
-                        ? <img src={tileImage(tile)} alt={tileName(tile)} className="h-full w-full object-contain p-2" />
-                        : <span className="text-2xl">{STAGE_SYMBOL[stage]}</span>}
+                      <img
+                        src={tileImage(tile)}
+                        alt={tileName(tile)}
+                        className="h-full w-full object-contain p-1"
+                        style={{ opacity: STAGE_OPACITY[stage] }}
+                      />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -612,83 +805,13 @@ export default function GardenPage() {
         </Panel>
       )}
 
-      <Panel eyebrow="Inventory" title="Your Plantables" action={<Pill>{totalPlantables} available</Pill>}>
-        {plantableInventory.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <span className="text-4xl">*</span>
-            <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>No plantables yet</p>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Buy plants in the Shop or open chests in your Collection to find seeds.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <a href="/shop" className={primaryButton}>Go to Shop</a>
-              <a href="/collection" className={secondaryButton}>Open Chests</a>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {plantableInventory.map((item) => {
-              const rStyle = rarityStyle[item.rarity] ?? rarityStyle.common;
-              const rBorder = rarityBorder[item.rarity] ?? "var(--border-default)";
-              const canPlantHere = selectingTile !== null && !occupiedTiles.has(selectingTile);
-              return (
-                <button
-                  key={item.inventoryKey}
-                  type="button"
-                  disabled={!canPlantHere}
-                  onClick={() => canPlantHere && placePlant(item)}
-                  className="group flex min-h-[172px] flex-col items-center gap-2 rounded-2xl border p-3 text-center transition hover:-translate-y-0.5"
-                  style={{
-                    borderColor: canPlantHere ? rStyle.accent : rBorder,
-                    background: canPlantHere ? `${rStyle.accent}18` : "var(--bg-card)",
-                    cursor: canPlantHere ? "pointer" : "default",
-                    opacity: canPlantHere ? 1 : 0.78
-                  }}
-                >
-                  <div
-                    className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl"
-                    style={{ background: `${rStyle.accent}14` }}
-                  >
-                    <img
-                      src={item.image}
-                      alt={item.itemName}
-                      className="h-full w-full object-contain p-2 transition group-hover:scale-110"
-                    />
-                  </div>
-                  <p className="text-xs font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>
-                    {item.itemName}
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${rStyle.chip}`}>
-                      {item.rarity}
-                    </span>
-                    <span className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
-                      x{item.count}
-                    </span>
-                    <Pill>{item.source === "seed" ? "Seed" : "Plant"}</Pill>
-                  </div>
-                  <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
-                    Blooms in {formatDuration(GROW_DURATION[item.rarity])}
-                  </p>
-                  {canPlantHere && <span className="text-[10px] font-extrabold text-emerald-600">Tap to plant</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {selectingTile === null && plantableInventory.length > 0 && (
-          <p className="mt-4 text-center text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
-            Select an empty tile first, then choose a plant or seed here.
-          </p>
-        )}
-      </Panel>
-
       <Panel eyebrow="Guide" title="Garden Rules">
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { icon: "1", title: "Find", desc: "Buy plants in the Shop or earn seeds from chests in your Collection." },
             { icon: "2", title: "Grow", desc: "Common plants bloom in 8h, rare in 24h, epic in 72h, and legendary in 96h." },
-            { icon: "3", title: "Return", desc: "Harvest ready plants for repeat EcoPoints and XP every 48h." }
+            { icon: "3", title: "Return", desc: "Harvest ready plants for repeat EcoPoints and XP every 48h." },
+            { icon: "4", title: "Expand", desc: "Unlock more tiles with EcoPoints (price rises each tile) — up to 16 tiles." }
           ].map(({ icon, title, desc }) => (
             <div key={title} className="rounded-2xl p-4" style={{ background: "var(--bg-panel-alt)" }}>
               <div className="mb-2 text-2xl font-black" style={{ color: "var(--text-accent)" }}>{icon}</div>
