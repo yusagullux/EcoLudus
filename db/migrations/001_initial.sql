@@ -1,3 +1,9 @@
+-- 001_initial.sql  (SUPERSEDED — kept for history)
+-- Creates the original 7 tables. Predates the private-missions and unified-
+-- impact-spine work: it is missing users.xp/level/trust_score and 8 newer
+-- tables. Run alongside 003_full_schema.sql (which adds the rest) to get the
+-- complete schema. The authoritative schema is ensureMigrations() in lib/db.ts.
+
 create extension if not exists pgcrypto;
 
 create table if not exists users (

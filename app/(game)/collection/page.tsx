@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -107,7 +106,7 @@ const eggsList = [
 
 export default function CollectionPage() {
   const { user, profile, setProfile, refreshProfile } = useAuth();
-  const ecoPoints = profile?.ecoPoints ?? 0;
+  const ecoPoints = Number(profile?.ecoPoints ?? 0);
   const [mode, setMode] = useState<CollMode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
   const [toast, setToast] = useState("");

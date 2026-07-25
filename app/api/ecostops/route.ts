@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { createImageHash, getExistingPhotoHash, MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, savePhotoHash, verifyImageWithProvider } from "@/lib/photo-verification";
+import { createImageHash, getExistingPhotoHash, parsePhotoProof, savePhotoHash, verifyImageWithProvider } from "@/lib/photo-verification";
 import {
   CHECKIN_RADIUS_M,
   checkinRangeError,
@@ -310,28 +310,6 @@ async function fetchOsmStops(lat: number, lng: number, radius: number): Promise<
   return [];
 }
 
-function isValidBase64ImagePayload(value: string) {
-  const normalized = value.replace(/\s/g, "");
-  return normalized.length > 0 && normalized.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(normalized);
-}
-
-function parsePhotoProof(photoProof: unknown, mimeType: unknown): { buffer: Buffer; mimeType: string } | null {
-  if (typeof photoProof !== "string" || photoProof.length < 100) return null;
-
-  const dataUrlMatch = photoProof.match(/^data:([^;]+);base64,(.+)$/);
-  const resolvedMimeType = dataUrlMatch?.[1] || (typeof mimeType === "string" ? mimeType : "image/jpeg");
-  const base64 = (dataUrlMatch?.[2] || photoProof).replace(/\s/g, "");
-  if (!isValidBase64ImagePayload(base64)) return null;
-
-  try {
-    const buffer = Buffer.from(base64, "base64");
-    if (buffer.length < MIN_PHOTO_BYTES || buffer.length > MAX_PHOTO_BYTES) return null;
-    return { buffer, mimeType: resolvedMimeType };
-  } catch {
-    return null;
-  }
-}
-
 // ── GET /api/ecostops?lat=X&lng=Y&radius=N ────────────────────────────────────
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -499,8 +477,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, xpAwarded, ecoAwarded, stopName: stop.name });
-  } catch (err: any) {
+  } catch (err) {
     console.error("EcoStop check-in error:", err);
-    return NextResponse.json({ success: false, error: { code: "internal", message: err.message ?? "Server error" } }, { status: 500 });
+    return NextResponse.json({ success: false, error: { code: "internal-error" } }, { status: 500 });
   }
 }

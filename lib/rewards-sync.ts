@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { sql } from "@/lib/db";
+import { logger, logError } from "@/lib/logger";
 
 const MILESTONES: Array<{
   type: "level" | "carbon" | "missions";
@@ -33,7 +34,7 @@ async function getUserById(userId: string): Promise<UserRow | null> {
 async function plantTreesViaEcologi(trees: number, userId: string, milestoneLabel: string): Promise<boolean> {
   const apiKey = process.env.ECOLOGI_API_KEY?.trim();
   if (!apiKey) {
-    console.warn("ECOLOGI_API_KEY not set — skipping tree planting for user", userId);
+    logger.warn("ECOLOGI_API_KEY not set — skipping tree planting", { userId });
     return false;
   }
 
@@ -51,14 +52,14 @@ async function plantTreesViaEcologi(trees: number, userId: string, milestoneLabe
 
     if (!response.ok) {
       const text = await response.text();
-      console.error(`Ecologi API error ${response.status}: ${text}`);
+      logger.error("Ecologi API error", { status: response.status, body: text.slice(0, 500) });
       return false;
     }
 
-    console.log(`Planted ${trees} tree(s) via Ecologi for user ${userId} — milestone: ${milestoneLabel}`);
+    logger.info("Planted tree(s) via Ecologi", { trees, userId, milestone: milestoneLabel });
     return true;
   } catch (error) {
-    console.error("Ecologi API call failed:", error);
+    logError("Ecologi API call failed", error, { userId });
     return false;
   }
 }
@@ -184,7 +185,7 @@ export async function processMilestonesForAllUsers(): Promise<{ processed: numbe
     try {
       totalTrees += await checkAndProcessMilestones(row.id);
     } catch (error) {
-      console.error(`Milestone processing failed for user ${row.id}:`, error);
+      logError("Milestone processing failed", error, { userId: row.id });
     }
   }
 

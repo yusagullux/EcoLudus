@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { processMilestonesForAllUsers } from "@/lib/rewards-sync";
+import { logError } from "@/lib/logger";
 
 /**
  * Nightly cron job — plants trees for users who have hit milestones.
@@ -27,9 +28,9 @@ export async function POST(request: Request) {
       runAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error("Cron: reward processing error:", error);
+    logError("Cron: reward processing error", error);
     return NextResponse.json(
-      { error: "Processing failed", message: String(error) },
+      { error: { code: "internal-error" } },
       { status: 500 }
     );
   }

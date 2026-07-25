@@ -1,11 +1,11 @@
-// @ts-nocheck
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
+import type { ShopItem, ShopMode } from "@/lib/catalog";
 
-type Mode = "plants" | "eggs" | "chests";
+type Mode = ShopMode;
 
 // Mirrors the collection page's CardImage so shop item photos fill the card
 // the same way (full-bleed object-cover, not letterboxed object-contain). Falls
@@ -34,49 +34,43 @@ function ShopCardImage({ item, mode }: { item: ShopItem; mode: Mode }) {
   );
 }
 
-type ShopItem = {
-  id: number;
-  name: string;
-  rarity: Rarity;
-  price: number;
-  image: string;
-  hatchTime?: string;
-  description?: string;
-};
-
-const plants = [
-  { id: 1, name: "Mossy Fern", rarity: "common", price: 50, image: "/images/plants/mint.png" },
-  { id: 2, name: "Golden Daisy", rarity: "common", price: 60, image: "/images/plants/sunflower.png" },
-  { id: 3, name: "Blue Orchid", rarity: "rare", price: 180, image: "/images/plants/orchid.png" },
-  { id: 4, name: "Spotted Aloe", rarity: "rare", price: 200, image: "/images/plants/basil.png" },
-  { id: 5, name: "Mystic Bamboo", rarity: "epic", price: 450, image: "/images/plants/bamboo.png" },
-  { id: 6, name: "Crystal Lotus", rarity: "epic", price: 500, image: "/images/plants/lotus.png" },
-  { id: 7, name: "Aurora Blossom", rarity: "legendary", price: 1200, image: "/images/plants/cherry_blossom.png" },
-  { id: 8, name: "Ember Cactus", rarity: "legendary", price: 1500, image: "/images/plants/dragonfruit.png" }
-];
-
-const eggs = [
-  { id: 1, name: "Common Egg", rarity: "common", price: 100, image: "/images/eggs/common-egg.png", hatchTime: "1h" },
-  { id: 2, name: "Rare Egg", rarity: "rare", price: 300, image: "/images/eggs/rare-egg.png", hatchTime: "4h" },
-  { id: 3, name: "Epic Egg", rarity: "epic", price: 700, image: "/images/eggs/epic-egg.png", hatchTime: "12h" },
-  { id: 4, name: "Legendary Egg", rarity: "legendary", price: 1800, image: "/images/eggs/legendary-egg.png", hatchTime: "24h" }
-];
-
-const chests = [
-  { id: 1, name: "Wooden Chest", rarity: "common", price: 150, image: "/images/chests/wooden-chest.png", description: "Contains EcoCoins or Common Plants!" },
-  { id: 2, name: "Bronze Chest", rarity: "rare", price: 350, image: "/images/chests/bronze-chest.png", description: "Contains EcoCoins, Rare Plants, or Common Eggs!" },
-  { id: 3, name: "Silver Chest", rarity: "epic", price: 800, image: "/images/chests/silver-chest.png", description: "Contains a large amount of EcoCoins, Epic Plants, or Eggs!" },
-  { id: 4, name: "Golden Chest", rarity: "legendary", price: 2000, image: "/images/chests/golden-chest.png", description: "Contains massive EcoCoins, Legendary Plants, or Eggs!" }
-];
+const EMPTY_CATALOG: Record<Mode, ShopItem[]> = { plants: [], eggs: [], chests: [] };
 
 export default function ShopPage() {
   const { user, profile, refreshProfile } = useAuth();
-  const ecoPoints = profile?.ecoPoints ?? 0;
+  const ecoPoints = Number(profile?.ecoPoints ?? 0);
   const [mode, setMode] = useState<Mode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
   const [toast, setToast] = useState("");
+  const [catalog, setCatalog] = useState<Record<Mode, ShopItem[]>>(EMPTY_CATALOG);
+  const [loading, setLoading] = useState(true);
 
-  const items = mode === "plants" ? plants : mode === "eggs" ? eggs : chests;
+  // The catalog (incl. prices) is loaded from the server's read API and is
+  // display-only — the /api/shop/buy route re-validates the price by id, so a
+  // client cannot buy at a cheaper price even by tampering with this state.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/catalog/shop", { credentials: "include" });
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled && res.ok && data?.catalog) {
+          setCatalog({
+            plants: Array.isArray(data.catalog.plants) ? data.catalog.plants : [],
+            eggs: Array.isArray(data.catalog.eggs) ? data.catalog.eggs : [],
+            chests: Array.isArray(data.catalog.chests) ? data.catalog.chests : []
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load shop catalog:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const items = catalog[mode] ?? [];
   const filtered = filter === "all" ? items : items.filter((item) => item.rarity === filter);
   const tabs: ("all" | Rarity)[] = ["all", "common", "rare", "epic", "legendary"];
 
@@ -153,7 +147,11 @@ export default function ShopPage() {
       </Panel>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-        {filtered.map((item) => {
+        {loading ? (
+          <p className="col-span-full text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Loading shop…</p>
+        ) : filtered.length === 0 ? (
+          <p className="col-span-full text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>No items in this category.</p>
+        ) : filtered.map((item) => {
           const style = rarityStyle[item.rarity as Rarity] ?? rarityStyle.common;
           const border = rarityBorder[item.rarity as Rarity] ?? rarityBorder.common;
           const canAfford = ecoPoints >= item.price;

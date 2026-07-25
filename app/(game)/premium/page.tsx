@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { PageHero, Panel, Pill } from "@/components/game-ui";

@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getQuestDefinition } from "@/lib/carbon-calc";
-import { MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, verifyTextProofWithGemini, verifyImageWithProvider } from "@/lib/photo-verification";
+import { MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, isValidBase64ImagePayload, verifyTextProofWithGemini, verifyImageWithProvider } from "@/lib/photo-verification";
 import { markQuestProofVerified } from "@/lib/quest-proof";
-
-function isValidBase64ImagePayload(value: string) {
-  const normalized = value.replace(/\s/g, "");
-  return normalized.length > 0 && normalized.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(normalized);
-}
 
 export async function POST(request: Request) {
   const session = await getSession();

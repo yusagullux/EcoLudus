@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -167,14 +166,60 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
   }
 
   const sorted = [...teams].sort((a, b) => b.totalXP - a.totalXP);
+  const teamPodium = [sorted[1], sorted[0], sorted[2]];
+  const teamPodiumRank = [2, 1, 3];
 
   return (
-    <Panel
-      eyebrow="Team competition"
-      title="Team Rankings"
-      action={<Pill>{sorted.length} teams</Pill>}
-      className="overflow-hidden"
-    >
+    <>
+      {/* Podium */}
+      {sorted.length >= 2 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {teamPodium.map((team, index) => {
+            if (!team) return <div key={index} />;
+            const rank = teamPodiumRank[index];
+            const isGold = rank === 1;
+            return (
+              <div
+                key={team.id}
+                className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""}`}
+                style={{
+                  borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
+                  background: isGold ? "#fbf4df" : "var(--bg-panel)"
+                }}
+              >
+                <span
+                  className="font-serif text-3xl font-extrabold"
+                  style={{ color: medalColors[rank - 1] }}
+                >
+                  {medalLabel[rank - 1]}
+                </span>
+                <span className="text-4xl" aria-hidden>🌿</span>
+                <div>
+                  <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "#102016" }}>
+                    {team.name}
+                  </p>
+                  <p className="text-xs font-semibold" style={{ color: "rgba(47,79,53,0.6)" }}>
+                    {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
+                  </p>
+                </div>
+                <p
+                  className="font-serif text-xl font-extrabold"
+                  style={{ color: medalColors[rank - 1] }}
+                >
+                  {team.totalXP.toLocaleString()} XP
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Panel
+        eyebrow="Team competition"
+        title="Team Rankings"
+        action={<Pill>{sorted.length} teams</Pill>}
+        className="overflow-hidden"
+      >
       <div className="-mx-5 -my-5 overflow-x-auto sm:-mx-6 sm:-my-6">
         <div className="min-w-[600px]">
           <div className="grid grid-cols-[56px_1fr_100px_120px_100px] items-center gap-4 border-b px-5 py-3" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
@@ -222,6 +267,7 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
         </div>
       </div>
     </Panel>
+    </>
   );
 }
 

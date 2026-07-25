@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { randomUUID } from "crypto";
 import { sql } from "@/lib/db";
 
@@ -20,25 +19,41 @@ type SessionUser = {
   email: string;
 };
 
+type DocRef =
+  | { collection: "users"; id: string }
+  | { collection: "teams"; id: string }
+  | { collection: "activeMissions"; id: string; parentId: string }
+  | { collection: "teamMissionLogs"; id: string; parentId: string }
+  | { collection: "missionLogs"; id: string };
+
+type CollectionRef =
+  | { collection: "users" }
+  | { collection: "teams" }
+  | { collection: "missionLogs" }
+  | { collection: "activeMissions"; parentId: string }
+  | { collection: "teamMissionLogs"; parentId: string };
+
+type DocRecord = Record<string, unknown>;
+
 const DELETE_SENTINEL = "__delete_field__";
 const INCREMENT_SENTINEL = "__increment__";
 
-function deepClone(value) {
-  return JSON.parse(JSON.stringify(value));
+function deepClone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function getByPath(source, path) {
-  return path.split(".").reduce((current, key) => {
+function getByPath(source: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((current, key) => {
     if (current && typeof current === "object") {
-      return current[key];
+      return (current as Record<string, unknown>)[key];
     }
     return undefined;
   }, source);
 }
 
-function setByPath(target, path, value) {
+function setByPath(target: DocRecord, path: string, value: unknown): void {
   const keys = path.split(".");
-  let cursor = target;
+  let cursor: DocRecord = target;
 
   for (let index = 0; index < keys.length - 1; index += 1) {
     const key = keys[index];
@@ -48,15 +63,15 @@ function setByPath(target, path, value) {
       cursor[key] = {};
     }
 
-    cursor = cursor[key];
+    cursor = cursor[key] as DocRecord;
   }
 
   cursor[keys[keys.length - 1]] = value;
 }
 
-function deleteByPath(target, path) {
+function deleteByPath(target: DocRecord, path: string): void {
   const keys = path.split(".");
-  let cursor = target;
+  let cursor: DocRecord = target;
 
   for (let index = 0; index < keys.length - 1; index += 1) {
     const key = keys[index];
@@ -64,26 +79,28 @@ function deleteByPath(target, path) {
     if (!nextValue || typeof nextValue !== "object" || Array.isArray(nextValue)) {
       return;
     }
-    cursor = nextValue;
+    cursor = nextValue as DocRecord;
   }
 
   delete cursor[keys[keys.length - 1]];
 }
 
-function applyPatch(payload, patch) {
+function applyPatch(payload: DocRecord, patch: DocRecord): DocRecord {
   const nextPayload = deepClone(payload);
 
   for (const [key, value] of Object.entries(patch)) {
-    if (value && typeof value === "object" && !Array.isArray(value) && value.__op === DELETE_SENTINEL) {
-      deleteByPath(nextPayload, key);
-      continue;
-    }
-
-    if (value && typeof value === "object" && !Array.isArray(value) && value.__op === INCREMENT_SENTINEL) {
-      const currentValue = Number(getByPath(nextPayload, key) ?? 0);
-      const incrementBy = Number(value.value ?? 0);
-      setByPath(nextPayload, key, currentValue + incrementBy);
-      continue;
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const record = value as Record<string, unknown>;
+      if (record.__op === DELETE_SENTINEL) {
+        deleteByPath(nextPayload, key);
+        continue;
+      }
+      if (record.__op === INCREMENT_SENTINEL) {
+        const currentValue = Number(getByPath(nextPayload, key) ?? 0);
+        const incrementBy = Number(record.value ?? 0);
+        setByPath(nextPayload, key, currentValue + incrementBy);
+        continue;
+      }
     }
 
     setByPath(nextPayload, key, value);
@@ -92,7 +109,7 @@ function applyPatch(payload, patch) {
   return nextPayload;
 }
 
-function parseDocPath(path) {
+function parseDocPath(path: string[]): DocRef {
   if (path[0] === "users" && path.length === 2) {
     return { collection: "users", id: path[1] };
   }
@@ -116,7 +133,7 @@ function parseDocPath(path) {
   throw new Error(`Unsupported document path: ${path.join("/")}`);
 }
 
-function parseCollectionPath(path) {
+function parseCollectionPath(path: string[]): CollectionRef {
   if (path.length === 1 && path[0] === "users") {
     return { collection: "users" };
   }
@@ -146,15 +163,15 @@ function ensureAuthenticated(session: SessionUser | null): asserts session is Se
   }
 }
 
-function sanitizeUserPayload(id, email, payload) {
+function sanitizeUserPayload(id: string, email: string, payload: DocRecord | null): DocRecord {
   return {
-    ...payload,
+    ...(payload ?? {}),
     email,
     id
   };
 }
 
-async function readUser(id) {
+async function readUser(id: string): Promise<DocRecord | null> {
   const result = await sql("select id, email, payload from users where id = $1 limit 1", [id]);
   const row = result.rows[0];
 
@@ -165,7 +182,7 @@ async function readUser(id) {
   return sanitizeUserPayload(row.id, row.email, row.payload);
 }
 
-async function readTeam(id) {
+async function readTeam(id: string): Promise<DocRecord | null> {
   const result = await sql("select id, join_code, payload from teams where id = $1 limit 1", [id]);
   const row = result.rows[0];
 
@@ -174,35 +191,45 @@ async function readTeam(id) {
   }
 
   return {
-    ...row.payload,
+    ...(row.payload as DocRecord | null ?? {}),
     joinCode: row.join_code
   };
 }
 
-async function readTeamSubdoc(table: "team_active_missions" | "team_mission_logs", teamId, id) {
+async function readTeamSubdoc(
+  table: "team_active_missions" | "team_mission_logs",
+  teamId: string,
+  id: string
+): Promise<DocRecord | null> {
   if (table === "team_active_missions") {
-    const result = await sql("select payload from team_active_missions where team_id = $1 and id = $2 limit 1", [teamId, id]);
-    return result.rows[0]?.payload ?? null;
+    const result = await sql(
+      "select payload from team_active_missions where team_id = $1 and id = $2 limit 1",
+      [teamId, id]
+    );
+    return (result.rows[0]?.payload as DocRecord | null) ?? null;
   }
-  const result = await sql("select payload from team_mission_logs where team_id = $1 and id = $2 limit 1", [teamId, id]);
-  return result.rows[0]?.payload ?? null;
+  const result = await sql(
+    "select payload from team_mission_logs where team_id = $1 and id = $2 limit 1",
+    [teamId, id]
+  );
+  return (result.rows[0]?.payload as DocRecord | null) ?? null;
 }
 
-async function readMissionLog(id) {
+async function readMissionLog(id: string): Promise<DocRecord | null> {
   const result = await sql("select payload from mission_logs where id = $1 limit 1", [id]);
-  return result.rows[0]?.payload ?? null;
+  return (result.rows[0]?.payload as DocRecord | null) ?? null;
 }
 
-function canAccessTeamPayload(payload, session) {
+function canAccessTeamPayload(payload: DocRecord, session: SessionUser): boolean {
   const members = payload.members;
   if (!members || typeof members !== "object" || Array.isArray(members)) {
     return false;
   }
 
-  return Boolean(members[session.userId]);
+  return Boolean((members as Record<string, unknown>)[session.userId]);
 }
 
-export async function getDocument(path, session) {
+export async function getDocument(path: string[], session: SessionUser | null): Promise<DocRecord | null> {
   ensureAuthenticated(session);
   const ref = parseDocPath(path);
 
@@ -250,7 +277,11 @@ export async function getDocument(path, session) {
   return log;
 }
 
-export async function setDocument(path, data, session) {
+export async function setDocument(
+  path: string[],
+  data: DocRecord,
+  session: SessionUser | null
+): Promise<void> {
   ensureAuthenticated(session);
   const ref = parseDocPath(path);
 
@@ -259,7 +290,7 @@ export async function setDocument(path, data, session) {
       throw new Error("permission-denied");
     }
 
-    const payload = {
+    const payload: DocRecord = {
       ...data,
       email: session.email
     };
@@ -284,16 +315,18 @@ export async function setDocument(path, data, session) {
   }
 
   if (ref.collection === "teams") {
-    const members = data.members;
-    const isMember =
-      members &&
-      typeof members === "object" &&
-      !Array.isArray(members) &&
-      Boolean(members[session.userId]);
-
-    if (!isMember) {
+    // Membership is owned by /api/teams (team_active_missions rows), not by
+    // this document-store path. Only an EXISTING member may write team
+    // metadata here, and the `members` map is never accepted from the client
+    // — otherwise a caller could self-grant membership by sending
+    // { members: { [theirUserId]: true } } and then read/write team subdocs.
+    const existing = await readTeam(ref.id);
+    if (!existing || !canAccessTeamPayload(existing, session)) {
       throw new Error("permission-denied");
     }
+
+    const { members: _dropMembers, ...rest } = data;
+    const payload: DocRecord = { ...rest, members: existing.members ?? {} };
 
     await sql(
       `insert into teams (id, join_code, created_by, payload)
@@ -302,7 +335,9 @@ export async function setDocument(path, data, session) {
        set join_code = excluded.join_code,
            payload = excluded.payload,
            updated_at = now()`,
-      [ref.id, String(data.joinCode ?? ""), session.userId, JSON.stringify(data)]
+      // created_by ($3) only applies on insert; on conflict it is preserved
+      // (not in the SET list).
+      [ref.id, String(data.joinCode ?? existing.joinCode ?? ""), session.userId, JSON.stringify(payload)]
     );
     return;
   }
@@ -352,7 +387,11 @@ export async function setDocument(path, data, session) {
   );
 }
 
-export async function updateDocument(path, updates, session) {
+export async function updateDocument(
+  path: string[],
+  updates: DocRecord,
+  session: SessionUser | null
+): Promise<void> {
   ensureAuthenticated(session);
   const current = await getDocument(path, session);
   if (!current) {
@@ -363,7 +402,7 @@ export async function updateDocument(path, updates, session) {
   await setDocument(path, next, session);
 }
 
-export async function deleteDocument(path, session) {
+export async function deleteDocument(path: string[], session: SessionUser | null): Promise<void> {
   ensureAuthenticated(session);
   const ref = parseDocPath(path);
 
@@ -405,7 +444,11 @@ export async function deleteDocument(path, session) {
   await sql("delete from mission_logs where id = $1 and user_id = $2", [ref.id, session.userId]);
 }
 
-export async function addDocument(collectionPath, data, session) {
+export async function addDocument(
+  collectionPath: string[],
+  data: DocRecord,
+  session: SessionUser | null
+): Promise<{ id: string }> {
   const collection = parseCollectionPath(collectionPath);
   const id = randomUUID();
 
@@ -423,7 +466,12 @@ export async function addDocument(collectionPath, data, session) {
   return { id };
 }
 
-export async function listDocuments(collectionPath, filters, maxResults, session) {
+export async function listDocuments(
+  collectionPath: string[],
+  filters: QueryFilter[],
+  maxResults: number | null | undefined,
+  session: SessionUser | null
+): Promise<Array<{ id: string; data: DocRecord }>> {
   ensureAuthenticated(session);
   const collection = parseCollectionPath(collectionPath);
   const limitValue = Math.max(1, Math.min(maxResults ?? 100, 500));
@@ -439,7 +487,7 @@ export async function listDocuments(collectionPath, filters, maxResults, session
 
   if (collection.collection === "teams") {
     let queryText = "select id, join_code, payload from teams";
-    const params = [];
+    const params: unknown[] = [];
 
     if (filters.length === 1 && filters[0]?.field === "joinCode" && filters[0]?.op === "==") {
       params.push(String(filters[0].value ?? ""));
@@ -455,11 +503,13 @@ export async function listDocuments(collectionPath, filters, maxResults, session
       .map((row) => ({
         id: row.id,
         data: {
-          ...row.payload,
+          ...(row.payload as DocRecord | null ?? {}),
           joinCode: row.join_code
-        }
+        } as DocRecord
       }))
-      .filter((row) => canAccessTeamPayload(row.data, session) || filters.some((filter) => filter.field === "joinCode"));
+      .filter(
+        (row) => canAccessTeamPayload(row.data, session) || filters.some((filter) => filter.field === "joinCode")
+      );
   }
 
   if (collection.collection === "activeMissions") {
@@ -468,14 +518,14 @@ export async function listDocuments(collectionPath, filters, maxResults, session
       throw new Error("permission-denied");
     }
 
-    const result = await sql("select id, payload from team_active_missions where team_id = $1 order by created_at desc limit $2", [
-      collection.parentId,
-      limitValue
-    ]);
+    const result = await sql(
+      "select id, payload from team_active_missions where team_id = $1 order by created_at desc limit $2",
+      [collection.parentId, limitValue]
+    );
 
     return result.rows.map((row) => ({
       id: row.id,
-      data: row.payload
+      data: (row.payload as DocRecord | null) ?? {}
     }));
   }
 
@@ -486,7 +536,7 @@ export async function listDocuments(collectionPath, filters, maxResults, session
     }
 
     let queryText = "select id, payload from team_mission_logs where team_id = $1";
-    const params = [collection.parentId];
+    const params: unknown[] = [collection.parentId];
 
     if (filters.length === 1 && filters[0]?.field === "missionId" && filters[0]?.op === "==") {
       params.push(String(filters[0].value ?? ""));
@@ -499,17 +549,21 @@ export async function listDocuments(collectionPath, filters, maxResults, session
     const result = await sql(queryText, params);
     return result.rows.map((row) => ({
       id: row.id,
-      data: row.payload
+      data: (row.payload as DocRecord | null) ?? {}
     }));
   }
 
-  const result = await sql("select id, payload from mission_logs where user_id = $1 order by created_at desc limit $2", [
-    session.userId,
-    limitValue
-  ]);
+  const result = await sql(
+    "select id, payload from mission_logs where user_id = $1 order by created_at desc limit $2",
+    [session.userId, limitValue]
+  );
 
   return result.rows.map((row) => ({
     id: row.id,
-    data: row.payload
+    data: (row.payload as DocRecord | null) ?? {}
   }));
 }
+
+// `SupportedCollection` is exported for callers that branch on the same set of
+// collection names (e.g. the /api/store route's discriminated validation).
+export type { SupportedCollection };

@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { logger } from "@/lib/logger";
 
 const SESSION_COOKIE_NAME = "ecoquest_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
@@ -18,7 +19,7 @@ function getSessionSecret() {
   }
 
   if (!secret) {
-    console.warn("WARNING: SESSION_SECRET env variable is not configured. Using a fallback secret for development.");
+    logger.warn("SESSION_SECRET not configured — using development fallback secret");
   }
 
   return new TextEncoder().encode(secret || "development-fallback-session-secret-at-least-32-chars-long");

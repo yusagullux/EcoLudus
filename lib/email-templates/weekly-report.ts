@@ -2,7 +2,7 @@ export type WeeklyReportData = {
   displayName: string;
   email: string;
   xp: number;
-  xpGainedThisWeek: number;
+  impactGainedThisWeek: number;
   level: number;
   carbonReduced: number;
   missionsCompleted: number;
@@ -16,7 +16,7 @@ export function buildWeeklyReportHtml(data: WeeklyReportData): string {
   const {
     displayName,
     xp,
-    xpGainedThisWeek,
+    impactGainedThisWeek,
     level,
     carbonReduced,
     missionsCompleted,
@@ -56,8 +56,8 @@ export function buildWeeklyReportHtml(data: WeeklyReportData): string {
           <!-- XP highlight -->
           <tr>
             <td style="background:#1a3020;padding:20px 32px;text-align:center;">
-              <p style="margin:0;color:#8fbf7a;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;">XP Gained This Week</p>
-              <p style="margin:6px 0 0;color:#ffffff;font-size:42px;font-weight:700;line-height:1;">+${xpGainedThisWeek.toLocaleString()}</p>
+              <p style="margin:0;color:#8fbf7a;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;">Impact Gained This Week</p>
+              <p style="margin:6px 0 0;color:#ffffff;font-size:42px;font-weight:700;line-height:1;">+${impactGainedThisWeek.toLocaleString()}</p>
               <p style="margin:4px 0 0;color:#8fbf7a;font-size:12px;">${xp.toLocaleString()} total XP · Level ${level}</p>
             </td>
           </tr>
@@ -125,7 +125,7 @@ Hi ${data.displayName},
 
 Here's your week in review:
 
-  +${data.xpGainedThisWeek.toLocaleString()} XP this week (${data.xp.toLocaleString()} total · Level ${data.level})
+  +${data.impactGainedThisWeek.toLocaleString()} Impact this week (${data.xp.toLocaleString()} total XP · Level ${data.level})
   ✅ ${data.weeklyMissions} missions completed
   🌿 ${data.carbonReduced.toFixed(1)} kg CO₂ reduced total
   🌳 ${data.treesPlanted} trees planted
