@@ -59,18 +59,16 @@ const animalEmoji: Record<string, string> = {
   Tiger: "🐯", Lion: "🦁", Phoenix: "🔥", Dragon: "🐉", Kraken: "🐙", Octapus: "🐙"
 };
 
-function CardImage({ entry, discovered, mode }: { entry: MasterEntry; discovered: boolean; mode: CollMode }) {
+function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; discovered: boolean; mode: CollMode; fit?: "cover" | "contain" }) {
   const [imgError, setImgError] = useState(false);
 
-  // Pet/animal art has wildly varying aspect ratios (cobra 687×1031 portrait,
-  // cat 1742×1161 landscape, kraken 1024×1536) and the creature has meaningful
-  // extent (head, tail, wings). object-cover would crop those off, so animals
-  // use object-contain to fit the whole creature inside the card, with a
-  // sliver of padding so tightly-framed art doesn't kiss the tile edge. Plants,
-  // eggs, seeds, and chests are centered blobs that crop cleanly, so they keep
-  // object-cover (full-bleed, no padding) for a uniform Pokédex tile.
-  const isAnimal = mode === "animals";
-  const fitClass = isAnimal ? "object-contain p-1.5" : "object-cover";
+  // All species tiles (plants, eggs, seeds, chests AND animals) now use
+  // object-cover for a uniform, full-bleed Pokédex grid that matches the shop.
+  // Pass fit="contain" for showcase surfaces (e.g. the hatching reveal) where
+  // the whole creature must stay visible — animal art has wildly varying
+  // aspect ratios (cobra 687×1031 portrait, cat 1742×1161 landscape) and
+  // cropping the head/tail/wings on a big reveal would look wrong.
+  const fitClass = fit === "contain" ? "object-contain p-1.5" : "object-cover";
 
   // Locked entries render as a pure silhouette: brightness(0) kills color,
   // opacity(0.55) softens it into a dark shape over the panel.
@@ -827,7 +825,7 @@ export default function CollectionPage() {
                   style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)" }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-tr from-green-500/10 to-transparent pointer-events-none" />
-                  <CardImage entry={revealedAnimal} discovered mode="animals" />
+                  <CardImage entry={revealedAnimal} discovered mode="animals" fit="contain" />
                 </div>
 
                 <div className="flex flex-col items-center">

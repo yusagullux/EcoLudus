@@ -1,14 +1,53 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { updateUserProfile } from "@/lib/auth-client";
+import { computeVitals } from "@/lib/pet-vitals";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
 function getPetImage(pet: any) {
   if (pet?.image) return pet.image;
   return `/images/pets/${String(pet?.name || "cat").toLowerCase()}.png`;
+}
+
+// Emoji fallback for a missing pet asset — keeps the card from showing a
+// broken-image icon. Mirrors the collection page's animalEmoji map.
+const PET_EMOJI: Record<string, string> = {
+  Cat: "🐱", Dog: "🐶", Rabbit: "🐰", Bee: "🐝", Mouse: "🐭", Worm: "🪱",
+  Deer: "🦌", Owl: "🦉", Panda: "🐼", Cobra: "🐍", Jaguar: "🐆", Wolf: "🐺",
+  Bear: "🐻", Eagle: "🦅", Lynx: "🐱", Shark: "🦈", Whale: "🐋", Tiger: "🐯",
+  Lion: "🦁", Phoenix: "🔥", Dragon: "🐉", Kraken: "🐙", Octapus: "🐙"
+};
+
+// Pet card image. `fit="cover"` (default) fills the frame like the shop/collection
+// tiles for a uniform grid; `fit="contain"` letterboxes the whole creature and is
+// used for the showcase portrait where cropping the art would look wrong.
+function PetImage({ pet, fit = "cover" }: { pet: any; fit?: "cover" | "contain" }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (imgError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-5xl select-none drop-shadow-sm transition duration-300 group-hover:scale-110">
+        {PET_EMOJI[String(pet?.name || "")] || "🐾"}
+      </div>
+    );
+  }
+
+  const fitClass =
+    fit === "contain"
+      ? "object-contain p-3 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]"
+      : "object-cover";
+
+  return (
+    <img
+      src={getPetImage(pet)}
+      alt={pet?.name || "pet"}
+      loading="lazy"
+      onError={() => setImgError(true)}
+      className={`h-full w-full ${fitClass} transition duration-300 group-hover:scale-110`}
+    />
+  );
 }
 
 const CARE_ACTIONS = [
@@ -37,12 +76,19 @@ function getBondLevel(bond: number) {
   return Math.max(1, Math.min(10, Math.floor(bond / 10) + 1));
 }
 
+// Apply time-based vitality drift (happiness decay / energy regen) to the
+// displayed stats. Cosmetic & non-authoritative — the care/quest routes
+// re-derive and re-anchor `vitalsAt` on interaction — but it keeps the page
+// feeling alive: a neglected pet visibly slides toward "Needs care" before
+// you act. See lib/pet-vitals.ts; the shared formula means display and server
+// never diverge between interactions.
 function normalizePet(pet: any) {
+  const drifted = computeVitals(pet, Date.now());
   return {
     ...pet,
-    happiness: Math.min(100, Math.max(0, Number(pet.happiness ?? 50))),
-    energy: Math.min(100, Math.max(0, Number(pet.energy ?? 50))),
-    bond: Math.min(100, Math.max(0, Number(pet.bond ?? 10))),
+    happiness: drifted.happiness,
+    energy: drifted.energy,
+    bond: drifted.bond,
     careStreak: Math.max(0, Number(pet.careStreak ?? 0)),
     careActionsToday: Math.max(0, Number(pet.careActionsToday ?? 0))
   };
@@ -206,19 +252,13 @@ export default function PetsPage() {
                 type="button"
                 onClick={petTheAnimal}
                 aria-label={`Pet ${selectedPet.name}`}
-                className="relative flex aspect-square w-full max-w-[360px] items-center justify-center overflow-hidden rounded-[28px] border transition active:scale-[0.98]"
+                className="relative flex aspect-square w-full max-w-[360px] items-center justify-center overflow-hidden rounded-[28px] border transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   borderColor: rarityBorder[selectedPet.rarity as Rarity] ?? "var(--border-default)",
                   background: `radial-gradient(circle at 50% 35%, ${(rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "#2f6b46")}22, transparent 58%), var(--bg-panel-alt)`
                 }}
               >
-                <Image
-                  src={getPetImage(selectedPet)}
-                  alt={selectedPet.name}
-                  fill
-                  sizes="(max-width: 480px) 88vw, 360px"
-                  className="object-contain p-3 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]"
-                />
+                <PetImage pet={selectedPet} fit="contain" />
                 {hearts.map((heart) => (
                   <span
                     key={heart.id}
@@ -319,31 +359,30 @@ export default function PetsPage() {
           {pets.map((pet) => {
             const isSelected = selectedPet?.id === pet.id;
             const isActive = pet.active || activePetId === pet.id;
+            const style = rarityStyle[pet.rarity as Rarity] ?? rarityStyle.common;
+            const accent = style.accent;
+            const border = isSelected ? accent : (rarityBorder[pet.rarity as Rarity] ?? rarityBorder.common);
             return (
               <button
                 key={pet.id}
                 type="button"
                 onClick={() => setSelectedId(pet.id)}
-                className="group overflow-hidden rounded-[20px] border text-left transition hover:-translate-y-1"
+                className="reveal-card group overflow-hidden rounded-[20px] border text-left transition duration-300 hover:-translate-y-1"
                 style={{
-                  borderColor: isSelected ? rarityStyle[pet.rarity as Rarity]?.accent ?? "var(--border-default)" : rarityBorder[pet.rarity as Rarity] ?? "var(--border-default)",
-                  background: "var(--bg-card)"
+                  borderColor: border,
+                  background: "var(--bg-card)",
+                  ...(isSelected ? { boxShadow: `0 10px 28px ${accent}33` } : {})
                 }}
               >
-                <span className="relative block aspect-square overflow-hidden" style={{ background: `${rarityStyle[pet.rarity as Rarity]?.accent ?? "#2f6b46"}12` }}>
-                  <Image
-                    src={getPetImage(pet)}
-                    alt={pet.name}
-                    fill
-                    sizes="(max-width: 640px) 45vw, (max-width: 768px) 30vw, 200px"
-                    className="object-contain p-1.5 transition duration-300 group-hover:scale-110"
-                  />
-                  {isActive && <span className="absolute left-2 top-2 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
+                <span className="relative block aspect-square overflow-hidden" style={{ background: `${accent}12` }}>
+                  <PetImage pet={pet} fit="cover" />
+                  {isActive && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
+                  <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{pet.rarity}</span>
                 </span>
                 <span className="block p-3">
                   <span className="block truncate font-serif text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{pet.name}</span>
                   <span className="mt-2 block">
-                    <ProgressBar value={Number(pet.happiness ?? 50)} color={rarityStyle[pet.rarity as Rarity]?.accent ?? "#2f6b46"} />
+                    <ProgressBar value={Number(pet.happiness ?? 50)} color={accent} />
                   </span>
                 </span>
               </button>

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { grantImpact, type ImpactUser } from "@/lib/impact-service";
+import { computeVitals } from "@/lib/pet-vitals";
 
 // Server-validated pet care. The pets page used to mutate XP/eco/stat fields
 // straight through `updateUserProfile`, which was trivially forgeable (a client
@@ -119,22 +120,31 @@ export async function POST(request: Request) {
 
       const ecoGained = action.eco > 0 && careActionsToday < MAX_ECO_ACTIONS_PER_DAY ? action.eco : 0;
 
+      const now = Date.now();
       const nextAnimals = animals.map((entry) => {
         if (String(entry.id) !== parsed.petId) return entry;
-        const currentStatValue = clampStat(entry[action.stat], action.stat === "bond" ? 10 : 50);
+        // Drift the stored vitals to "now" first (authoritative), then apply the
+        // action delta on top, then re-anchor `vitalsAt` so the client's own
+        // computeVitals matches between interactions. Bond doesn't drift, so the
+        // bond action reads from the clamped stored value.
+        const drifted = computeVitals(entry, now);
+        const currentStatValue =
+          action.stat === "bond" ? clampStat(entry.bond, 10) : action.stat === "energy" ? drifted.energy : drifted.happiness;
         return {
           ...entry,
           [action.stat]: Math.min(100, currentStatValue + action.amount),
           happiness: Math.min(
             100,
-            clampStat(entry.happiness, 50) + (action.stat === "happiness" ? 0 : 4)
+            drifted.happiness + (action.stat === "happiness" ? 0 : 4)
           ),
+          energy: action.stat === "energy" ? Math.min(100, drifted.energy + action.amount) : drifted.energy,
           petsGiven: Number(entry.petsGiven ?? 0) + 1,
           careActionsToday: careActionsToday + 1,
           petXpToday: parsed.action === "pet" ? (petXpEligible ? petXpToday + 1 : Number(entry.petXpToday ?? 0)) : Number(entry.petXpToday ?? 0),
           careStreak: isNewCareDay ? Number(entry.careStreak ?? 0) + 1 : Number(entry.careStreak ?? 0),
           lastCareDate: today,
-          lastPettedAt: new Date().toISOString()
+          lastPettedAt: new Date(now).toISOString(),
+          vitalsAt: new Date(now).toISOString()
         };
       });
 

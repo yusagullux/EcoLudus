@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
-import { grantImpact } from "@/lib/impact-service";
+import { transaction, selectUserForUpdate } from "@/lib/db";
+import { grantImpact, type ImpactUser } from "@/lib/impact-service";
 
 // Server-validated social-quest claim. The friends page used to grant the
 // quest's XP + eco straight through `updateUserProfile` after a client-side
@@ -52,63 +52,72 @@ export async function POST(request: Request) {
   }
 
   try {
-    const userResult = await sql<{ email: string; payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [session.userId]
-    );
-    if (userResult.rowCount === 0) {
-      return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
-    }
+    // Read → re-claim guard → progress check → grant inside one transaction with
+    // a row lock on the user row. The `claimedSocialRewards` re-claim guard is
+    // checked against the locked row, so two concurrent claims can no longer
+    // both pass the guard and double-grant the quest's XP/eco (the lost-update
+    // class fixed in the other reward routes — see the reward-routes-lost-update
+    // note). grantImpact shares the lock via `tx` (no re-read, no nested tx).
+    return await transaction(async (query) => {
+      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      if (userResult.rowCount === 0) {
+        return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
+      }
 
-    const quest = SOCIAL_QUESTS.find((q) => q.id === parsed.questId) ?? null;
-    if (!quest) {
-      return NextResponse.json({ error: { code: "social-quest/not-found" } }, { status: 404 });
-    }
+      const quest = SOCIAL_QUESTS.find((q) => q.id === parsed.questId) ?? null;
+      if (!quest) {
+        return NextResponse.json({ error: { code: "social-quest/not-found" } }, { status: 404 });
+      }
 
-    const profile = userResult.rows[0].payload ?? {};
-    const claimedSocialRewards = Array.isArray(profile.claimedSocialRewards)
-      ? (profile.claimedSocialRewards as string[])
-      : [];
-    if (claimedSocialRewards.includes(quest.id)) {
-      return NextResponse.json(
-        { error: { code: "social-quest/already-claimed", message: "You have already claimed this reward." } },
-        { status: 409 }
-      );
-    }
+      const user = userResult.rows[0];
+      const profile = user.payload ?? {};
+      const claimedSocialRewards = Array.isArray(profile.claimedSocialRewards)
+        ? (profile.claimedSocialRewards as string[])
+        : [];
+      if (claimedSocialRewards.includes(quest.id)) {
+        return NextResponse.json(
+          { error: { code: "social-quest/already-claimed", message: "You have already claimed this reward." } },
+          { status: 409 }
+        );
+      }
 
-    // Re-derive progress from stored state — never trust the client's number.
-    const friends = Array.isArray(profile.friends) ? (profile.friends as unknown[]) : [];
-    const socialStats = (profile.socialStats ?? {}) as Record<string, unknown>;
-    const progress =
-      quest.metric === "friends"
-        ? friends.length
-        : Math.max(0, Number(socialStats.cheersGiven ?? 0));
+      // Re-derive progress from stored state — never trust the client's number.
+      const friends = Array.isArray(profile.friends) ? (profile.friends as unknown[]) : [];
+      const socialStats = (profile.socialStats ?? {}) as Record<string, unknown>;
+      const progress =
+        quest.metric === "friends"
+          ? friends.length
+          : Math.max(0, Number(socialStats.cheersGiven ?? 0));
 
-    if (progress < quest.target) {
-      return NextResponse.json(
-        { error: { code: "social-quest/not-complete", message: "You haven't met the goal for this reward yet." } },
-        { status: 425 }
-      );
-    }
+      if (progress < quest.target) {
+        return NextResponse.json(
+          { error: { code: "social-quest/not-complete", message: "You haven't met the goal for this reward yet." } },
+          { status: 425 }
+        );
+      }
 
-    const granted = await grantImpact({
-      userId: session.userId,
-      source: "friend",
-      baseXp: quest.xp,
-      baseImpact: quest.xp, // social-quest completion is real social activity — feeds the spine
-      eco: quest.eco,
-      meta: { questId: quest.id, metric: quest.metric, target: quest.target },
-      payloadPatch: { claimedSocialRewards: [...claimedSocialRewards, quest.id] }
-    });
+      const granted = await grantImpact({
+        userId: session.userId,
+        source: "friend",
+        baseXp: quest.xp,
+        baseImpact: quest.xp, // social-quest completion is real social activity — feeds the spine
+        eco: quest.eco,
+        meta: { questId: quest.id, metric: quest.metric, target: quest.target },
+        payloadPatch: { claimedSocialRewards: [...claimedSocialRewards, quest.id] },
+        // Share the locked transaction so the re-claim guard + reward grant are
+        // one atomic unit.
+        tx: { query, user }
+      });
 
-    return NextResponse.json({
-      success: true,
-      questId: quest.id,
-      xpAwarded: quest.xp,
-      ecoAwarded: quest.eco,
-      level: granted?.level ?? null,
-      xp: granted?.xp ?? null,
-      ecoPoints: granted?.ecoPoints ?? null
+      return NextResponse.json({
+        success: true,
+        questId: quest.id,
+        xpAwarded: quest.xp,
+        ecoAwarded: quest.eco,
+        level: granted?.level ?? null,
+        xp: granted?.xp ?? null,
+        ecoPoints: granted?.ecoPoints ?? null
+      });
     });
   } catch (error) {
     console.error("Social quest claim error:", error);

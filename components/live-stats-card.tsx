@@ -40,33 +40,40 @@ export async function LiveStatsCard() {
 
   return (
     <div className="rounded-[2rem] border border-white/70 bg-[linear-gradient(145deg,rgba(255,255,255,0.94),rgba(239,243,232,0.82))] p-5 shadow-[0_35px_90px_rgba(16,33,20,0.16)] backdrop-blur-xl">
-      <div className="rounded-[1.5rem] bg-[linear-gradient(180deg,#26472e_0%,#16301d_100%)] p-6 text-cream-100 shadow-inner">
-        <div className="flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-[1.5rem] bg-[linear-gradient(180deg,#26472e_0%,#16301d_100%)] p-6 text-cream-100 shadow-inner sm:p-7">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-moss-300/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-moss-300">Real-time impact</p>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-moss-300 opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-moss-300" />
+              </span>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-moss-300">Real-time impact</p>
+            </div>
             <h2 className="mt-3 font-serif text-3xl">Forest pulse</h2>
           </div>
-          <div className="rounded-2xl bg-white/10 px-4 py-3 text-right">
-            <div className="text-xs uppercase tracking-[0.22em] text-moss-300">CO₂ reduced</div>
-            <div className="mt-2 text-3xl font-semibold">{stats.total_co2_reduced.toFixed(1)}kg</div>
-            <div className="mt-1 text-xs text-moss-300">by community</div>
+          <div className="rounded-2xl bg-white/10 px-4 py-3 text-right ring-1 ring-white/10">
+            <div className="text-[10px] uppercase tracking-[0.22em] text-moss-300">CO₂ reduced</div>
+            <div className="mt-1.5 font-serif text-3xl font-bold">{stats.total_co2_reduced.toFixed(1)}<span className="text-lg">kg</span></div>
+            <div className="mt-0.5 text-[10px] text-moss-300">by community</div>
           </div>
         </div>
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-3xl border border-white/10 bg-white/8 px-4 py-5">
-            <div className="text-xs uppercase tracking-[0.2em] text-moss-300">Active members</div>
-            <div className="mt-3 text-2xl font-semibold text-white">{stats.active_users}</div>
+        <div className="relative mt-7 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-moss-300">Active members</div>
+            <div className="mt-2 font-serif text-2xl font-bold text-white">{stats.active_users.toLocaleString()}</div>
           </div>
-          <div className="rounded-3xl border border-white/10 bg-white/8 px-4 py-5">
-            <div className="text-xs uppercase tracking-[0.2em] text-moss-300">Missions</div>
-            <div className="mt-3 text-2xl font-semibold text-white">{stats.total_missions}</div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-moss-300">Missions</div>
+            <div className="mt-2 font-serif text-2xl font-bold text-white">{stats.total_missions.toLocaleString()}</div>
           </div>
-          <div className="rounded-3xl border border-white/10 bg-white/8 px-4 py-5">
-            <div className="text-xs uppercase tracking-[0.2em] text-moss-300">Community XP</div>
-            <div className="mt-3 text-2xl font-semibold text-white">{(stats.total_xp / 1000).toFixed(1)}k</div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-moss-300">Community XP</div>
+            <div className="mt-2 font-serif text-2xl font-bold text-white">{(stats.total_xp / 1000).toFixed(1)}k</div>
           </div>
         </div>
-        <div className="mt-4 text-xs text-moss-300">Real data from verified missions</div>
+        <div className="relative mt-4 text-[11px] text-moss-300">Real data from verified missions</div>
       </div>
     </div>
   );
