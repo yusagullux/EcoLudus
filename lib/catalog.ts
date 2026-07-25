@@ -111,3 +111,62 @@ export const SHOP_SEED_ROWS: ShopSeedRow[] = (Object.keys(SHOP_CATALOG) as ShopM
     sort_order: index
   }))
 );
+
+// ── Pets + seeds: shared species catalogs ─────────────────────────────────
+//
+// Unlike the shop catalog, pets and seeds have no runtime-editable values
+// (no prices), so they live as TS constants rather than DB tables — the hatch
+// route (`app/api/eggs/incubate`) and the chest route (`app/api/chests/open`)
+// import these instead of hardcoding their pools, and the collection page
+// reads them via `GET /api/catalog/species`. One source, no client drift.
+
+export type PetSpecies = {
+  id: string;
+  name: string;
+  rarity: Rarity;
+  image: string;
+};
+
+export type SeedSpecies = {
+  id: string;
+  name: string;
+  rarity: Rarity;
+  image: string;
+};
+
+function slug(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+// The 13 companion animals the hatch route rolls from, grouped by the egg
+// rarity that hatches them. This is the single source of truth — the hatch
+// route builds its per-rarity pool from this flat list.
+export const PET_CATALOG: PetSpecies[] = [
+  { id: "cat", name: "Cat", rarity: "common", image: "/images/pets/cat.png" },
+  { id: "dog", name: "Dog", rarity: "common", image: "/images/pets/dog.png" },
+  { id: "rabbit", name: "Rabbit", rarity: "common", image: "/images/pets/rabbit.png" },
+  { id: "bee", name: "Bee", rarity: "common", image: "/images/pets/bee.png" },
+  { id: "deer", name: "Deer", rarity: "rare", image: "/images/pets/deer.png" },
+  { id: "owl", name: "Owl", rarity: "rare", image: "/images/pets/owl.png" },
+  { id: "panda", name: "Panda", rarity: "rare", image: "/images/pets/panda.png" },
+  { id: "wolf", name: "Wolf", rarity: "epic", image: "/images/pets/wolf.png" },
+  { id: "bear", name: "Bear", rarity: "epic", image: "/images/pets/bear.png" },
+  { id: "eagle", name: "Eagle", rarity: "epic", image: "/images/pets/eagle.png" },
+  { id: "tiger", name: "Tiger", rarity: "legendary", image: "/images/pets/tiger.png" },
+  { id: "lion", name: "Lion", rarity: "legendary", image: "/images/pets/lion.png" },
+  { id: "dragon", name: "Dragon", rarity: "legendary", image: "/images/pets/dragon.png" }
+];
+
+// The 8 seed varieties the chest route can drop. Names mirror the shop plants
+// with a " Seed" suffix. The chest route's per-tier pools are subsets of this
+// list (filtered by name), so the rolling behavior is preserved.
+export const SEED_CATALOG: SeedSpecies[] = [
+  { id: slug("Mossy Fern Seed"), name: "Mossy Fern Seed", rarity: "common", image: "/images/plants/mint.png" },
+  { id: slug("Golden Daisy Seed"), name: "Golden Daisy Seed", rarity: "common", image: "/images/plants/sunflower.png" },
+  { id: slug("Blue Orchid Seed"), name: "Blue Orchid Seed", rarity: "rare", image: "/images/plants/orchid.png" },
+  { id: slug("Spotted Aloe Seed"), name: "Spotted Aloe Seed", rarity: "rare", image: "/images/plants/basil.png" },
+  { id: slug("Mystic Bamboo Seed"), name: "Mystic Bamboo Seed", rarity: "epic", image: "/images/plants/bamboo.png" },
+  { id: slug("Crystal Lotus Seed"), name: "Crystal Lotus Seed", rarity: "epic", image: "/images/plants/lotus.png" },
+  { id: slug("Aurora Blossom Seed"), name: "Aurora Blossom Seed", rarity: "legendary", image: "/images/plants/cherry_blossom.png" },
+  { id: slug("Ember Cactus Seed"), name: "Ember Cactus Seed", rarity: "legendary", image: "/images/plants/dragonfruit.png" }
+];

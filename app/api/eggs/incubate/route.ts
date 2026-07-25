@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { grantImpact } from "@/lib/impact-service";
+import { PET_CATALOG, type PetSpecies } from "@/lib/catalog";
 
 // Server-owned egg lifecycle. The collection page used to mutate eggs /
 // hatchings / ecoPoints straight through `updateUserProfile`, and — worse —
@@ -42,28 +43,11 @@ const MAX_INCUBATOR_SLOTS = 3;
 const HATCH_IMPACT: Record<Rarity, number> = { common: 8, rare: 20, epic: 45, legendary: 100 };
 const HATCH_XP: Record<Rarity, number> = { common: 15, rare: 40, epic: 90, legendary: 200 };
 
-const animalRewards: Record<Rarity, Array<{ name: string; image: string; rarity: Rarity }>> = {
-  common: [
-    { name: "Cat", image: "/images/pets/cat.png", rarity: "common" },
-    { name: "Dog", image: "/images/pets/dog.png", rarity: "common" },
-    { name: "Rabbit", image: "/images/pets/rabbit.png", rarity: "common" },
-    { name: "Bee", image: "/images/pets/bee.png", rarity: "common" }
-  ],
-  rare: [
-    { name: "Deer", image: "/images/pets/deer.png", rarity: "rare" },
-    { name: "Owl", image: "/images/pets/owl.png", rarity: "rare" },
-    { name: "Panda", image: "/images/pets/panda.png", rarity: "rare" }
-  ],
-  epic: [
-    { name: "Wolf", image: "/images/pets/wolf.png", rarity: "epic" },
-    { name: "Bear", image: "/images/pets/bear.png", rarity: "epic" },
-    { name: "Eagle", image: "/images/pets/eagle.png", rarity: "epic" }
-  ],
-  legendary: [
-    { name: "Tiger", image: "/images/pets/tiger.png", rarity: "legendary" },
-    { name: "Lion", image: "/images/pets/lion.png", rarity: "legendary" },
-    { name: "Dragon", image: "/images/pets/dragon.png", rarity: "legendary" }
-  ]
+const animalRewards: Record<Rarity, PetSpecies[]> = {
+  common: PET_CATALOG.filter((p) => p.rarity === "common"),
+  rare: PET_CATALOG.filter((p) => p.rarity === "rare"),
+  epic: PET_CATALOG.filter((p) => p.rarity === "epic"),
+  legendary: PET_CATALOG.filter((p) => p.rarity === "legendary")
 };
 
 function normalizeRarity(value: unknown): Rarity {

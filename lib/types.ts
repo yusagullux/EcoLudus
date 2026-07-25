@@ -123,6 +123,8 @@ export interface UserProfile {
   hatchings: unknown[];
   animals: unknown[];
   activePet: string | null;
+  /** Seeds dropped by chests (`{ name, rarity, image, count }`). Collection-book Pokédex reads this. */
+  seeds?: unknown[];
 
   // ── Streaks ───────────────────────────────────────────────────────────────
   currentStreak: number;

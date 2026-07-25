@@ -7,7 +7,15 @@
 // doesn't validate — the server always looks the item up by id.
 
 import { sql } from "@/lib/db";
-import type { ShopItem, ShopMode, TeamMissionTemplate } from "@/lib/catalog";
+import {
+  PET_CATALOG,
+  SEED_CATALOG,
+  type ShopItem,
+  type ShopMode,
+  type TeamMissionTemplate,
+  type PetSpecies,
+  type SeedSpecies
+} from "@/lib/catalog";
 import type { Rarity } from "@/components/game-ui";
 
 type ShopRow = {
@@ -113,4 +121,15 @@ export async function getTeamMissionTemplate(
   );
   const row = result.rows[0];
   return row ? rowToTeamTemplate(row) : null;
+}
+
+// Pets and seeds have no DB table (no runtime-editable values) — the catalog
+// *is* the constant. Returned through accessors so the read API and the page
+// share one source with the hatch/chest routes, no client-side drift.
+export function getPetCatalog(): PetSpecies[] {
+  return PET_CATALOG;
+}
+
+export function getSeedCatalog(): SeedSpecies[] {
+  return SEED_CATALOG;
 }
