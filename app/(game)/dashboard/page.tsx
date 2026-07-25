@@ -134,6 +134,13 @@ export default function DashboardPage() {
   }, []);
 
 
+  // ── NOTE: the set-state-in-effect / exhaustive-deps warnings in the effects
+  // below are known and intentionally deferred. This project runs the React
+  // Compiler (react-hooks/preserve-manual-memoization), which REJECTS manual
+  // useMemo/useState-lazy workarounds with "Existing memoization could not be
+  // preserved" errors — verified while fixing the collection page. The only
+  // safe fix is the wholesale Phase 4 rewrite of this quest-sync effect, which
+  // is out of scope for a piecemeal lint pass. Leaving as-is intentionally.
   // Sync / Initialize daily quests based on profile and questsData
   useEffect(() => {
     if (!profile || !questsData || !user?.uid) return;

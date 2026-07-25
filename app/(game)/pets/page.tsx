@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { updateUserProfile } from "@/lib/auth-client";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
@@ -211,7 +212,13 @@ export default function PetsPage() {
                   background: `radial-gradient(circle at 50% 35%, ${(rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "#2f6b46")}22, transparent 58%), var(--bg-panel-alt)`
                 }}
               >
-                <img src={getPetImage(selectedPet)} alt={selectedPet.name} className="h-full w-full object-contain p-8 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]" />
+                <Image
+                  src={getPetImage(selectedPet)}
+                  alt={selectedPet.name}
+                  fill
+                  sizes="(max-width: 480px) 88vw, 360px"
+                  className="object-contain p-3 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]"
+                />
                 {hearts.map((heart) => (
                   <span
                     key={heart.id}
@@ -324,7 +331,13 @@ export default function PetsPage() {
                 }}
               >
                 <span className="relative block aspect-square overflow-hidden" style={{ background: `${rarityStyle[pet.rarity as Rarity]?.accent ?? "#2f6b46"}12` }}>
-                  <img src={getPetImage(pet)} alt={pet.name} className="h-full w-full object-contain p-5 transition group-hover:scale-110" />
+                  <Image
+                    src={getPetImage(pet)}
+                    alt={pet.name}
+                    fill
+                    sizes="(max-width: 640px) 45vw, (max-width: 768px) 30vw, 200px"
+                    className="object-contain p-1.5 transition duration-300 group-hover:scale-110"
+                  />
                   {isActive && <span className="absolute left-2 top-2 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
                 </span>
                 <span className="block p-3">

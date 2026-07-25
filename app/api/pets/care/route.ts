@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
-import { grantImpact } from "@/lib/impact-service";
+import { transaction, selectUserForUpdate } from "@/lib/db";
+import { grantImpact, type ImpactUser } from "@/lib/impact-service";
 
 // Server-validated pet care. The pets page used to mutate XP/eco/stat fields
 // straight through `updateUserProfile`, which was trivially forgeable (a client
@@ -29,6 +29,15 @@ const ACTION_TABLE: Record<string, { stat: "energy" | "bond" | "happiness"; amou
 
 const MAX_ECO_ACTIONS_PER_DAY = 5;
 
+// The free `pet` tap (no eco cost/reward) still grants +2 XP. Without a cap that
+// is an unlimited XP farm — a client loops POST {action:"pet"} for free XP with
+// no cooldown and no daily limit (the eco cap above only fires when
+// action.eco > 0). Bound it: each pet grants pet-XP at most this many times per
+// day. Taps past the cap still bump happiness and emit hearts (the feel-good
+// free interaction is preserved) — only the XP stops. Per-pet counter stored
+// alongside the existing care fields (freeform jsonb, no migration).
+const MAX_PET_XP_PER_DAY = 10;
+
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -54,89 +63,107 @@ export async function POST(request: Request) {
   }
 
   try {
-    const userResult = await sql<{ email: string; payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [session.userId]
-    );
-    if (userResult.rowCount === 0) {
-      return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
-    }
+    // Read → cap-check → compute → grant inside one transaction with a row lock
+    // on the user row. This makes the per-pet daily eco cap and the per-pet
+    // daily XP cap race-proof (concurrent care requests can no longer both
+    // pass the cap against a stale read — the lost-update / cap-bypass class
+    // from the 2026-07-25 audit) and shares the lock with grantImpact's write
+    // via `tx` (no second read, no nested transaction). Early 400/404/429
+    // returns inside the callback commit (empty tx) cleanly.
+    return await transaction(async (query) => {
+      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      if (userResult.rowCount === 0) {
+        return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
+      }
 
-    const profile = userResult.rows[0].payload ?? {};
-    const animals = Array.isArray(profile.animals)
-      ? (profile.animals as Array<Record<string, unknown>>).map((pet) => ({ ...pet }))
-      : [];
+      const user = userResult.rows[0];
+      const profile = user.payload ?? {};
+      const animals = Array.isArray(profile.animals)
+        ? (profile.animals as Array<Record<string, unknown>>).map((pet) => ({ ...pet }))
+        : [];
 
-    const pet = animals.find((entry) => String(entry.id) === parsed.petId) ?? null;
-    if (!pet) {
-      return NextResponse.json({ error: { code: "pets/not-found" } }, { status: 404 });
-    }
+      const pet = animals.find((entry) => String(entry.id) === parsed.petId) ?? null;
+      if (!pet) {
+        return NextResponse.json({ error: { code: "pets/not-found" } }, { status: 404 });
+      }
 
-    const action = ACTION_TABLE[parsed.action];
-    const today = todayKey();
-    const lastCareDate = String(pet.lastCareDate ?? "");
-    const isNewCareDay = lastCareDate !== today;
-    const careActionsToday = isNewCareDay ? 0 : Math.max(0, Number(pet.careActionsToday ?? 0));
+      const action = ACTION_TABLE[parsed.action];
+      const today = todayKey();
+      const lastCareDate = String(pet.lastCareDate ?? "");
+      const isNewCareDay = lastCareDate !== today;
+      const careActionsToday = isNewCareDay ? 0 : Math.max(0, Number(pet.careActionsToday ?? 0));
 
-    // Enforce the daily eco-reward cap server-side (the whole point of moving this here).
-    if (action.eco > 0 && careActionsToday >= MAX_ECO_ACTIONS_PER_DAY) {
-      return NextResponse.json(
-        { error: { code: "pets/eco-cap-reached", message: `Daily eco reward limit reached for this companion (${MAX_ECO_ACTIONS_PER_DAY}/day).` } },
-        { status: 429 }
-      );
-    }
+      // Enforce the daily eco-reward cap server-side (the whole point of moving this here).
+      if (action.eco > 0 && careActionsToday >= MAX_ECO_ACTIONS_PER_DAY) {
+        return NextResponse.json(
+          { error: { code: "pets/eco-cap-reached", message: `Daily eco reward limit reached for this companion (${MAX_ECO_ACTIONS_PER_DAY}/day).` } },
+          { status: 429 }
+        );
+      }
 
-    // Validate the eco cost can be paid.
-    const currentEco = Math.max(0, Number(profile.ecoPoints ?? 0) || 0);
-    if (action.cost > 0 && currentEco < action.cost) {
-      return NextResponse.json(
-        { error: { code: "pets/insufficient-eco", message: `Need ${action.cost} EcoPoints for this action.` } },
-        { status: 400 }
-      );
-    }
+      // Free `pet` taps are bounded by a per-pet daily XP cap (see MAX_PET_XP_PER_DAY).
+      const petXpToday = isNewCareDay ? 0 : Math.max(0, Number(pet.petXpToday ?? 0));
+      const petXpEligible = parsed.action !== "pet" || petXpToday < MAX_PET_XP_PER_DAY;
+      // XP only for the pet action when still under the daily cap; other actions
+      // always grant their full XP.
+      const xpToGrant = parsed.action === "pet" ? (petXpEligible ? action.xp : 0) : action.xp;
 
-    const ecoGained = action.eco > 0 && careActionsToday < MAX_ECO_ACTIONS_PER_DAY ? action.eco : 0;
+      // Validate the eco cost can be paid.
+      const currentEco = Math.max(0, Number(profile.ecoPoints ?? 0) || 0);
+      if (action.cost > 0 && currentEco < action.cost) {
+        return NextResponse.json(
+          { error: { code: "pets/insufficient-eco", message: `Need ${action.cost} EcoPoints for this action.` } },
+          { status: 400 }
+        );
+      }
 
-    const nextAnimals = animals.map((entry) => {
-      if (String(entry.id) !== parsed.petId) return entry;
-      const currentStatValue = clampStat(entry[action.stat], action.stat === "bond" ? 10 : 50);
-      return {
-        ...entry,
-        [action.stat]: Math.min(100, currentStatValue + action.amount),
-        happiness: Math.min(
-          100,
-          clampStat(entry.happiness, 50) + (action.stat === "happiness" ? 0 : 4)
-        ),
-        petsGiven: Number(entry.petsGiven ?? 0) + 1,
+      const ecoGained = action.eco > 0 && careActionsToday < MAX_ECO_ACTIONS_PER_DAY ? action.eco : 0;
+
+      const nextAnimals = animals.map((entry) => {
+        if (String(entry.id) !== parsed.petId) return entry;
+        const currentStatValue = clampStat(entry[action.stat], action.stat === "bond" ? 10 : 50);
+        return {
+          ...entry,
+          [action.stat]: Math.min(100, currentStatValue + action.amount),
+          happiness: Math.min(
+            100,
+            clampStat(entry.happiness, 50) + (action.stat === "happiness" ? 0 : 4)
+          ),
+          petsGiven: Number(entry.petsGiven ?? 0) + 1,
+          careActionsToday: careActionsToday + 1,
+          petXpToday: parsed.action === "pet" ? (petXpEligible ? petXpToday + 1 : Number(entry.petXpToday ?? 0)) : Number(entry.petXpToday ?? 0),
+          careStreak: isNewCareDay ? Number(entry.careStreak ?? 0) + 1 : Number(entry.careStreak ?? 0),
+          lastCareDate: today,
+          lastPettedAt: new Date().toISOString()
+        };
+      });
+
+      const granted = await grantImpact({
+        userId: session.userId,
+        source: "petCare",
+        baseXp: xpToGrant,
+        baseImpact: 0, // pet care feeds vitality (Phase 2), not the spine
+        eco: ecoGained - action.cost, // net eco delta (reward minus cost)
+        meta: { action: parsed.action, petId: parsed.petId, petName: String(pet.name ?? "") },
+        payloadPatch: { animals: nextAnimals },
+        // Share the locked transaction so the cap checks + grant are atomic.
+        tx: { query, user }
+      });
+
+      return NextResponse.json({
+        success: true,
+        action: parsed.action,
+        petId: parsed.petId,
+        xpAwarded: xpToGrant,
+        petXpCapReached: parsed.action === "pet" && !petXpEligible,
+        ecoGained,
+        ecoSpent: action.cost,
         careActionsToday: careActionsToday + 1,
-        careStreak: isNewCareDay ? Number(entry.careStreak ?? 0) + 1 : Number(entry.careStreak ?? 0),
-        lastCareDate: today,
-        lastPettedAt: new Date().toISOString()
-      };
-    });
-
-    const granted = await grantImpact({
-      userId: session.userId,
-      source: "petCare",
-      baseXp: action.xp,
-      baseImpact: 0, // pet care feeds vitality (Phase 2), not the spine
-      eco: ecoGained - action.cost, // net eco delta (reward minus cost)
-      meta: { action: parsed.action, petId: parsed.petId, petName: String(pet.name ?? "") },
-      payloadPatch: { animals: nextAnimals }
-    });
-
-    return NextResponse.json({
-      success: true,
-      action: parsed.action,
-      petId: parsed.petId,
-      xpAwarded: action.xp,
-      ecoGained,
-      ecoSpent: action.cost,
-      careActionsToday: careActionsToday + 1,
-      ecoCapReached: careActionsToday + 1 >= MAX_ECO_ACTIONS_PER_DAY && action.eco > 0,
-      level: granted?.level ?? null,
-      xp: granted?.xp ?? null,
-      ecoPoints: granted?.ecoPoints ?? currentEco - action.cost + ecoGained
+        ecoCapReached: careActionsToday + 1 >= MAX_ECO_ACTIONS_PER_DAY && action.eco > 0,
+        level: granted?.level ?? null,
+        xp: granted?.xp ?? null,
+        ecoPoints: granted?.ecoPoints ?? currentEco - action.cost + ecoGained
+      });
     });
   } catch (error) {
     console.error("Pet care error:", error);
