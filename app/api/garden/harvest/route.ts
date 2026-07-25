@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
-import { grantImpact } from "@/lib/impact-service";
+import { transaction, selectUserForUpdate } from "@/lib/db";
+import { grantImpact, type ImpactUser } from "@/lib/impact-service";
 
 // Server-validated garden harvest. The garden page used to compute XP/eco from
 // a tile's rarity and write it through `updateUserProfile`, which a client could
@@ -63,66 +63,75 @@ export async function POST(request: Request) {
   }
 
   try {
-    const userResult = await sql<{ payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [session.userId]
-    );
-    if (userResult.rowCount === 0) {
-      return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
-    }
+    // Read → harvest-eval → grant inside one transaction with a row lock on the
+    // user row. The per-tile `lastHarvestAt` / 48h cooldown is checked against
+    // the locked row, so two concurrent harvests of the same ready tile can no
+    // longer both pass `isReady` and double-grant (the lost-update class fixed
+    // in the other reward routes — see the reward-routes-lost-update note).
+    // grantImpact shares the lock via `tx` (no re-read, no nested transaction).
+    return await transaction(async (query) => {
+      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      if (userResult.rowCount === 0) {
+        return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
+      }
 
-    const profile = userResult.rows[0].payload ?? {};
-    const garden = (profile.garden ?? {}) as Record<string, Record<string, unknown>>;
-    const now = Date.now();
+      const user = userResult.rows[0];
+      const profile = user.payload ?? {};
+      const garden = (profile.garden ?? {}) as Record<string, Record<string, unknown>>;
+      const now = Date.now();
 
-    // Candidate tiles: the requested ids (if given) else every occupied tile.
-    const candidateIds = parsed.tileIds && parsed.tileIds.length > 0
-      ? parsed.tileIds.map(String)
-      : Object.keys(garden);
+      // Candidate tiles: the requested ids (if given) else every occupied tile.
+      const candidateIds = parsed.tileIds && parsed.tileIds.length > 0
+        ? parsed.tileIds.map(String)
+        : Object.keys(garden);
 
-    const nextGarden: Record<string, Record<string, unknown>> = { ...garden };
-    let totalEco = 0;
-    let totalXp = 0;
-    let harvested = 0;
+      const nextGarden: Record<string, Record<string, unknown>> = { ...garden };
+      let totalEco = 0;
+      let totalXp = 0;
+      let harvested = 0;
 
-    for (const tileIdKey of candidateIds) {
-      const tile = garden[tileIdKey];
-      if (!tile || !isReady(tile, now)) continue;
+      for (const tileIdKey of candidateIds) {
+        const tile = garden[tileIdKey];
+        if (!tile || !isReady(tile, now)) continue;
 
-      const rarity = normalizeRarity(tile.rarity);
-      totalEco += HARVEST_REWARDS[rarity];
-      totalXp += HARVEST_XP[rarity];
-      nextGarden[tileIdKey] = { ...tile, lastHarvestAt: now };
-      harvested += 1;
-    }
+        const rarity = normalizeRarity(tile.rarity);
+        totalEco += HARVEST_REWARDS[rarity];
+        totalXp += HARVEST_XP[rarity];
+        nextGarden[tileIdKey] = { ...tile, lastHarvestAt: now };
+        harvested += 1;
+      }
 
-    if (harvested === 0) {
+      if (harvested === 0) {
+        return NextResponse.json({
+          success: true,
+          harvested: 0,
+          eco: 0,
+          xp: 0,
+          message: "No plants are ready to harvest yet."
+        });
+      }
+
+      const granted = await grantImpact({
+        userId: session.userId,
+        source: "garden",
+        baseXp: totalXp,
+        baseImpact: totalXp,
+        eco: totalEco,
+        meta: { harvested, tileIds: candidateIds },
+        payloadPatch: { garden: nextGarden },
+        // Share the locked transaction so the per-tile cooldown stamps + reward
+        // grant are one atomic unit.
+        tx: { query, user }
+      });
+
       return NextResponse.json({
         success: true,
-        harvested: 0,
-        eco: 0,
-        xp: 0,
-        message: "No plants are ready to harvest yet."
+        harvested,
+        eco: totalEco,
+        xp: totalXp,
+        level: granted?.level ?? null,
+        ecoPoints: granted?.ecoPoints ?? null
       });
-    }
-
-    const granted = await grantImpact({
-      userId: session.userId,
-      source: "garden",
-      baseXp: totalXp,
-      baseImpact: totalXp,
-      eco: totalEco,
-      meta: { harvested, tileIds: candidateIds },
-      payloadPatch: { garden: nextGarden }
-    });
-
-    return NextResponse.json({
-      success: true,
-      harvested,
-      eco: totalEco,
-      xp: totalXp,
-      level: granted?.level ?? null,
-      ecoPoints: granted?.ecoPoints ?? null
     });
   } catch (error) {
     console.error("Garden harvest error:", error);

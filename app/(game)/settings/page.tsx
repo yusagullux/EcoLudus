@@ -24,6 +24,24 @@ const THEMES: { value: Theme; label: string; desc: string; preview: string }[] =
     label: "Liquid",
     desc: "Ocean-depth glassmorphism",
     preview: "linear-gradient(160deg,#0f2b4a,#1a3d5c,#0d3d3a,#0f2b1e)"
+  },
+  {
+    value: "dawn",
+    label: "Dawn",
+    desc: "Warm amber & terracotta on cream",
+    preview: "linear-gradient(135deg,#fbeed8,#fff6ec,#f7e4cd)"
+  },
+  {
+    value: "bloom",
+    label: "Bloom",
+    desc: "Floral magenta & rose on blush",
+    preview: "linear-gradient(135deg,#fdeaf3,#fff5f8,#f8dce9)"
+  },
+  {
+    value: "aurora",
+    label: "Aurora",
+    desc: "Indigo night with teal aurora glow",
+    preview: "linear-gradient(135deg,#0a0f2e,#10183a,#0c1230)"
   }
 ];
 

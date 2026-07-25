@@ -11,116 +11,137 @@ import { Avatar } from "@/components/avatar";
 type SidebarProps = { user: any; profile: any };
 
 type NavItem = { name: string; href: string; icon: React.ReactNode };
+type NavGroup = { label: string; items: NavItem[] };
 
-const navItems: NavItem[] = [
+const navGroups: NavGroup[] = [
   {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-      </svg>
-    )
+    label: "Overview",
+    items: [
+      {
+        name: "Dashboard",
+        href: "/dashboard",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
+          </svg>
+        )
+      },
+      {
+        name: "Insights",
+        href: "/insights",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a3 3 0 013-3h4V6m4 12v-4m-4 4V9m8 9V4" />
+          </svg>
+        )
+      },
+      {
+        name: "Leaderboard",
+        href: "/leaderboard",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 21V10M12 21V4M16 21v-7" />
+          </svg>
+        )
+      }
+    ]
   },
   {
-    name: "Team",
-    href: "/team",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87M12 12a4 4 0 100-8 4 4 0 000 8zm6 8v-2a4 4 0 00-3-3.87" />
-      </svg>
-    )
+    label: "Play",
+    items: [
+      {
+        name: "Habits",
+        href: "/habits",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+        )
+      },
+      {
+        name: "Team",
+        href: "/team",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87M12 12a4 4 0 100-8 4 4 0 000 8zm6 8v-2a4 4 0 00-3-3.87" />
+          </svg>
+        )
+      },
+      {
+        name: "EcoMap",
+        href: "/ecomap",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6-10l6 3m0 7l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 10m0 10V10" />
+          </svg>
+        )
+      }
+    ]
   },
   {
-    name: "Habits",
-    href: "/habits",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-      </svg>
-    )
+    label: "Collection",
+    items: [
+      {
+        name: "Shop",
+        href: "/shop",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+        )
+      },
+      {
+        name: "Collection",
+        href: "/collection",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        )
+      },
+      {
+        name: "Pets",
+        href: "/pets",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7 12.5c-1.2 0-2-1-2-2.2S5.8 8 7 8s2 1 2 2.3-.8 2.2-2 2.2Zm10 0c-1.2 0-2-1-2-2.2S15.8 8 17 8s2 1 2 2.3-.8 2.2-2 2.2ZM9.5 17.5c0-1.9 1.2-3.5 2.5-3.5s2.5 1.6 2.5 3.5c0 1.1-.8 1.8-2.5 1.8s-2.5-.7-2.5-1.8ZM9 5.5c0 1.1-.7 2-1.6 2s-1.6-.9-1.6-2 .7-2 1.6-2S9 4.4 9 5.5Zm9.2 0c0 1.1-.7 2-1.6 2s-1.6-.9-1.6-2 .7-2 1.6-2 1.6.9 1.6 2Z" />
+          </svg>
+        )
+      },
+      {
+        name: "Garden",
+        href: "/garden",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 22V12m0 0C12 7 8 4 4 5c0 4 3 7 8 7zm0 0c0-5 4-8 8-7-1 4-4 7-8 7z" />
+          </svg>
+        )
+      }
+    ]
   },
   {
-    name: "Insights",
-    href: "/insights",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a3 3 0 013-3h4V6m4 12v-4m-4 4V9m8 9V4" />
-      </svg>
-    )
-  },
-  {
-    name: "Leaderboard",
-    href: "/leaderboard",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 21V10M12 21V4M16 21v-7" />
-      </svg>
-    )
-  },
-  {
-    name: "Shop",
-    href: "/shop",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-      </svg>
-    )
-  },
-  {
-    name: "Collection",
-    href: "/collection",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-      </svg>
-    )
-  },
-  {
-    name: "Pets",
-    href: "/pets",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 12.5c-1.2 0-2-1-2-2.2S5.8 8 7 8s2 1 2 2.3-.8 2.2-2 2.2Zm10 0c-1.2 0-2-1-2-2.2S15.8 8 17 8s2 1 2 2.3-.8 2.2-2 2.2ZM9.5 17.5c0-1.9 1.2-3.5 2.5-3.5s2.5 1.6 2.5 3.5c0 1.1-.8 1.8-2.5 1.8s-2.5-.7-2.5-1.8ZM9 5.5c0 1.1-.7 2-1.6 2s-1.6-.9-1.6-2 .7-2 1.6-2S9 4.4 9 5.5Zm9.2 0c0 1.1-.7 2-1.6 2s-1.6-.9-1.6-2 .7-2 1.6-2 1.6.9 1.6 2Z" />
-      </svg>
-    )
-  },
-  {
-    name: "Friends",
-    href: "/friends",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 11a3 3 0 100-6 3 3 0 000 6Zm8 0a3 3 0 100-6 3 3 0 000 6ZM3.5 20a4.5 4.5 0 019 0M11.5 20a4.5 4.5 0 019 0" />
-      </svg>
-    )
-  },
-  {
-    name: "Garden",
-    href: "/garden",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 22V12m0 0C12 7 8 4 4 5c0 4 3 7 8 7zm0 0c0-5 4-8 8-7-1 4-4 7-8 7z" />
-      </svg>
-    )
-  },
-  {
-    name: "EcoMap",
-    href: "/ecomap",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6-10l6 3m0 7l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 10m0 10V10" />
-      </svg>
-    )
-  },
-  {
-    name: "Profile",
-    href: "/profile",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
-    )
+    label: "Social",
+    items: [
+      {
+        name: "Friends",
+        href: "/friends",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 11a3 3 0 100-6 3 3 0 000 6Zm8 0a3 3 0 100-6 3 3 0 000 6ZM3.5 20a4.5 4.5 0 019 0M11.5 20a4.5 4.5 0 019 0" />
+          </svg>
+        )
+      },
+      {
+        name: "Profile",
+        href: "/profile",
+        icon: (
+          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        )
+      }
+    ]
   }
 ];
 
@@ -181,36 +202,48 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
       <div className="mx-4 mb-3 h-px shrink-0" style={{ background: "rgba(255,255,255,0.06)" }} />
 
       {/* ── Main nav ── */}
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-2" aria-label="Main navigation">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={`t-sidebar-link${isActive ? " active" : ""}`}
-              aria-current={isActive ? "page" : undefined}
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-2" aria-label="Main navigation">
+        {navGroups.map((group) => (
+          <div key={group.label} className="mb-1">
+            <p
+              className="px-3 pb-1.5 pt-2 text-[8.5px] font-black uppercase tracking-[0.22em]"
+              style={{ color: "var(--text-sidebar-muted)" }}
             >
-              <span className="shrink-0" style={{ color: isActive ? "var(--text-sidebar)" : "var(--text-sidebar-muted)" }}>
-                {item.icon}
-              </span>
-              <span className="flex-1 truncate">{item.name}</span>
-              {item.name === "Friends" && (
-                (() => {
-                  const requestsCount = Array.isArray(profile?.friendRequests)
-                    ? profile.friendRequests.length
-                    : 0;
-                  return requestsCount > 0 ? (
-                    <span className="rounded-full bg-emerald-500/80 px-1.5 py-0.5 text-[8.5px] font-black text-white leading-none shrink-0">
-                      {requestsCount}
+              {group.label}
+            </p>
+            <div className="flex flex-col gap-0.5">
+              {group.items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={`t-sidebar-link${isActive ? " active" : ""}`}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    <span className="shrink-0" style={{ color: isActive ? "var(--text-sidebar)" : "var(--text-sidebar-muted)" }}>
+                      {item.icon}
                     </span>
-                  ) : null;
-                })()
-              )}
-            </Link>
-          );
-        })}
+                    <span className="flex-1 truncate">{item.name}</span>
+                    {item.name === "Friends" && (
+                      (() => {
+                        const requestsCount = Array.isArray(profile?.friendRequests)
+                          ? profile.friendRequests.length
+                          : 0;
+                        return requestsCount > 0 ? (
+                          <span className="rounded-full bg-emerald-500/80 px-1.5 py-0.5 text-[8.5px] font-black text-white leading-none shrink-0">
+                            {requestsCount}
+                          </span>
+                        ) : null;
+                      })()
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* ── Bottom section ── */}

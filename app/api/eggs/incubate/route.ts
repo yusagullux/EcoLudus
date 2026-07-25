@@ -239,7 +239,8 @@ export async function POST(request: Request) {
         animals[existingIndex] = {
           ...animals[existingIndex],
           count: Number(animals[existingIndex].count ?? 1) + 1,
-          hatchedAt
+          hatchedAt,
+          vitalsAt: hatchedAt
         };
       } else {
         animals.push({
@@ -254,7 +255,8 @@ export async function POST(request: Request) {
           bond: 10,
           careStreak: 0,
           careActionsToday: 0,
-          hatchedAt
+          hatchedAt,
+          vitalsAt: hatchedAt
         });
       }
 

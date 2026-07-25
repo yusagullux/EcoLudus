@@ -193,6 +193,115 @@
   --pill-active-text: #e4f4ff;
 }
 
+/* Dawn — warm light theme: amber/terracotta accent on warm cream.
+   Light color-scheme, so it inherits the default (unflipped) forest scale. */
+[data-theme="dawn"] {
+  color-scheme: light;
+
+  --bg-page:       linear-gradient(135deg, #fbeed8 0%, #fff6ec 48%, #f7e4cd 100%);
+  --bg-sidebar:    #2e1d10;
+  --bg-panel:      #fffaf3;
+  --bg-panel-alt:  #fbf0e1;
+  --bg-input:      #fffdf8;
+  --bg-card:       #fffaf3;
+  --bg-hero:       linear-gradient(135deg, #2e1d10 0%, #7b5832 55%, #b08d60 100%);
+
+  --border-default: #ecd9bf;
+  --border-subtle:  #f2e4d0;
+  --border-input:   #e6cdae;
+
+  --text-primary:   #2e1d10;
+  --text-secondary: #604225;
+  --text-muted:     rgba(96,66,37,0.6);
+  --text-inverse:   #fff6ec;
+  --text-sidebar:   #fff6ec;
+  --text-sidebar-muted: rgba(255,246,236,0.55);
+  --text-accent:    #b06a2a;
+
+  --sidebar-active-bg:   rgba(255,255,255,0.12);
+  --sidebar-active-text: #fff6ec;
+  --sidebar-hover-bg:    rgba(255,255,255,0.07);
+
+  --pill-bg:        #fbf0e1;
+  --pill-border:    #ecd9bf;
+  --pill-text:      #604225;
+  --pill-active-bg: #2e1d10;
+  --pill-active-text: #fff6ec;
+}
+
+/* Bloom — floral light theme: magenta/rose accent on soft blush.
+   Light color-scheme, inherits the default forest scale. */
+[data-theme="bloom"] {
+  color-scheme: light;
+
+  --bg-page:       linear-gradient(135deg, #fdeaf3 0%, #fff5f8 48%, #f8dce9 100%);
+  --bg-sidebar:    #4a1d3a;
+  --bg-panel:      #fffafc;
+  --bg-panel-alt:  #fbe9f1;
+  --bg-input:      #fffafd;
+  --bg-card:       #fffafc;
+  --bg-hero:       linear-gradient(135deg, #4a1d3a 0%, #7a2f5a 55%, #b06a8a 100%);
+
+  --border-default: #f0cfe0;
+  --border-subtle:  #f5dcea;
+  --border-input:   #eec2d6;
+
+  --text-primary:   #4a1d3a;
+  --text-secondary: #6e2f52;
+  --text-muted:     rgba(78,29,58,0.6);
+  --text-inverse:   #fff5f8;
+  --text-sidebar:   #fff5f8;
+  --text-sidebar-muted: rgba(255,245,248,0.55);
+  --text-accent:    #c2387a;
+
+  --sidebar-active-bg:   rgba(255,255,255,0.12);
+  --sidebar-active-text: #fff5f8;
+  --sidebar-hover-bg:    rgba(255,255,255,0.07);
+
+  --pill-bg:        #fbe9f1;
+  --pill-border:    #f0cfe0;
+  --pill-text:      #6e2f52;
+  --pill-active-bg: #4a1d3a;
+  --pill-active-text: #fff5f8;
+}
+
+/* Aurora — cool dark theme: deep indigo night with a teal-green aurora accent.
+   Dark color-scheme; flips the forest scale to light indigo (see below) and
+   gets the same dark-contrast overrides as dark/liquid. */
+[data-theme="aurora"] {
+  color-scheme: dark;
+
+  --bg-page:       linear-gradient(135deg, #0a0f2e 0%, #10183a 48%, #0c1230 100%);
+  --bg-sidebar:    #060a1c;
+  --bg-panel:      #131a38;
+  --bg-panel-alt:  #0e1430;
+  --bg-input:      #182050;
+  --bg-card:       #131a38;
+  --bg-hero:       linear-gradient(135deg, #060a1c 0%, #122040 55%, #16345a 100%);
+
+  --border-default: #1f2a55;
+  --border-subtle:  #18204a;
+  --border-input:   #263468;
+
+  --text-primary:   #e6ecff;
+  --text-secondary: #9ab4e8;
+  --text-muted:     rgba(154,180,232,0.55);
+  --text-inverse:   #0a0f2e;
+  --text-sidebar:   #e6ecff;
+  --text-sidebar-muted: rgba(230,236,255,0.45);
+  --text-accent:    #4ad8c0;
+
+  --sidebar-active-bg:   rgba(74,216,192,0.15);
+  --sidebar-active-text: #e6ecff;
+  --sidebar-hover-bg:    rgba(255,255,255,0.05);
+
+  --pill-bg:        #182050;
+  --pill-border:    #263468;
+  --pill-text:      #9ab4e8;
+  --pill-active-bg: rgba(74,216,192,0.2);
+  --pill-active-text: #e6ecff;
+}
+
 /* ── BASE ───────────────────────────────────────────────── */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -411,6 +520,25 @@ html {
   --color-cream-200: #0c2438;
 }
 
+[data-theme="aurora"] {
+  /* Aurora uses indigo tones — flip forest to light indigo/blue */
+  --color-forest-950: #e6ecff;
+  --color-forest-900: #c8d6f5;
+  --color-forest-800: #a8bcec;
+  --color-forest-700: #9ab4e8;
+  --color-forest-600: #6e8cd6;
+  --color-forest-500: #4a6cc0;
+  --color-forest-400: #2e54a0;
+  --color-forest-300: #1a3c7a;
+  --color-forest-200: #0c2858;
+  --color-forest-100: #04184a;
+  --color-forest-50:  #020c3a;
+
+  /* Cream inverts to deep indigo — for contrast on light forest-950 */
+  --color-cream-100: #060a1c;
+  --color-cream-200: #0e1430;
+}
+
 /* ── PAGE BACKGROUND ─────────────────────────────────────── */
 /* Applied to the main content wrapper — using a solid bg-color for
    smooth theme transitions (gradient backgrounds can't animate) */
@@ -431,6 +559,15 @@ html {
 [data-theme="liquid"] {
   --bg-page-solid: #0f2b3a;
 }
+[data-theme="dawn"] {
+  --bg-page-solid: #f7ead4;
+}
+[data-theme="bloom"] {
+  --bg-page-solid: #f7dce9;
+}
+[data-theme="aurora"] {
+  --bg-page-solid: #0c1230;
+}
 
 /* ── BACKGROUND OVERRIDES for hardcoded hex values ──────────
    The forest color variable approach handles text automatically.
@@ -439,7 +576,8 @@ html {
 
 /* White panels → dark theme panel bg */
 [data-theme="dark"] .bg-white,
-[data-theme="liquid"] .bg-white {
+[data-theme="liquid"] .bg-white,
+[data-theme="aurora"] .bg-white {
   background-color: var(--bg-panel) !important;
   color: var(--text-primary);
 }
@@ -450,7 +588,10 @@ html {
 [data-theme="dark"] .bg-\[#eef5ea\], [data-theme="dark"] .bg-\[#f0f8e8\],
 [data-theme="liquid"] .bg-\[#fffefa\], [data-theme="liquid"] .bg-\[#f7f9f2\],
 [data-theme="liquid"] .bg-\[#f4f7ef\], [data-theme="liquid"] .bg-\[#fbfcf7\],
-[data-theme="liquid"] .bg-\[#eef5ea\], [data-theme="liquid"] .bg-\[#f0f8e8\] {
+[data-theme="liquid"] .bg-\[#eef5ea\], [data-theme="liquid"] .bg-\[#f0f8e8\],
+[data-theme="aurora"] .bg-\[#fffefa\], [data-theme="aurora"] .bg-\[#f7f9f2\],
+[data-theme="aurora"] .bg-\[#f4f7ef\], [data-theme="aurora"] .bg-\[#fbfcf7\],
+[data-theme="aurora"] .bg-\[#eef5ea\], [data-theme="aurora"] .bg-\[#f0f8e8\] {
   background-color: var(--bg-panel-alt) !important;
   color: var(--text-primary);
 }
@@ -459,26 +600,32 @@ html {
 [data-theme="dark"] .border-\[#dfe7d7\], [data-theme="dark"] .border-\[#e7ecdf\],
 [data-theme="dark"] .border-\[#dce6d8\], [data-theme="dark"] .border-\[#dfe7d7\],
 [data-theme="liquid"] .border-\[#dfe7d7\], [data-theme="liquid"] .border-\[#e7ecdf\],
-[data-theme="liquid"] .border-\[#dce6d8\], [data-theme="liquid"] .border-\[#dfe7d7\] {
+[data-theme="liquid"] .border-\[#dce6d8\], [data-theme="liquid"] .border-\[#dfe7d7\],
+[data-theme="aurora"] .border-\[#dfe7d7\], [data-theme="aurora"] .border-\[#e7ecdf\],
+[data-theme="aurora"] .border-\[#dce6d8\], [data-theme="aurora"] .border-\[#dfe7d7\] {
   border-color: var(--border-default) !important;
 }
 
-/* Global rule: on dark/liquid themes, any element that has a light bg
+/* Global rule: on dark/liquid/aurora themes, any element that has a light bg
    MUST have dark text on it — prevent white-on-white */
 [data-theme="dark"] .bg-rose-50,
-[data-theme="liquid"] .bg-rose-50 {
+[data-theme="liquid"] .bg-rose-50,
+[data-theme="aurora"] .bg-rose-50 {
   color: #7f1d1d !important;
 }
 [data-theme="dark"] .bg-emerald-50,
-[data-theme="liquid"] .bg-emerald-50 {
+[data-theme="liquid"] .bg-emerald-50,
+[data-theme="aurora"] .bg-emerald-50 {
   color: #14532d !important;
 }
 [data-theme="dark"] .bg-amber-50,
-[data-theme="liquid"] .bg-amber-50 {
+[data-theme="liquid"] .bg-amber-50,
+[data-theme="aurora"] .bg-amber-50 {
   color: #78350f !important;
 }
 [data-theme="dark"] .bg-slate-50,
-[data-theme="liquid"] .bg-slate-50 {
+[data-theme="liquid"] .bg-slate-50,
+[data-theme="aurora"] .bg-slate-50 {
   color: #334155 !important;
 }
 
@@ -504,7 +651,8 @@ html {
 
 /* Inherit theme text colour throughout the content area */
 [data-theme="dark"] .app-main-bg,
-[data-theme="liquid"] .app-main-bg {
+[data-theme="liquid"] .app-main-bg,
+[data-theme="aurora"] .app-main-bg {
   color: var(--text-primary);
 }
 
@@ -514,17 +662,21 @@ html {
 
 /* text-* that map to near-black shades → remap to theme text */
 [data-theme="dark"] .text-forest-950,  [data-theme="dark"] .text-forest-900,
-[data-theme="liquid"] .text-forest-950,[data-theme="liquid"] .text-forest-900 {
+[data-theme="liquid"] .text-forest-950,[data-theme="liquid"] .text-forest-900,
+[data-theme="aurora"] .text-forest-950,[data-theme="aurora"] .text-forest-900 {
   color: var(--text-primary) !important;
 }
 [data-theme="dark"] .text-forest-800,  [data-theme="dark"] .text-forest-700,
-[data-theme="liquid"] .text-forest-800,[data-theme="liquid"] .text-forest-700 {
+[data-theme="liquid"] .text-forest-800,[data-theme="liquid"] .text-forest-700,
+[data-theme="aurora"] .text-forest-800,[data-theme="aurora"] .text-forest-700 {
   color: var(--text-secondary) !important;
 }
 [data-theme="dark"] .text-forest-600,  [data-theme="dark"] .text-forest-500,
 [data-theme="dark"] .text-forest-400,
 [data-theme="liquid"] .text-forest-600,[data-theme="liquid"] .text-forest-500,
-[data-theme="liquid"] .text-forest-400 {
+[data-theme="liquid"] .text-forest-400,
+[data-theme="aurora"] .text-forest-600,[data-theme="aurora"] .text-forest-500,
+[data-theme="aurora"] .text-forest-400 {
   color: var(--text-muted) !important;
 }
 
@@ -532,7 +684,9 @@ html {
 [data-theme="dark"] [style*="color: #102016"],
 [data-theme="dark"] [style*="color:#102016"],
 [data-theme="liquid"] [style*="color: #102016"],
-[data-theme="liquid"] [style*="color:#102016"] {
+[data-theme="liquid"] [style*="color:#102016"],
+[data-theme="aurora"] [style*="color: #102016"],
+[data-theme="aurora"] [style*="color:#102016"] {
   color: var(--text-primary) !important;
 }
 

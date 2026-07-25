@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 
-export type Theme = "light" | "dark" | "liquid";
+export type Theme = "light" | "dark" | "liquid" | "dawn" | "bloom" | "aurora";
 
 const STORAGE_KEY = "ecoludus.theme";
 const DEFAULT_THEME: Theme = "light";
@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-      if (stored && ["light", "dark", "liquid"].includes(stored)) {
+      if (stored && ["light", "dark", "liquid", "dawn", "bloom", "aurora"].includes(stored)) {
         setThemeState(stored);
         applyTheme(stored);
       }

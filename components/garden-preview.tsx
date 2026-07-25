@@ -101,10 +101,13 @@ export function GardenPreview() {
   };
 
   return (
-    <div className="rounded-[2rem] border border-forest-900/10 bg-white/70 p-8 shadow-[0_24px_50px_rgba(16,33,20,0.08)]">
-      <div className="mb-6">
-        <h3 className="font-serif text-2xl text-forest-950">Your virtual garden</h3>
-        <p className="mt-2 text-sm text-forest-900/70">Click plants to grow them • Real garden, hand-drawn</p>
+    <div className="rounded-[2rem] border border-forest-900/10 bg-white/70 p-8 shadow-[0_24px_50px_rgba(16,33,20,0.08)] backdrop-blur sm:p-10">
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-forest-700/70">Interactive preview</p>
+          <h3 className="mt-2 font-serif text-3xl text-forest-950">Your virtual garden</h3>
+          <p className="mt-2 text-sm text-forest-900/70">Click plants to grow them — hand-drawn, live in the browser.</p>
+        </div>
       </div>
 
       <div className="relative mx-auto max-w-xl rounded-2xl border-2 border-dashed border-forest-900/15 bg-[linear-gradient(180deg,#eff3e8_0%,#dce7d5_100%)] p-8">
