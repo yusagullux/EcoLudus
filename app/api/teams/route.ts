@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { verifyImageWithProvider, verifyTextProofWithGemini } from "@/lib/photo-verification";
+import { verifyImageWithProvider, verifyTextProofWithGemini, parsePhotoProof, createImageHash, getExistingPhotoHash, savePhotoHash } from "@/lib/photo-verification";
 import { grantImpact } from "@/lib/impact-service";
+import { getTeamMissionTemplate } from "@/lib/catalog-server";
 
 async function getUserTeamId(userId: string) {
   const result = await sql(
@@ -254,13 +255,27 @@ export async function POST(request: Request) {
         );
       }
 
+      // The mission template is the server-side source of truth for the
+      // mission's title/icon/xp/eco/needed. The client only sends a missionId;
+      // any client-supplied title/icon/xp/eco/needed is ignored. This closes
+      // the "client starts a team mission with inflated rewards" risk — the
+      // values later granted by submit_progress come from this row, not the
+      // request body.
+      const template = await getTeamMissionTemplate(String(missionId));
+      if (!template) {
+        return NextResponse.json(
+          { error: { code: "missions/not-found", message: "Unknown mission template." } },
+          { status: 400 }
+        );
+      }
+
       const activeMissionId = randomUUID();
       const payload = {
-        title,
-        icon,
-        xp,
-        eco,
-        needed,
+        title: template.title,
+        icon: template.icon,
+        xp: template.xp,
+        eco: template.eco,
+        needed: template.needed,
         completed_count: 0
       };
 
@@ -310,25 +325,48 @@ export async function POST(request: Request) {
       }
 
       if (photoProof) {
-        let base64Data = photoProof;
-        if (base64Data.includes(";base64,")) {
-          base64Data = base64Data.split(";base64,").pop() || "";
+        // Parse + size-validate the same way /api/ecostops and /api/photo-verification
+        // do, then dedupe by image hash so a single photo can't be reused across
+        // submissions (previously this route decoded base64 with no checks).
+        const photo = parsePhotoProof(photoProof, mimeType);
+        if (!photo) {
+          return NextResponse.json(
+            { error: { code: "invalid-argument", message: "Photo proof must be a valid base64 image between 5KB and 10MB." } },
+            { status: 400 }
+          );
         }
-        const buffer = Buffer.from(base64Data, "base64");
-        const resolvedMimeType = mimeType || "image/jpeg";
+
+        const imageHash = createImageHash(photo.buffer);
+        const existingPhoto = await getExistingPhotoHash(imageHash);
+        if (existingPhoto) {
+          return NextResponse.json(
+            {
+              error: {
+                code: "photo-already-used",
+                message: existingPhoto.user_id === userId
+                  ? "You already used this photo for a team mission. Please take a new photo."
+                  : "This photo has already been used by another user. Please submit a unique photo."
+              }
+            },
+            { status: 409 }
+          );
+        }
+
         const result = await verifyImageWithProvider(
-          buffer,
+          photo.buffer,
           userId,
           currentMissionId,
           missionPayload.title || "Team Mission",
-          resolvedMimeType
+          photo.mimeType
         );
         if (!result.verified) {
           return NextResponse.json(
-            { error: { code: "verification-failed", message: result.details || "The uploaded photo does not match or prove completion of this quest. Please provide a relevant photo." } },
+            { error: { code: "verification-failed", message: result.details || "The uploaded photo does not match or prove completion of this team mission. Please provide a relevant photo." } },
             { status: 422 }
           );
         }
+
+        await savePhotoHash(imageHash, userId, `team:${currentMissionId}`);
       } else if (textProof) {
         const result = await verifyTextProofWithGemini(
           textProof,
@@ -446,12 +484,74 @@ export async function DELETE(request: Request) {
   try {
     const userId = session.userId;
 
-    if (userId) {
-      await sql("delete from team_active_missions where payload->>'user_id' = $1", [userId]);
+    if (!userId) {
+      return NextResponse.json({ error: { code: "invalid-request" } }, { status: 400 });
+    }
+
+    // Find the caller's team (placeholder rows carry payload.user_id; mission
+    // rows do not, so this matches only the membership linkage).
+    const teamLink = await sql(
+      "select team_id from team_active_missions where payload->>'user_id' = $1 limit 1",
+      [userId]
+    );
+    const teamId = teamLink.rows[0]?.team_id ? String(teamLink.rows[0].team_id) : null;
+
+    // Not in a team — nothing to leave.
+    if (!teamId) {
       return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json({ error: { code: "invalid-request" } }, { status: 400 });
+    const teamRow = await sql(
+      "select created_by from teams where id = $1 limit 1",
+      [teamId]
+    );
+    const isLeader = teamRow.rows[0]?.created_by === userId;
+
+    if (isLeader) {
+      // Find remaining members (other placeholder rows), most senior first.
+      const remaining = await sql(
+        `select payload->>'user_id' as user_id
+         from team_active_missions
+         where team_id = $1
+           and payload->>'user_id' is not null
+           and payload->>'user_id' <> $2
+         order by created_at asc
+         limit 1`,
+        [teamId, userId]
+      );
+      const newLeaderId = remaining.rows[0]?.user_id
+        ? String(remaining.rows[0].user_id)
+        : null;
+
+      if (newLeaderId) {
+        // Reassign leadership: the team keeps its id/code/missions; only the
+        // leader pointer and the new leader's role label change.
+        await sql(
+          "update teams set created_by = $1, updated_at = now() where id = $2",
+          [newLeaderId, teamId]
+        );
+        await sql(
+          `update team_active_missions
+             set payload = jsonb_set(payload, '{role}', to_jsonb('leader'::text), true),
+                 updated_at = now()
+           where team_id = $1 and payload->>'user_id' = $2`,
+          [teamId, newLeaderId]
+        );
+      } else {
+        // No remaining members — disband. Cascades to team_active_missions,
+        // team_mission_logs, and team_progress (all on delete cascade).
+        await sql("delete from teams where id = $1", [teamId]);
+        return NextResponse.json({ success: true, disbanded: true });
+      }
+    }
+
+    // Remove the caller's membership linkage (mission_id is null placeholder).
+    await sql(
+      "delete from team_active_missions where team_id = $1 and payload->>'user_id' = $2 and mission_id is null",
+      [teamId, userId]
+    );
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Leave team error:", error);
     return NextResponse.json(

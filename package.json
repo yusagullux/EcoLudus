@@ -6,11 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:migrate": "node --import tsx scripts/migrate.ts",
     "test:photo-proof": "node --import tsx scripts/test-photo-verification.ts"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.68.0",
     "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
     "jose": "^6.1.2",
@@ -22,12 +29,20 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^24.10.0",
     "@types/pg": "^8.15.6",
     "@types/react": "19.2.16",
-    "autoprefixer": "^10.5.0",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.2.6",
+    "jsdom": "^25.0.1",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4.3.0",
     "tsx": "^4.20.6",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^2.1.9"
   }
 }

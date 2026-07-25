@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -253,8 +252,8 @@ export default function HabitsPage() {
   }
 
   const trustScore = Number(profile?.trustScore ?? 50);
-  const xp = profile?.xp ?? 0;
-  const level = profile?.level ?? 1;
+  const xp = Number(profile?.xp ?? 0);
+  const level = Number(profile?.level ?? 1);
 
   const trustLabel =
     trustScore >= 75

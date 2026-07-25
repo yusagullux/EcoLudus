@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -590,7 +589,7 @@ export default function GardenPage() {
                 style={{
                   borderColor: tile ? (rarityBorder[rarity] ?? "var(--border-default)") : "var(--border-default)",
                   background: tile ? `${rStyle.accent}14` : "var(--bg-panel-alt)",
-                  "--tw-ring-offset-color": "var(--bg-panel)"
+                  ["--tw-ring-offset-color" as string]: "var(--bg-panel)"
                 }}
                 aria-label={tile ? `${tileName(tile)} - ${stage}` : `Empty tile ${tileId + 1}`}
               >

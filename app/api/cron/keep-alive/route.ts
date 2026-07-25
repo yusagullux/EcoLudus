@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { isDatabaseSetupError, sql } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 /**
  * Keep-alive cron — pings the database on a regular schedule so the Supabase
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
   } catch (error) {
     // Don't fail the cron — the connection attempt itself helps wake a paused project.
     if (!isDatabaseSetupError(error)) {
-      console.error("Keep-alive DB ping failed:", error);
+      logError("Keep-alive DB ping failed", error);
     }
   }
 

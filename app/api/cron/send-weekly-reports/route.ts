@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { getImpactSince } from "@/lib/impact-service";
 import { buildWeeklyReportHtml, buildWeeklyReportText, type WeeklyReportData } from "@/lib/email-templates/weekly-report";
+import { logger, logError } from "@/lib/logger";
 
 /**
  * Weekly email cron — sends personalised impact reports every Monday at 08:00 UTC.
@@ -45,6 +47,11 @@ export async function POST(request: Request) {
     allUsers.sort((a, b) => b.xp - a.xp);
     const rankMap = new Map(allUsers.map((u, i) => [u.id, i + 1]));
 
+    // Window for "this week" — trailing 7 days. Using a rolling window (rather
+    // than calendar-week Monday 00:00) keeps the report correct even if the
+    // cron fires late. impact_events is the server-authoritative spine ledger.
+    const weekStartIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
     let sent = 0;
     let skipped = 0;
 
@@ -76,15 +83,17 @@ export async function POST(request: Request) {
         weeklyMissions += dailyQuestCompletions[key]?.length ?? 0;
       }
 
-      // XP gained this week (estimate from recent XP transactions — approximation)
-      // For now we use stored weeklyXp or fall back to 0
-      const xpGainedThisWeek = Number(payload?.weeklyXp ?? 0);
+      // Impact gained this week from the spine ledger. XP is only a running
+      // total (users.xp), not separately ledgered, so the comprehensive
+      // server-authoritative weekly-progress metric is Impact — the same one
+      // the dashboard's "Impact this week" cell shows.
+      const impactGainedThisWeek = await getImpactSince(user.id, weekStartIso);
 
       const reportData: WeeklyReportData = {
         displayName,
         email: user.email,
         xp,
-        xpGainedThisWeek,
+        impactGainedThisWeek,
         level,
         carbonReduced,
         missionsCompleted,
@@ -108,7 +117,7 @@ export async function POST(request: Request) {
             personalizations: [
               {
                 to: [{ email: user.email, name: displayName }],
-                subject: `Your EcoLudus week: +${xpGainedThisWeek} XP earned`
+                subject: `Your EcoLudus week: +${impactGainedThisWeek} Impact earned`
               }
             ],
             from: { email: fromAddress, name: "EcoLudus" },
@@ -123,11 +132,11 @@ export async function POST(request: Request) {
           sent++;
         } else {
           const body = await response.text();
-          console.error(`SendGrid error for ${user.email}: ${response.status} ${body}`);
+          logger.error("SendGrid send failed", { email: user.email, status: response.status, body: body.slice(0, 500) });
           skipped++;
         }
       } catch (err) {
-        console.error(`Failed to send email to ${user.email}:`, err);
+        logError("Failed to send weekly report email", err, { email: user.email });
         skipped++;
       }
     }
@@ -140,9 +149,9 @@ export async function POST(request: Request) {
       runAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error("Weekly report cron error:", error);
+    logError("Weekly report cron error", error);
     return NextResponse.json(
-      { error: "Weekly report run failed", message: String(error) },
+      { error: { code: "internal-error" } },
       { status: 500 }
     );
   }

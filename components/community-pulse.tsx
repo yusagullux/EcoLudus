@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 
+// Live community stats for the landing page. Sourced from /api/stats/community-aggregate
+// (the cached, users-table aggregate) rather than the old /api/community/stats route,
+// which read the mission_logs table and duplicated this aggregation.
+
 interface CommunityStats {
-  activeMembers: number;
+  members: number;
   totalMissions: number;
-  totalCO2Avoided: number;
-  totalXP: number;
-  lastUpdated: string;
+  totalCO2kg: number;
+  updated: string;
 }
 
 export function CommunityPulse() {
@@ -17,11 +20,16 @@ export function CommunityPulse() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("/api/community/stats", {
+        const response = await fetch("/api/stats/community-aggregate", {
           cache: "no-store"
         });
         const data = await response.json();
-        setStats(data);
+        setStats({
+          members: Number(data?.totalUsers ?? 0),
+          totalMissions: Number(data?.totalMissions ?? 0),
+          totalCO2kg: Number(data?.totalCO2kg ?? 0),
+          updated: String(data?.cachedAt ?? new Date().toISOString())
+        });
       } catch (error) {
         console.error("Failed to fetch community stats:", error);
       } finally {
@@ -30,8 +38,8 @@ export function CommunityPulse() {
     };
 
     fetchStats();
-    
-    // Refresh every 5 minutes
+
+    // Refresh every 5 minutes (matches the server-side cache TTL)
     const interval = setInterval(fetchStats, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -53,15 +61,15 @@ export function CommunityPulse() {
       <div className="flex flex-wrap items-center justify-center gap-8 text-center sm:gap-12">
         <div>
           <div className="text-2xl font-semibold text-forest-900">
-            {stats.activeMembers.toLocaleString()}
+            {stats.members.toLocaleString()}
           </div>
           <div className="text-xs uppercase tracking-[0.2em] text-forest-900/60 mt-1">
-            Active Members
+            Members
           </div>
         </div>
-        
+
         <div className="hidden h-12 w-px bg-forest-900/10 sm:block" />
-        
+
         <div>
           <div className="text-2xl font-semibold text-forest-900">
             {stats.totalMissions.toLocaleString()}
@@ -70,12 +78,12 @@ export function CommunityPulse() {
             Missions Completed
           </div>
         </div>
-        
+
         <div className="hidden h-12 w-px bg-forest-900/10 sm:block" />
-        
+
         <div>
           <div className="text-2xl font-semibold text-forest-900">
-            {stats.totalCO2Avoided.toLocaleString()}kg
+            {stats.totalCO2kg.toLocaleString()}kg
           </div>
           <div className="text-xs uppercase tracking-[0.2em] text-forest-900/60 mt-1">
             CO₂ Avoided
@@ -83,7 +91,7 @@ export function CommunityPulse() {
         </div>
       </div>
       <div className="mt-4 text-center text-xs text-forest-900/50">
-        Real data • Updated {new Date(stats.lastUpdated).toLocaleTimeString()}
+        Real data • Updated {new Date(stats.updated).toLocaleTimeString()}
       </div>
     </div>
   );

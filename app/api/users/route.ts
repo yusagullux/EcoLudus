@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json(
+      { error: { code: "auth/unauthenticated" } },
+      { status: 401 }
+    );
+  }
+
   try {
     const result = await sql(
       "select id, email, payload from users order by created_at asc limit 100"

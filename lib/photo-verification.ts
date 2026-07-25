@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { sql } from "./db";
+import { logger, logError } from "./logger";
 
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 export const MIN_PHOTO_BYTES = 5 * 1024;
@@ -39,10 +40,9 @@ function getGeminiEndpoint(model: string, key: string): { url: string; headers: 
 function warnIfKeyMissing() {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) {
-    console.warn(
-      "[EcoLudus] GEMINI_API_KEY is not set - AI verification disabled. " +
-      "Get a free key at https://aistudio.google.com/app/apikey"
-    );
+    logger.warn("GEMINI_API_KEY is not set — AI verification disabled", {
+      hint: "https://aistudio.google.com/app/apikey"
+    });
   }
 }
 
@@ -67,6 +67,35 @@ export async function savePhotoHash(imageHash: string, userId: string, questId: 
     "insert into photo_hashes (image_hash, user_id, quest_id) values ($1, $2, $3) on conflict (image_hash) do update set user_id = excluded.user_id, quest_id = excluded.quest_id, created_at = now()",
     [imageHash, userId, questId]
   );
+}
+
+/** Validate that a string is a non-empty, base64-alphabet payload with sane length. */
+export function isValidBase64ImagePayload(value: string) {
+  const normalized = value.replace(/\s/g, "");
+  return normalized.length > 0 && normalized.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(normalized);
+}
+
+/**
+ * Parse a client-supplied photo proof (either a `data:<mime>;base64,...` URL or
+ * raw base64) into a buffer + resolved MIME type. Enforces the same size limits
+ * (MIN_PHOTO_BYTES..MAX_PHOTO_BYTES) used everywhere else. Returns null on any
+ * validation failure — callers map that to their own error code.
+ */
+export function parsePhotoProof(photoProof: unknown, mimeType: unknown): { buffer: Buffer; mimeType: string } | null {
+  if (typeof photoProof !== "string" || photoProof.length < 100) return null;
+
+  const dataUrlMatch = photoProof.match(/^data:([^;]+);base64,(.+)$/);
+  const resolvedMimeType = dataUrlMatch?.[1] || (typeof mimeType === "string" ? mimeType : "image/jpeg");
+  const base64 = (dataUrlMatch?.[2] || photoProof).replace(/\s/g, "");
+  if (!isValidBase64ImagePayload(base64)) return null;
+
+  try {
+    const buffer = Buffer.from(base64, "base64");
+    if (buffer.length < MIN_PHOTO_BYTES || buffer.length > MAX_PHOTO_BYTES) return null;
+    return { buffer, mimeType: resolvedMimeType };
+  } catch {
+    return null;
+  }
 }
 
 function normalizeImageMimeType(buffer: Buffer, mimeType: string | null): string | null {
@@ -215,8 +244,12 @@ export async function verifyImageWithProvider(
 
     if (!response.ok) {
       const text = await response.text();
-      console.error(`[Gemini photo] HTTP ${response.status} - key prefix: ${geminiApiKey.slice(0, 8)}, url: ${url.split("?")[0]}`);
-      console.error(`[Gemini photo] Response body: ${text.slice(0, 500)}`);
+      logger.error("Gemini photo verification HTTP error", {
+        status: response.status,
+        keyPrefix: geminiApiKey.slice(0, 8),
+        url: url.split("?")[0],
+        body: text.slice(0, 500)
+      });
       throw new Error(`Gemini photo verification returned ${response.status}: ${text}`);
     }
 
@@ -230,7 +263,7 @@ export async function verifyImageWithProvider(
       details: parsed.reasoning || null
     };
   } catch (error) {
-    console.error("Gemini photo verification failed:", error);
+    logError("Gemini photo verification failed", error);
     if (!allowHeuristicFallback) {
       return {
         verified: false,
@@ -414,7 +447,7 @@ export async function verifyTextProofWithGemini(
       reasoning: parsed.reasoning || "Could not determine proof validity."
     };
   } catch (error) {
-    console.error("Gemini text verification error:", error);
+    logError("Gemini text verification failed", error);
     return heuristicTextVerification(textProof, questTitle);
   }
 }

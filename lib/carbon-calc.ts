@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { readFile } from "fs/promises";
 import path from "path";
 import { sql } from "@/lib/db";
+import { logError } from "@/lib/logger";
 
 type QuestDefinition = {
   id: string;
@@ -58,15 +58,28 @@ function roundCarbon(value: number) {
   return Math.max(0, Math.round(value * 100) / 100);
 }
 
-async function loadQuestCatalog() {
+function loadQuestCatalog(): Promise<Map<string, QuestDefinition>> {
   if (!questCatalogPromise) {
     questCatalogPromise = (async () => {
       const raw = await readFile(path.join(process.cwd(), "public", "quests.json"), "utf8");
-      const parsed = JSON.parse(raw);
+      const parsed = JSON.parse(raw) as {
+        categories?: Array<{
+          id: string;
+          name: string;
+          quests?: Array<{
+            id: string;
+            shortName?: string;
+            description?: string;
+            xp?: number;
+            ecoCoins?: number;
+            carbonFootprintReduction?: number;
+          }>;
+        }>;
+      };
       const quests = new Map<string, QuestDefinition>();
 
-      for (const category of parsed.categories || []) {
-        for (const quest of category.quests || []) {
+      for (const category of parsed.categories ?? []) {
+        for (const quest of category.quests ?? []) {
           quests.set(quest.id, {
             id: quest.id,
             title: quest.shortName || quest.description || quest.id,
@@ -83,7 +96,8 @@ async function loadQuestCatalog() {
     })();
   }
 
-  return questCatalogPromise;
+  // questCatalogPromise is assigned synchronously above when it was null.
+  return questCatalogPromise!;
 }
 
 export async function getQuestDefinition(questId: string) {
@@ -165,7 +179,7 @@ export async function getQuestCarbonReduction(quest: QuestDefinition): Promise<C
       await cacheCarbonValue(quest.id, kg, "climatiq", sourcePayload);
       return { kg, source: "climatiq", sourcePayload };
     } catch (error) {
-      console.error("Climatiq carbon calculation failed:", error);
+      logError("Climatiq carbon calculation failed", error);
     }
   }
 

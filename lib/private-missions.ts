@@ -13,6 +13,7 @@ import {
   getTrustMultiplier
 } from "./trust-system";
 import { checkAndProcessMilestones } from "./rewards-sync";
+import { logError } from "./logger";
 
 export const privateMissionSubmissionSchema = z.object({
   missionId: z.string().min(2).max(120),
@@ -461,7 +462,7 @@ export async function submitPrivateMission(
 
   // Check milestones async (tree planting) — fire-and-forget, never blocks the response
   checkAndProcessMilestones(body.userId).catch((err) =>
-    console.error("Milestone check after private mission failed:", err)
+    logError("Milestone check after private mission failed", err, { userId: body.userId })
   );
 
   return submissionResult;

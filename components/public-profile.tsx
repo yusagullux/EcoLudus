@@ -28,11 +28,11 @@ export type PublicProfile = {
 };
 
 const categories = [
-  { id: "recycling", name: "Recycling", image: "/images/forest.png", color: "#2f6b46", maxCo2: 3.6, badge: "Recycler" },
-  { id: "energy", name: "Energy Saving", image: "/images/background.png", color: "#9a6b1f", maxCo2: 2.1, badge: "Energy Saver" },
-  { id: "transportation", name: "Transportation", image: "/images/mountains.png", color: "#2f5f86", maxCo2: 3.0, badge: "Eco Commuter" },
-  { id: "water", name: "Water Saving", image: "/images/nature.png", color: "#237482", maxCo2: 0.5, badge: "Water Guardian" },
-  { id: "cleanup", name: "Clean-Up", image: "/images/night.png", color: "#62508f", maxCo2: 2.4, badge: "Clean Earth" },
+  { id: "recycling", name: "Recycling", image: "/images/forest.webp", color: "#2f6b46", maxCo2: 3.6, badge: "Recycler" },
+  { id: "energy", name: "Energy Saving", image: "/images/background.webp", color: "#9a6b1f", maxCo2: 2.1, badge: "Energy Saver" },
+  { id: "transportation", name: "Transportation", image: "/images/mountains.webp", color: "#2f5f86", maxCo2: 3.0, badge: "Eco Commuter" },
+  { id: "water", name: "Water Saving", image: "/images/nature.webp", color: "#237482", maxCo2: 0.5, badge: "Water Guardian" },
+  { id: "cleanup", name: "Clean-Up", image: "/images/night.webp", color: "#62508f", maxCo2: 2.4, badge: "Clean Earth" },
   { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b", maxCo2: 0.6, badge: "Green Thumb" }
 ];
 

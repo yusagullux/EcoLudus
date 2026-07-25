@@ -1,5 +1,6 @@
 // @ts-nocheck
 import type { CSSProperties } from "react";
+import type { SVGProps } from "react";
 
 /**
  * Hand-coded SVG category icons (no external/stock images).
@@ -17,12 +18,12 @@ type IconKey =
   | "sustainable"
   | "default";
 
-const stroke = {
+const stroke: SVGProps<SVGGElement> = {
   fill: "none",
   stroke: "currentColor",
   strokeWidth: 1.8,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
+  strokeLinecap: "round",
+  strokeLinejoin: "round"
 };
 
 function normalizeKey(idOrName: string): IconKey {

@@ -22,7 +22,8 @@
             "unit": "trash items"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "recycling_2",
@@ -38,7 +39,8 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": true
         },
         {
           "id": "recycling_3",
@@ -54,7 +56,8 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": true
         },
         {
           "id": "recycling_4",
@@ -70,7 +73,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": true
         },
         {
           "id": "recycling_5",
@@ -86,7 +90,8 @@
             "unit": "meal"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "recycling_6",
@@ -102,7 +107,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "recycling_7",
@@ -118,13 +124,14 @@
             "unit": "day"
           },
           "xp": 25,
-          "ecoCoins": 15
+          "ecoCoins": 15,
+          "requiresPhoto": false
         },
         {
           "id": "recycling_8",
           "shortName": "Donate Old Clothes",
           "description": "Donate or give away clothes you no longer wear instead of throwing them away, extending their life and reducing waste.",
-          "carbonFootprintReduction": 3.0,
+          "carbonFootprintReduction": 3,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -134,7 +141,8 @@
             "unit": "session"
           },
           "xp": 45,
-          "ecoCoins": 35
+          "ecoCoins": 35,
+          "requiresPhoto": false
         },
         {
           "id": "recycling_9",
@@ -150,7 +158,8 @@
             "unit": "item"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "recycling_10",
@@ -166,7 +175,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         }
       ]
     },
@@ -192,7 +202,8 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "energy_2",
@@ -208,7 +219,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "energy_3",
@@ -231,7 +243,7 @@
           "id": "energy_4",
           "shortName": "Turn Off Screen When Not Using",
           "description": "Turn off your computer, TV, or tablet screen when not actively using it to save energy.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -241,7 +253,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "energy_5",
@@ -264,7 +277,7 @@
           "id": "energy_6",
           "shortName": "Switch to LED Light Bulbs",
           "description": "Replace at least one incandescent light bulb with an energy-efficient LED bulb to reduce electricity consumption.",
-          "carbonFootprintReduction": 2.0,
+          "carbonFootprintReduction": 2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -274,13 +287,14 @@
             "unit": "bulb"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "energy_7",
           "shortName": "Use Cold Water for Laundry",
           "description": "Wash your clothes with cold water instead of hot water to save energy and reduce your carbon footprint.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -290,7 +304,8 @@
             "unit": "load"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "energy_8",
@@ -306,7 +321,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "energy_9",
@@ -322,13 +338,14 @@
             "unit": "day"
           },
           "xp": 25,
-          "ecoCoins": 15
+          "ecoCoins": 15,
+          "requiresPhoto": false
         },
         {
           "id": "energy_10",
           "shortName": "Use Power Strip with Switch",
           "description": "Use a power strip with an on/off switch to easily turn off multiple devices at once and prevent phantom energy drain.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -338,7 +355,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "energy_11",
@@ -354,7 +372,8 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "energy_12",
@@ -387,7 +406,7 @@
           "id": "transportation_1",
           "shortName": "Skip One Unnecessary Trip",
           "description": "Avoid making one unnecessary trip by combining errands, using online services, or postponing non-urgent travel.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -397,13 +416,14 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "transportation_2",
           "shortName": "Walk or Bike for Short Distance",
           "description": "Choose to walk or bike for a short distance (if possible) instead of using a car to reduce carbon emissions.",
-          "carbonFootprintReduction": 2.0,
+          "carbonFootprintReduction": 2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -413,7 +433,8 @@
             "unit": "trip"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "transportation_3",
@@ -429,7 +450,8 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "transportation_4",
@@ -445,7 +467,8 @@
             "unit": "trip"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "transportation_5",
@@ -461,7 +484,8 @@
             "unit": "trip"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "transportation_6",
@@ -477,13 +501,14 @@
             "unit": "trip"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "transportation_7",
           "shortName": "Work from Home",
           "description": "Work from home or remotely for at least part of the day to avoid commuting and reduce transportation emissions.",
-          "carbonFootprintReduction": 3.0,
+          "carbonFootprintReduction": 3,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -538,13 +563,13 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": true
         },
         {
           "id": "water_3",
           "shortName": "Fix Leaky Faucet",
           "description": "Fix a leaky faucet or report it to maintenance to prevent water waste. Even a small drip wastes gallons of water daily.",
-          "carbonFootprintReduction": 2.0,
+          "carbonFootprintReduction": 2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -554,13 +579,14 @@
             "unit": "faucet"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "water_4",
           "shortName": "Use Dishwasher Efficiently",
           "description": "Run your dishwasher only when it's fully loaded and use the eco-mode setting to save water and energy.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -570,7 +596,8 @@
             "unit": "load"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "water_5",
@@ -586,7 +613,8 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "water_6",
@@ -602,7 +630,8 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         }
       ]
     },
@@ -628,7 +657,8 @@
             "unit": "trash items"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": true
         },
         {
           "id": "cleanup_2",
@@ -644,7 +674,8 @@
             "unit": "session"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": true
         },
         {
           "id": "cleanup_3",
@@ -660,7 +691,8 @@
             "unit": "workspace"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": true
         },
         {
           "id": "cleanup_4",
@@ -676,7 +708,8 @@
             "unit": "session"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "cleanup_5",
@@ -692,13 +725,14 @@
             "unit": "trash items"
           },
           "xp": 50,
-          "ecoCoins": 40
+          "ecoCoins": 40,
+          "requiresPhoto": false
         },
         {
           "id": "cleanup_6",
           "shortName": "Recycle Old Electronics",
           "description": "Properly recycle or donate old electronics, batteries, or devices instead of throwing them in the trash.",
-          "carbonFootprintReduction": 2.0,
+          "carbonFootprintReduction": 2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -708,7 +742,8 @@
             "unit": "session"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         }
       ]
     },
@@ -734,13 +769,14 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": true
         },
         {
           "id": "gardening_2",
           "shortName": "Use Natural Light During Day",
           "description": "Open curtains and use natural sunlight instead of turning on lights during daytime hours.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -750,7 +786,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": true
         },
         {
           "id": "gardening_3",
@@ -766,13 +803,14 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": true
         },
         {
           "id": "gardening_4",
           "shortName": "Start Indoor Plant",
           "description": "Start growing an indoor plant or herb garden to improve air quality and connect with nature.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -782,7 +820,8 @@
             "unit": "plant"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "gardening_5",
@@ -798,7 +837,8 @@
             "unit": "shopping"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "gardening_6",
@@ -814,7 +854,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         }
       ]
     },
@@ -830,7 +871,7 @@
           "id": "sustainable_1",
           "shortName": "Compost Food Scraps",
           "description": "Start composting your food scraps instead of throwing them in the trash to reduce waste and create nutrient-rich soil.",
-          "carbonFootprintReduction": 2.0,
+          "carbonFootprintReduction": 2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -840,13 +881,14 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_2",
           "shortName": "Reuse Containers or Jars",
           "description": "Reuse glass jars, plastic containers, or other packaging instead of throwing them away.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -856,13 +898,14 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_3",
           "shortName": "Eat a Vegetarian Meal",
           "description": "Choose a vegetarian or plant-based meal to reduce carbon emissions from meat production.",
-          "carbonFootprintReduction": 2.0,
+          "carbonFootprintReduction": 2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -872,7 +915,8 @@
             "unit": "meal"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_4",
@@ -905,7 +949,8 @@
             "unit": "shopping"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_6",
@@ -921,7 +966,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_7",
@@ -937,7 +983,8 @@
             "unit": "item"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_8",
@@ -953,7 +1000,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_9",
@@ -969,13 +1017,14 @@
             "unit": "day"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_10",
           "shortName": "Use Reusable Water Filter",
           "description": "Use a reusable water filter or filter pitcher instead of buying bottled water to reduce plastic waste.",
-          "carbonFootprintReduction": 1.0,
+          "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -985,7 +1034,8 @@
             "unit": "day"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_11",
@@ -1001,7 +1051,8 @@
             "unit": "snack"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_12",
@@ -1017,7 +1068,8 @@
             "unit": "item"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_13",
@@ -1033,7 +1085,8 @@
             "unit": "load"
           },
           "xp": 35,
-          "ecoCoins": 25
+          "ecoCoins": 25,
+          "requiresPhoto": false
         },
         {
           "id": "sustainable_14",
@@ -1049,7 +1102,8 @@
             "unit": "plan"
           },
           "xp": 30,
-          "ecoCoins": 20
+          "ecoCoins": 20,
+          "requiresPhoto": false
         },
         {
           "id": "gamified_pet_1",
@@ -1065,7 +1119,8 @@
             "unit": "day"
           },
           "xp": 40,
-          "ecoCoins": 30
+          "ecoCoins": 30,
+          "requiresPhoto": false
         },
         {
           "id": "gamified_hatch_1",
@@ -1081,7 +1136,8 @@
             "unit": "day"
           },
           "xp": 100,
-          "ecoCoins": 80
+          "ecoCoins": 80,
+          "requiresPhoto": false
         }
       ]
     }

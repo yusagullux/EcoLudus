@@ -1,0 +1,8 @@
+.next
+node_modules
+docs
+ecoquest
+legacy
+supabase
+package-lock.json
+tsconfig.tsbuildinfo

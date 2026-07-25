@@ -1,3 +1,4 @@
+-- 002_lockdown_public_api.sql  (PARTIAL — see also 004_rls_newer_tables.sql)
 -- EcoLudus uses direct Postgres via DATABASE_URL / POSTGRES_URL, not the Supabase Data API.
 -- Enable RLS so tables are not readable through PostgREST if grants exist.
 

@@ -1,8 +1,9 @@
-// @ts-nocheck
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import { Pool, type QueryResultRow } from "pg";
+import { logger, logError } from "@/lib/logger";
+import { SHOP_SEED_ROWS, TEAM_MISSION_TEMPLATES } from "@/lib/catalog";
 
 type QueryResult<T extends QueryResultRow = QueryResultRow> = {
   command: string;
@@ -66,6 +67,30 @@ type MissionRow = {
   updated_at: string;
 };
 
+type CatalogItemRow = {
+  mode: string;
+  item_id: number;
+  name: string;
+  rarity: string;
+  price: number;
+  image: string;
+  hatch_time: string | null;
+  description: string | null;
+  sort_order: number;
+};
+
+type TeamTemplateRow = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  difficulty: string;
+  xp: number;
+  eco: number;
+  needed: number;
+  sort_order: number;
+};
+
 type MissionSubmissionRow = {
   id: string;
   mission_id: string;
@@ -103,6 +128,8 @@ type FileStore = {
   xp_transactions: Array<Record<string, unknown>>;
   trust_history: Array<Record<string, unknown>>;
   impact_events: Array<Record<string, unknown>>;
+  catalog_items: CatalogItemRow[];
+  team_mission_templates: TeamTemplateRow[];
 };
 
 declare global {
@@ -176,7 +203,19 @@ const EMPTY_STORE: FileStore = {
   team_progress: [],
   xp_transactions: [],
   trust_history: [],
-  impact_events: []
+  impact_events: [],
+  catalog_items: SHOP_SEED_ROWS.map((row) => ({ ...row })),
+  team_mission_templates: TEAM_MISSION_TEMPLATES.map((row, index) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    icon: row.icon,
+    difficulty: row.difficulty,
+    xp: row.xp,
+    eco: row.eco,
+    needed: row.needed,
+    sort_order: index
+  }))
 };
 
 function nowIso() {
@@ -293,7 +332,7 @@ async function ensureStoreDir() {
   await mkdir(path.dirname(STORE_PATH), { recursive: true });
 }
 
-async function loadStore() {
+async function loadStore(): Promise<FileStore> {
   if (global.__ecoquestStore) {
     return global.__ecoquestStore;
   }
@@ -304,14 +343,15 @@ async function loadStore() {
     const raw = await readFile(STORE_PATH, "utf8");
     global.__ecoquestStore = {
       ...clone(EMPTY_STORE),
-      ...JSON.parse(raw)
+      ...(JSON.parse(raw) as Partial<FileStore>)
     };
   } catch {
     global.__ecoquestStore = clone(EMPTY_STORE);
     await writeFile(STORE_PATH, JSON.stringify(global.__ecoquestStore, null, 2), "utf8");
   }
 
-  return global.__ecoquestStore;
+  // Both branches above assign global.__ecoquestStore, so this is defined.
+  return global.__ecoquestStore!;
 }
 
 async function persistStore() {
@@ -342,31 +382,31 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
   const normalized = normalizeSql(text);
 
   if (normalized === "select 1 as ok") {
-    return result([{ ok: 1 } as T]);
+    return result([{ ok: 1 } as unknown as T]);
   }
 
   if (normalized === "select id from users where email = $1 limit 1") {
     const email = String(params[0] ?? "");
     const row = store.users.find((user) => user.email === email);
-    return result(row ? ([{ id: row.id }] as T[]) : []);
+    return result(row ? ([{ id: row.id }] as unknown as T[]) : []);
   }
 
   if (normalized === "select id, email, password_hash, payload from users where email = $1 limit 1") {
     const email = String(params[0] ?? "");
     const row = store.users.find((user) => user.email === email);
-    return result(row ? ([clone(row)] as T[]) : []);
+    return result(row ? ([clone(row)] as unknown as T[]) : []);
   }
 
   if (normalized === "select id, email, payload from users where id = $1 limit 1") {
     const id = String(params[0] ?? "");
     const row = store.users.find((user) => user.id === id);
-    return result(row ? ([{ id: row.id, email: row.email, payload: clone(row.payload) }] as T[]) : []);
+    return result(row ? ([{ id: row.id, email: row.email, payload: clone(row.payload) }] as unknown as T[]) : []);
   }
 
   if (normalized === "select id, email, xp, level, trust_score, payload from users where id = $1 limit 1") {
     const id = String(params[0] ?? "");
     const row = store.users.find((user) => user.id === id);
-    if (!row) return result([] as T[]);
+    if (!row) return result([] as unknown as T[]);
     return result(
       [
         {
@@ -377,7 +417,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
           trust_score: Number((row.payload as any)?.trustScore ?? 50),
           payload: clone(row.payload)
         }
-      ] as T[]
+      ] as unknown as T[]
     );
   }
 
@@ -390,14 +430,14 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         email: row.email,
         payload: clone(row.payload)
       }));
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (normalized === "select id, join_code, payload from teams where id = $1 limit 1") {
     const id = String(params[0] ?? "");
     const row = store.teams.find((team) => team.id === id);
     return result(
-      row ? ([{ id: row.id, join_code: row.join_code, payload: clone(row.payload) }] as T[]) : []
+      row ? ([{ id: row.id, join_code: row.join_code, payload: clone(row.payload) }] as unknown as T[]) : []
     );
   }
 
@@ -405,11 +445,11 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const userId = String(params[0] ?? "");
     const teamActiveMission = store.team_active_missions.find((tam) => (tam.payload as any)?.user_id === userId);
     if (!teamActiveMission) {
-      return result([] as T[]);
+      return result([] as unknown as T[]);
     }
     const row = store.teams.find((team) => team.id === teamActiveMission.team_id);
     return result(
-      row ? ([{ id: row.id, join_code: row.join_code, created_by: row.created_by, payload: clone(row.payload) }] as T[]) : []
+      row ? ([{ id: row.id, join_code: row.join_code, created_by: row.created_by, payload: clone(row.payload) }] as unknown as T[]) : []
     );
   }
 
@@ -417,20 +457,20 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const joinCode = String(params[0] ?? "");
     const row = store.teams.find((team) => team.join_code === joinCode);
     return result(
-      row ? ([{ id: row.id, payload: clone(row.payload) }] as T[]) : []
+      row ? ([{ id: row.id, payload: clone(row.payload) }] as unknown as T[]) : []
     );
   }
 
   if (normalized === "select payload from team_active_missions where team_id = $1 and id = $2 limit 1") {
     const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
     const row = store.team_active_missions.find((entry) => entry.team_id === teamId && entry.id === id);
-    return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
+    return result(row ? ([{ payload: clone(row.payload) }] as unknown as T[]) : []);
   }
 
   if (normalized === "select payload, mission_id from team_active_missions where team_id = $1 and id = $2 limit 1") {
     const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
     const row = store.team_active_missions.find((entry) => entry.team_id === teamId && entry.id === id);
-    return result(row ? ([{ payload: clone(row.payload), mission_id: row.mission_id }] as T[]) : []);
+    return result(row ? ([{ payload: clone(row.payload), mission_id: row.mission_id }] as unknown as T[]) : []);
   }
 
   if (normalized === "select count(*) as count from team_active_missions where team_id = $1 and mission_id is not null") {
@@ -438,7 +478,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const count = store.team_active_missions.filter(
       (entry) => entry.team_id === teamId && entry.mission_id !== null
     ).length;
-    return result([{ count }] as T[]);
+    return result([{ count }] as unknown as T[]);
   }
 
   if (normalized === "select id from team_active_missions where team_id = $1 and mission_id = $2 limit 1") {
@@ -446,19 +486,19 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const row = store.team_active_missions.find(
       (entry) => entry.team_id === teamId && entry.mission_id === missionId
     );
-    return result(row ? ([{ id: row.id }] as T[]) : []);
+    return result(row ? ([{ id: row.id }] as unknown as T[]) : []);
   }
 
   if (normalized === "select payload from team_mission_logs where team_id = $1 and id = $2 limit 1") {
     const [teamId, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
     const row = store.team_mission_logs.find((entry) => entry.team_id === teamId && entry.id === id);
-    return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
+    return result(row ? ([{ payload: clone(row.payload) }] as unknown as T[]) : []);
   }
 
   if (normalized === "select payload from mission_logs where id = $1 limit 1") {
     const id = String(params[0] ?? "");
     const row = store.mission_logs.find((entry) => entry.id === id);
-    return result(row ? ([{ payload: clone(row.payload) }] as T[]) : []);
+    return result(row ? ([{ payload: clone(row.payload) }] as unknown as T[]) : []);
   }
 
   if (normalized === "select id, user_id, payload from mission_logs") {
@@ -467,7 +507,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
       user_id: row.user_id,
       payload: clone(row.payload)
     }));
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -479,13 +519,13 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const row = store.carbon_cache.find(
       (entry) => entry.quest_id === questId && new Date(entry.cached_at).getTime() > cutoff
     );
-    return result(row ? ([clone(row)] as T[]) : []);
+    return result(row ? ([clone(row)] as unknown as T[]) : []);
   }
 
   if (normalized === "select id, image_hash, user_id, quest_id, created_at from photo_hashes where image_hash = $1 limit 1") {
     const hash = String(params[0] ?? "");
     const row = store.photo_hashes.find((entry) => entry.image_hash === hash);
-    return result(row ? ([clone(row)] as T[]) : []);
+    return result(row ? ([clone(row)] as unknown as T[]) : []);
   }
 
   if (
@@ -529,7 +569,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         repeat_window_seconds: mission.repeat_window_seconds,
         metadata: clone(mission.metadata)
       }));
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -547,7 +587,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
               base_xp: row.base_xp,
               repeat_window_seconds: row.repeat_window_seconds
             }
-          ] as T[])
+          ] as unknown as T[])
         : []
     );
   }
@@ -561,7 +601,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const count = store.mission_submissions.filter(
       (entry) => entry.user_id === userId && new Date(entry.submitted_at).getTime() > cutoff
     ).length;
-    return result([{ count }] as T[]);
+    return result([{ count }] as unknown as T[]);
   }
 
   if (
@@ -575,7 +615,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         .filter((entry) => entry.user_id === userId && new Date(entry.submitted_at).getTime() > cutoff)
         .map((entry) => entry.mission_id)
     );
-    return result([{ count: missionIds.size }] as T[]);
+    return result([{ count: missionIds.size }] as unknown as T[]);
   }
 
   if (
@@ -595,7 +635,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         after_value: entry.after_value,
         description: entry.description
       }));
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -918,7 +958,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
       updated_at: nowIso()
     });
     await persistStore();
-    return result([{ id: newId }] as T[], "INSERT");
+    return result([{ id: newId }] as unknown as T[], "INSERT");
   }
 
   if (
@@ -1024,13 +1064,13 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const totalCo2 = store.users.reduce((s, u) => s + Number((u.payload as any)?.carbonReduced ?? 0), 0);
     const totalMissions = store.users.reduce((s, u) => s + Number((u.payload as any)?.missionsCompleted ?? 0), 0);
     const totalTrees = store.users.reduce((s, u) => s + Number((u.payload as any)?.treesPlanted ?? 0), 0);
-    return result([{ total_users: totalUsers, total_xp: totalXp, total_co2: totalCo2, total_missions: totalMissions, total_trees: totalTrees }] as T[]);
+    return result([{ total_users: totalUsers, total_xp: totalXp, total_co2: totalCo2, total_missions: totalMissions, total_trees: totalTrees }] as unknown as T[]);
   }
 
   // ── Cron: list all users for milestone processing ─────────────────────────
   if (normalized === "select id from users limit 1000") {
     const rows = store.users.slice(0, 1000).map((u) => ({ id: u.id }));
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   // ── rewards-sync: update payload only ─────────────────────────────────────
@@ -1096,7 +1136,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         payload: clone(row.payload)
       }));
 
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -1114,7 +1154,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
       email: u.email,
       payload: clone(u.payload)
     }));
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -1129,13 +1169,56 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const users = store.users.filter((u) => userIds.includes(u.id));
     const totalXp = users.reduce((sum, u) => sum + ((u.payload as any)?.xp || 0), 0);
     const totalEco = users.reduce((sum, u) => sum + ((u.payload as any)?.ecoPoints || 0), 0);
-    return result([{ total_xp: totalXp, total_eco: totalEco, member_count: users.length }] as T[]);
+    return result([{ total_xp: totalXp, total_eco: totalEco, member_count: users.length }] as unknown as T[]);
   }
 
   if (normalized === "select count(*) as missions_completed from team_mission_logs where team_id = $1") {
     const teamId = String(params[0] ?? "");
     const count = store.team_mission_logs.filter((entry) => entry.team_id === teamId).length;
-    return result([{ missions_completed: count }] as T[]);
+    return result([{ missions_completed: count }] as unknown as T[]);
+  }
+
+  if (
+    normalized ===
+    "select t.id, t.join_code, t.payload, coalesce(sum((u.payload->>'xp')::numeric), 0) as total_xp, coalesce(sum((u.payload->>'ecopoints')::numeric), 0) as total_eco, count(u.id) as member_count, (select count(*) from team_mission_logs tml where tml.team_id = t.id) as missions_completed from teams t left join team_active_missions tam on tam.team_id = t.id left join users u on u.id::text = tam.payload->>'user_id' group by t.id order by t.created_at desc limit $1"
+  ) {
+    // File-store mirror of the /api/stats/team-aggregate single-query form:
+    // per-team sum of member XP/eco (over team_active_missions × users), the
+    // count of joined rows that resolve to a user, and the team's mission-log
+    // count. Teams are ordered by created_at desc and capped at the limit.
+    const limitValue = Math.max(0, Number(params[0] ?? 50) || 50);
+    const rows = [...store.teams]
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limitValue)
+      .map((team) => {
+        const teamActiveMissions = store.team_active_missions.filter(
+          (tam) => tam.team_id === team.id
+        );
+        const memberUsers = teamActiveMissions
+          .map((tam) => store.users.find((u) => u.id === String((tam.payload as Record<string, unknown>)?.user_id ?? "")))
+          .filter((u): u is UserRow => Boolean(u));
+        const totalXp = memberUsers.reduce(
+          (sum, u) => sum + Number((u.payload as Record<string, unknown>)?.xp ?? 0),
+          0
+        );
+        const totalEco = memberUsers.reduce(
+          (sum, u) => sum + Number((u.payload as Record<string, unknown>)?.ecoPoints ?? 0),
+          0
+        );
+        const missionsCompleted = store.team_mission_logs.filter(
+          (entry) => entry.team_id === team.id
+        ).length;
+        return {
+          id: team.id,
+          join_code: team.join_code,
+          payload: clone(team.payload),
+          total_xp: totalXp,
+          total_eco: totalEco,
+          member_count: memberUsers.length,
+          missions_completed: missionsCompleted
+        };
+      });
+    return result(rows as unknown as T[]);
   }
 
   if (normalized === "select id, mission_id, payload from team_active_missions where team_id = $1 order by created_at desc") {
@@ -1148,13 +1231,13 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         mission_id: row.mission_id,
         payload: clone(row.payload)
       }));
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (normalized === "select team_id from team_active_missions where payload->>'user_id' = $1 limit 1") {
     const userId = String(params[0] ?? "");
     const row = store.team_active_missions.find((tam) => (tam.payload as any)?.user_id === userId);
-    return result(row ? ([{ team_id: row.team_id }] as T[]) : []);
+    return result(row ? ([{ team_id: row.team_id }] as unknown as T[]) : []);
   }
 
   if (normalized === "delete from team_active_missions where payload->>'user_id' = $1") {
@@ -1176,7 +1259,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         payload: clone(row.payload)
       }));
 
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -1195,7 +1278,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         payload: clone(row.payload)
       }));
 
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -1212,7 +1295,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         payload: clone(row.payload)
       }));
 
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -1229,7 +1312,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         payload: clone(row.payload)
       }));
 
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -1250,7 +1333,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         payload: clone(row.payload)
       }));
 
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   if (
@@ -1267,7 +1350,7 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         payload: clone(row.payload)
       }));
 
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
   }
 
   // ── Impact spine: append-only ledger ───────────────────────────────────────
@@ -1297,10 +1380,10 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const weekImpact = store.impact_events
       .filter(
         (entry) =>
-          entry.user_id === userId && new Date(entry.created_at).getTime() >= since
+          String(entry.user_id) === userId && new Date(String(entry.created_at)).getTime() >= since
       )
       .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
-    return result([{ week_impact: weekImpact }] as T[]);
+    return result([{ week_impact: weekImpact }] as unknown as T[]);
   }
 
   if (
@@ -1312,9 +1395,9 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     const rows = store.impact_events
       .filter(
         (entry) =>
-          entry.user_id === userId && new Date(entry.created_at).getTime() >= since
+          String(entry.user_id) === userId && new Date(String(entry.created_at)).getTime() >= since
       )
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
       .slice(0, limitValue)
       .map((entry) => ({
         id: entry.id,
@@ -1323,7 +1406,52 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         meta: clone(entry.meta),
         created_at: entry.created_at
       }));
-    return result(rows as T[]);
+    return result(rows as unknown as T[]);
+  }
+
+  if (
+    normalized ===
+    "select mode, item_id, name, rarity, price, image, hatch_time, description, sort_order from catalog_items order by mode, sort_order, item_id"
+  ) {
+    const rows = [...store.catalog_items]
+      .sort((a, b) =>
+        a.mode === b.mode
+          ? a.sort_order - b.sort_order || a.item_id - b.item_id
+          : a.mode.localeCompare(b.mode)
+      )
+      .map((row) => ({ ...row }));
+    return result(rows as unknown as T[]);
+  }
+
+  if (
+    normalized ===
+    "select mode, item_id, name, rarity, price, image, hatch_time, description, sort_order from catalog_items where mode = $1 and item_id = $2 limit 1"
+  ) {
+    const mode = String(params[0] ?? "");
+    const itemId = Number(params[1] ?? 0);
+    const row = store.catalog_items.find(
+      (entry) => entry.mode === mode && entry.item_id === itemId
+    );
+    return result(row ? ([{ ...row }] as unknown as T[]) : []);
+  }
+
+  if (
+    normalized ===
+    "select id, title, description, icon, difficulty, xp, eco, needed, sort_order from team_mission_templates order by sort_order"
+  ) {
+    const rows = [...store.team_mission_templates]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((row) => ({ ...row }));
+    return result(rows as unknown as T[]);
+  }
+
+  if (
+    normalized ===
+    "select id, title, description, icon, difficulty, xp, eco, needed, sort_order from team_mission_templates where id = $1 limit 1"
+  ) {
+    const id = String(params[0] ?? "");
+    const row = store.team_mission_templates.find((entry) => entry.id === id);
+    return result(row ? ([{ ...row }] as unknown as T[]) : []);
   }
 
   throw new Error(`Unsupported file database query: ${text}`);
@@ -1428,6 +1556,9 @@ create index if not exists idx_team_mission_logs_team_id on team_mission_logs(te
 create index if not exists idx_team_mission_logs_mission_id on team_mission_logs(mission_id);
 create index if not exists idx_mission_logs_user_id on mission_logs(user_id);
 create index if not exists idx_carbon_cache_cached_at on carbon_cache(cached_at);
+-- Leaderboard ordering by XP (desc) and team-progress lookup by team + source.
+create index if not exists idx_users_xp_desc on users(xp desc);
+create index if not exists idx_team_progress_team_source on team_progress(team_id, source);
 
 alter table users
   add column if not exists xp integer not null default 0,
@@ -1540,6 +1671,36 @@ create table if not exists impact_events (
 create index if not exists idx_impact_events_user_created on impact_events(user_id, created_at desc);
 create index if not exists idx_impact_events_source on impact_events(source);
 
+-- Shop + team-mission catalogs. The catalog is the source of truth for
+-- prices and team-mission rewards: the buy/assign routes look items up by
+-- id and ignore any client-supplied price/xp/eco. Seeds mirror the constants
+-- in lib/catalog.ts (SHOP_CATALOG / TEAM_MISSION_TEMPLATES) and the file-fallback
+-- seeds in EMPTY_STORE — keep all three in sync when editing.
+create table if not exists catalog_items (
+  mode text not null check (mode in ('plants', 'eggs', 'chests')),
+  item_id integer not null,
+  name text not null,
+  rarity text not null check (rarity in ('common', 'rare', 'epic', 'legendary')),
+  price integer not null check (price >= 0),
+  image text not null,
+  hatch_time text,
+  description text,
+  sort_order integer not null default 0,
+  primary key (mode, item_id)
+);
+
+create table if not exists team_mission_templates (
+  id text primary key,
+  title text not null,
+  description text not null,
+  icon text not null,
+  difficulty text not null check (difficulty in ('Easy', 'Medium', 'Hard')),
+  xp integer not null check (xp >= 0),
+  eco integer not null check (eco >= 0),
+  needed integer not null check (needed >= 1),
+  sort_order integer not null default 0
+);
+
 insert into missions (id, title, category, mission_type, visibility, base_xp, repeat_window_seconds, metadata)
 values
   ('shower_reduce_5min', 'Reduce shower time', 'water', 'private', 'private', 40, 86400, '{"preferredBeforeAfter": true, "unitHint": "minutes"}'::jsonb),
@@ -1555,6 +1716,60 @@ set title = excluded.title,
     metadata = excluded.metadata,
     updated_at = now();
 
+-- Seed catalog_items (mirrors SHOP_CATALOG in lib/catalog.ts).
+insert into catalog_items (mode, item_id, name, rarity, price, image, hatch_time, description, sort_order)
+values
+  ('plants', 1, 'Mossy Fern', 'common', 50, '/images/plants/mint.png', null, null, 0),
+  ('plants', 2, 'Golden Daisy', 'common', 60, '/images/plants/sunflower.png', null, null, 1),
+  ('plants', 3, 'Blue Orchid', 'rare', 180, '/images/plants/orchid.png', null, null, 2),
+  ('plants', 4, 'Spotted Aloe', 'rare', 200, '/images/plants/basil.png', null, null, 3),
+  ('plants', 5, 'Mystic Bamboo', 'epic', 450, '/images/plants/bamboo.png', null, null, 4),
+  ('plants', 6, 'Crystal Lotus', 'epic', 500, '/images/plants/lotus.png', null, null, 5),
+  ('plants', 7, 'Aurora Blossom', 'legendary', 1200, '/images/plants/cherry_blossom.png', null, null, 6),
+  ('plants', 8, 'Ember Cactus', 'legendary', 1500, '/images/plants/dragonfruit.png', null, null, 7),
+  ('eggs', 1, 'Common Egg', 'common', 100, '/images/eggs/common-egg.png', '1h', null, 0),
+  ('eggs', 2, 'Rare Egg', 'rare', 300, '/images/eggs/rare-egg.png', '4h', null, 1),
+  ('eggs', 3, 'Epic Egg', 'epic', 700, '/images/eggs/epic-egg.png', '12h', null, 2),
+  ('eggs', 4, 'Legendary Egg', 'legendary', 1800, '/images/eggs/legendary-egg.png', '24h', null, 3),
+  ('chests', 1, 'Wooden Chest', 'common', 150, '/images/chests/wooden-chest.png', null, 'Contains EcoCoins or Common Plants!', 0),
+  ('chests', 2, 'Bronze Chest', 'rare', 350, '/images/chests/bronze-chest.png', null, 'Contains EcoCoins, Rare Plants, or Common Eggs!', 1),
+  ('chests', 3, 'Silver Chest', 'epic', 800, '/images/chests/silver-chest.png', null, 'Contains a large amount of EcoCoins, Epic Plants, or Eggs!', 2),
+  ('chests', 4, 'Golden Chest', 'legendary', 2000, '/images/chests/golden-chest.png', null, 'Contains massive EcoCoins, Legendary Plants, or Eggs!', 3)
+on conflict (mode, item_id) do update
+set name = excluded.name,
+    rarity = excluded.rarity,
+    price = excluded.price,
+    image = excluded.image,
+    hatch_time = excluded.hatch_time,
+    description = excluded.description,
+    sort_order = excluded.sort_order;
+
+-- Seed team_mission_templates (mirrors TEAM_MISSION_TEMPLATES in lib/catalog.ts).
+insert into team_mission_templates (id, title, description, icon, difficulty, xp, eco, needed, sort_order)
+values
+  ('t1', 'Recycle 15 Plastic Bottles', 'Split the work and recycle at least 15 plastic bottles as a team.', '♻️', 'Easy', 240, 140, 3, 0),
+  ('t2', 'Clean One Shared Area', 'Pick a park block or stairwell and leave it visibly better.', '🧹', 'Easy', 260, 160, 3, 1),
+  ('t3', 'Commute Sustainably', 'At least 3 teammates bike, walk or take transit instead of a car.', '🚶', 'Medium', 300, 180, 3, 2),
+  ('t4', 'Save 50 Liters of Water', 'Collectively save about 50 liters through shorter showers.', '💧', 'Medium', 320, 190, 3, 3),
+  ('t5', 'Night Power Down', 'Unplug unused chargers/devices across at least 3 households.', '🔌', 'Easy', 220, 130, 2, 4),
+  ('t6', 'Plant or Care for 3 Greens', 'Plant seeds or tend to three different plants as a joint effort.', '🌱', 'Easy', 210, 120, 3, 5),
+  ('t7', 'Zero-Waste Group Feast', 'Organize a group meal where all food ingredients are package-free and zero waste is generated.', '🍽️', 'Hard', 500, 300, 4, 6),
+  ('t8', 'Plastic Cleanup Blitz', 'Do a neighborhood walk together and clean up 50 items of plastic waste.', '🚯', 'Medium', 380, 220, 3, 7),
+  ('t9', 'Community Energy Audit', 'Inspect and log energy usage parameters in your homes to identify major power-draining sources.', '📊', 'Hard', 550, 340, 4, 8),
+  ('t10', 'Shared Compost Starter', 'Set up or refresh a shared compost bin and have teammates add approved food scraps.', 'CP', 'Medium', 420, 250, 3, 9),
+  ('t11', 'Reusable Kit Relay', 'Each teammate prepares a reusable bottle, bag, and container kit for the week.', 'RK', 'Easy', 280, 170, 3, 10),
+  ('t12', 'Tree Care Patrol', 'Water, mulch, or clean around nearby trees and document care from multiple teammates.', 'TC', 'Medium', 460, 280, 4, 11),
+  ('t13', 'Repair Circle', 'Work together to repair clothes, gear, or household items instead of replacing them.', 'RC', 'Hard', 600, 380, 4, 12)
+on conflict (id) do update
+set title = excluded.title,
+    description = excluded.description,
+    icon = excluded.icon,
+    difficulty = excluded.difficulty,
+    xp = excluded.xp,
+    eco = excluded.eco,
+    needed = excluded.needed,
+    sort_order = excluded.sort_order;
+
 create index if not exists idx_missions_type_active on missions(mission_type, active);
 create index if not exists idx_mission_submissions_user_submitted on mission_submissions(user_id, submitted_at desc);
 create index if not exists idx_mission_submissions_mission on mission_submissions(mission_id);
@@ -1566,7 +1781,7 @@ create index if not exists idx_trust_history_user_created on trust_history(user_
   `;
 
   migrationPromise = poolInstance.query(migrationSql).then(() => {
-    console.log("Database migrations applied successfully.");
+    logger.info("Database migrations applied successfully");
   }).catch((err) => {
     migrationPromise = null;
     throw err;
@@ -1618,7 +1833,7 @@ async function detectMode() {
         throw error;
       }
 
-      console.warn("PostgreSQL unavailable, falling back to local persistent data store. Error:", error);
+      logError("PostgreSQL unavailable, falling back to local file store", error);
       global.__ecoquestDbMode = "file";
     } finally {
       global.__ecoquestDetectModePromise = undefined;
@@ -1652,7 +1867,7 @@ export async function sql<T extends QueryResultRow = QueryResultRow>(
     }
 
     global.__ecoquestDbMode = "file";
-    console.warn("PostgreSQL query failed, switching to local persistent data store. Error:", error);
+    logError("PostgreSQL query failed, switching to local file store", error);
     return fileSql<T>(text, params);
   }
 }

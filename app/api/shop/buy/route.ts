@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { getShopItem } from "@/lib/catalog-server";
+import { logError } from "@/lib/logger";
 
 // Server-validated shop purchase. The shop page used to spend EcoPoints and
 // mint the plant/egg/chest straight through `updateUserProfile`, so a client
@@ -11,46 +13,11 @@ import { sql } from "@/lib/db";
 // right inventory. Purchases are a SINK — they spend earned eco and grant no
 // Impact / XP (no purchase→farm loop), so this is a direct payload write, NOT
 // a grantImpact call (mirrors /api/chests/open).
-
-type Rarity = "common" | "rare" | "epic" | "legendary";
-
-type CatalogItem = {
-  id: number;
-  name: string;
-  rarity: Rarity;
-  price: number;
-  image: string;
-  hatchTime?: string;
-  description?: string;
-};
-
-// Single source of truth for shop pricing. Mirrors the catalog in
-// app/(game)/shop/page.tsx — the client only renders this; the server decides
-// what each item costs. A client cannot send a cheaper price.
-const CATALOG: Record<"plants" | "eggs" | "chests", CatalogItem[]> = {
-  plants: [
-    { id: 1, name: "Mossy Fern", rarity: "common", price: 50, image: "/images/plants/mint.png" },
-    { id: 2, name: "Golden Daisy", rarity: "common", price: 60, image: "/images/plants/sunflower.png" },
-    { id: 3, name: "Blue Orchid", rarity: "rare", price: 180, image: "/images/plants/orchid.png" },
-    { id: 4, name: "Spotted Aloe", rarity: "rare", price: 200, image: "/images/plants/basil.png" },
-    { id: 5, name: "Mystic Bamboo", rarity: "epic", price: 450, image: "/images/plants/bamboo.png" },
-    { id: 6, name: "Crystal Lotus", rarity: "epic", price: 500, image: "/images/plants/lotus.png" },
-    { id: 7, name: "Aurora Blossom", rarity: "legendary", price: 1200, image: "/images/plants/cherry_blossom.png" },
-    { id: 8, name: "Ember Cactus", rarity: "legendary", price: 1500, image: "/images/plants/dragonfruit.png" }
-  ],
-  eggs: [
-    { id: 1, name: "Common Egg", rarity: "common", price: 100, image: "/images/eggs/common-egg.png", hatchTime: "1h" },
-    { id: 2, name: "Rare Egg", rarity: "rare", price: 300, image: "/images/eggs/rare-egg.png", hatchTime: "4h" },
-    { id: 3, name: "Epic Egg", rarity: "epic", price: 700, image: "/images/eggs/epic-egg.png", hatchTime: "12h" },
-    { id: 4, name: "Legendary Egg", rarity: "legendary", price: 1800, image: "/images/eggs/legendary-egg.png", hatchTime: "24h" }
-  ],
-  chests: [
-    { id: 1, name: "Wooden Chest", rarity: "common", price: 150, image: "/images/chests/wooden-chest.png" },
-    { id: 2, name: "Bronze Chest", rarity: "rare", price: 350, image: "/images/chests/bronze-chest.png" },
-    { id: 3, name: "Silver Chest", rarity: "epic", price: 800, image: "/images/chests/silver-chest.png" },
-    { id: 4, name: "Golden Chest", rarity: "legendary", price: 2000, image: "/images/chests/golden-chest.png" }
-  ]
-};
+//
+// The catalog is loaded from `catalog_items` via lib/catalog-server — a
+// client only sends `{ mode, itemId }` and the server looks up the price, so
+// a client cannot send a cheaper price. Prices can be updated in the DB
+// without a code deploy.
 
 const buySchema = z.object({
   mode: z.enum(["plants", "eggs", "chests"]),
@@ -82,7 +49,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
     }
 
-    const item = CATALOG[parsed.mode].find((entry) => entry.id === parsed.itemId) ?? null;
+    const item = await getShopItem(parsed.mode, parsed.itemId);
     if (!item) {
       return NextResponse.json({ error: { code: "shop/not-found" } }, { status: 404 });
     }
@@ -134,7 +101,7 @@ export async function POST(request: Request) {
       ecoPoints: currentEco - item.price
     });
   } catch (error) {
-    console.error("Shop buy error:", error);
+    logError("Shop buy error", error);
     return NextResponse.json({ error: { code: "internal-error" } }, { status: 500 });
   }
 }

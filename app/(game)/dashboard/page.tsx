@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
@@ -17,37 +16,41 @@ const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string;
 };
 
 const CATEGORIES = [
-  { name: "Recycling", image: "/images/forest.png", color: "#2f6b46" },
-  { name: "Energy Saving", image: "/images/background.png", color: "#9a6b1f" },
-  { name: "Transportation", image: "/images/mountains.png", color: "#2f5f86" },
-  { name: "Water Saving", image: "/images/nature.png", color: "#237482" },
-  { name: "Clean-Up Missions", image: "/images/night.png", color: "#62508f" },
+  { name: "Recycling", image: "/images/forest.webp", color: "#2f6b46" },
+  { name: "Energy Saving", image: "/images/background.webp", color: "#9a6b1f" },
+  { name: "Transportation", image: "/images/mountains.webp", color: "#2f5f86" },
+  { name: "Water Saving", image: "/images/nature.webp", color: "#237482" },
+  { name: "Clean-Up Missions", image: "/images/night.webp", color: "#62508f" },
   { name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b" },
   { name: "Sustainable Living", image: "/images/plants/lotus.png", color: "#3e8c7c" }
 ];
 
 const CATEGORY_IMAGES: Record<string, string> = {
-  recycling: "/images/forest.png",
-  energy_saving: "/images/background.png",
-  transportation: "/images/mountains.png",
-  water_saving: "/images/nature.png",
-  cleanup_missions: "/images/night.png",
-  gardening_nature: "/images/forest.png",
-  sustainable_living: "/images/mountains.png"
+  recycling: "/images/forest.webp",
+  energy_saving: "/images/background.webp",
+  transportation: "/images/mountains.webp",
+  water_saving: "/images/nature.webp",
+  cleanup_missions: "/images/night.webp",
+  gardening_nature: "/images/forest.webp",
+  sustainable_living: "/images/mountains.webp"
 };
 
 const MAX_PROOF_PHOTO_BYTES = 10 * 1024 * 1024;
 const MIN_PROOF_PHOTO_BYTES = 5 * 1024;
 const ACCEPTED_PROOF_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
-function checkIfQuestRequiresPhoto(id: string) {
-  const photoQuestIds = [
-    "recycling_2", "recycling_3", "recycling_4",
-    "cleanup_1", "cleanup_2", "cleanup_3",
-    "gardening_1", "gardening_2", "gardening_3",
-    "water_2"
-  ];
-  return photoQuestIds.includes(id);
+// Whether a quest requires a photo proof (vs. allowing text). Derived from the
+// `requiresPhoto` flag on the quest definition in /public/quests.json — the
+// quest catalog is the single source of truth, so adding a photo quest no
+// longer needs a code change here.
+function questRequiresPhoto(questsData: { categories?: Array<{ quests?: Array<{ id: string; requiresPhoto?: boolean }> }> } | null, id: string) {
+  if (!questsData?.categories) return false;
+  for (const category of questsData.categories) {
+    for (const quest of category.quests ?? []) {
+      if (quest.id === id) return Boolean(quest.requiresPhoto);
+    }
+  }
+  return false;
 }
 
 function getTimeUntilNextReset(lastResetTime: string | null): number {
@@ -135,9 +138,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!profile || !questsData || !user?.uid) return;
 
-    const lastReset = profile.lastQuestResetTime;
-    const currentDailyQuestIds = profile.currentDailyQuests || [];
-    const dailyQuestsCompleted = profile.dailyQuestsCompleted || [];
+    const lastReset = profile.lastQuestResetTime as string | undefined;
+    const currentDailyQuestIds = (profile.currentDailyQuests || []) as string[];
+    const dailyQuestsCompleted = (profile.dailyQuestsCompleted || []) as string[];
 
     // Flatten all quests from quests.json categories
     const allMappedQuests: any[] = [];
@@ -151,7 +154,8 @@ export default function DashboardPage() {
           xp: quest.xp || 35,
           eco: quest.ecoCoins || 25,
           carbon: quest.carbonFootprintReduction || 0.5,
-          requiresProof: true
+          requiresProof: true,
+          requiresPhoto: Boolean(quest.requiresPhoto)
         });
       });
     });
@@ -161,7 +165,7 @@ export default function DashboardPage() {
     if (isResetNeeded) {
       async function resetDaily() {
         setLoadingQuests(true);
-        const completedQuestIds = profile.completedQuests || [];
+        const completedQuestIds = (profile!.completedQuests || []) as string[];
         let available = allMappedQuests.filter((q: any) => !completedQuestIds.includes(q.id));
         if (available.length === 0) {
           available = allMappedQuests;
@@ -195,7 +199,7 @@ export default function DashboardPage() {
         };
 
         try {
-          const result = await updateUserProfile(user.uid, profileUpdates);
+          const result = await updateUserProfile(user!.uid, profileUpdates);
           if (result.success) {
             await refreshProfile();
           }
@@ -244,10 +248,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!activeTextVerifyQuest) return;
 
-    const requiresPhoto = checkIfQuestRequiresPhoto(activeTextVerifyQuest.id);
+    const requiresPhoto = questRequiresPhoto(questsData, activeTextVerifyQuest.id);
     setProofType(requiresPhoto ? "photo" : "text");
     setVerificationError(null);
-  }, [activeTextVerifyQuest]);
+  }, [activeTextVerifyQuest, questsData]);
 
   // Live ticking reset timer (counts down to midnight UTC)
   useEffect(() => {
@@ -268,12 +272,12 @@ export default function DashboardPage() {
   };
 
   const displayName = profile?.displayName || user?.email?.split("@")[0] || "Explorer";
-  const xp = profile?.xp ?? 0;
-  const ecoPoints = profile?.ecoPoints ?? 0;
-  const level = profile?.level ?? 1;
-  const carbonReduced = profile?.carbonReduced ?? 0;
-  const missionsCompleted = profile?.missionsCompleted ?? 0;
-  const completedQuests = profile?.completedQuests || [];
+  const xp = Number(profile?.xp ?? 0);
+  const ecoPoints = Number(profile?.ecoPoints ?? 0);
+  const level = Number(profile?.level ?? 1);
+  const carbonReduced = Number(profile?.carbonReduced ?? 0);
+  const missionsCompleted = Number(profile?.missionsCompleted ?? 0);
+  const completedQuests = (profile?.completedQuests || []) as string[];
   const currentStreak = Number(profile?.currentStreak ?? 0);
   const longestStreak = Number(profile?.longestStreak ?? 0);
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
@@ -646,7 +650,7 @@ export default function DashboardPage() {
                         e.preventDefault();
                         e.stopPropagation();
                         setActiveTextVerifyQuest(quest);
-                        setProofType(checkIfQuestRequiresPhoto(quest.id) ? "photo" : "text");
+                        setProofType(questRequiresPhoto(questsData, quest.id) ? "photo" : "text");
                         setTextProof("");
                         setPhotoFile(null);
                         setPhotoPreview(null);
@@ -697,7 +701,7 @@ export default function DashboardPage() {
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Quest verification</p>
                 <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Verify proof for: {activeTextVerifyQuest.title}</h3>
                 <p className="mt-2 text-sm leading-6" style={{ color: "var(--text-muted)" }}>
-                  {checkIfQuestRequiresPhoto(activeTextVerifyQuest.id)
+                  {questRequiresPhoto(questsData, activeTextVerifyQuest.id)
                     ? "This quest needs a photo proof upload."
                     : "You can verify with either text or a photo."}
                 </p>
@@ -707,12 +711,12 @@ export default function DashboardPage() {
               <div className="flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
                 <button
                   type="button"
-                  disabled={checkIfQuestRequiresPhoto(activeTextVerifyQuest.id)}
+                  disabled={questRequiresPhoto(questsData, activeTextVerifyQuest.id)}
                   onClick={() => { setProofType("text"); setVerificationError(null); }}
                   className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
                   style={proofType === "text"
                     ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
-                    : checkIfQuestRequiresPhoto(activeTextVerifyQuest.id)
+                    : questRequiresPhoto(questsData, activeTextVerifyQuest.id)
                     ? { color: "var(--text-muted)", opacity: 0.45 }
                     : { color: "var(--text-muted)" }}
                 >

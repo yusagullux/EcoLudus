@@ -1,30 +1,10 @@
-// @ts-nocheck
 "use client";
 
 import { useAuth } from "@/lib/useAuth";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
-
-const missionTemplates = [
-  { id: "t1", title: "Recycle 15 Plastic Bottles", desc: "Split the work and recycle at least 15 plastic bottles as a team.", icon: "♻️", difficulty: "Easy", xp: 240, eco: 140, needed: 3 },
-  { id: "t2", title: "Clean One Shared Area", desc: "Pick a park block or stairwell and leave it visibly better.", icon: "🧹", difficulty: "Easy", xp: 260, eco: 160, needed: 3 },
-  { id: "t3", title: "Commute Sustainably", desc: "At least 3 teammates bike, walk or take transit instead of a car.", icon: "🚶", difficulty: "Medium", xp: 300, eco: 180, needed: 3 },
-  { id: "t4", title: "Save 50 Liters of Water", desc: "Collectively save about 50 liters through shorter showers.", icon: "💧", difficulty: "Medium", xp: 320, eco: 190, needed: 3 },
-  { id: "t5", title: "Night Power Down", desc: "Unplug unused chargers/devices across at least 3 households.", icon: "🔌", difficulty: "Easy", xp: 220, eco: 130, needed: 2 },
-  { id: "t6", title: "Plant or Care for 3 Greens", desc: "Plant seeds or tend to three different plants as a joint effort.", icon: "🌱", difficulty: "Easy", xp: 210, eco: 120, needed: 3 },
-  { id: "t7", title: "Zero-Waste Group Feast", desc: "Organize a group meal where all food ingredients are package-free and zero waste is generated.", icon: "🍽️", difficulty: "Hard", xp: 500, eco: 300, needed: 4 },
-  { id: "t8", title: "Plastic Cleanup Blitz", desc: "Do a neighborhood walk together and clean up 50 items of plastic waste.", icon: "🚯", difficulty: "Medium", xp: 380, eco: 220, needed: 3 },
-  { id: "t9", title: "Community Energy Audit", desc: "Inspect and log energy usage parameters in your homes to identify major power-draining sources.", icon: "📊", difficulty: "Hard", xp: 550, eco: 340, needed: 4 }
-];
-
-const expandedMissionTemplates = [
-  ...missionTemplates,
-  { id: "t10", title: "Shared Compost Starter", desc: "Set up or refresh a shared compost bin and have teammates add approved food scraps.", icon: "CP", difficulty: "Medium", xp: 420, eco: 250, needed: 3 },
-  { id: "t11", title: "Reusable Kit Relay", desc: "Each teammate prepares a reusable bottle, bag, and container kit for the week.", icon: "RK", difficulty: "Easy", xp: 280, eco: 170, needed: 3 },
-  { id: "t12", title: "Tree Care Patrol", desc: "Water, mulch, or clean around nearby trees and document care from multiple teammates.", icon: "TC", difficulty: "Medium", xp: 460, eco: 280, needed: 4 },
-  { id: "t13", title: "Repair Circle", desc: "Work together to repair clothes, gear, or household items instead of replacing them.", icon: "RC", difficulty: "Hard", xp: 600, eco: 380, needed: 4 }
-];
+import type { TeamMissionTemplate } from "@/lib/catalog";
 
 const difficultyColor: Record<string, string> = {
   Easy: "bg-emerald-50 text-emerald-700",
@@ -44,6 +24,27 @@ export default function TeamPage() {
   const [toast, setToast] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<TeamMissionTemplate[]>([]);
+
+  // Mission templates (titles, icons, xp/eco/needed) are loaded from the
+  // server's read API and are display-only — the /api/teams `assign` route
+  // re-validates the template by id and ignores any client-supplied values,
+  // so a client cannot start a mission with inflated rewards.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/catalog/team-templates", { credentials: "include" });
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled && res.ok && Array.isArray(data?.templates)) {
+          setTemplates(data.templates);
+        }
+      } catch (error) {
+        console.error("Failed to load team mission templates:", error);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Team progress proof states
   const [activeProofMission, setActiveProofMission] = useState<any | null>(null);
@@ -166,7 +167,7 @@ export default function TeamPage() {
     }
   };
 
-  const handleAssignMission = async (t: typeof expandedMissionTemplates[0]) => {
+  const handleAssignMission = async (t: TeamMissionTemplate) => {
     if (!user?.uid || !team?.id) return;
     if (activeMissions.length >= 3) {
       showToast("Maximum 3 active missions allowed");
@@ -180,6 +181,8 @@ export default function TeamPage() {
 
     setAssigningId(t.id);
     try {
+      // Only the missionId is sent; the server looks up the template and
+      // uses its title/icon/xp/eco/needed, so a client cannot inflate rewards.
       const response = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -187,12 +190,7 @@ export default function TeamPage() {
         body: JSON.stringify({
           action: "assign",
           teamId: team.id,
-          missionId: t.id,
-          title: t.title,
-          icon: t.icon,
-          xp: t.xp,
-          eco: t.eco,
-          needed: t.needed
+          missionId: t.id
         })
       });
       const data = await response.json();
@@ -457,14 +455,16 @@ export default function TeamPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Mission library</p>
             <h2 className="mt-0.5 mb-5 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Assign New Mission</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              {expandedMissionTemplates.map((t) => {
+              {templates.length === 0 ? (
+                <p className="col-span-full text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Loading missions…</p>
+              ) : templates.map((t) => {
                 const isAssigning = assigningId === t.id;
                 const isAlreadyActive = activeMissions.some((m) => m.mission_id === t.id);
                 return (
                   <div key={t.id} className="flex flex-col gap-3 rounded-xl border p-4 transition" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                     <div>
                       <p className="font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{t.icon} {t.title}</p>
-                      <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{t.desc}</p>
+                      <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{t.description}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${difficultyColor[t.difficulty] ?? ""}`}
