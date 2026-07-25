@@ -5,7 +5,42 @@ import { useAuth } from "@/lib/useAuth";
 import { updateUserProfile } from "@/lib/auth-client";
 import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
-type CollMode = "plants" | "eggs" | "animals" | "chests";
+// Pokédex-style collection book. Each tab renders the FULL master list of
+// discoverable species (sourced from the catalog APIs), not just what the user
+// owns. An entry the user owns (matched by `name`) is rendered fully; an entry
+// they have never owned is rendered as a locked silhouette with "???" — no
+// name, no rarity, no count, no actions. Per-tab "X/Y discovered" progress
+// replaces the old owned-count totals.
+//
+// Master lists:
+//   plants / eggs / chests → GET /api/catalog/shop  (DB-backed catalog_items)
+//   pets / seeds           → GET /api/catalog/species (TS constants in lib/catalog)
+//
+// Discovery is binary "owned = discovered": a species is unlocked iff its
+// `name` appears in the corresponding owned profile array. No new profile
+// field, no server writes on acquisition — lowest risk. The hatch/chest routes
+// re-validate rewards server-side, so a client can't forge discovery by
+// tampering with what it renders.
+
+type CollMode = "plants" | "eggs" | "animals" | "seeds" | "chests";
+
+type MasterEntry = {
+  id: string | number;
+  name: string;
+  rarity: Rarity;
+  image: string;
+};
+
+type ShopCatalog = {
+  plants: MasterEntry[];
+  eggs: MasterEntry[];
+  chests: MasterEntry[];
+};
+
+type SpeciesCatalog = {
+  pets: MasterEntry[];
+  seeds: MasterEntry[];
+};
 
 const HATCH_DURATIONS: Record<Rarity, number> = {
   common: 60 * 60 * 1000,      // 1 hour
@@ -14,38 +49,9 @@ const HATCH_DURATIONS: Record<Rarity, number> = {
   legendary: 24 * 60 * 60 * 1000 // 24 hours
 };
 
-const assetByName: Record<string, string> = {
-  "Mossy Fern": "/images/plants/mint.png",
-  "Golden Daisy": "/images/plants/sunflower.png",
-  "Blue Orchid": "/images/plants/orchid.png",
-  "Spotted Aloe": "/images/plants/basil.png",
-  "Mystic Bamboo": "/images/plants/bamboo.png",
-  "Crystal Lotus": "/images/plants/lotus.png",
-  "Aurora Blossom": "/images/plants/cherry_blossom.png",
-  "Ember Cactus": "/images/plants/dragonfruit.png",
-  "Common Egg": "/images/eggs/common-egg.png",
-  "Rare Egg": "/images/eggs/rare-egg.png",
-  "Epic Egg": "/images/eggs/epic-egg.png",
-  "Legendary Egg": "/images/eggs/legendary-egg.png",
-  "Wooden Chest": "/images/chests/wooden-chest.png",
-  "Bronze Chest": "/images/chests/bronze-chest.png",
-  "Silver Chest": "/images/chests/silver-chest.png",
-  "Golden Chest": "/images/chests/golden-chest.png",
-  Cat: "/images/pets/cat.png",
-  Dog: "/images/pets/dog.png",
-  Rabbit: "/images/pets/rabbit.png",
-  Bee: "/images/pets/bee.png",
-  Deer: "/images/pets/deer.png",
-  Wolf: "/images/pets/wolf.png",
-  Bear: "/images/pets/bear.png",
-  Eagle: "/images/pets/eagle.png",
-  Tiger: "/images/pets/tiger.png",
-  Lion: "/images/pets/lion.png",
-  Owl: "/images/pets/owl.png",
-  Panda: "/images/pets/panda.png",
-  Dragon: "/images/pets/dragon.png"
-};
-
+// Image-error fallback for pets only (the catalog image path is the source of
+// truth for every other species). Kept small — a missing pet asset falls back
+// to an emoji rather than a broken-image icon.
 const animalEmoji: Record<string, string> = {
   Cat: "🐱", Dog: "🐶", Rabbit: "🐰", Bee: "🐝", Mouse: "🐭", Worm: "🪱",
   Deer: "🦌", Owl: "🦉", Panda: "🐼", Cobra: "🐍", Jaguar: "🐆",
@@ -53,21 +59,27 @@ const animalEmoji: Record<string, string> = {
   Tiger: "🐯", Lion: "🦁", Phoenix: "🔥", Dragon: "🐉", Kraken: "🐙", Octapus: "🐙"
 };
 
-function getAsset(item: any, mode: CollMode) {
-  if (item.image) return item.image;
-  if (assetByName[item.name]) return assetByName[item.name];
-  if (mode === "plants") return "/images/plants/sunflower.png";
-  if (mode === "eggs") return "/images/eggs/common-egg.png";
-  if (mode === "chests") return "/images/chests/wooden-chest.png";
-  return "/images/pets/cat.png";
-}
-
-function CardImage({ item, mode }: { item: any; mode: CollMode }) {
+function CardImage({ entry, discovered, mode }: { entry: MasterEntry; discovered: boolean; mode: CollMode }) {
   const [imgError, setImgError] = useState(false);
-  const src = getAsset(item, mode);
-  
-  if (mode === "animals" && (imgError || !src)) {
-    const emoji = animalEmoji[item.name] || "🐾";
+
+  // Locked entries render as a pure silhouette: brightness(0) kills color,
+  // opacity(0.55) softens it into a dark shape over the panel.
+  if (!discovered) {
+    return (
+      <img
+        src={entry.image}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        onError={() => setImgError(true)}
+        className="h-full w-full object-cover transition duration-300"
+        style={{ filter: "brightness(0) opacity(0.55)" }}
+      />
+    );
+  }
+
+  if (mode === "animals" && imgError) {
+    const emoji = animalEmoji[entry.name] || "🐾";
     return (
       <div className="flex h-full w-full items-center justify-center text-5xl select-none transition duration-300 group-hover:scale-120 drop-shadow-sm">
         {emoji}
@@ -77,8 +89,8 @@ function CardImage({ item, mode }: { item: any; mode: CollMode }) {
 
   return (
     <img
-      src={src}
-      alt={item.name}
+      src={entry.image}
+      alt={entry.name}
       loading="lazy"
       onError={() => setImgError(true)}
       className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
@@ -86,31 +98,17 @@ function CardImage({ item, mode }: { item: any; mode: CollMode }) {
   );
 }
 
-const plantsList = [
-  { id: 1, name: "Mossy Fern", rarity: "common", image: "/images/plants/mint.png" },
-  { id: 2, name: "Golden Daisy", rarity: "common", image: "/images/plants/sunflower.png" },
-  { id: 3, name: "Blue Orchid", rarity: "rare", image: "/images/plants/orchid.png" },
-  { id: 4, name: "Spotted Aloe", rarity: "rare", image: "/images/plants/basil.png" },
-  { id: 5, name: "Mystic Bamboo", rarity: "epic", image: "/images/plants/bamboo.png" },
-  { id: 6, name: "Crystal Lotus", rarity: "epic", image: "/images/plants/lotus.png" },
-  { id: 7, name: "Aurora Blossom", rarity: "legendary", image: "/images/plants/cherry_blossom.png" },
-  { id: 8, name: "Ember Cactus", rarity: "legendary", image: "/images/plants/dragonfruit.png" }
-];
-
-const eggsList = [
-  { id: 1, name: "Common Egg", rarity: "common", image: "/images/eggs/common-egg.png" },
-  { id: 2, name: "Rare Egg", rarity: "rare", image: "/images/eggs/rare-egg.png" },
-  { id: 3, name: "Epic Egg", rarity: "epic", image: "/images/eggs/epic-egg.png" },
-  { id: 4, name: "Legendary Egg", rarity: "legendary", image: "/images/eggs/legendary-egg.png" }
-];
-
 export default function CollectionPage() {
   const { user, profile, setProfile, refreshProfile } = useAuth();
   const ecoPoints = Number(profile?.ecoPoints ?? 0);
   const [mode, setMode] = useState<CollMode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
   const [toast, setToast] = useState("");
-  
+
+  // Master lists (the full discoverable universe per tab).
+  const [shopCatalog, setShopCatalog] = useState<ShopCatalog | null>(null);
+  const [speciesCatalog, setSpeciesCatalog] = useState<SpeciesCatalog | null>(null);
+
   // Ticking Time state
   const [nowTime, setNowTime] = useState(Date.now());
   const [warmingId, setWarmingId] = useState<string | null>(null);
@@ -134,14 +132,68 @@ export default function CollectionPage() {
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
   const profileHatchings = Array.isArray(profile?.hatchings) ? profile.hatchings : [];
   const profileChests = Array.isArray(profile?.chests) ? profile.chests : [];
+  const profileSeeds = Array.isArray(profile?.seeds) ? profile.seeds : [];
 
-  const items = mode === "plants" ? profilePlants : mode === "eggs" ? profileEggs : mode === "animals" ? profileAnimals : profileChests;
-  const filtered = filter === "all" ? items : items.filter((item) => item.rarity === filter);
+  // Fetch the master catalogs once. Both endpoints are public reads —
+  // names/images aren't secret, and the hatch/chest routes re-validate every
+  // reward server-side, so a client can't forge anything by tampering here.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetch("/api/catalog/shop").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/catalog/species").then((r) => (r.ok ? r.json() : null)).catch(() => null)
+    ]).then(([shop, species]) => {
+      if (cancelled) return;
+      if (shop && shop.plants && shop.eggs && shop.chests) {
+        setShopCatalog({ plants: shop.plants, eggs: shop.eggs, chests: shop.chests });
+      }
+      if (species && species.pets && species.seeds) {
+        setSpeciesCatalog({ pets: species.pets, seeds: species.seeds });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const totalPlants = profilePlants.reduce((sum, plant) => sum + (plant.count ?? 1), 0);
-  const totalEggs = profileEggs.reduce((sum, egg) => sum + (egg.count ?? 1), 0) + profileHatchings.length;
-  const totalAnimals = profileAnimals.reduce((sum, animal) => sum + (animal.count ?? 1), 0);
-  const totalChests = profileChests.reduce((sum, chest) => sum + (chest.count ?? 1), 0);
+  // Per-mode master list + owned records.
+  const masterList: MasterEntry[] =
+    mode === "plants" ? (shopCatalog?.plants ?? [])
+    : mode === "eggs" ? (shopCatalog?.eggs ?? [])
+    : mode === "chests" ? (shopCatalog?.chests ?? [])
+    : mode === "animals" ? (speciesCatalog?.pets ?? [])
+    : (speciesCatalog?.seeds ?? []);
+
+  const ownedRecords: any[] =
+    mode === "plants" ? profilePlants
+    : mode === "eggs" ? profileEggs
+    : mode === "chests" ? profileChests
+    : mode === "animals" ? profileAnimals
+    : profileSeeds;
+
+  // Build a name → owned-record map so a discovered master entry can pick up
+  // its count / active flag / id for actions. Match key is `name` — animal &
+  // egg ids are timestamps, not stable catalog ids.
+  const ownedByName = new Map<string, any>();
+  for (const rec of ownedRecords) {
+    if (rec && typeof rec.name === "string") ownedByName.set(rec.name, rec);
+  }
+
+  const discoveredCount = masterList.filter((entry) => ownedByName.has(entry.name)).length;
+  const totalCount = masterList.length;
+
+  const filtered = filter === "all" ? masterList : masterList.filter((entry) => entry.rarity === filter);
+
+  // Per-category discovered/total for the hero. Falls back to 0/0 while the
+  // catalogs are still loading.
+  const stats = {
+    plants: { found: (shopCatalog?.plants ?? []).filter((p) => profilePlants.some((o: any) => o.name === p.name)).length, total: shopCatalog?.plants.length ?? 0 },
+    eggs: { found: (shopCatalog?.eggs ?? []).filter((p) => profileEggs.some((o: any) => o.name === p.name)).length, total: shopCatalog?.eggs.length ?? 0 },
+    animals: { found: (speciesCatalog?.pets ?? []).filter((p) => profileAnimals.some((o: any) => o.name === p.name)).length, total: speciesCatalog?.pets.length ?? 0 },
+    seeds: { found: (speciesCatalog?.seeds ?? []).filter((p) => profileSeeds.some((o: any) => o.name === p.name)).length, total: speciesCatalog?.seeds.length ?? 0 },
+    chests: { found: (shopCatalog?.chests ?? []).filter((p) => profileChests.some((o: any) => o.name === p.name)).length, total: shopCatalog?.chests.length ?? 0 }
+  };
+
   const tabs: ("all" | Rarity)[] = ["all", "common", "rare", "epic", "legendary"];
 
   // Countdown timer effect
@@ -409,14 +461,17 @@ export default function CollectionPage() {
     showToast(`${animal.name} is now your active companion.`);
   };
 
+  const catalogLoading = !shopCatalog || !speciesCatalog;
+
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Your nature collection" title="My Collection" description="Every plant, egg, companion, and chest you have earned.">
+      <PageHero eyebrow="Your nature collection" title="My Collection" description="Discover every species. Locked entries reveal as you earn them.">
         <div className="flex flex-wrap gap-3">
-          <HeroMetric label="Plants" value={totalPlants} />
-          <HeroMetric label="Eggs" value={totalEggs} />
-          <HeroMetric label="Chests" value={totalChests} />
-          <HeroMetric label="Animals" value={totalAnimals} />
+          <HeroMetric label="Plants" value={`${stats.plants.found}/${stats.plants.total}`} />
+          <HeroMetric label="Eggs" value={`${stats.eggs.found}/${stats.eggs.total}`} />
+          <HeroMetric label="Pets" value={`${stats.animals.found}/${stats.animals.total}`} />
+          <HeroMetric label="Seeds" value={`${stats.seeds.found}/${stats.seeds.total}`} />
+          <HeroMetric label="Chests" value={`${stats.chests.found}/${stats.chests.total}`} />
           <HeroMetric label="Eco" value={ecoPoints.toLocaleString()} />
         </div>
       </PageHero>
@@ -425,7 +480,7 @@ export default function CollectionPage() {
         <div className="flex flex-col gap-4">
           {/* Mode tabs */}
           <div className="inline-flex w-fit rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
-            {(["plants", "eggs", "chests", "animals"] as CollMode[]).map((itemMode) => (
+            {(["plants", "eggs", "animals", "seeds", "chests"] as CollMode[]).map((itemMode) => (
               <button
                 key={itemMode}
                 onClick={() => { setMode(itemMode); setFilter("all"); }}
@@ -463,7 +518,7 @@ export default function CollectionPage() {
             <div className="flex flex-col items-center justify-center py-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
               <div className="text-4xl mb-2">💤</div>
               <p className="font-bold">No eggs are currently incubating.</p>
-              <p className="text-xs">Place an egg from your inventory below into the chamber.</p>
+              <p className="text-xs">Place an egg from your collection below into the chamber.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -568,67 +623,90 @@ export default function CollectionPage() {
         </Panel>
       )}
 
-      {filtered.length === 0 ? (
+      {/* Per-tab discovered progress line */}
+      {!catalogLoading && (
+        <div className="px-1 text-sm font-extrabold" style={{ color: "var(--text-muted)" }}>
+          Discovered {discoveredCount}/{totalCount} {mode}
+        </div>
+      )}
+
+      {catalogLoading ? (
+        <Panel>
+          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center">
+            <div className="text-3xl animate-pulse">📖</div>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading collection book…</p>
+          </div>
+        </Panel>
+      ) : filtered.length === 0 ? (
         <Panel>
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 text-center">
-            <img src={mode === "eggs" ? "/images/eggs/common-egg.png" : "/images/plants/sunflower.png"} alt="" className="h-20 w-20 object-contain opacity-60" />
+            <img src="/images/plants/sunflower.png" alt="" className="h-20 w-20 object-contain opacity-60" />
             <div>
-              <p className="font-serif text-xl font-extrabold" style={{ color: "var(--text-primary)" }}>Nothing here yet</p>
-              <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>Visit the Shop to add items.</p>
+              <p className="font-serif text-xl font-extrabold" style={{ color: "var(--text-primary)" }}>Nothing matches that filter</p>
+              <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>Try a different rarity, or the “all” filter.</p>
             </div>
           </div>
         </Panel>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {filtered.map((item) => {
-            const style = rarityStyle[item.rarity as Rarity] ?? rarityStyle.common;
-            const border = rarityBorder[item.rarity as Rarity] ?? rarityBorder.common;
+          {filtered.map((entry) => {
+            const owned = ownedByName.get(entry.name);
+            const discovered = !!owned;
+            const style = rarityStyle[entry.rarity] ?? rarityStyle.common;
+            const border = discovered ? (rarityBorder[entry.rarity] ?? rarityBorder.common) : "var(--border-default)";
+            const count = Number(owned?.count ?? 1);
+            const isActive = !!owned?.active;
             return (
               <article
-                key={`${mode}-${item.id}-${item.name}`}
+                key={`${mode}-${entry.id}-${entry.name}`}
                 className="reveal-card group relative flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
                 style={{ borderColor: border, background: "var(--bg-card)" }}
               >
-                {(item as any).active && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
-                
-                
+                {discovered && isActive && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
+                {!discovered && <span className="absolute left-2 top-2 z-10 text-base">🔒</span>}
+
                 {/* Framed card image design - full bleed aspect ratio */}
-                <div className="relative flex aspect-square items-center justify-center overflow-hidden" style={{ background: `${style.accent}12` }}>
-                  <CardImage item={item} mode={mode} />
-                  <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
-                  {(item as any).count > 1 && <span className="absolute bottom-2 right-2 z-10 rounded-full bg-forest-950 px-2 py-0.5 text-[9px] font-extrabold text-cream-100">×{(item as any).count}</span>}
+                <div className="relative flex aspect-square items-center justify-center overflow-hidden" style={{ background: discovered ? `${style.accent}12` : "var(--bg-panel-alt)" }}>
+                  <CardImage entry={entry} discovered={discovered} mode={mode} />
+                  {discovered && <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{entry.rarity}</span>}
+                  {discovered && count > 1 && <span className="absolute bottom-2 right-2 z-10 rounded-full bg-forest-950 px-2 py-0.5 text-[9px] font-extrabold text-cream-100">×{count}</span>}
                 </div>
 
                 <div className="flex flex-1 flex-col gap-2 p-3">
-                  <p className="font-serif text-sm font-extrabold leading-tight truncate" style={{ color: "var(--text-primary)" }}>{item.name}</p>
-                  {mode === "eggs" && (
+                  <p className="font-serif text-sm font-extrabold leading-tight truncate" style={{ color: "var(--text-primary)" }}>
+                    {discovered ? entry.name : "???"}
+                  </p>
+                  {discovered && mode === "eggs" && (
                     <button
                       type="button"
-                      onClick={() => incubateEgg(item)}
-                      className={`mt-auto w-full ${primaryButton}`}
+                      onClick={() => incubateEgg(owned)}
+                      disabled={count <= 0}
+                      className={`mt-auto w-full ${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       Incubate
                     </button>
                   )}
-                  {mode === "chests" && (
+                  {discovered && mode === "chests" && (
                     <button
                       type="button"
-                      onClick={() => openChest(item)}
-                      className={`mt-auto w-full ${primaryButton}`}
+                      onClick={() => openChest(owned)}
+                      disabled={count <= 0}
+                      className={`mt-auto w-full ${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       Open Chest
                     </button>
                   )}
-                  {mode === "animals" && (
+                  {discovered && mode === "animals" && (
                     <button
                       type="button"
-                      onClick={() => selectActivePet(item)}
-                      disabled={(item as any).active || selectingPetId === String(item.id)}
-                      className={`mt-auto w-full ${(item as any).active ? secondaryButton : primaryButton}`}
+                      onClick={() => selectActivePet(owned)}
+                      disabled={isActive || selectingPetId === String(owned.id)}
+                      className={`mt-auto w-full ${isActive ? secondaryButton : primaryButton}`}
                     >
-                      {(item as any).active ? "Active Pet" : selectingPetId === String(item.id) ? "Choosing..." : "Choose Pet"}
+                      {isActive ? "Active Pet" : selectingPetId === String(owned.id) ? "Choosing..." : "Choose Pet"}
                     </button>
                   )}
+                  {/* plants + seeds: display-only, no action button */}
                 </div>
               </article>
             );
@@ -640,7 +718,7 @@ export default function CollectionPage() {
       {activeHatching && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md fade-in">
           <div className="relative w-full max-w-md rounded-[32px] border border-white/10 bg-gradient-to-b from-[#1c2e21] to-[#0c1810] p-6 text-center text-white shadow-2xl animate-modal-in">
-            
+
             {/* Sparkle Particles container */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
               {particles.map((p) => (
@@ -724,7 +802,7 @@ export default function CollectionPage() {
                   style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)" }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-tr from-green-500/10 to-transparent pointer-events-none" />
-                  <CardImage item={revealedAnimal} mode="animals" />
+                  <CardImage entry={revealedAnimal} discovered mode="animals" />
                 </div>
 
                 <div className="flex flex-col items-center">
@@ -762,7 +840,7 @@ export default function CollectionPage() {
       {activeChest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md fade-in">
           <div className="relative w-full max-w-md rounded-[32px] border border-white/10 bg-gradient-to-b from-[#1c222e] to-[#0c1018] p-6 text-center text-white shadow-2xl animate-modal-in">
-            
+
             {/* Sparkle Particles container */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
               {chestParticles.map((p) => (

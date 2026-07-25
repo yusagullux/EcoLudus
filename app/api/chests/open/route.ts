@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { SEED_CATALOG, type SeedSpecies } from "@/lib/catalog";
 
 // Server-side chest opening. The collection page used to roll the reward with
 // Math.random() in the browser and then write it through `updateUserProfile` —
@@ -13,6 +14,13 @@ import { sql } from "@/lib/db";
 // So this route does a direct payload write — it does NOT call grantImpact.
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
+
+// Per-tier seed pools are subsets of SEED_CATALOG (lib/catalog.ts), filtered by
+// name. Keeping the pools here as name lists (rather than inline objects)
+// means the chest drops and the collection-book Pokédex read from one source.
+function seedsFor(names: string[]): SeedSpecies[] {
+  return SEED_CATALOG.filter((seed) => names.includes(seed.name));
+}
 
 type ChestReward = {
   type: "points" | "seed" | "egg";
@@ -29,12 +37,9 @@ const OPEN_CHEST_REWARDS: Record<string, () => ChestReward> = {
       const amount = Math.floor(Math.random() * 151) + 100;
       return { type: "points", name: "EcoPoints", amount, rarity: "common", image: "/images/logo.png", seedName: "" };
     }
-    const seedPool = [
-      { seedName: "Mossy Fern Seed", rarity: "common" as Rarity, image: "/images/plants/mint.png" },
-      { seedName: "Golden Daisy Seed", rarity: "common" as Rarity, image: "/images/plants/sunflower.png" }
-    ];
+    const seedPool = seedsFor(["Mossy Fern Seed", "Golden Daisy Seed"]);
     const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-    return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
+    return { type: "seed", name: seed.name, seedName: seed.name, rarity: seed.rarity, image: seed.image };
   },
   "Bronze Chest": () => {
     const rand = Math.random();
@@ -43,14 +48,9 @@ const OPEN_CHEST_REWARDS: Record<string, () => ChestReward> = {
       return { type: "points", name: "EcoPoints", amount, rarity: "rare", image: "/images/logo.png", seedName: "" };
     }
     if (rand < 0.8) {
-      const seedPool = [
-        { seedName: "Mossy Fern Seed", rarity: "common" as Rarity, image: "/images/plants/mint.png" },
-        { seedName: "Golden Daisy Seed", rarity: "common" as Rarity, image: "/images/plants/sunflower.png" },
-        { seedName: "Blue Orchid Seed", rarity: "rare" as Rarity, image: "/images/plants/orchid.png" },
-        { seedName: "Spotted Aloe Seed", rarity: "rare" as Rarity, image: "/images/plants/basil.png" }
-      ];
+      const seedPool = seedsFor(["Mossy Fern Seed", "Golden Daisy Seed", "Blue Orchid Seed", "Spotted Aloe Seed"]);
       const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
+      return { type: "seed", name: seed.name, seedName: seed.name, rarity: seed.rarity, image: seed.image };
     }
     return { type: "egg", name: "Common Egg", seedName: "", rarity: "common", image: "/images/eggs/common-egg.png" };
   },
@@ -61,14 +61,9 @@ const OPEN_CHEST_REWARDS: Record<string, () => ChestReward> = {
       return { type: "points", name: "EcoPoints", amount, rarity: "epic", image: "/images/logo.png", seedName: "" };
     }
     if (rand < 0.75) {
-      const seedPool = [
-        { seedName: "Blue Orchid Seed", rarity: "rare" as Rarity, image: "/images/plants/orchid.png" },
-        { seedName: "Spotted Aloe Seed", rarity: "rare" as Rarity, image: "/images/plants/basil.png" },
-        { seedName: "Mystic Bamboo Seed", rarity: "epic" as Rarity, image: "/images/plants/bamboo.png" },
-        { seedName: "Crystal Lotus Seed", rarity: "epic" as Rarity, image: "/images/plants/lotus.png" }
-      ];
+      const seedPool = seedsFor(["Blue Orchid Seed", "Spotted Aloe Seed", "Mystic Bamboo Seed", "Crystal Lotus Seed"]);
       const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
+      return { type: "seed", name: seed.name, seedName: seed.name, rarity: seed.rarity, image: seed.image };
     }
     const eggPool = [
       { name: "Rare Egg", rarity: "rare" as Rarity, image: "/images/eggs/rare-egg.png" },
@@ -84,14 +79,9 @@ const OPEN_CHEST_REWARDS: Record<string, () => ChestReward> = {
       return { type: "points", name: "EcoPoints", amount, rarity: "legendary", image: "/images/logo.png", seedName: "" };
     }
     if (rand < 0.65) {
-      const seedPool = [
-        { seedName: "Mystic Bamboo Seed", rarity: "epic" as Rarity, image: "/images/plants/bamboo.png" },
-        { seedName: "Crystal Lotus Seed", rarity: "epic" as Rarity, image: "/images/plants/lotus.png" },
-        { seedName: "Aurora Blossom Seed", rarity: "legendary" as Rarity, image: "/images/plants/cherry_blossom.png" },
-        { seedName: "Ember Cactus Seed", rarity: "legendary" as Rarity, image: "/images/plants/dragonfruit.png" }
-      ];
+      const seedPool = seedsFor(["Mystic Bamboo Seed", "Crystal Lotus Seed", "Aurora Blossom Seed", "Ember Cactus Seed"]);
       const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.seedName, seedName: seed.seedName, rarity: seed.rarity, image: seed.image };
+      return { type: "seed", name: seed.name, seedName: seed.name, rarity: seed.rarity, image: seed.image };
     }
     const eggPool = [
       { name: "Epic Egg", rarity: "epic" as Rarity, image: "/images/eggs/epic-egg.png" },
