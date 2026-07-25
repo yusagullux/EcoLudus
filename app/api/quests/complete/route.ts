@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { getQuestCarbonReduction, getQuestDefinition } from "@/lib/carbon-calc";
-import { sql } from "@/lib/db";
+import { transaction, selectUserForUpdate } from "@/lib/db";
 import { getMissingVerifiedQuestProofIds, removeVerifiedQuestProofs } from "@/lib/quest-proof";
 import { checkAndProcessMilestones } from "@/lib/rewards-sync";
-import { grantImpact } from "@/lib/impact-service";
+import { grantImpact, type ImpactUser } from "@/lib/impact-service";
 
 const completeQuestSchema = z.object({
   questIds: z.array(z.string().min(1)).min(1).max(5)
@@ -172,188 +172,208 @@ export async function POST(request: Request) {
     const payload = completeQuestSchema.parse(await request.json());
     const requestedQuestIds = Array.from(new Set(payload.questIds));
 
-    const userResult = await sql<{
-      id: string;
-      email: string;
-      payload: Record<string, unknown>;
-    }>("select id, email, payload from users where id = $1 limit 1", [session.userId]);
+    // Wrap the read→compute→grant→mission_logs in one transaction with a row
+    // lock on the user row, so concurrent quest completions on the same user
+    // cannot both pass the "already completed today" check against a stale read
+    // and double-grant XP/eco, or roll the daily-clear bonus chest twice (the
+    // lost-update / double-grant class from the 2026-07-25 audit). grantImpact
+    // shares the lock via `tx` (no second read, no nested transaction), and the
+    // mission_logs inserts run on the same `query` so they commit atomically
+    // with the user write. The quest-definition / carbon lookups use the global
+    // pool (not the locked client), so they only serialize same-user
+    // completions — the desired behavior — and don't block cross-user traffic.
+    // Early 400/404/422 returns inside the callback commit (empty tx) cleanly.
+    let questSucceeded = false;
+    const result = await transaction(async (query) => {
+      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
 
-    const user = userResult.rows[0];
-    if (!user) {
-      return NextResponse.json(
-        { error: { code: "auth/user-not-found" } },
-        { status: 404 }
-      );
-    }
-
-    const profile = user.payload || {};
-    const currentDailyQuests = asArray(profile.currentDailyQuests).map(String);
-    const dailyQuestsCompleted = asArray(profile.dailyQuestsCompleted).map(String);
-    const completedQuests = asArray(profile.completedQuests).map(String);
-
-    const questIds = requestedQuestIds.filter(
-      (questId) => currentDailyQuests.includes(questId) && !dailyQuestsCompleted.includes(questId)
-    );
-
-    if (!questIds.length) {
-      return NextResponse.json(
-        { error: { code: "quests/no-valid-selection" } },
-        { status: 400 }
-      );
-    }
-
-    const missingVerifiedProofIds = getMissingVerifiedQuestProofIds(profile, questIds);
-    if (missingVerifiedProofIds.length > 0) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "quests/proof-required",
-            message: "Please verify proof for each selected quest before completing it.",
-            questIds: missingVerifiedProofIds
-          }
-        },
-        { status: 422 }
-      );
-    }
-
-    const completedAt = new Date();
-    const todayKey = dateKey(completedAt);
-    const completionRecords = [];
-
-    for (const questId of questIds) {
-      const quest = await getQuestDefinition(questId);
-
-      if (!quest) {
+      const user = userResult.rows[0];
+      if (!user) {
         return NextResponse.json(
-          { error: { code: "quests/not-found", questId } },
+          { error: { code: "auth/user-not-found" } },
+          { status: 404 }
+        );
+      }
+
+      const profile = user.payload || {};
+      const currentDailyQuests = asArray(profile.currentDailyQuests).map(String);
+      const dailyQuestsCompleted = asArray(profile.dailyQuestsCompleted).map(String);
+      const completedQuests = asArray(profile.completedQuests).map(String);
+
+      const questIds = requestedQuestIds.filter(
+        (questId) => currentDailyQuests.includes(questId) && !dailyQuestsCompleted.includes(questId)
+      );
+
+      if (!questIds.length) {
+        return NextResponse.json(
+          { error: { code: "quests/no-valid-selection" } },
           { status: 400 }
         );
       }
 
-      const carbon = await getQuestCarbonReduction(quest);
-      completionRecords.push({
-        id: randomUUID(),
-        questId: quest.id,
-        title: quest.title,
-        categoryId: quest.categoryId,
-        categoryName: quest.categoryName,
-        xp: quest.xp,
-        ecoPoints: quest.eco,
-        carbonReduced: carbon.kg,
-        carbonSource: carbon.source,
-        carbonSourcePayload: carbon.sourcePayload,
-        completedAt: completedAt.toISOString()
+      const missingVerifiedProofIds = getMissingVerifiedQuestProofIds(profile, questIds);
+      if (missingVerifiedProofIds.length > 0) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "quests/proof-required",
+              message: "Please verify proof for each selected quest before completing it.",
+              questIds: missingVerifiedProofIds
+            }
+          },
+          { status: 422 }
+        );
+      }
+
+      const completedAt = new Date();
+      const todayKey = dateKey(completedAt);
+      const completionRecords = [];
+
+      for (const questId of questIds) {
+        const quest = await getQuestDefinition(questId);
+
+        if (!quest) {
+          return NextResponse.json(
+            { error: { code: "quests/not-found", questId } },
+            { status: 400 }
+          );
+        }
+
+        const carbon = await getQuestCarbonReduction(quest);
+        completionRecords.push({
+          id: randomUUID(),
+          questId: quest.id,
+          title: quest.title,
+          categoryId: quest.categoryId,
+          categoryName: quest.categoryName,
+          xp: quest.xp,
+          ecoPoints: quest.eco,
+          carbonReduced: carbon.kg,
+          carbonSource: carbon.source,
+          carbonSourcePayload: carbon.sourcePayload,
+          completedAt: completedAt.toISOString()
+        });
+      }
+
+      const xpReward = completionRecords.reduce((sum, quest) => sum + quest.xp, 0);
+      const ecoReward = completionRecords.reduce((sum, quest) => sum + quest.ecoPoints, 0);
+      const carbonReward = completionRecords.reduce((sum, quest) => sum + quest.carbonReduced, 0);
+      const companionProgress = applyCompanionProgress(profile, completionRecords.length, xpReward);
+      const nextDailyCompletions = Array.from(new Set([...dailyQuestsCompleted, ...questIds]));
+      const nextCompletedQuests = Array.from(new Set([...completedQuests, ...questIds]));
+      const dailyClearChestRewards = {
+        ...((profile.dailyClearChestRewards as Record<string, unknown>) || {})
+      };
+      const didClearAllDailyQuests =
+        currentDailyQuests.length > 0 &&
+        currentDailyQuests.every((questId) => nextDailyCompletions.includes(questId));
+      const wasAlreadyClear =
+        currentDailyQuests.length > 0 &&
+        currentDailyQuests.every((questId) => dailyQuestsCompleted.includes(questId));
+      const canRollDailyChest = didClearAllDailyQuests && !wasAlreadyClear && !dailyClearChestRewards[todayKey];
+      const bonusChest = canRollDailyChest && Math.random() < DAILY_CLEAR_CHEST_CHANCE
+        ? pickDailyClearChest()
+        : null;
+
+      if (canRollDailyChest) {
+        dailyClearChestRewards[todayKey] = bonusChest
+          ? { awarded: true, chest: bonusChest.name, awardedAt: completedAt.toISOString() }
+          : { awarded: false, rolledAt: completedAt.toISOString() };
+      }
+
+      const dailyQuestCompletions = {
+        ...((profile.dailyQuestCompletions as Record<string, string[]>) || {}),
+        [todayKey]: Array.from(
+          new Set([
+            ...asArray((profile.dailyQuestCompletions as Record<string, unknown>)?.[todayKey]).map(String),
+            ...questIds
+          ])
+        )
+      };
+
+      // Route the reward write through the spine. XP includes the companion bonus
+      // (a perk for the active pet); Impact is the base quest XP only, so the spine
+      // measures the actual eco activity, not the companion perk on top of it.
+      const baseXp = xpReward + companionProgress.companionXpBonus;
+      const patch: Record<string, unknown> = {
+        animals: companionProgress.animals,
+        missionsCompleted: Number(profile.missionsCompleted || 0) + completionRecords.length,
+        completedQuests: nextCompletedQuests,
+        dailyQuestsCompleted: nextDailyCompletions,
+        dailyQuestCompletions,
+        dailyClearChestRewards,
+        verifiedQuestProofs: removeVerifiedQuestProofs(profile, questIds).verifiedQuestProofs,
+        ...(bonusChest ? { chests: addChest(profile.chests, bonusChest) } : {}),
+        lastQuestCompletionTime: completedAt.toISOString()
+      };
+
+      const granted = await grantImpact({
+        userId: session.userId,
+        source: "quests",
+        baseXp,
+        baseImpact: xpReward,
+        eco: ecoReward,
+        carbon: carbonReward,
+        meta: {
+          questIds,
+          count: completionRecords.length,
+          companionXpBonus: companionProgress.companionXpBonus
+        },
+        payloadPatch: patch,
+        // Share the locked transaction so the quest completion + reward grant
+        // are one atomic unit (no second read, no nested transaction).
+        tx: { query, user }
       });
-    }
 
-    const xpReward = completionRecords.reduce((sum, quest) => sum + quest.xp, 0);
-    const ecoReward = completionRecords.reduce((sum, quest) => sum + quest.ecoPoints, 0);
-    const carbonReward = completionRecords.reduce((sum, quest) => sum + quest.carbonReduced, 0);
-    const companionProgress = applyCompanionProgress(profile, completionRecords.length, xpReward);
-    const nextDailyCompletions = Array.from(new Set([...dailyQuestsCompleted, ...questIds]));
-    const nextCompletedQuests = Array.from(new Set([...completedQuests, ...questIds]));
-    const dailyClearChestRewards = {
-      ...((profile.dailyClearChestRewards as Record<string, unknown>) || {})
-    };
-    const didClearAllDailyQuests =
-      currentDailyQuests.length > 0 &&
-      currentDailyQuests.every((questId) => nextDailyCompletions.includes(questId));
-    const wasAlreadyClear =
-      currentDailyQuests.length > 0 &&
-      currentDailyQuests.every((questId) => dailyQuestsCompleted.includes(questId));
-    const canRollDailyChest = didClearAllDailyQuests && !wasAlreadyClear && !dailyClearChestRewards[todayKey];
-    const bonusChest = canRollDailyChest && Math.random() < DAILY_CLEAR_CHEST_CHANCE
-      ? pickDailyClearChest()
-      : null;
+      const nextProfile = granted
+        ? {
+            ...profile,
+            ...patch,
+            xp: granted.xp,
+            level: granted.level,
+            ecoPoints: granted.ecoPoints,
+            carbonReduced: granted.carbonReduced,
+            impact: granted.impact
+          }
+        : { ...removeVerifiedQuestProofs(profile, questIds), ...patch };
 
-    if (canRollDailyChest) {
-      dailyClearChestRewards[todayKey] = bonusChest
-        ? { awarded: true, chest: bonusChest.name, awardedAt: completedAt.toISOString() }
-        : { awarded: false, rolledAt: completedAt.toISOString() };
-    }
+      for (const completion of completionRecords) {
+        await query(
+          `insert into mission_logs (id, user_id, payload)
+           values ($1, $2, $3::jsonb)
+           on conflict (id) do update
+           set user_id = excluded.user_id,
+               payload = excluded.payload`,
+          [completion.id, session.userId, JSON.stringify({ ...completion, userId: session.userId })]
+        );
+      }
 
-    const dailyQuestCompletions = {
-      ...((profile.dailyQuestCompletions as Record<string, string[]>) || {}),
-      [todayKey]: Array.from(
-        new Set([
-          ...asArray((profile.dailyQuestCompletions as Record<string, unknown>)?.[todayKey]).map(String),
-          ...questIds
-        ])
-      )
-    };
-
-    // Route the reward write through the spine. XP includes the companion bonus
-    // (a perk for the active pet); Impact is the base quest XP only, so the spine
-    // measures the actual eco activity, not the companion perk on top of it.
-    const baseXp = xpReward + companionProgress.companionXpBonus;
-    const patch: Record<string, unknown> = {
-      animals: companionProgress.animals,
-      missionsCompleted: Number(profile.missionsCompleted || 0) + completionRecords.length,
-      completedQuests: nextCompletedQuests,
-      dailyQuestsCompleted: nextDailyCompletions,
-      dailyQuestCompletions,
-      dailyClearChestRewards,
-      verifiedQuestProofs: removeVerifiedQuestProofs(profile, questIds).verifiedQuestProofs,
-      ...(bonusChest ? { chests: addChest(profile.chests, bonusChest) } : {}),
-      lastQuestCompletionTime: completedAt.toISOString()
-    };
-
-    const granted = await grantImpact({
-      userId: session.userId,
-      source: "quests",
-      baseXp,
-      baseImpact: xpReward,
-      eco: ecoReward,
-      carbon: carbonReward,
-      meta: {
-        questIds,
-        count: completionRecords.length,
-        companionXpBonus: companionProgress.companionXpBonus
-      },
-      payloadPatch: patch
+      questSucceeded = true;
+      return NextResponse.json({
+        success: true,
+        profile: nextProfile,
+        completed: completionRecords,
+        totals: {
+          xp: xpReward,
+          companionXpBonus: companionProgress.companionXpBonus,
+          ecoPoints: ecoReward,
+          carbonReduced: Math.round(carbonReward * 100) / 100
+        },
+        bonusChest,
+        companion: companionProgress.companion
+      });
     });
 
-    const nextProfile = granted
-      ? {
-          ...profile,
-          ...patch,
-          xp: granted.xp,
-          level: granted.level,
-          ecoPoints: granted.ecoPoints,
-          carbonReduced: granted.carbonReduced,
-          impact: granted.impact
-        }
-      : { ...removeVerifiedQuestProofs(profile, questIds), ...patch };
-
-    for (const completion of completionRecords) {
-      await sql(
-        `insert into mission_logs (id, user_id, payload)
-         values ($1, $2, $3::jsonb)
-         on conflict (id) do update
-         set user_id = excluded.user_id,
-             payload = excluded.payload`,
-        [completion.id, session.userId, JSON.stringify({ ...completion, userId: session.userId })]
+    // Check milestones async (tree planting) — fire-and-forget, OUTSIDE the
+    // transaction so its network calls (Ecologi) don't hold the user row lock.
+    // Only fire on a successful completion, not on the early 400/404/422 paths.
+    if (questSucceeded) {
+      checkAndProcessMilestones(session.userId).catch((err) =>
+        console.error("Milestone check after quest completion failed:", err)
       );
     }
 
-    // Check milestones async (tree planting) — non-blocking, don't fail the request
-    checkAndProcessMilestones(session.userId).catch((err) =>
-      console.error("Milestone check after quest completion failed:", err)
-    );
-
-    return NextResponse.json({
-      success: true,
-      profile: nextProfile,
-      completed: completionRecords,
-      totals: {
-        xp: xpReward,
-        companionXpBonus: companionProgress.companionXpBonus,
-        ecoPoints: ecoReward,
-        carbonReduced: Math.round(carbonReward * 100) / 100
-      },
-      bonusChest,
-      companion: companionProgress.companion
-    });
+    return result;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -1790,7 +1790,7 @@ create index if not exists idx_trust_history_user_created on trust_history(user_
   return migrationPromise;
 }
 
-async function detectMode() {
+export async function detectMode() {
   if (global.__ecoquestDbMode) {
     return global.__ecoquestDbMode;
   }
@@ -1904,6 +1904,44 @@ export async function transaction<T>(
   } finally {
     client.release();
   }
+}
+
+// Type of the client-bound `query` fn passed to a `transaction()` callback.
+// Exported so helpers (selectUserForUpdate) and callers (grantImpact) can share
+// the same signature across module boundaries.
+export type DbQuery = <R extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: unknown[]
+) => Promise<QueryResult<R>>;
+
+// The base user read used by the impact spine (getUserForImpact in
+// lib/impact-service.ts). Reused here so the locked read selects the same
+// columns the spine expects, and so file mode hits the existing fileSql branch
+// (the exact-match at "select id, email, xp, level, trust_score, payload from
+// users where id = $1 limit 1") without needing a new branch.
+const SELECT_USER_FOR_IMPACT =
+  "select id, email, xp, level, trust_score, payload from users where id = $1 limit 1";
+
+// Read the user row with a FOR UPDATE row lock, on the SAME client-bound `query`
+// as the surrounding transaction(). The lock is held until the transaction
+// commits, making the caller's read→compute→write atomic against concurrent
+// reward grants on the same user row (the lost-update / double-grant class of
+// bugs found in the 2026-07-25 reward-route audit).
+//
+// In file mode (single-user dev fallback) there is no real transaction and no
+// row lock, so we run the plain read — which fileSql already handles — and skip
+// the FOR UPDATE clause. The "for update" string therefore only ever runs
+// against real Postgres (CLAUDE.md option (c): "only run it against real
+// Postgres"), so NO new fileSql branch is required.
+export async function selectUserForUpdate<T extends QueryResultRow = QueryResultRow>(
+  query: DbQuery,
+  userId: string
+): Promise<QueryResult<T>> {
+  const mode = await detectMode();
+  if (mode === "file") {
+    return query<T>(SELECT_USER_FOR_IMPACT, [userId]);
+  }
+  return query<T>(SELECT_USER_FOR_IMPACT + " for update", [userId]);
 }
 
 export const pool = {

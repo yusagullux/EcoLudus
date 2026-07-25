@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { transaction, selectUserForUpdate } from "@/lib/db";
 import { SEED_CATALOG, type SeedSpecies } from "@/lib/catalog";
 
 // Server-side chest opening. The collection page used to roll the reward with
@@ -111,75 +111,81 @@ export async function POST(request: Request) {
   }
 
   try {
-    const userResult = await sql<{ email: string; payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [session.userId]
-    );
-    if (userResult.rowCount === 0) {
-      return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
-    }
-
-    const profile = userResult.rows[0].payload ?? {};
-    const chests = Array.isArray(profile.chests)
-      ? (profile.chests as Array<Record<string, unknown>>).map((c) => ({ ...c }))
-      : [];
-
-    const chest = chests.find((c) => String(c.id) === String(parsed.chestId)) ?? null;
-    if (!chest || Number(chest.count ?? 1) <= 0) {
-      return NextResponse.json({ error: { code: "chests/not-owned" } }, { status: 404 });
-    }
-
-    const chestName = String(chest.name ?? "Wooden Chest");
-    const generator = OPEN_CHEST_REWARDS[chestName] ?? OPEN_CHEST_REWARDS["Wooden Chest"];
-    const reward = generator();
-
-    // Consume one chest.
-    const nextChests = chests
-      .map((c) => (String(c.id) === String(parsed.chestId) ? { ...c, count: Number(c.count ?? 1) - 1 } : c))
-      .filter((c) => Number(c.count ?? 1) > 0);
-
-    const nextProfile: Record<string, unknown> = { ...profile, chests: nextChests };
-
-    if (reward.type === "points") {
-      nextProfile.ecoPoints = Math.max(0, Number(profile.ecoPoints ?? 0) || 0) + Number(reward.amount ?? 0);
-    } else if (reward.type === "seed") {
-      const seeds = Array.isArray(profile.seeds) ? [...(profile.seeds as Array<Record<string, unknown>>)] : [];
-      const idx = seeds.findIndex((s) => s.name === reward.seedName);
-      if (idx >= 0) {
-        seeds[idx] = { ...seeds[idx], count: Number(seeds[idx].count ?? 1) + 1, obtainedAt: new Date().toISOString() };
-      } else {
-        seeds.push({
-          id: `seed-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-          name: reward.seedName,
-          rarity: reward.rarity,
-          image: reward.image,
-          count: 1,
-          obtainedAt: new Date().toISOString()
-        });
+    // Read → roll → consume → write inside one transaction with a row lock on
+    // the user row, so a concurrent open cannot roll two rewards against one
+    // chest (lost-update / double-reward from the 2026-07-25 audit). Early
+    // 404 returns inside the callback still commit (empty tx) cleanly.
+    return await transaction(async (query) => {
+      const userResult = await selectUserForUpdate<{ email: string; payload: Record<string, unknown> }>(
+        query,
+        session.userId!
+      );
+      if (userResult.rowCount === 0) {
+        return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
       }
-      nextProfile.seeds = seeds;
-    } else {
-      const eggs = Array.isArray(profile.eggs) ? [...(profile.eggs as Array<Record<string, unknown>>)] : [];
-      const idx = eggs.findIndex((e) => e.name === reward.name);
-      if (idx >= 0) {
-        eggs[idx] = { ...eggs[idx], count: Number(eggs[idx].count ?? 1) + 1, purchasedAt: new Date().toISOString() };
-      } else {
-        eggs.push({ id: Date.now(), name: reward.name, rarity: reward.rarity, price: 0, image: reward.image, count: 1, purchasedAt: new Date().toISOString() });
+
+      const profile = userResult.rows[0].payload ?? {};
+      const chests = Array.isArray(profile.chests)
+        ? (profile.chests as Array<Record<string, unknown>>).map((c) => ({ ...c }))
+        : [];
+
+      const chest = chests.find((c) => String(c.id) === String(parsed.chestId)) ?? null;
+      if (!chest || Number(chest.count ?? 1) <= 0) {
+        return NextResponse.json({ error: { code: "chests/not-owned" } }, { status: 404 });
       }
-      nextProfile.eggs = eggs;
-    }
 
-    await sql(
-      `insert into users (id, email, password_hash, payload)
-       values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
-       on conflict (id) do update
-       set email = excluded.email,
-           payload = excluded.payload,
-           updated_at = now()`,
-      [session.userId, userResult.rows[0].email, JSON.stringify(nextProfile)]
-    );
+      const chestName = String(chest.name ?? "Wooden Chest");
+      const generator = OPEN_CHEST_REWARDS[chestName] ?? OPEN_CHEST_REWARDS["Wooden Chest"];
+      const reward = generator();
 
-    return NextResponse.json({ success: true, reward, chestName });
+      // Consume one chest.
+      const nextChests = chests
+        .map((c) => (String(c.id) === String(parsed.chestId) ? { ...c, count: Number(c.count ?? 1) - 1 } : c))
+        .filter((c) => Number(c.count ?? 1) > 0);
+
+      const nextProfile: Record<string, unknown> = { ...profile, chests: nextChests };
+
+      if (reward.type === "points") {
+        nextProfile.ecoPoints = Math.max(0, Number(profile.ecoPoints ?? 0) || 0) + Number(reward.amount ?? 0);
+      } else if (reward.type === "seed") {
+        const seeds = Array.isArray(profile.seeds) ? [...(profile.seeds as Array<Record<string, unknown>>)] : [];
+        const idx = seeds.findIndex((s) => s.name === reward.seedName);
+        if (idx >= 0) {
+          seeds[idx] = { ...seeds[idx], count: Number(seeds[idx].count ?? 1) + 1, obtainedAt: new Date().toISOString() };
+        } else {
+          seeds.push({
+            id: `seed-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+            name: reward.seedName,
+            rarity: reward.rarity,
+            image: reward.image,
+            count: 1,
+            obtainedAt: new Date().toISOString()
+          });
+        }
+        nextProfile.seeds = seeds;
+      } else {
+        const eggs = Array.isArray(profile.eggs) ? [...(profile.eggs as Array<Record<string, unknown>>)] : [];
+        const idx = eggs.findIndex((e) => e.name === reward.name);
+        if (idx >= 0) {
+          eggs[idx] = { ...eggs[idx], count: Number(eggs[idx].count ?? 1) + 1, purchasedAt: new Date().toISOString() };
+        } else {
+          eggs.push({ id: Date.now(), name: reward.name, rarity: reward.rarity, price: 0, image: reward.image, count: 1, purchasedAt: new Date().toISOString() });
+        }
+        nextProfile.eggs = eggs;
+      }
+
+      await query(
+        `insert into users (id, email, password_hash, payload)
+         values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
+         on conflict (id) do update
+         set email = excluded.email,
+             payload = excluded.payload,
+             updated_at = now()`,
+        [session.userId, userResult.rows[0].email, JSON.stringify(nextProfile)]
+      );
+
+      return NextResponse.json({ success: true, reward, chestName });
+    });
   } catch (error) {
     console.error("Chest open error:", error);
     return NextResponse.json({ error: { code: "internal-error" } }, { status: 500 });

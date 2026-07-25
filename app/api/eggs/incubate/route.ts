@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
-import { grantImpact } from "@/lib/impact-service";
+import { transaction, selectUserForUpdate, type DbQuery } from "@/lib/db";
+import { grantImpact, type ImpactUser } from "@/lib/impact-service";
 import { PET_CATALOG, type PetSpecies } from "@/lib/catalog";
 
 // Server-owned egg lifecycle. The collection page used to mutate eggs /
@@ -62,8 +62,8 @@ const incubateSchema = z.object({
   hatchingId: z.string().min(1).optional()
 });
 
-function writePayload(userId: string, email: string, payload: Record<string, unknown>) {
-  return sql(
+function writePayload(query: DbQuery, userId: string, email: string, payload: Record<string, unknown>) {
+  return query(
     `insert into users (id, email, password_hash, payload)
      values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
      on conflict (id) do update
@@ -90,181 +90,197 @@ export async function POST(request: Request) {
     throw error;
   }
 
+  // Every egg lifecycle mutation is a read→compute→write on the user row, and
+  // they all race under concurrency (concurrent incubate grants 2 hatchings
+  // from 1 egg; concurrent warm bypasses the eco cost; concurrent hatch
+  // double-grants HATCH_XP/Impact and doesn't consume the hatching atomically
+  // — the lost-update class from the 2026-07-25 audit). Wrap the whole body in
+  // one transaction with a FOR UPDATE row lock; the hatch branch passes the
+  // locked client + row to grantImpact's `tx` so the Impact grant shares the
+  // same lock (no second read, no nested transaction). No external I/O happens
+  // inside the locked section (PET_CATALOG is in-memory), so holding the lock
+  // for the whole body is cheap. Early 400/404/425 returns inside the callback
+  // commit (empty tx) cleanly.
   try {
-    const userResult = await sql<{ email: string; payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [session.userId]
-    );
-    if (userResult.rowCount === 0) {
-      return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
-    }
-
-    const email = userResult.rows[0].email;
-    const profile = userResult.rows[0].payload ?? {};
-    const now = Date.now();
-
-    // ---------- incubate: place an owned egg into an incubator slot ----------
-    if (parsed.action === "incubate") {
-      if (parsed.eggId === undefined) {
-        return NextResponse.json({ error: { code: "invalid-argument", message: "eggId is required" } }, { status: 400 });
+    return await transaction(async (query) => {
+      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      if (userResult.rowCount === 0) {
+        return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
       }
-      const eggs = Array.isArray(profile.eggs) ? [...(profile.eggs as Array<Record<string, unknown>>)] : [];
+
+      const user = userResult.rows[0];
+      const email = user.email;
+      const profile = user.payload ?? {};
+      const now = Date.now();
+
+      // ---------- incubate: place an owned egg into an incubator slot ----------
+      if (parsed.action === "incubate") {
+        if (parsed.eggId === undefined) {
+          return NextResponse.json({ error: { code: "invalid-argument", message: "eggId is required" } }, { status: 400 });
+        }
+        const eggs = Array.isArray(profile.eggs) ? [...(profile.eggs as Array<Record<string, unknown>>)] : [];
+        const hatchings = Array.isArray(profile.hatchings) ? [...(profile.hatchings as Array<Record<string, unknown>>)] : [];
+
+        if (hatchings.length >= MAX_INCUBATOR_SLOTS) {
+          return NextResponse.json(
+            { error: { code: "eggs/no-slot", message: "All incubator slots are full. Hatch an egg to free up a slot." } },
+            { status: 409 }
+          );
+        }
+
+        const egg = eggs.find((e) => String(e.id) === String(parsed.eggId)) ?? null;
+        if (!egg || Number(egg.count ?? 1) <= 0) {
+          return NextResponse.json({ error: { code: "eggs/not-owned" } }, { status: 404 });
+        }
+
+        const rarity = normalizeRarity(egg.rarity);
+        const nextEggs = eggs
+          .map((e) => (String(e.id) === String(parsed.eggId) ? { ...e, count: Number(e.count ?? 1) - 1 } : e))
+          .filter((e) => Number(e.count ?? 1) > 0);
+
+        const newHatching: Record<string, unknown> = {
+          id: `hatch-${now}-${Math.floor(Math.random() * 1000)}`,
+          eggId: egg.id,
+          name: String(egg.name ?? "Egg"),
+          rarity,
+          startTime: now,
+          endTime: now + (HATCH_DURATIONS[rarity] ?? HATCH_DURATIONS.common),
+          warmedCount: 0
+        };
+
+        const nextProfile = { ...profile, eggs: nextEggs, hatchings: [...hatchings, newHatching] };
+        await writePayload(query, session.userId, email, nextProfile);
+
+        return NextResponse.json({ success: true, action: "incubate", hatching: newHatching });
+      }
+
+      // ---- warm / instant / hatch all operate on a specific hatching ----
+      if (!parsed.hatchingId) {
+        return NextResponse.json({ error: { code: "invalid-argument", message: "hatchingId is required" } }, { status: 400 });
+      }
+
       const hatchings = Array.isArray(profile.hatchings) ? [...(profile.hatchings as Array<Record<string, unknown>>)] : [];
+      const hatching = hatchings.find((h) => String(h.id) === String(parsed.hatchingId)) ?? null;
+      if (!hatching) {
+        return NextResponse.json({ error: { code: "eggs/hatching-not-found" } }, { status: 404 });
+      }
 
-      if (hatchings.length >= MAX_INCUBATOR_SLOTS) {
+      // ---------- warm: spend 10 eco, shave 15 min off the timer ----------
+      if (parsed.action === "warm") {
+        const currentEco = Math.max(0, Number(profile.ecoPoints ?? 0) || 0);
+        if (currentEco < WARM_COST) {
+          return NextResponse.json(
+            { error: { code: "eggs/insufficient-eco", message: `Need ${WARM_COST} EcoPoints to warm the egg.` } },
+            { status: 400 }
+          );
+        }
+        const startTime = Number(hatching.startTime ?? now);
+        const currentEnd = Number(hatching.endTime ?? startTime);
+        const nextEnd = Math.max(startTime, currentEnd - WARM_REDUCTION_MS);
+        const warmedCount = Number(hatching.warmedCount ?? 0) + 1;
+
+        const nextHatchings = hatchings.map((h) =>
+          String(h.id) === String(parsed.hatchingId) ? { ...h, endTime: nextEnd, warmedCount } : h
+        );
+        const nextProfile = { ...profile, ecoPoints: currentEco - WARM_COST, hatchings: nextHatchings };
+        await writePayload(query, session.userId, email, nextProfile);
+
+        return NextResponse.json({
+          success: true,
+          action: "warm",
+          ecoPoints: currentEco - WARM_COST,
+          endTime: nextEnd,
+          warmedCount
+        });
+      }
+
+      // ---------- instant: spend eco to force the egg ready now ----------
+      if (parsed.action === "instant") {
+        const endTime = Number(hatching.endTime ?? now);
+        const remaining = Math.max(0, endTime - now);
+        const cost = Math.max(10, Math.ceil(remaining / (3 * 60 * 1000))); // 1 EP / 3 min, min 10
+        const currentEco = Math.max(0, Number(profile.ecoPoints ?? 0) || 0);
+        if (currentEco < cost) {
+          return NextResponse.json(
+            { error: { code: "eggs/insufficient-eco", message: `Need ${cost} EcoPoints to hatch instantly.` } },
+            { status: 400 }
+          );
+        }
+
+        const nextHatchings = hatchings.map((h) =>
+          String(h.id) === String(parsed.hatchingId) ? { ...h, endTime: now } : h
+        );
+        const nextProfile = { ...profile, ecoPoints: currentEco - cost, hatchings: nextHatchings };
+        await writePayload(query, session.userId, email, nextProfile);
+
+        return NextResponse.json({ success: true, action: "instant", ecoPoints: currentEco - cost, cost });
+      }
+
+      // ---------- hatch: validate timing, roll the pet, mint it, grant Impact ----------
+      const rarity = normalizeRarity(hatching.rarity);
+      const endTime = Number(hatching.endTime ?? now);
+      if (endTime > now) {
         return NextResponse.json(
-          { error: { code: "eggs/no-slot", message: "All incubator slots are full. Hatch an egg to free up a slot." } },
-          { status: 409 }
+          { error: { code: "eggs/not-ready", message: "This egg is not ready to hatch yet." } },
+          { status: 425 }
         );
       }
 
-      const egg = eggs.find((e) => String(e.id) === String(parsed.eggId)) ?? null;
-      if (!egg || Number(egg.count ?? 1) <= 0) {
-        return NextResponse.json({ error: { code: "eggs/not-owned" } }, { status: 404 });
+      const rewardPool = animalRewards[rarity] ?? animalRewards.common;
+      const reward = rewardPool[Math.floor(Math.random() * rewardPool.length)];
+
+      const nextHatchings = hatchings.filter((h) => String(h.id) !== String(parsed.hatchingId));
+      const animals = Array.isArray(profile.animals)
+        ? [...(profile.animals as Array<Record<string, unknown>>)]
+        : [];
+      const existingIndex = animals.findIndex((a) => String(a.name) === String(reward.name));
+      const hatchedAt = new Date().toISOString();
+      if (existingIndex >= 0) {
+        animals[existingIndex] = {
+          ...animals[existingIndex],
+          count: Number(animals[existingIndex].count ?? 1) + 1,
+          hatchedAt
+        };
+      } else {
+        animals.push({
+          id: `${reward.name.toLowerCase()}-${now}`,
+          name: reward.name,
+          image: reward.image,
+          rarity: reward.rarity,
+          count: 1,
+          active: false,
+          happiness: 50,
+          energy: 50,
+          bond: 10,
+          careStreak: 0,
+          careActionsToday: 0,
+          hatchedAt
+        });
       }
 
-      const rarity = normalizeRarity(egg.rarity);
-      const nextEggs = eggs
-        .map((e) => (String(e.id) === String(parsed.eggId) ? { ...e, count: Number(e.count ?? 1) - 1 } : e))
-        .filter((e) => Number(e.count ?? 1) > 0);
-
-      const newHatching: Record<string, unknown> = {
-        id: `hatch-${now}-${Math.floor(Math.random() * 1000)}`,
-        eggId: egg.id,
-        name: String(egg.name ?? "Egg"),
-        rarity,
-        startTime: now,
-        endTime: now + (HATCH_DURATIONS[rarity] ?? HATCH_DURATIONS.common),
-        warmedCount: 0
-      };
-
-      const nextProfile = { ...profile, eggs: nextEggs, hatchings: [...hatchings, newHatching] };
-      await writePayload(session.userId, email, nextProfile);
-
-      return NextResponse.json({ success: true, action: "incubate", hatching: newHatching });
-    }
-
-    // ---- warm / instant / hatch all operate on a specific hatching ----
-    if (!parsed.hatchingId) {
-      return NextResponse.json({ error: { code: "invalid-argument", message: "hatchingId is required" } }, { status: 400 });
-    }
-
-    const hatchings = Array.isArray(profile.hatchings) ? [...(profile.hatchings as Array<Record<string, unknown>>)] : [];
-    const hatching = hatchings.find((h) => String(h.id) === String(parsed.hatchingId)) ?? null;
-    if (!hatching) {
-      return NextResponse.json({ error: { code: "eggs/hatching-not-found" } }, { status: 404 });
-    }
-
-    // ---------- warm: spend 10 eco, shave 15 min off the timer ----------
-    if (parsed.action === "warm") {
-      const currentEco = Math.max(0, Number(profile.ecoPoints ?? 0) || 0);
-      if (currentEco < WARM_COST) {
-        return NextResponse.json(
-          { error: { code: "eggs/insufficient-eco", message: `Need ${WARM_COST} EcoPoints to warm the egg.` } },
-          { status: 400 }
-        );
-      }
-      const startTime = Number(hatching.startTime ?? now);
-      const currentEnd = Number(hatching.endTime ?? startTime);
-      const nextEnd = Math.max(startTime, currentEnd - WARM_REDUCTION_MS);
-      const warmedCount = Number(hatching.warmedCount ?? 0) + 1;
-
-      const nextHatchings = hatchings.map((h) =>
-        String(h.id) === String(parsed.hatchingId) ? { ...h, endTime: nextEnd, warmedCount } : h
-      );
-      const nextProfile = { ...profile, ecoPoints: currentEco - WARM_COST, hatchings: nextHatchings };
-      await writePayload(session.userId, email, nextProfile);
+      const granted = await grantImpact({
+        userId: session.userId,
+        source: "egg",
+        baseXp: HATCH_XP[rarity],
+        baseImpact: HATCH_IMPACT[rarity],
+        meta: { hatchingId: parsed.hatchingId, animal: reward.name, rarity },
+        payloadPatch: { hatchings: nextHatchings, animals },
+        // Share the locked transaction: grantImpact runs its user upsert +
+        // impact_events insert on the same client-bound `query` and reuses the
+        // already-locked `user` row (no re-read, no nested transaction), so the
+        // hatching-consumption + reward grant are one atomic unit.
+        tx: { query, user }
+      });
 
       return NextResponse.json({
         success: true,
-        action: "warm",
-        ecoPoints: currentEco - WARM_COST,
-        endTime: nextEnd,
-        warmedCount
+        action: "hatch",
+        animal: reward,
+        level: granted?.level ?? null,
+        xp: granted?.xp ?? null,
+        impact: granted?.impact ?? null,
+        ecoPoints: granted?.ecoPoints ?? null
       });
-    }
-
-    // ---------- instant: spend eco to force the egg ready now ----------
-    if (parsed.action === "instant") {
-      const endTime = Number(hatching.endTime ?? now);
-      const remaining = Math.max(0, endTime - now);
-      const cost = Math.max(10, Math.ceil(remaining / (3 * 60 * 1000))); // 1 EP / 3 min, min 10
-      const currentEco = Math.max(0, Number(profile.ecoPoints ?? 0) || 0);
-      if (currentEco < cost) {
-        return NextResponse.json(
-          { error: { code: "eggs/insufficient-eco", message: `Need ${cost} EcoPoints to hatch instantly.` } },
-          { status: 400 }
-        );
-      }
-
-      const nextHatchings = hatchings.map((h) =>
-        String(h.id) === String(parsed.hatchingId) ? { ...h, endTime: now } : h
-      );
-      const nextProfile = { ...profile, ecoPoints: currentEco - cost, hatchings: nextHatchings };
-      await writePayload(session.userId, email, nextProfile);
-
-      return NextResponse.json({ success: true, action: "instant", ecoPoints: currentEco - cost, cost });
-    }
-
-    // ---------- hatch: validate timing, roll the pet, mint it, grant Impact ----------
-    const rarity = normalizeRarity(hatching.rarity);
-    const endTime = Number(hatching.endTime ?? now);
-    if (endTime > now) {
-      return NextResponse.json(
-        { error: { code: "eggs/not-ready", message: "This egg is not ready to hatch yet." } },
-        { status: 425 }
-      );
-    }
-
-    const rewardPool = animalRewards[rarity] ?? animalRewards.common;
-    const reward = rewardPool[Math.floor(Math.random() * rewardPool.length)];
-
-    const nextHatchings = hatchings.filter((h) => String(h.id) !== String(parsed.hatchingId));
-    const animals = Array.isArray(profile.animals)
-      ? [...(profile.animals as Array<Record<string, unknown>>)]
-      : [];
-    const existingIndex = animals.findIndex((a) => String(a.name) === String(reward.name));
-    const hatchedAt = new Date().toISOString();
-    if (existingIndex >= 0) {
-      animals[existingIndex] = {
-        ...animals[existingIndex],
-        count: Number(animals[existingIndex].count ?? 1) + 1,
-        hatchedAt
-      };
-    } else {
-      animals.push({
-        id: `${reward.name.toLowerCase()}-${now}`,
-        name: reward.name,
-        image: reward.image,
-        rarity: reward.rarity,
-        count: 1,
-        active: false,
-        happiness: 50,
-        energy: 50,
-        bond: 10,
-        careStreak: 0,
-        careActionsToday: 0,
-        hatchedAt
-      });
-    }
-
-    const granted = await grantImpact({
-      userId: session.userId,
-      source: "egg",
-      baseXp: HATCH_XP[rarity],
-      baseImpact: HATCH_IMPACT[rarity],
-      meta: { hatchingId: parsed.hatchingId, animal: reward.name, rarity },
-      payloadPatch: { hatchings: nextHatchings, animals }
-    });
-
-    return NextResponse.json({
-      success: true,
-      action: "hatch",
-      animal: reward,
-      level: granted?.level ?? null,
-      xp: granted?.xp ?? null,
-      impact: granted?.impact ?? null,
-      ecoPoints: granted?.ecoPoints ?? null
     });
   } catch (error) {
     console.error("Egg incubate error:", error);

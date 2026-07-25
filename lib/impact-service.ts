@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { sql, transaction } from "./db";
+import { sql, transaction, type DbQuery } from "./db";
 import { calculateLevel } from "./level-system";
 
 /**
@@ -44,6 +44,18 @@ export type GrantImpactInput = {
    * after the impact/xp/eco fields, so do not include xp/level/impact here.
    */
   payloadPatch?: Record<string, unknown>;
+  /**
+   * Optional pre-locked transaction context: when a reward route has already
+   * opened a transaction() and locked the user row with SELECT ... FOR UPDATE
+   * (see selectUserForUpdate in lib/db.ts), it passes the client-bound `query`
+   * and the already-read `user` row here so the grant runs INSIDE that same
+   * transaction — no re-read, no nested transaction. This makes the route's
+   * read→compute→grant atomic against concurrent reward grants on the same
+   * user (closes the lost-update / double-grant class found in the 2026-07-25
+   * reward-route audit). Non-reward callers omit `tx` and get the unchanged
+   * own-read + own-transaction path.
+   */
+  tx?: { query: DbQuery; user: ImpactUser };
 };
 
 export type GrantImpactResult = {
@@ -66,6 +78,10 @@ type UserRecord = {
   trust_score: number | null;
   payload: Record<string, unknown>;
 };
+
+// Exported alias so reward routes can type the row they pass to grantImpact's
+// `tx.user` without reaching for the internal UserRecord name.
+export type ImpactUser = UserRecord;
 
 async function getUserForImpact(userId: string) {
   const result = await sql<UserRecord>(
@@ -91,45 +107,45 @@ export async function grantImpact(input: GrantImpactInput): Promise<GrantImpactR
     return null;
   }
 
-  const user = await getUserForImpact(input.userId);
-  if (!user) {
-    return null;
-  }
+  // Compute the next payload + ledger write, then upsert the user row + insert
+  // the impact_events row via the given `query`. When `query` is the
+  // client-bound fn from a surrounding transaction() that already locked the
+  // user row with SELECT ... FOR UPDATE, the whole grant is atomic with the
+  // caller's read (no re-read, no nested transaction).
+  const run = async (query: DbQuery, user: UserRecord): Promise<GrantImpactResult> => {
+    const payload = user.payload ?? {};
+    const previousXp = Math.max(0, Math.floor(Number(payload.xp ?? user.xp ?? 0) || 0));
+    const previousLevel = Math.max(1, Math.floor(Number(payload.level ?? user.level ?? calculateLevel(previousXp)) || 0) || 1);
+    const nextXp = previousXp + baseXp;
+    const nextLevel = calculateLevel(nextXp);
 
-  const payload = user.payload ?? {};
-  const previousXp = Math.max(0, Math.floor(Number(payload.xp ?? user.xp ?? 0) || 0));
-  const previousLevel = Math.max(1, Math.floor(Number(payload.level ?? user.level ?? calculateLevel(previousXp)) || 0) || 1);
-  const nextXp = previousXp + baseXp;
-  const nextLevel = calculateLevel(nextXp);
+    const previousImpact = Math.max(0, Math.floor(Number(payload.impact ?? 0) || 0));
+    const nextImpact = previousImpact + baseImpact;
 
-  const previousImpact = Math.max(0, Math.floor(Number(payload.impact ?? 0) || 0));
-  const nextImpact = previousImpact + baseImpact;
+    const previousEco = Math.max(0, Math.floor(Number(payload.ecoPoints ?? 0) || 0));
+    const nextEco = Math.max(0, previousEco + eco);
 
-  const previousEco = Math.max(0, Math.floor(Number(payload.ecoPoints ?? 0) || 0));
-  const nextEco = Math.max(0, previousEco + eco);
+    const previousCarbon = Math.max(0, Number(payload.carbonReduced ?? 0) || 0);
+    const nextCarbon = Math.round((previousCarbon + carbon) * 100) / 100;
 
-  const previousCarbon = Math.max(0, Number(payload.carbonReduced ?? 0) || 0);
-  const nextCarbon = Math.round((previousCarbon + carbon) * 100) / 100;
+    const impactBySource = {
+      ...(typeof payload.impactBySource === "object" && payload.impactBySource ? payload.impactBySource : {}),
+      [input.source]: Math.max(0, Math.floor(Number((payload.impactBySource as Record<string, number> | undefined)?.[input.source] ?? 0) || 0)) + baseImpact
+    };
 
-  const impactBySource = {
-    ...(typeof payload.impactBySource === "object" && payload.impactBySource ? payload.impactBySource : {}),
-    [input.source]: Math.max(0, Math.floor(Number((payload.impactBySource as Record<string, number> | undefined)?.[input.source] ?? 0) || 0)) + baseImpact
-  };
+    const nextPayload: Record<string, unknown> = {
+      ...payload,
+      xp: nextXp,
+      level: nextLevel,
+      ecoPoints: nextEco,
+      carbonReduced: nextCarbon,
+      impact: nextImpact,
+      impactBySource,
+      ...patch
+    };
 
-  const nextPayload: Record<string, unknown> = {
-    ...payload,
-    xp: nextXp,
-    level: nextLevel,
-    ecoPoints: nextEco,
-    carbonReduced: nextCarbon,
-    impact: nextImpact,
-    impactBySource,
-    ...patch
-  };
+    const eventId = randomUUID();
 
-  const eventId = randomUUID();
-
-  await transaction(async (query) => {
     await query(
       `insert into users (id, email, password_hash, xp, level, payload)
        values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $4, $5, $3::jsonb)
@@ -149,19 +165,32 @@ export async function grantImpact(input: GrantImpactInput): Promise<GrantImpactR
         [eventId, input.userId, input.source, baseImpact, JSON.stringify(meta)]
       );
     }
-  });
 
-  return {
-    userId: input.userId,
-    xp: nextXp,
-    level: nextLevel,
-    previousLevel,
-    leveledUp: nextLevel > previousLevel,
-    impact: nextImpact,
-    impactDelta: baseImpact,
-    ecoPoints: nextEco,
-    carbonReduced: nextCarbon
+    return {
+      userId: input.userId,
+      xp: nextXp,
+      level: nextLevel,
+      previousLevel,
+      leveledUp: nextLevel > previousLevel,
+      impact: nextImpact,
+      impactDelta: baseImpact,
+      ecoPoints: nextEco,
+      carbonReduced: nextCarbon
+    };
   };
+
+  // If the caller already opened a transaction and locked the user row, run
+  // inside it. Otherwise do the own-read + own-transaction path (unchanged for
+  // non-reward callers like streak/apply, garden, friend, ecomap, private).
+  if (input.tx) {
+    return run(input.tx.query, input.tx.user);
+  }
+
+  const user = await getUserForImpact(input.userId);
+  if (!user) {
+    return null;
+  }
+  return transaction((query) => run(query, user));
 }
 
 /** Sum of Impact granted since `sinceIso` (ISO timestamp). Used by the dashboard "Impact this week" cell. */

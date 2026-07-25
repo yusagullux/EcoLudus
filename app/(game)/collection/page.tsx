@@ -62,6 +62,16 @@ const animalEmoji: Record<string, string> = {
 function CardImage({ entry, discovered, mode }: { entry: MasterEntry; discovered: boolean; mode: CollMode }) {
   const [imgError, setImgError] = useState(false);
 
+  // Pet/animal art has wildly varying aspect ratios (cobra 687×1031 portrait,
+  // cat 1742×1161 landscape, kraken 1024×1536) and the creature has meaningful
+  // extent (head, tail, wings). object-cover would crop those off, so animals
+  // use object-contain to fit the whole creature inside the card, with a
+  // sliver of padding so tightly-framed art doesn't kiss the tile edge. Plants,
+  // eggs, seeds, and chests are centered blobs that crop cleanly, so they keep
+  // object-cover (full-bleed, no padding) for a uniform Pokédex tile.
+  const isAnimal = mode === "animals";
+  const fitClass = isAnimal ? "object-contain p-1.5" : "object-cover";
+
   // Locked entries render as a pure silhouette: brightness(0) kills color,
   // opacity(0.55) softens it into a dark shape over the panel.
   if (!discovered) {
@@ -72,7 +82,7 @@ function CardImage({ entry, discovered, mode }: { entry: MasterEntry; discovered
         aria-hidden="true"
         loading="lazy"
         onError={() => setImgError(true)}
-        className="h-full w-full object-cover transition duration-300"
+        className={`h-full w-full ${fitClass} transition duration-300`}
         style={{ filter: "brightness(0) opacity(0.55)" }}
       />
     );
@@ -93,7 +103,7 @@ function CardImage({ entry, discovered, mode }: { entry: MasterEntry; discovered
       alt={entry.name}
       loading="lazy"
       onError={() => setImgError(true)}
-      className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
+      className={`h-full w-full ${fitClass} transition duration-300 group-hover:scale-110`}
     />
   );
 }
@@ -109,8 +119,11 @@ export default function CollectionPage() {
   const [shopCatalog, setShopCatalog] = useState<ShopCatalog | null>(null);
   const [speciesCatalog, setSpeciesCatalog] = useState<SpeciesCatalog | null>(null);
 
-  // Ticking Time state
-  const [nowTime, setNowTime] = useState(Date.now());
+  // Ticking Time state. Lazy-initialized so the seed timestamp is read once
+  // (in render, not during module init) and stays stable across the initial
+  // server/client render — avoids a hydration mismatch and the React 19
+  // "impure function during render" warning. Same pattern as the garden page.
+  const [nowTime, setNowTime] = useState(() => Date.now());
   const [warmingId, setWarmingId] = useState<string | null>(null);
 
   // Fullscreen Hatching Reveal State
