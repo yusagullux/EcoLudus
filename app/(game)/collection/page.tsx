@@ -137,19 +137,31 @@ export default function CollectionPage() {
   // Fetch the master catalogs once. Both endpoints are public reads —
   // names/images aren't secret, and the hatch/chest routes re-validate every
   // reward server-side, so a client can't forge anything by tampering here.
+  // The shop route wraps its payload under a `catalog` key (same contract as
+  // the shop page); the species route returns `{ pets, seeds }` flat. Both
+  // always resolve — a failed fetch falls back to empty arrays so the page
+  // renders (locked/empty) instead of hanging on "Loading…" forever.
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch("/api/catalog/shop").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch("/api/catalog/species").then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      fetch("/api/catalog/shop", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+      fetch("/api/catalog/species", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
     ]).then(([shop, species]) => {
       if (cancelled) return;
-      if (shop && shop.plants && shop.eggs && shop.chests) {
-        setShopCatalog({ plants: shop.plants, eggs: shop.eggs, chests: shop.chests });
-      }
-      if (species && species.pets && species.seeds) {
-        setSpeciesCatalog({ pets: species.pets, seeds: species.seeds });
-      }
+      const cat = shop?.catalog;
+      setShopCatalog({
+        plants: Array.isArray(cat?.plants) ? cat.plants : [],
+        eggs: Array.isArray(cat?.eggs) ? cat.eggs : [],
+        chests: Array.isArray(cat?.chests) ? cat.chests : []
+      });
+      setSpeciesCatalog({
+        pets: Array.isArray(species?.pets) ? species.pets : [],
+        seeds: Array.isArray(species?.seeds) ? species.seeds : []
+      });
     });
     return () => {
       cancelled = true;
