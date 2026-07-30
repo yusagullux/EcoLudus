@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
-import { updateUserProfile } from "@/lib/auth-client";
 import { computeVitals } from "@/lib/pet-vitals";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
@@ -23,7 +23,11 @@ const PET_EMOJI: Record<string, string> = {
 // Pet card image. `fit="cover"` (default) fills the frame like the shop/collection
 // tiles for a uniform grid; `fit="contain"` letterboxes the whole creature and is
 // used for the showcase portrait where cropping the art would look wrong.
-function PetImage({ pet, fit = "cover" }: { pet: any; fit?: "cover" | "contain" }) {
+function PetImage({
+  pet,
+  fit = "cover",
+  sizes = "(max-width: 640px) 45vw, 240px"
+}: { pet: any; fit?: "cover" | "contain"; sizes?: string }) {
   const [imgError, setImgError] = useState(false);
 
   if (imgError) {
@@ -40,12 +44,13 @@ function PetImage({ pet, fit = "cover" }: { pet: any; fit?: "cover" | "contain" 
       : "object-cover";
 
   return (
-    <img
+    <Image
       src={getPetImage(pet)}
       alt={pet?.name || "pet"}
-      loading="lazy"
+      fill
+      sizes={sizes}
       onError={() => setImgError(true)}
-      className={`h-full w-full ${fitClass} transition duration-300 group-hover:scale-110`}
+      className={`${fitClass} transition duration-300 group-hover:scale-110`}
     />
   );
 }
@@ -115,16 +120,23 @@ export default function PetsPage() {
 
   const selectActivePet = async (pet: any) => {
     if (!user?.uid || !profile) return;
-    const nextPets = pets.map((entry) => ({ ...entry, active: entry.id === pet.id }));
-    const updates = { animals: nextPets, activePet: pet.id };
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) {
-      showToast("Could not choose that companion.");
+    // Server owns the switch: /api/pets/select locks the row and toggles only the
+    // `active` flag on the canonical pet rows — it never writes the client-drifted
+    // happiness/energy/bond back as canonical stats (the old updateUserProfile
+    // path did). We just ask and reflect the result.
+    const res = await fetch("/api/pets/select", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ petId: pet.id })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      showToast(data?.error?.message || "Could not choose that companion.");
       return;
     }
     setSelectedId(pet.id);
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
+    if (typeof setProfile === "function" && profile) {
+      setProfile({ ...profile, animals: data.animals, activePet: data.activePet });
     }
     showToast(`${pet.name} is traveling with you now.`);
   };
@@ -258,7 +270,7 @@ export default function PetsPage() {
                   background: `radial-gradient(circle at 50% 35%, ${(rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "#2f6b46")}22, transparent 58%), var(--bg-panel-alt)`
                 }}
               >
-                <PetImage pet={selectedPet} fit="contain" />
+                <PetImage pet={selectedPet} fit="contain" sizes="(max-width: 1024px) 90vw, 360px" />
                 {hearts.map((heart) => (
                   <span
                     key={heart.id}

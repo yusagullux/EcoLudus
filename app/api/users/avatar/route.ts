@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { transaction, selectUserForUpdate } from "@/lib/db";
 import { uploadAvatar, StorageNotConfiguredError } from "@/lib/supabase-storage";
 
 // Upload (and replace) the authenticated user's profile picture to Supabase
@@ -49,25 +49,32 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    // Persist the public URL into the user's payload.
-    const userResult = await sql<{ email: string; payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [session.userId]
-    );
-    if (userResult.rowCount === 0) {
+    // Persist the public URL into the user's payload. The storage upload already
+    // happened (network, outside any lock); this just records the resulting URL.
+    // Read+write under a row lock so a concurrent reward grant on the same row
+    // isn't clobbered by the full-payload write (lost-update class, audit M7).
+    // The write uses the file-DB-covered "update users set payload = … where id"
+    // string and shallow-merges over the locked payload, preserving economy.
+    let notFound = false;
+    await transaction(async (query) => {
+      const result = await selectUserForUpdate<{ payload: Record<string, unknown> }>(
+        query,
+        session.userId!
+      );
+      const locked = result.rows[0];
+      if (!locked) {
+        notFound = true;
+        return;
+      }
+      const nextProfile = { ...locked.payload, profileImage };
+      await query("update users set payload = $1::jsonb, updated_at = now() where id = $2", [
+        JSON.stringify(nextProfile),
+        session.userId
+      ]);
+    });
+    if (notFound) {
       return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
     }
-
-    const nextProfile = { ...userResult.rows[0].payload, profileImage };
-    await sql(
-      `insert into users (id, email, password_hash, payload)
-       values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
-       on conflict (id) do update
-       set email = excluded.email,
-           payload = excluded.payload,
-           updated_at = now()`,
-      [session.userId, session.email, JSON.stringify(nextProfile)]
-    );
 
     return NextResponse.json({ success: true, profileImage });
   } catch (error) {

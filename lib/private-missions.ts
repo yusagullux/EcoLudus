@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
-import { sql, transaction } from "./db";
+import { sql, transaction, selectUserForUpdate } from "./db";
 import { calculateLevel, getLevelProgress, getLevelUpRewards } from "./level-system";
 import {
   type PrivateMissionVerificationResult,
@@ -232,11 +232,6 @@ export async function submitPrivateMission(
     recentSubmissionCount
   });
   const finalXp = xpForVerification(mission.base_xp, verification, trustUpdate.nextScore);
-  const previousXp = Number(user.payload?.xp ?? user.xp ?? 0);
-  const nextXp = previousXp + finalXp;
-  const previousLevel = Number(user.payload?.level ?? user.level ?? calculateLevel(previousXp));
-  const nextLevel = calculateLevel(nextXp);
-  const levelRewards = getLevelUpRewards(previousLevel, nextLevel);
   const teamId = await getTeamId(body.userId);
   const submissionId = randomUUID();
   const privateLogId = randomUUID();
@@ -250,8 +245,34 @@ export async function submitPrivateMission(
     verification.risk_flags.length
   );
 
+  // Outcome of the locked grant: authoritative nextXp + levelRewards, derived from
+  // the locked user row inside the transaction. Declared outside try so the success
+  // response (built after the catch) can read it.
+  type GrantOutcome = { nextXp: number; levelRewards: ReturnType<typeof getLevelUpRewards> };
+  let grantOutcome: GrantOutcome;
+
   try {
-    await transaction(async (query) => {
+    grantOutcome = await transaction<GrantOutcome>(async (query) => {
+      // Lock the user row FIRST (before any inserts) and recompute xp/level/payload
+      // from the locked row, so the verified-XP grant is atomic against concurrent
+      // reward grants on the same user (lost-update class, audit H5). The early
+      // `user` read (line 191) is kept only for trust scoring, which is not a
+      // concurrency guard. Returns the authoritative nextXp/levelRewards for the
+      // response so it reflects the locked value, not the stale early read.
+      const lockedResult = await selectUserForUpdate<UserRecord>(query, body.userId);
+      const lockedUser = lockedResult.rows[0];
+      if (!lockedUser) {
+        const err = new Error("auth/user-not-found");
+        (err as Error & { code?: string }).code = "auth/user-not-found";
+        throw err;
+      }
+
+      const lockedPrevXp = Math.max(0, Number(lockedUser.payload?.xp ?? lockedUser.xp ?? 0));
+      const lockedNextXp = lockedPrevXp + finalXp;
+      const lockedPrevLevel = Math.max(1, Number(lockedUser.payload?.level ?? lockedUser.level ?? calculateLevel(lockedPrevXp)) || 1);
+      const lockedNextLevel = calculateLevel(lockedNextXp);
+      const lockedLevelRewards = getLevelUpRewards(lockedPrevLevel, lockedNextLevel);
+
       await query(
         `insert into mission_submissions (
            id, mission_id, user_id, before_value, after_value, description, confidence,
@@ -350,7 +371,7 @@ export async function submitPrivateMission(
             "private_mission_verified",
             getTrustMultiplier(trustUpdate.nextScore),
             verification.status,
-            JSON.stringify({ baseXp: mission.base_xp, levelRewards })
+            JSON.stringify({ baseXp: mission.base_xp, levelRewards: lockedLevelRewards })
           ]
         );
       }
@@ -367,10 +388,12 @@ export async function submitPrivateMission(
 
       // Spine: bump Impact in lockstep with the verified XP so private missions feed
       // the same number the hooks consume. 1:1 with finalXp (post trust/verification).
-      const previousImpact = Math.max(0, Math.floor(Number(user.payload?.impact ?? 0) || 0));
+      // Derived from the LOCKED user row so a concurrent reward grant can't be
+      // clobbered by this full-payload write (lost-update class, audit H5).
+      const previousImpact = Math.max(0, Math.floor(Number(lockedUser.payload?.impact ?? 0) || 0));
       const prevImpactBySource =
-        (user.payload?.impactBySource && typeof user.payload.impactBySource === "object"
-          ? user.payload.impactBySource
+        (lockedUser.payload?.impactBySource && typeof lockedUser.payload.impactBySource === "object"
+          ? lockedUser.payload.impactBySource
           : {}) as Record<string, number>;
       const nextImpact = previousImpact + finalXp;
       const nextImpactBySource = {
@@ -379,11 +402,11 @@ export async function submitPrivateMission(
       };
 
       const nextPayload = {
-        ...user.payload,
-        xp: nextXp,
-        level: nextLevel,
+        ...lockedUser.payload,
+        xp: lockedNextXp,
+        level: lockedNextLevel,
         trustScore: trustUpdate.nextScore,
-        missionsCompleted: Number(user.payload?.missionsCompleted ?? 0) + (finalXp > 0 ? 1 : 0),
+        missionsCompleted: Number(lockedUser.payload?.missionsCompleted ?? 0) + (finalXp > 0 ? 1 : 0),
         lastPrivateMissionAt: submittedAt.toISOString(),
         impact: nextImpact,
         impactBySource: nextImpactBySource
@@ -397,7 +420,7 @@ export async function submitPrivateMission(
              payload = $4::jsonb,
              updated_at = now()
          where id = $5`,
-        [nextXp, nextLevel, trustUpdate.nextScore, JSON.stringify(nextPayload), body.userId]
+        [lockedNextXp, lockedNextLevel, trustUpdate.nextScore, JSON.stringify(nextPayload), body.userId]
       );
 
       if (finalXp > 0) {
@@ -418,11 +441,16 @@ export async function submitPrivateMission(
           ]
         );
       }
+
+      return { nextXp: lockedNextXp, levelRewards: lockedLevelRewards };
     });
   } catch (error) {
     const code = typeof error === "object" && error && "code" in error ? String((error as { code: unknown }).code) : "";
     if (code === "23505") {
       return { error: { code: "missions/duplicate-window", status: 409 } as const };
+    }
+    if (code === "auth/user-not-found") {
+      return { error: { code: "auth/user-not-found", status: 404 } as const };
     }
     throw error;
   }
@@ -445,8 +473,8 @@ export async function submitPrivateMission(
       xpAwarded: finalXp,
       baseXp: mission.base_xp,
       trustMultiplier: getTrustMultiplier(trustUpdate.nextScore),
-      level: getLevelProgress(nextXp),
-      levelRewards
+      level: getLevelProgress(grantOutcome.nextXp),
+      levelRewards: grantOutcome.levelRewards
     },
     trust: {
       previousScore: trustUpdate.previousScore,

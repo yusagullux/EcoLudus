@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/useAuth";
+import { useTeamTemplates } from "@/lib/useCatalog";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
@@ -24,27 +25,12 @@ export default function TeamPage() {
   const [toast, setToast] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<TeamMissionTemplate[]>([]);
-
   // Mission templates (titles, icons, xp/eco/needed) are loaded from the
   // server's read API and are display-only — the /api/teams `assign` route
   // re-validates the template by id and ignores any client-supplied values,
-  // so a client cannot start a mission with inflated rewards.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/catalog/team-templates", { credentials: "include" });
-        const data = await res.json().catch(() => ({}));
-        if (!cancelled && res.ok && Array.isArray(data?.templates)) {
-          setTemplates(data.templates);
-        }
-      } catch (error) {
-        console.error("Failed to load team mission templates:", error);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // so a client cannot start a mission with inflated rewards. SWR caches them.
+  const { templates: rawTemplates } = useTeamTemplates();
+  const templates = rawTemplates as TeamMissionTemplate[];
 
   // Team progress proof states
   const [activeProofMission, setActiveProofMission] = useState<any | null>(null);

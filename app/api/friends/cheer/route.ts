@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
-import { grantImpact } from "@/lib/impact-service";
+import { sql, transaction, selectUserForUpdate } from "@/lib/db";
+import { grantImpact, type ImpactUser, type GrantImpactResult } from "@/lib/impact-service";
 
 // Server-validated friend cheer. The friends page used to enforce the 5/day
 // cap and grant XP/eco client-side through `updateUserProfile`, which a client
@@ -11,6 +11,13 @@ import { grantImpact } from "@/lib/impact-service";
 // through the spine. A small one-shot `source:"friend"` Impact is granted to
 // BOTH users — the cheerer (who acted) and the friend (who was encouraged) —
 // with a notification left for the friend.
+//
+// The cheerer's read → friend/cap checks → grant run inside one transaction
+// with a row lock (selectUserForUpdate) so a concurrent cheer cannot both
+// pass the 5/day cap against a stale read (lost-update / cap-bypass class from
+// the audit), and the grant shares the lock via `tx`. The friend's
+// notification grant is a SEPARATE user row, done best-effort AFTER the
+// cheerer's transaction commits — it must not fail the cheerer's reward.
 
 const CHEER_XP = 10;
 const CHEER_ECO = 3;
@@ -46,114 +53,142 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: { code: "friends/self-cheer" } }, { status: 400 });
   }
 
+  // The cheerer's read → friend/cap checks → grant run inside one transaction
+  // with a row lock (selectUserForUpdate) so a concurrent cheer cannot both
+  // pass the 5/day cap against a stale read (lost-update / cap-bypass class from
+  // the audit), and the grant shares the lock via `tx`. The transaction returns a
+  // discriminated result — either an early 404/429 response (empty tx commits) or
+  // the grant outcome. The friend's notification grant is a SEPARATE user row,
+  // done best-effort AFTER the cheerer's transaction commits — never fails the
+  // cheerer.
+  type CheerOutcome =
+    | { early: NextResponse }
+    | { grant: GrantImpactResult | null; cheersAfter: number; cheererName: string };
+
+  let outcome: CheerOutcome;
   try {
-    const userResult = await sql<{ email: string; payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [session.userId]
-    );
-    if (userResult.rowCount === 0) {
-      return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
-    }
-
-    const profile = userResult.rows[0].payload ?? {};
-    const friends = Array.isArray(profile.friends) ? [...(profile.friends as Array<Record<string, unknown>>)] : [];
-
-    // Must be an actual friend — no cheering arbitrary users.
-    const friendEntry = friends.find((f) => String(f.id) === parsed.friendId) ?? null;
-    if (!friendEntry) {
-      return NextResponse.json({ error: { code: "friends/not-friend" } }, { status: 404 });
-    }
-
-    // Enforce the 5/day cap server-side.
-    const today = todayKey();
-    const socialStats = (profile.socialStats ?? {}) as Record<string, unknown>;
-    const sameDay = String(socialStats.lastCheerDate ?? "") === today;
-    const cheersToday = sameDay ? Math.max(0, Number(socialStats.cheersToday ?? 0)) : 0;
-    if (cheersToday >= MAX_CHEERS_PER_DAY) {
-      return NextResponse.json(
-        { error: { code: "friends/cheer-cap-reached", message: "Daily cheer limit reached. Come back tomorrow." } },
-        { status: 429 }
-      );
-    }
-
-    // Bump the per-friend cheer counter on the cheerer's friend list.
-    const nextFriends = friends.map((f) =>
-      String(f.id) === parsed.friendId
-        ? { ...f, cheers: Number(f.cheers ?? 0) + 1, lastCheeredAt: new Date().toISOString() }
-        : f
-    );
-
-    const nextSocialStats = {
-      ...socialStats,
-      cheersGiven: Number(socialStats.cheersGiven ?? 0) + 1,
-      cheersToday: cheersToday + 1,
-      lastCheerDate: today
-    };
-
-    const cheererName = String(profile.displayName ?? profile.name ?? "A friend");
-
-    // Grant to the cheerer (XP + eco + Impact), patching friend list + social stats atomically.
-    const granted = await grantImpact({
-      userId: session.userId,
-      source: "friend",
-      baseXp: CHEER_XP,
-      baseImpact: CHEERER_IMPACT,
-      eco: CHEER_ECO,
-      meta: { friendId: parsed.friendId, friendName: String(friendEntry.displayName ?? "") },
-      payloadPatch: { friends: nextFriends, socialStats: nextSocialStats }
-    });
-
-    // Grant a small Impact to the friend too, plus a notification. Load the
-    // friend's current notifications so we can prepend (kept to last 20).
-    let friendNotified = false;
-    try {
-      const friendResult = await sql<{ email: string; payload: Record<string, unknown> }>(
-        "select id, email, payload from users where id = $1 limit 1",
-        [parsed.friendId]
-      );
-      if (friendResult.rowCount !== 0) {
-        const friendProfile = friendResult.rows[0].payload ?? {};
-        const existingNotifications = Array.isArray(friendProfile.notifications)
-          ? (friendProfile.notifications as Array<Record<string, unknown>>)
-          : [];
-        const notification = {
-          id: `cheer-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-          type: "cheer",
-          title: "You were cheered! 🌿",
-          message: `${cheererName} cheered you on. Keep going!`,
-          read: false,
-          createdAt: new Date().toISOString()
-        };
-        const nextNotifications = [notification, ...existingNotifications].slice(0, 20);
-
-        await grantImpact({
-          userId: parsed.friendId,
-          source: "friend",
-          baseImpact: FRIEND_IMPACT,
-          meta: { cheeredBy: session.userId, cheeredByName: cheererName },
-          payloadPatch: { notifications: nextNotifications }
-        });
-        friendNotified = true;
+    outcome = await transaction<CheerOutcome>(async (query) => {
+      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      if (userResult.rowCount === 0) {
+        return { early: NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 }) };
       }
-    } catch (friendError) {
-      // The friend grant is best-effort — never fail the cheerer's reward.
-      console.error("Friend cheer notification error:", friendError);
-    }
 
-    return NextResponse.json({
-      success: true,
-      xpAwarded: CHEER_XP,
-      ecoAwarded: CHEER_ECO,
-      impactAwarded: CHEERER_IMPACT,
-      cheersToday: cheersToday + 1,
-      cheersCap: MAX_CHEERS_PER_DAY,
-      friendNotified,
-      level: granted?.level ?? null,
-      xp: granted?.xp ?? null,
-      ecoPoints: granted?.ecoPoints ?? null
+      const user = userResult.rows[0];
+      const profile = user.payload ?? {};
+      const friends = Array.isArray(profile.friends)
+        ? [...(profile.friends as Array<Record<string, unknown>>)]
+        : [];
+
+      // Must be an actual friend — no cheering arbitrary users.
+      const friendEntry = friends.find((f) => String(f.id) === parsed.friendId) ?? null;
+      if (!friendEntry) {
+        return { early: NextResponse.json({ error: { code: "friends/not-friend" } }, { status: 404 }) };
+      }
+
+      // Enforce the 5/day cap server-side (checked under the row lock).
+      const today = todayKey();
+      const socialStats = (profile.socialStats ?? {}) as Record<string, unknown>;
+      const sameDay = String(socialStats.lastCheerDate ?? "") === today;
+      const cheersToday = sameDay ? Math.max(0, Number(socialStats.cheersToday ?? 0)) : 0;
+      if (cheersToday >= MAX_CHEERS_PER_DAY) {
+        return {
+          early: NextResponse.json(
+            { error: { code: "friends/cheer-cap-reached", message: "Daily cheer limit reached. Come back tomorrow." } },
+            { status: 429 }
+          )
+        };
+      }
+
+      // Bump the per-friend cheer counter on the cheerer's friend list.
+      const nextFriends = friends.map((f) =>
+        String(f.id) === parsed.friendId
+          ? { ...f, cheers: Number(f.cheers ?? 0) + 1, lastCheeredAt: new Date().toISOString() }
+          : f
+      );
+
+      const nextSocialStats = {
+        ...socialStats,
+        cheersGiven: Number(socialStats.cheersGiven ?? 0) + 1,
+        cheersToday: cheersToday + 1,
+        lastCheerDate: today
+      };
+
+      const cheererName = String(profile.displayName ?? profile.name ?? "A friend");
+      const cheersAfter = cheersToday + 1;
+
+      // Grant to the cheerer (XP + eco + Impact), patching friend list + social
+      // stats atomically inside the locked transaction.
+      const grant = await grantImpact({
+        userId: session.userId,
+        source: "friend",
+        baseXp: CHEER_XP,
+        baseImpact: CHEERER_IMPACT,
+        eco: CHEER_ECO,
+        meta: { friendId: parsed.friendId, friendName: String(friendEntry.displayName ?? "") },
+        payloadPatch: { friends: nextFriends, socialStats: nextSocialStats },
+        tx: { query, user }
+      });
+
+      return { grant, cheersAfter, cheererName };
     });
   } catch (error) {
     console.error("Friend cheer error:", error);
     return NextResponse.json({ error: { code: "internal-error" } }, { status: 500 });
   }
+
+  if ("early" in outcome) {
+    return outcome.early;
+  }
+
+  const { grant: cheererGrant, cheersAfter, cheererName } = outcome;
+
+  // Grant a small Impact to the friend too, plus a notification. Best-effort,
+  // AFTER the cheerer's locked transaction committed — never fail the cheerer.
+  let friendNotified = false;
+  try {
+    const friendResult = await sql<{ email: string; payload: Record<string, unknown> }>(
+      "select id, email, payload from users where id = $1 limit 1",
+      [parsed.friendId]
+    );
+    if (friendResult.rowCount !== 0) {
+      const friendProfile = friendResult.rows[0].payload ?? {};
+      const existingNotifications = Array.isArray(friendProfile.notifications)
+        ? (friendProfile.notifications as Array<Record<string, unknown>>)
+        : [];
+      const notification = {
+        id: `cheer-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+        type: "cheer",
+        title: "You were cheered! 🌿",
+        message: `${cheererName} cheered you on. Keep going!`,
+        read: false,
+        createdAt: new Date().toISOString()
+      };
+      const nextNotifications = [notification, ...existingNotifications].slice(0, 20);
+
+      await grantImpact({
+        userId: parsed.friendId,
+        source: "friend",
+        baseImpact: FRIEND_IMPACT,
+        meta: { cheeredBy: session.userId, cheeredByName: cheererName },
+        payloadPatch: { notifications: nextNotifications }
+      });
+      friendNotified = true;
+    }
+  } catch (friendError) {
+    // The friend grant is best-effort — never fail the cheerer's reward.
+    console.error("Friend cheer notification error:", friendError);
+  }
+
+  return NextResponse.json({
+    success: true,
+    xpAwarded: CHEER_XP,
+    ecoAwarded: CHEER_ECO,
+    impactAwarded: CHEERER_IMPACT,
+    cheersToday: cheersAfter,
+    cheersCap: MAX_CHEERS_PER_DAY,
+    friendNotified,
+    level: cheererGrant?.level ?? null,
+    xp: cheererGrant?.xp ?? null,
+    ecoPoints: cheererGrant?.ecoPoints ?? null
+  });
 }

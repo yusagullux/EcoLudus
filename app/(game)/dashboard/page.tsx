@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
+import { useQuests } from "@/lib/useQuests";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 import PhotoVerification from "@/components/photo-verification";
-import { updateUserProfile } from "@/lib/auth-client";
 import { requiredXP } from "@/lib/level-system";
 
 const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string; icon: string; label: string }> = {
@@ -78,7 +79,7 @@ function isAfterMidnightUTC(lastResetTime: string | null): boolean {
 export default function DashboardPage() {
   const { user, profile, loading, refreshProfile } = useAuth();
 
-  const [questsData, setQuestsData] = useState<any>(null);
+  const { quests: questsData } = useQuests();
   const [quests, setQuests] = useState<any[]>([]);
   const [loadingQuests, setLoadingQuests] = useState(true);
 
@@ -98,22 +99,6 @@ export default function DashboardPage() {
   const [streakReward, setStreakReward] = useState<{ day: number; label: string } | null>(null);
   // Read-only "Impact this week" — the first visible surface for the spine.
   const [weekImpact, setWeekImpact] = useState<number | null>(null);
-
-  // Load quests.json on mount
-  useEffect(() => {
-    async function loadQuests() {
-      try {
-        const res = await fetch("/quests.json");
-        if (res.ok) {
-          const data = await res.json();
-          setQuestsData(data);
-        }
-      } catch (err) {
-        console.error("Error loading quests.json:", err);
-      }
-    }
-    loadQuests();
-  }, []);
 
   // Load weekly Impact (the spine's first visible surface) on mount.
   useEffect(() => {
@@ -172,20 +157,10 @@ export default function DashboardPage() {
     if (isResetNeeded) {
       async function resetDaily() {
         setLoadingQuests(true);
-        const completedQuestIds = (profile!.completedQuests || []) as string[];
-        let available = allMappedQuests.filter((q: any) => !completedQuestIds.includes(q.id));
-        if (available.length === 0) {
-          available = allMappedQuests;
-        }
-        const shuffled = [...available].sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, 5);
-        const selectedIds = selected.map((q: any) => q.id);
 
         // ── Streak milestone rewards (server-granted) ───────────────────────
         // Eco/egg streak rewards are granted by /api/streak/apply so they can't
-        // be forged from the client. The route runs the streak counter + milestone
-        // logic and returns the granted milestone (if any) for the toast. Quest
-        // *selection* (below) still happens client-side; only the *reward* moved.
+        // be forged from the client.
         try {
           const streakRes = await fetch("/api/streak/apply", { method: "POST" });
           if (streakRes.ok) {
@@ -198,20 +173,18 @@ export default function DashboardPage() {
           console.error("Error applying streak rewards:", err);
         }
 
-        const profileUpdates: Record<string, unknown> = {
-          lastQuestResetTime: new Date().toISOString(),
-          currentDailyQuests: selectedIds,
-          dailyQuestsCompleted: [],
-          verifiedQuestProofs: {}
-        };
-
+        // ── Daily quest selection (server-side) ─────────────────────────────
+        // /api/quests/daily picks the 5 daily quests under a row lock and writes
+        // the set + reset bookkeeping atomically, so the daily set can no longer
+        // be rigged client-side to the highest-XP quests. Idempotent within a UTC
+        // day. We just ask and refresh.
         try {
-          const result = await updateUserProfile(user!.uid, profileUpdates);
-          if (result.success) {
+          const res = await fetch("/api/quests/daily", { method: "POST" });
+          if (res.ok) {
             await refreshProfile();
           }
         } catch (err) {
-          console.error("Error resetting daily quests in database:", err);
+          console.error("Error selecting daily quests:", err);
         } finally {
           setLoadingQuests(false);
         }
@@ -496,8 +469,8 @@ export default function DashboardPage() {
   if (loading || loadingQuests) {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <div className="logo-breathe h-14 w-14 overflow-hidden rounded-2xl bg-white shadow-[0_18px_38px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10">
-          <img src="/images/logo.png" alt="EcoLudus logo" className="h-full w-full object-cover" />
+        <div className="logo-breathe relative h-14 w-14 overflow-hidden rounded-2xl bg-white shadow-[0_18px_38px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10">
+          <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="56px" className="object-cover" />
         </div>
         <p className="text-sm font-semibold text-forest-800">Synchronizing daily quest rhythm...</p>
       </div>

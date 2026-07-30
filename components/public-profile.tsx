@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 import { Avatar } from "@/components/avatar";
@@ -180,7 +181,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
               <article key={plant.id} className="reveal-card group flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition hover:-translate-y-1" style={{ borderColor: rarityBorder[plant.rarity as Rarity] ?? "#d9e2d2", background: "var(--bg-card)" }}>
                 <span className="relative flex aspect-square w-full max-w-32 items-center justify-center rounded-2xl p-4" style={{ background: `${rarityStyle[plant.rarity as Rarity]?.accent ?? "#2f6b46"}12` }}>
                   <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white shadow-sm border border-forest-100/60 overflow-hidden p-2">
-                    <img src={getPlantImage(plant)} alt={plant.name} loading="lazy" className="h-full w-full object-contain transition group-hover:scale-110 mix-blend-multiply dark:mix-blend-normal" />
+                    <Image src={getPlantImage(plant)} alt={plant.name} fill sizes="96px" className="object-contain transition group-hover:scale-110 mix-blend-multiply dark:mix-blend-normal" />
                   </div>
                 </span>
                 <p className="text-sm font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>{plant.name}</p>
@@ -198,7 +199,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
           {isOwner && (
             <a href="/shop" className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-4 text-center transition hover:-translate-y-0.5" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}>
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--bg-panel)" }}>
-                <img src="/images/plants/sunflower.png" alt="" className="h-10 w-10 object-contain" />
+                <Image src="/images/plants/sunflower.png" alt="" width={40} height={40} className="object-contain" />
               </span>
               <span className="text-xs font-extrabold uppercase tracking-[0.08em]">Visit Shop</span>
             </a>

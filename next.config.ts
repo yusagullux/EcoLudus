@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 // Content-Security-Policy. Permissive-but-present as a first pass; ratchet
 // down after runtime testing. Covers the real external surface:
-//   - Leaflet JS + CSS from unpkg (/ecomap) and CARTO map tiles
-//   - Supabase Storage public avatar images
+//   - Leaflet is now bundled (npm `leaflet`), no longer loaded from unpkg
+//   - CARTO map tiles (/ecomap) and Supabase Storage public avatar images
 //   - Vercel Analytics (va.vercel-scripts.com)
 //   - next/font (self-hosted) and Tailwind v4 + styled-jsx (inline styles)
 // External integrations (Gemini, Climatiq, Ecologi, SendGrid, Overpass) run
@@ -13,8 +13,8 @@ const csp = [
   "default-src 'self'",
   // Next.js injects inline runtime/hydration scripts; JSON-LD is inline. Using
   // 'unsafe-inline' until a per-request nonce strategy is added.
-  `script-src 'self' 'unsafe-inline' https://unpkg.com https://va.vercel-scripts.com${isDev ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline' https://unpkg.com",
+  `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com${isDev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.cartocdn.com https://*.openstreetmap.org https://*.supabase.co",
   "font-src 'self' data:",
   "connect-src 'self' https://va.vercel-scripts.com",

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
-import { updateUserProfile } from "@/lib/auth-client";
 import {
   GARDEN_MAX_TILES,
   resolveGardenTiles,
@@ -254,14 +254,6 @@ export default function GardenPage() {
     setTimeout(() => setToast(""), 3500);
   };
 
-  const saveProfile = async (updates: Record<string, unknown>) => {
-    if (!user?.uid || !profile) return false;
-    const result = await updateUserProfile(user.uid, updates);
-    if (!result.success) return false;
-    if (typeof setProfile === "function") setProfile({ ...profile, ...updates });
-    return true;
-  };
-
   const placePlant = async (item: PlantableItem) => {
     if (selectingTile === null || !user?.uid || !profile || isProcessing.current) return;
     if (garden[selectingTile]) {
@@ -271,37 +263,28 @@ export default function GardenPage() {
 
     isProcessing.current = true;
     try {
-      const tile: GardenTile = {
-        tileId: selectingTile,
-        source: item.source,
-        sourceId: item.id,
-        plantId: item.source === "plant" ? item.id : undefined,
-        seedId: item.source === "seed" ? item.id : undefined,
-        seedName: item.source === "seed" ? item.itemName : undefined,
-        seedImage: item.source === "seed" ? item.image : undefined,
-        plantName: item.name,
-        plantImage: item.image,
-        rarity: item.rarity,
-        placedAt: Date.now()
-      };
-
-      const updates: Record<string, unknown> = {
-        garden: { ...garden, [selectingTile]: tile }
-      };
-
-      if (item.source === "plant") {
-        updates.plants = ownedPlants
-          .map((plant) => (plant.id ?? plant.name) === item.id ? { ...plant, count: countOf(plant) - 1 } : plant)
-          .filter((plant) => countOf(plant) > 0);
-      } else {
-        updates.seeds = ownedSeeds
-          .map((seed) => (seed.id ?? seed.name) === item.id ? { ...seed, count: countOf(seed) - 1 } : seed)
-          .filter((seed) => countOf(seed) > 0);
+      // Server owns placement: it validates the tile is unlocked + empty, that
+      // we actually own the item, and resolves rarity/name/image from the server
+      // catalog — so we can't plant a legendary we don't own, or forge a rarity.
+      // See /api/garden/plant.
+      const res = await fetch("/api/garden/plant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tileId: selectingTile, source: item.source, itemId: item.id })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        showToast(data?.error?.message || "Could not plant. Please try again.");
+        return;
       }
-
-      const ok = await saveProfile(updates);
-      showToast(ok ? `${item.itemName} planted. First harvest in ${formatDuration(GROW_DURATION[item.rarity])}.` : "Could not plant. Please try again.");
-      if (ok) setSelectingTile(null);
+      if (typeof setProfile === "function" && profile) {
+        const key = item.source === "plant" ? "plants" : "seeds";
+        setProfile({ ...profile, garden: data.garden, [key]: data[key] });
+      }
+      await refreshProfile();
+      const plantedRarity = normalizeRarity(data.tile?.rarity ?? item.rarity);
+      showToast(`${item.itemName} planted. First harvest in ${formatDuration(GROW_DURATION[plantedRarity])}.`);
+      setSelectingTile(null);
     } finally {
       isProcessing.current = false;
     }
@@ -314,37 +297,26 @@ export default function GardenPage() {
 
     isProcessing.current = true;
     try {
-      const nextGarden = { ...garden };
-      delete nextGarden[tileId];
-
-      const updates: Record<string, unknown> = { garden: nextGarden };
-      const source = tile.source ?? (tile.seedId || tile.seedName ? "seed" : "plant");
-
-      if (source === "seed") {
-        const seedId = tile.seedId ?? tile.sourceId ?? tile.seedName ?? tileName(tile);
-        const seedName = tile.seedName || `${tileName(tile)} Seed`;
-        const nextSeeds = [...ownedSeeds];
-        const existingIdx = nextSeeds.findIndex((seed) => (seed.id ?? seed.name) === seedId || seed.name === seedName);
-        if (existingIdx >= 0) {
-          nextSeeds[existingIdx] = { ...nextSeeds[existingIdx], count: countOf(nextSeeds[existingIdx]) + 1 };
-        } else {
-          nextSeeds.push({ id: seedId, name: seedName, rarity: tileRarity(tile), image: tileImage(tile), count: 1 });
-        }
-        updates.seeds = nextSeeds;
-      } else {
-        const plantId = tile.plantId ?? tile.sourceId ?? tileName(tile);
-        const nextPlants = [...ownedPlants];
-        const existingIdx = nextPlants.findIndex((plant) => (plant.id ?? plant.name) === plantId || plant.name === tileName(tile));
-        if (existingIdx >= 0) {
-          nextPlants[existingIdx] = { ...nextPlants[existingIdx], count: countOf(nextPlants[existingIdx]) + 1 };
-        } else {
-          nextPlants.push({ id: plantId, name: tileName(tile), rarity: tileRarity(tile), image: tileImage(tile), count: 1 });
-        }
-        updates.plants = nextPlants;
+      // Server owns removal + the inventory refund under a row lock, so we can't
+      // end up with the item back AND the tile still placed (duplication), and the
+      // refund's rarity comes from the server catalog. See /api/garden/remove.
+      const res = await fetch("/api/garden/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tileId })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        showToast(data?.error?.message || "Could not remove plant.");
+        return;
       }
-
-      const ok = await saveProfile(updates);
-      showToast(ok ? "Plant returned to your inventory." : "Could not remove plant.");
+      if (typeof setProfile === "function" && profile) {
+        const key =
+          (tile.source ?? (tile.seedId || tile.seedName ? "seed" : "plant")) === "seed" ? "seeds" : "plants";
+        setProfile({ ...profile, garden: data.garden, [key]: data[key] });
+      }
+      await refreshProfile();
+      showToast("Plant returned to your inventory.");
     } finally {
       isProcessing.current = false;
     }
@@ -602,11 +574,13 @@ export default function GardenPage() {
                       className="absolute inset-0 flex items-center justify-center overflow-hidden"
                       style={{ background: `${rStyle.accent}12` }}
                     >
-                      <img
+                      <Image
                         src={tileImage(tile)}
                         alt={tileName(tile)}
+                        fill
+                        sizes="(max-width: 640px) 45vw, 120px"
                         className={[
-                          "h-full w-full object-contain p-1 transition duration-300",
+                          "object-contain p-1 transition duration-300",
                           isAnimating ? "scale-150" : ""
                         ].join(" ")}
                         style={{
@@ -698,13 +672,15 @@ export default function GardenPage() {
                   }}
                 >
                   <div
-                    className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl"
+                    className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl"
                     style={{ background: `${rStyle.accent}14` }}
                   >
-                    <img
+                    <Image
                       src={item.image}
                       alt={item.itemName}
-                      className="h-full w-full object-cover transition group-hover:scale-110"
+                      fill
+                      sizes="64px"
+                      className="object-cover transition group-hover:scale-110"
                     />
                   </div>
                   <p className="text-xs font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>
@@ -752,13 +728,15 @@ export default function GardenPage() {
                 return (
                   <div key={tile.tileId} className="flex items-center gap-4 py-4">
                     <div
-                      className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border"
+                      className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border"
                       style={{ borderColor: rarityBorder[rarity] ?? "var(--border-default)", background: `${rStyle.accent}14` }}
                     >
-                      <img
+                      <Image
                         src={tileImage(tile)}
                         alt={tileName(tile)}
-                        className="h-full w-full object-contain p-1"
+                        fill
+                        sizes="56px"
+                        className="object-contain p-1"
                         style={{ opacity: STAGE_OPACITY[stage] }}
                       />
                     </div>

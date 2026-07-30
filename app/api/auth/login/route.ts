@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { setSessionCookie, verifyPassword } from "@/lib/auth";
 import { isDatabaseSetupError, sql } from "@/lib/db";
-import { applyDailyStreak } from "@/lib/streak";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -46,17 +45,16 @@ export async function POST(request: Request) {
       email: user.email
     });
 
-    const nextPayload = applyDailyStreak(user.payload || {});
-    await sql(
-      "update users set payload = $2::jsonb, updated_at = now() where id = $1",
-      [user.id, JSON.stringify(nextPayload)]
-    );
-
+    // No streak write here. Applying the daily streak was an unlocked full-payload
+    // overwrite (lost-update class, audit H6) that raced with concurrent reward
+    // grants. The streak counter + milestone rewards are now persisted atomically
+    // under a row lock by POST /api/streak/apply, which the dashboard calls on
+    // mount — so login just authenticates and reports identity.
     return NextResponse.json({
       user: {
         uid: user.id,
         email: user.email,
-        displayName: String(nextPayload.displayName ?? user.email.split("@")[0])
+        displayName: String(user.payload?.displayName ?? user.email.split("@")[0])
       }
     });
   } catch (error) {

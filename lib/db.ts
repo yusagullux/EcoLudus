@@ -1944,6 +1944,30 @@ export async function selectUserForUpdate<T extends QueryResultRow = QueryResult
   return query<T>(SELECT_USER_FOR_IMPACT + " for update", [userId]);
 }
 
+// Lock a team_active_missions row on the same client-bound `query` as the
+// surrounding transaction(), so the submit_progress read→increment→complete
+// sequence is atomic against concurrent submissions on the same mission
+// (lost-increment / double-completion class, audit H4). Mirrors
+// selectUserForUpdate: in file mode (no real tx / row lock) we run the plain
+// read — which fileSql already handles (exact-match at "select payload,
+// mission_id from team_active_missions where team_id = $1 and id = $2 limit
+// 1") — and skip the FOR UPDATE clause, so no new fileSql branch is needed
+// (CLAUDE.md option (c): "only run it against real Postgres").
+const SELECT_TEAM_ACTIVE_MISSION =
+  "select payload, mission_id from team_active_missions where team_id = $1 and id = $2 limit 1";
+
+export async function selectTeamActiveMissionForUpdate<T extends QueryResultRow = QueryResultRow>(
+  query: DbQuery,
+  teamId: string,
+  id: string
+): Promise<QueryResult<T>> {
+  const mode = await detectMode();
+  if (mode === "file") {
+    return query<T>(SELECT_TEAM_ACTIVE_MISSION, [teamId, id]);
+  }
+  return query<T>(SELECT_TEAM_ACTIVE_MISSION + " for update", [teamId, id]);
+}
+
 export const pool = {
   query: sql,
   async end() {

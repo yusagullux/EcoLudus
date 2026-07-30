@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Script from "next/script";
+import "leaflet/dist/leaflet.css";
 import { useAuth } from "@/lib/useAuth";
 import {
   HeroMetric, MetricCard, PageHero, Panel, Pill,
@@ -133,6 +133,11 @@ export default function EcoMapPage() {
   const mapInstanceRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
+  // Leaflet is a browser-only lib (touches `window` at load), so it's
+  // dynamically imported in the init effect (no SSR) and stashed here for the
+  // marker/user-marker effects and the fit-bounds handler. Replaces the old
+  // unpkg CDN <Script> + <link> — now bundled and code-split into this route.
+  const leafletLib = useRef<any>(null);
 
   const checkins: CheckinRecord[] = Array.isArray(profile?.ecoMapCheckins) ? profile.ecoMapCheckins as CheckinRecord[] : [];
   const uniqueVisited = new Set(checkins.map(c => c.stopId)).size;
@@ -157,26 +162,33 @@ export default function EcoMapPage() {
   useEffect(() => { locate(); }, [locate]);
 
   useEffect(() => {
-    if (!leafletReady || !mapContainerRef.current || mapInstanceRef.current) return;
-    const L = (window as any).L;
-    if (!L) return;
+    if (mapInstanceRef.current || !mapContainerRef.current) return;
+    let cancelled = false;
+    void (async () => {
+      const mod = await import("leaflet");
+      const L = (mod as any).default ?? mod;
+      if (cancelled || !mapContainerRef.current || mapInstanceRef.current) return;
+      leafletLib.current = L;
 
-    const map = L.map(mapContainerRef.current, { zoomControl: false, scrollWheelZoom: true })
-      .setView(DEFAULT_CENTER, 13);
+      const map = L.map(mapContainerRef.current, { zoomControl: false, scrollWheelZoom: true })
+        .setView(DEFAULT_CENTER, 13);
 
-    L.control.zoom({ position: "bottomleft" }).addTo(map);
-    L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 20
-    }).addTo(map);
+      L.control.zoom({ position: "bottomleft" }).addTo(map);
+      L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 20
+      }).addTo(map);
 
-    markersLayerRef.current = L.layerGroup().addTo(map);
-    mapInstanceRef.current = map;
-  }, [leafletReady]);
+      markersLayerRef.current = L.layerGroup().addTo(map);
+      mapInstanceRef.current = map;
+      setLeafletReady(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
-    const L = (window as any).L;
+    const L = leafletLib.current;
     if (!L || !mapInstanceRef.current || !markersLayerRef.current) return;
 
     markersLayerRef.current.clearLayers();
@@ -247,11 +259,10 @@ export default function EcoMapPage() {
       const group = L.featureGroup(markersLayerRef.current.getLayers());
       mapInstanceRef.current.fitBounds(group.getBounds().pad(0.18), { maxZoom: 13 });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stops, checkins, leafletReady, userLat, userLng, geoAccuracy]);
 
   useEffect(() => {
-    const L = (window as any).L;
+    const L = leafletLib.current;
     if (!L || !mapInstanceRef.current || userLat === null || userLng === null) return;
 
     if (userMarkerRef.current) {
@@ -305,7 +316,7 @@ export default function EcoMapPage() {
   };
 
   const focusAllStops = () => {
-    const L = (window as any).L;
+    const L = leafletLib.current;
     if (!L || !mapInstanceRef.current || !markersLayerRef.current) return;
     const layers = markersLayerRef.current.getLayers();
     if (!layers.length) return;
@@ -473,13 +484,6 @@ export default function EcoMapPage() {
         title="EcoStops Near You"
         action={<button type="button" onClick={focusAllStops} className={secondaryButton}>Fit Stops</button>}
       >
-        <Script
-          src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-          strategy="afterInteractive"
-          onLoad={() => setLeafletReady(true)}
-        />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
         <style jsx global>{`
           @keyframes pulse {
             0% { transform: scale(.7); opacity: .9; }
