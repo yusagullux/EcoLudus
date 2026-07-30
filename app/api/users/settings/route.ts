@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { transaction, selectUserForUpdate } from "@/lib/db";
 
 const settingsSchema = z.object({
   displayName: z
@@ -24,41 +24,47 @@ export async function POST(request: Request) {
   try {
     const body = settingsSchema.parse(await request.json());
 
-    const userResult = await sql<{ id: string; email: string; payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [session.userId]
-    );
+    // Read+write under a row lock so a concurrent reward grant on the same row
+    // isn't clobbered by this full-payload write (lost-update class, audit M7).
+    // The write uses the file-DB-covered "update users set payload = … where id"
+    // string and shallow-merges over the locked payload, preserving economy.
+    let notFound = false;
+    await transaction(async (query) => {
+      const result = await selectUserForUpdate<{ payload: Record<string, unknown> }>(
+        query,
+        session.userId!
+      );
+      const locked = result.rows[0];
+      if (!locked) {
+        notFound = true;
+        return;
+      }
 
-    const user = userResult.rows[0];
-    if (!user) {
+      const nextPayload: Record<string, unknown> = { ...locked.payload };
+
+      if (body.displayName !== undefined) {
+        nextPayload.displayName = body.displayName;
+      }
+      if (body.emailWeeklyReport !== undefined) {
+        nextPayload.emailWeeklyReport = body.emailWeeklyReport;
+      }
+      if (body.profileImage !== undefined) {
+        if (body.profileImage === null) {
+          delete nextPayload.profileImage;
+        } else {
+          nextPayload.profileImage = body.profileImage;
+        }
+      }
+
+      await query("update users set payload = $1::jsonb, updated_at = now() where id = $2", [
+        JSON.stringify(nextPayload),
+        session.userId
+      ]);
+    });
+
+    if (notFound) {
       return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
     }
-
-    const nextPayload: Record<string, unknown> = { ...user.payload };
-
-    if (body.displayName !== undefined) {
-      nextPayload.displayName = body.displayName;
-    }
-    if (body.emailWeeklyReport !== undefined) {
-      nextPayload.emailWeeklyReport = body.emailWeeklyReport;
-    }
-    if (body.profileImage !== undefined) {
-      if (body.profileImage === null) {
-        delete nextPayload.profileImage;
-      } else {
-        nextPayload.profileImage = body.profileImage;
-      }
-    }
-
-    await sql(
-      `insert into users (id, email, password_hash, payload)
-       values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
-       on conflict (id) do update
-       set email     = excluded.email,
-           payload   = excluded.payload,
-           updated_at = now()`,
-      [session.userId, session.email, JSON.stringify(nextPayload)]
-    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

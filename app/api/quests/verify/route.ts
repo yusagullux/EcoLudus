@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { getQuestDefinition } from "@/lib/carbon-calc";
 import { MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, isValidBase64ImagePayload, verifyTextProofWithGemini, verifyImageWithProvider } from "@/lib/photo-verification";
 import { markQuestProofVerified } from "@/lib/quest-proof";
+
+// Validate the request shape at the boundary (project convention). Semantic
+// checks (proof presence, base64 validity, size) remain below for their
+// specific messages.
+const verifySchema = z.object({
+  questId: z.string().min(1),
+  textProof: z.string().optional(),
+  photoProof: z.string().optional(),
+  mimeType: z.string().optional()
+});
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -15,14 +26,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { questId, textProof, photoProof, mimeType } = await request.json();
-
-    if (!questId) {
-      return NextResponse.json(
-        { error: { code: "invalid-argument", message: "Quest ID is required." } },
-        { status: 400 }
-      );
-    }
+    const parsed = verifySchema.parse(await request.json());
+    const { questId, textProof, photoProof, mimeType } = parsed;
 
     if (!textProof && !photoProof) {
       return NextResponse.json(
@@ -168,6 +173,12 @@ export async function POST(request: Request) {
       confidence: textConfidence
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: { code: "invalid-argument", details: error.flatten() } },
+        { status: 400 }
+      );
+    }
     console.error("Error in quest verification route:", error);
     return NextResponse.json(
       { error: { code: "internal-error", message: "An error occurred during verification." } },

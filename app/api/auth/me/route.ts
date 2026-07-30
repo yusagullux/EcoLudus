@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isDatabaseSetupError, sql } from "@/lib/db";
-import { applyDailyStreak } from "@/lib/streak";
 
+// Pure read — the session bootstrap. It must NOT write: a GET that mutates the
+// user row is (a) a full-payload overwrite with no row lock, so it clobbers any
+// concurrent reward grant (lost-update class, audit H6), and (b) un-cacheable, so
+// it re-runs on every navigation instead of being served from cache. The daily
+// streak counter + milestone rewards are persisted atomically under a row lock
+// by POST /api/streak/apply (called by the dashboard on mount); this route just
+// reports identity for the client. Swr-friendly: callers may cache this.
 export async function GET() {
   try {
     const session = await getSession();
@@ -22,24 +28,11 @@ export async function GET() {
       return NextResponse.json({ user: null });
     }
 
-    const nextPayload = applyDailyStreak(user.payload || {});
-    const streakChanged =
-      nextPayload.currentStreak !== user.payload.currentStreak ||
-      nextPayload.longestStreak !== user.payload.longestStreak ||
-      nextPayload.lastLoginDate !== user.payload.lastLoginDate;
-
-    if (streakChanged) {
-      await sql(
-        "update users set payload = $2::jsonb, updated_at = now() where id = $1",
-        [user.id, JSON.stringify(nextPayload)]
-      );
-    }
-
     return NextResponse.json({
       user: {
         uid: user.id,
         email: user.email,
-        displayName: String(nextPayload.displayName ?? user.email.split("@")[0])
+        displayName: String(user.payload?.displayName ?? user.email.split("@")[0])
       }
     });
   } catch (error) {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
+import { useQuests } from "@/lib/useQuests";
 import { MetricCard, PageHero, Panel, Pill, ProgressBar } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 
@@ -36,23 +37,7 @@ type CategoryProgress = {
 
 export default function InsightsPage() {
   const { profile } = useAuth();
-  const [questsData, setQuestsData] = useState<any>(null);
-
-  // Load quests data
-  useEffect(() => {
-    async function loadQuests() {
-      try {
-        const res = await fetch("/quests.json");
-        if (res.ok) {
-          const data = await res.json();
-          setQuestsData(data);
-        }
-      } catch (err) {
-        console.error("Error loading quests.json in insights:", err);
-      }
-    }
-    loadQuests();
-  }, []);
+  const { quests: questsData } = useQuests();
 
   const xp = Number(profile?.xp ?? 0);
   const ecoPoints = Number(profile?.ecoPoints ?? 0);

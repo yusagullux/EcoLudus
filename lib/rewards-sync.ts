@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { sql } from "@/lib/db";
+import { sql, transaction, selectUserForUpdate } from "@/lib/db";
 import { logger, logError } from "@/lib/logger";
 
 const MILESTONES: Array<{
@@ -23,12 +23,31 @@ type UserRow = {
   payload: Record<string, unknown>;
 };
 
+// Covered by fileSql (exact-match at "select id, email, payload from users where
+// id = $1 limit 1") — used for the unlocked evaluation read.
+const SELECT_USER =
+  "select id, email, payload from users where id = $1 limit 1";
+
+// Covered by fileSql (exact-match at "update users set payload = $1::jsonb,
+// updated_at = now() where id = $2") — the only write string this module issues,
+// so local no-DB dev works and we never clobber economy columns.
+const UPDATE_USER_PAYLOAD =
+  "update users set payload = $1::jsonb, updated_at = now() where id = $2";
+
 async function getUserById(userId: string): Promise<UserRow | null> {
-  const result = await sql<UserRow>(
-    "select id, email, payload from users where id = $1 limit 1",
-    [userId]
-  );
+  const result = await sql<UserRow>(SELECT_USER, [userId]);
   return result.rows[0] ?? null;
+}
+
+function isReached(milestone: (typeof MILESTONES)[number], payload: Record<string, unknown>) {
+  if (payload?.[milestone.key]) return false; // already claimed
+  const level = Number(payload?.level ?? 1);
+  const carbonReduced = Number(payload?.carbonReduced ?? 0);
+  const missionsCompleted = Number(payload?.missionsCompleted ?? 0);
+  if (milestone.type === "level") return level >= milestone.value;
+  if (milestone.type === "carbon") return carbonReduced >= milestone.value;
+  if (milestone.type === "missions") return missionsCompleted >= milestone.value;
+  return false;
 }
 
 async function plantTreesViaEcologi(trees: number, userId: string, milestoneLabel: string): Promise<boolean> {
@@ -64,114 +83,144 @@ async function plantTreesViaEcologi(trees: number, userId: string, milestoneLabe
   }
 }
 
-async function saveNotification(
-  userId: string,
-  type: string,
-  title: string,
-  message: string
-): Promise<void> {
-  const id = randomUUID();
-  // Store notification in user payload (simple approach compatible with file store + PG)
-  const user = await getUserById(userId);
-  if (!user) return;
-
-  const existingNotifications: unknown[] = Array.isArray(user.payload?.notifications)
-    ? (user.payload.notifications as unknown[])
-    : [];
-
-  const notification = {
-    id,
-    type,
-    title,
-    message,
-    read: false,
-    createdAt: new Date().toISOString()
-  };
-
-  const nextPayload = {
-    ...user.payload,
-    notifications: [notification, ...existingNotifications].slice(0, 20) // Keep last 20
-  };
-
-  await sql(
-    `insert into users (id, email, password_hash, payload)
-     values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
-     on conflict (id) do update
-     set email = excluded.email,
-         payload = excluded.payload,
-         updated_at = now()`,
-    [userId, user.email, JSON.stringify(nextPayload)]
-  );
-}
-
 /**
- * Check a single user's milestones and trigger tree planting if any are newly reached.
- * Returns the number of trees planted.
+ * Check a single user's milestones and trigger tree planting if any are newly
+ * reached. Returns the number of trees planted.
+ *
+ * Concurrency design (audit H8): this is fired fire-and-forget after every quest
+ * completion, so two completions can overlap. The old version did three unlocked
+ * full-payload overwrites (evaluation read, per-milestone notification upsert,
+ * final treesPlanted write) — each clobbered any concurrent reward grant on the
+ * same row (lost-update), and two overlapping calls could both plant real trees
+ * for the same milestone (double-charge Ecologi).
+ *
+ * The fix is a pre-claim → plant (outside lock) → finalize flow:
+ *   1. Evaluate reached+unclaimed milestones from an unlocked read (idempotent).
+ *   2. PRE-CLAIM them under a row lock: re-check each against the locked payload
+ *      (a concurrent call may have beaten us) and mark the milestone key so no
+ *      other call plants for it. Returns only the milestones this call claimed.
+ *   3. Plant real trees via Ecologi OUTSIDE any lock (network call — never hold
+ *      a row lock across it).
+ *   4. FINALIZE under a row lock: bump treesPlanted by the successfully-planted
+ *      count, append a notification per planted milestone, and — for transient
+ *      Ecologi failures (key configured) — un-claim so the next run retries.
+ *      No-key dev runs keep the claim (matches the old "don't retry forever"
+ *      behavior). Both writes are patch-merges over the locked payload, so
+ *      economy state (xp/eco/eggs/…) is preserved, not clobbered.
  */
 export async function checkAndProcessMilestones(userId: string): Promise<number> {
+  // 1. Evaluate (unlocked).
   const user = await getUserById(userId);
   if (!user) return 0;
 
-  const payload = user.payload;
-  const level = Number(payload?.level ?? 1);
-  const carbonReduced = Number(payload?.carbonReduced ?? 0);
-  const missionsCompleted = Number(payload?.missionsCompleted ?? 0);
+  const candidates = MILESTONES.filter((m) => isReached(m, user.payload || {}));
+  if (candidates.length === 0) return 0;
 
+  // 2. Pre-claim under a lock.
+  const claimed = await preClaimMilestones(userId, candidates);
+  if (claimed.length === 0) return 0;
+
+  // 3. Plant outside the lock.
   let totalTreesPlanted = 0;
-  const claimedMilestones: Record<string, boolean> = {};
-
-  for (const milestone of MILESTONES) {
-    // Already claimed
-    if (payload?.[milestone.key]) continue;
-
-    let reached = false;
-    if (milestone.type === "level" && level >= milestone.value) reached = true;
-    if (milestone.type === "carbon" && carbonReduced >= milestone.value) reached = true;
-    if (milestone.type === "missions" && missionsCompleted >= milestone.value) reached = true;
-
-    if (!reached) continue;
-
+  const plantResults: Array<{ milestone: (typeof MILESTONES)[number]; planted: boolean }> = [];
+  for (const milestone of claimed) {
     const planted = await plantTreesViaEcologi(milestone.trees, userId, milestone.label);
-
-    if (planted) {
-      totalTreesPlanted += milestone.trees;
-      claimedMilestones[milestone.key] = true;
-
-      await saveNotification(
-        userId,
-        "tree_planted",
-        `🌳 ${milestone.trees} Tree${milestone.trees > 1 ? "s" : ""} Planted!`,
-        `Your efforts just planted ${milestone.trees} real tree${milestone.trees > 1 ? "s" : ""} via Ecologi. Milestone: ${milestone.label}.`
-      );
-    } else {
-      // Mark as claimed even without API (no key configured) so we don't retry forever in dev
-      if (!process.env.ECOLOGI_API_KEY) {
-        claimedMilestones[milestone.key] = true;
-      }
-    }
+    plantResults.push({ milestone, planted });
+    if (planted) totalTreesPlanted += milestone.trees;
   }
 
-  if (Object.keys(claimedMilestones).length > 0) {
-    const freshUser = await getUserById(userId);
-    if (freshUser) {
-      const treesPlanted = Number(freshUser.payload?.treesPlanted ?? 0) + totalTreesPlanted;
-      const nextPayload = {
-        ...freshUser.payload,
-        treesPlanted,
-        ...claimedMilestones
-      };
-
-      await sql(
-        `update users
-         set payload = $1::jsonb,
-             updated_at = now()
-         where id = $2`,
-        [JSON.stringify(nextPayload), userId]
-      );
-    }
-  }
+  // 4. Finalize under a lock.
+  await finalizeMilestones(userId, plantResults, totalTreesPlanted);
 
   return totalTreesPlanted;
+}
+
+// Mark the candidate milestones as claimed under a row lock, re-checking each
+// against the locked payload so a concurrent call can't double-claim. Returns
+// only the milestones THIS call newly claimed.
+async function preClaimMilestones(
+  userId: string,
+  candidates: Array<(typeof MILESTONES)[number]>
+): Promise<Array<(typeof MILESTONES)[number]>> {
+  const newlyClaimed: Array<(typeof MILESTONES)[number]> = [];
+
+  await transaction(async (query) => {
+    const result = await selectUserForUpdate<UserRow>(query, userId);
+    const locked = result.rows[0];
+    if (!locked) return;
+
+    const patch: Record<string, unknown> = {};
+    for (const milestone of candidates) {
+      if (locked.payload?.[milestone.key]) continue; // beaten by a concurrent call
+      // Re-check reachability against the locked payload — a concurrent grant
+      // may have changed level/carbon/missions since our unlocked evaluation.
+      if (!isReached(milestone, locked.payload || {})) continue;
+      patch[milestone.key] = true;
+      newlyClaimed.push(milestone);
+    }
+
+    if (Object.keys(patch).length > 0) {
+      const nextPayload = { ...locked.payload, ...patch };
+      await query(UPDATE_USER_PAYLOAD, [JSON.stringify(nextPayload), userId]);
+    }
+  });
+
+  return newlyClaimed;
+}
+
+// Bump treesPlanted + append notifications for successfully-planted milestones,
+// and un-claim transient Ecologi failures so the next run retries. All under one
+// row lock, one patch-merge write.
+async function finalizeMilestones(
+  userId: string,
+  plantResults: Array<{ milestone: (typeof MILESTONES)[number]; planted: boolean }>,
+  totalTreesPlanted: number
+): Promise<void> {
+  await transaction(async (query) => {
+    const result = await selectUserForUpdate<UserRow>(query, userId);
+    const locked = result.rows[0];
+    if (!locked) return;
+
+    const payload = locked.payload || {};
+    const patch: Record<string, unknown> = {};
+    const hasApiKey = Boolean(process.env.ECOLOGI_API_KEY?.trim());
+
+    if (totalTreesPlanted > 0) {
+      patch.treesPlanted = Math.max(0, Number(payload?.treesPlanted ?? 0)) + totalTreesPlanted;
+    }
+
+    const notifications: unknown[] = Array.isArray(payload?.notifications)
+      ? (payload.notifications as unknown[])
+      : [];
+
+    for (const { milestone, planted } of plantResults) {
+      if (planted) {
+        notifications.unshift({
+          id: randomUUID(),
+          type: "tree_planted",
+          title: `🌳 ${milestone.trees} Tree${milestone.trees > 1 ? "s" : ""} Planted!`,
+          message: `Your efforts just planted ${milestone.trees} real tree${milestone.trees > 1 ? "s" : ""} via Ecologi. Milestone: ${milestone.label}.`,
+          read: false,
+          createdAt: new Date().toISOString()
+        });
+      } else if (hasApiKey) {
+        // Transient Ecologi failure — un-claim so the next run retries.
+        // (Set false rather than delete to stay within the patch-merge model;
+        // isReached treats a falsy key as unclaimed.)
+        patch[milestone.key] = false;
+      }
+      // No-key dev runs: leave the claim (key stays true) — don't retry forever.
+    }
+
+    if (notifications.length > 0) {
+      patch.notifications = notifications.slice(0, 20);
+    }
+
+    if (Object.keys(patch).length > 0) {
+      const nextPayload = { ...payload, ...patch };
+      await query(UPDATE_USER_PAYLOAD, [JSON.stringify(nextPayload), userId]);
+    }
+  });
 }
 
 /**

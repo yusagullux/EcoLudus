@@ -105,6 +105,12 @@ export async function getQuestDefinition(questId: string) {
   return catalog.get(questId) ?? null;
 }
 
+/** All quest definitions in the catalog (id, title, category, xp, eco, carbon). */
+export async function getAllQuestDefinitions() {
+  const catalog = await loadQuestCatalog();
+  return Array.from(catalog.values());
+}
+
 export async function getQuestCarbonReduction(quest: QuestDefinition): Promise<CarbonResult> {
   const apiKey = process.env.CLIMATIQ_API_KEY?.trim();
   const cached = await sql<{

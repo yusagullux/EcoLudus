@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { sql, transaction, selectUserForUpdate } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { createImageHash, getExistingPhotoHash, parsePhotoProof, savePhotoHash, verifyImageWithProvider } from "@/lib/photo-verification";
 import {
@@ -9,7 +9,7 @@ import {
   isWithinCheckinRange,
   parseGeoFix
 } from "@/lib/ecomap-geo";
-import { grantImpact } from "@/lib/impact-service";
+import { grantImpact, type ImpactUser, type GrantImpactResult } from "@/lib/impact-service";
 
 // ── Seed stops (used when table is empty / file-store mode) ──────────────────
 const SEED_STOPS = [
@@ -391,42 +391,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: { code: "ecostop/photo-required", message: "Photo proof is required for EcoStop check-in." } }, { status: 422 });
     }
 
-    // Load user to check cooldown and apply rewards
-    const userResult = await sql<{ id: string; email: string; payload: Record<string, unknown> }>(
-      "SELECT id, email, payload FROM users WHERE id = $1 LIMIT 1",
-      [userId]
-    );
-    if (!userResult.rows[0]) {
-      return NextResponse.json({ success: false, error: { code: "auth/user-not-found" } }, { status: 404 });
-    }
-    const user = userResult.rows[0];
-    const payload = user.payload ?? {};
-
-    // Cooldown check — per-stop, per-user
-    const checkins: Array<{ stopId: string; checkedInAt: string }> = Array.isArray(payload.ecoMapCheckins) ? payload.ecoMapCheckins as any : [];
-    const lastCheckin = [...checkins].reverse().find(c => c.stopId === stop.id);
-    if (lastCheckin) {
-      const elapsed = Date.now() - new Date(lastCheckin.checkedInAt).getTime();
-      if (elapsed < stop.cooldownHours * 3_600_000) {
-        const remainH = Math.ceil((stop.cooldownHours * 3_600_000 - elapsed) / 3_600_000);
-        return NextResponse.json({ success: false, error: { code: "ecostop/on-cooldown", message: `You already checked in here. Come back in ~${remainH}h.` } }, { status: 429 });
-      }
-    }
-
-    const imageHash = createImageHash(photo.buffer);
-    const existingPhoto = await getExistingPhotoHash(imageHash);
-    if (existingPhoto) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          code: "ecostop/photo-already-used",
-          message: existingPhoto.user_id === userId
-            ? "You already used this photo for an EcoStop check-in. Please take a new photo."
-            : "This photo has already been used by another user. Please submit a unique photo."
-        }
-      }, { status: 409 });
-    }
-
+    // Run the (slow, external) photo verification BEFORE acquiring the user-row
+    // lock — never hold a row lock across an external HTTP call. A request that
+    // passes verification but then loses the cooldown race below wastes only the
+    // external call; no reward is granted.
     const verification = await verifyImageWithProvider(
       photo.buffer,
       userId,
@@ -447,36 +415,103 @@ export async function POST(req: NextRequest) {
       }, { status: 422 });
     }
 
-    await savePhotoHash(imageHash, userId, `ecostop:${stop.id}`);
+    const imageHash = createImageHash(photo.buffer);
 
-    // Grant rewards via the spine so XP/level/Impact are server-validated and
-    // every EcoMap check-in feeds the same Impact number the hooks consume.
-    const xpAwarded  = stop.xpReward;
-    const ecoAwarded = stop.ecoReward;
-    const newCheckin = {
-      stopId: stop.id,
-      checkedInAt: new Date().toISOString(),
-      distanceM: Math.round(distanceM),
-      accuracyM: Math.round(accuracyM),
-      proof: "photo",
-      verificationProvider: verification.provider
-    };
-    const nextCheckins = [...checkins, newCheckin].slice(-200); // keep last 200
+    // Read → cooldown re-check → photo-hash dedup → grant inside one transaction
+    // with a row lock (selectUserForUpdate) so a concurrent check-in at the same
+    // stop cannot both pass the cooldown against a stale read and double-grant
+    // (lost-update / cooldown-bypass class from the audit). The grant shares the
+    // lock via `tx`. The transaction returns a discriminated result — either an
+    // early 404/409/429 response (empty tx commits cleanly) or the grant outcome.
+    type CheckinOutcome =
+      | { early: NextResponse }
+      | { grant: GrantImpactResult | null; awardedXp: number; awardedEco: number };
 
-    await grantImpact({
-      userId,
-      source: "ecomap",
-      baseXp: xpAwarded,
-      baseImpact: xpAwarded,
-      eco: ecoAwarded,
-      meta: { stopId: stop.id, stopName: stop.name, stopType: stop.type, distanceM: Math.round(distanceM) },
-      payloadPatch: {
-        ecoMapCheckins: nextCheckins,
-        missionsCompleted: Number(payload.missionsCompleted ?? 0) + 1
+    const outcome = await transaction<CheckinOutcome>(async (query) => {
+      const userResult = await selectUserForUpdate<ImpactUser>(query, userId);
+      if (userResult.rowCount === 0) {
+        return { early: NextResponse.json({ success: false, error: { code: "auth/user-not-found" } }, { status: 404 }) };
       }
+
+      const user = userResult.rows[0];
+      const payload = user.payload ?? {};
+
+      // Cooldown check — per-stop, per-user, re-checked under the row lock.
+      const checkins: Array<{ stopId: string; checkedInAt: string }> = Array.isArray(payload.ecoMapCheckins) ? payload.ecoMapCheckins as any : [];
+      const lastCheckin = [...checkins].reverse().find(c => c.stopId === stop.id);
+      if (lastCheckin) {
+        const elapsed = Date.now() - new Date(lastCheckin.checkedInAt).getTime();
+        if (elapsed < stop.cooldownHours * 3_600_000) {
+          const remainH = Math.ceil((stop.cooldownHours * 3_600_000 - elapsed) / 3_600_000);
+          return { early: NextResponse.json({ success: false, error: { code: "ecostop/on-cooldown", message: `You already checked in here. Come back in ~${remainH}h.` } }, { status: 429 }) };
+        }
+      }
+
+      // Photo-hash dedup (best-effort; the locked cooldown re-check above is the
+      // real guard against same-stop double-grant). savePhotoHash/getExistingPhotoHash
+      // use the global pool, so this commits independently — acceptable for a dedup
+      // record; it never gates the reward.
+      const existingPhoto = await getExistingPhotoHash(imageHash);
+      if (existingPhoto) {
+        return {
+          early: NextResponse.json({
+            success: false,
+            error: {
+              code: "ecostop/photo-already-used",
+              message: existingPhoto.user_id === userId
+                ? "You already used this photo for an EcoStop check-in. Please take a new photo."
+                : "This photo has already been used by another user. Please submit a unique photo."
+            }
+          }, { status: 409 })
+        };
+      }
+
+      await savePhotoHash(imageHash, userId, `ecostop:${stop.id}`);
+
+      // Grant rewards via the spine so XP/level/Impact are server-validated and
+      // every EcoMap check-in feeds the same Impact number the hooks consume.
+      const awardedXp = stop.xpReward;
+      const awardedEco = stop.ecoReward;
+      const newCheckin = {
+        stopId: stop.id,
+        checkedInAt: new Date().toISOString(),
+        distanceM: Math.round(distanceM),
+        accuracyM: Math.round(accuracyM),
+        proof: "photo",
+        verificationProvider: verification.provider
+      };
+      const nextCheckins = [...checkins, newCheckin].slice(-200); // keep last 200
+
+      const grant = await grantImpact({
+        userId,
+        source: "ecomap",
+        baseXp: awardedXp,
+        baseImpact: awardedXp,
+        eco: awardedEco,
+        meta: { stopId: stop.id, stopName: stop.name, stopType: stop.type, distanceM: Math.round(distanceM) },
+        payloadPatch: {
+          ecoMapCheckins: nextCheckins,
+          missionsCompleted: Number(payload.missionsCompleted ?? 0) + 1
+        },
+        tx: { query, user }
+      });
+
+      return { grant, awardedXp, awardedEco };
     });
 
-    return NextResponse.json({ success: true, xpAwarded, ecoAwarded, stopName: stop.name });
+    if ("early" in outcome) {
+      return outcome.early;
+    }
+
+    return NextResponse.json({
+      success: true,
+      xpAwarded: outcome.awardedXp,
+      ecoAwarded: outcome.awardedEco,
+      stopName: stop.name,
+      level: outcome.grant?.level ?? null,
+      xp: outcome.grant?.xp ?? null,
+      ecoPoints: outcome.grant?.ecoPoints ?? null
+    });
   } catch (err) {
     console.error("EcoStop check-in error:", err);
     return NextResponse.json({ success: false, error: { code: "internal-error" } }, { status: 500 });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { sql, transaction, selectTeamActiveMissionForUpdate } from "@/lib/db";
 import { verifyImageWithProvider, verifyTextProofWithGemini, parsePhotoProof, createImageHash, getExistingPhotoHash, savePhotoHash } from "@/lib/photo-verification";
 import { grantImpact } from "@/lib/impact-service";
 import { getTeamMissionTemplate } from "@/lib/catalog-server";
@@ -301,21 +301,23 @@ export async function POST(request: Request) {
         );
       }
 
-      const activeMissionResult = await sql(
+      // Unlocked read purely for verification context (mission id/title). The
+      // authoritative completed_count is re-read under a row lock below.
+      const contextResult = await sql(
         "select payload, mission_id from team_active_missions where team_id = $1 and id = $2 limit 1",
         [teamId, activeMissionId]
       );
 
-      if (activeMissionResult.rowCount === 0) {
+      if (contextResult.rowCount === 0) {
         return NextResponse.json(
           { error: { code: "mission-not-found", message: "Active mission not found." } },
           { status: 404 }
         );
       }
 
-      const row = activeMissionResult.rows[0];
-      const missionPayload = row.payload as any;
-      const currentMissionId = row.mission_id;
+      const contextRow = contextResult.rows[0];
+      const contextPayload = contextRow.payload as any;
+      const currentMissionId = contextRow.mission_id;
 
       if (!textProof && !photoProof) {
         return NextResponse.json(
@@ -356,7 +358,7 @@ export async function POST(request: Request) {
           photo.buffer,
           userId,
           currentMissionId,
-          missionPayload.title || "Team Mission",
+          contextPayload.title || "Team Mission",
           photo.mimeType
         );
         if (!result.verified) {
@@ -370,8 +372,8 @@ export async function POST(request: Request) {
       } else if (textProof) {
         const result = await verifyTextProofWithGemini(
           textProof,
-          missionPayload.title || "Team Mission",
-          missionPayload.title || "Team Mission"
+          contextPayload.title || "Team Mission",
+          contextPayload.title || "Team Mission"
         );
         if (!result.verified) {
           return NextResponse.json(
@@ -381,87 +383,115 @@ export async function POST(request: Request) {
         }
       }
 
-      const newCount = (missionPayload.completed_count || 0) + 1;
-      const needed = missionPayload.needed || 1;
-
-      if (newCount >= needed) {
-        // Mission completed!
-        // Delete from active
-        await sql(
-          "delete from team_active_missions where team_id = $1 and id = $2",
-          [teamId, activeMissionId]
+      // Increment + completion must be atomic against concurrent submissions
+      // on the same active mission: lock the mission row with SELECT … FOR UPDATE
+      // so two concurrent submissions can't both read completed_count=N and both
+      // write N+1 (lost increment) or both enter the completion branch
+      // (double-completion + double-grant). The member reward grants run AFTER
+      // the lock decision and at most once (only the request that flips the
+      // count to `needed` enters the completion branch); they use their own
+      // transactions since they touch a separate user row per member.
+      return await transaction(async (query) => {
+        const lockedResult = await selectTeamActiveMissionForUpdate<{ payload: any; mission_id: string }>(
+          query,
+          teamId,
+          activeMissionId
         );
 
-        // Add to logs
-        const logId = randomUUID();
-        const completedPayload = {
-          ...missionPayload,
-          completed_count: newCount,
-          completed_at: new Date().toISOString()
-        };
-
-        await sql(
-          `insert into team_mission_logs (id, team_id, mission_id, payload)
-           values ($1, $2, $3, $4::jsonb)
-           on conflict (id) do update
-           set mission_id = excluded.mission_id,
-               payload = excluded.payload`,
-          [logId, teamId, currentMissionId, JSON.stringify(completedPayload)]
-        );
-
-        // Reward all members in the team
-        const membersResult = await sql(
-          `select distinct u.id, u.email, u.payload 
-           from team_active_missions tam
-           join users u on u.id::text = tam.payload->>'user_id'
-           where tam.team_id = $1`,
-          [teamId]
-        );
-
-        const teamXp = Math.max(0, Math.floor(Number(missionPayload.xp || 0)));
-        const teamEco = Math.max(0, Math.floor(Number(missionPayload.eco || 0)));
-
-        for (const member of membersResult.rows) {
-          const payload = member.payload as any;
-          const nextMissions = Math.max(0, Math.floor(Number(payload.missionsCompleted || 0))) + 1;
-
-          // Route through the spine so XP/level/Impact are server-validated and
-          // every team completion feeds the same Impact number the hooks consume.
-          await grantImpact({
-            userId: String(member.id),
-            source: "team",
-            baseXp: teamXp,
-            baseImpact: teamXp,
-            eco: teamEco,
-            meta: {
-              teamId,
-              missionId: currentMissionId,
-              missionTitle: missionPayload.title || "Team Mission"
-            },
-            payloadPatch: { missionsCompleted: nextMissions }
-          });
+        if (lockedResult.rowCount === 0) {
+          // A concurrent request completed + deleted the mission.
+          return NextResponse.json(
+            { error: { code: "mission-not-found", message: "Active mission not found." } },
+            { status: 404 }
+          );
         }
 
-        return NextResponse.json({ success: true, completed: true });
-      }
+        const missionPayload = lockedResult.rows[0].payload as any;
+        const missionId = lockedResult.rows[0].mission_id;
+        const newCount = (missionPayload.completed_count || 0) + 1;
+        const needed = missionPayload.needed || 1;
 
-      // Increment progress
-      const updatedPayload = {
-        ...missionPayload,
-        completed_count: newCount
-      };
+        if (newCount >= needed) {
+          // Mission completed!
+          // Delete from active
+          await query(
+            "delete from team_active_missions where team_id = $1 and id = $2",
+            [teamId, activeMissionId]
+          );
 
-      await sql(
-        `insert into team_active_missions (id, team_id, mission_id, payload)
+          // Add to logs
+          const logId = randomUUID();
+          const completedPayload = {
+            ...missionPayload,
+            completed_count: newCount,
+            completed_at: new Date().toISOString()
+          };
+
+          await query(
+            `insert into team_mission_logs (id, team_id, mission_id, payload)
+             values ($1, $2, $3, $4::jsonb)
+             on conflict (id) do update
+             set mission_id = excluded.mission_id,
+                 payload = excluded.payload`,
+            [logId, teamId, missionId, JSON.stringify(completedPayload)]
+          );
+
+          // Reward all members in the team. The lock above guarantees this runs
+          // for exactly one completion of this mission (no double-grant). Each
+          // grant opens its own transaction on the member's user row.
+          const membersResult = await query(
+            `select distinct u.id, u.email, u.payload
+             from team_active_missions tam
+             join users u on u.id::text = tam.payload->>'user_id'
+             where tam.team_id = $1`,
+            [teamId]
+          );
+
+          const teamXp = Math.max(0, Math.floor(Number(missionPayload.xp || 0)));
+          const teamEco = Math.max(0, Math.floor(Number(missionPayload.eco || 0)));
+
+          for (const member of membersResult.rows) {
+            const memberPayload = member.payload as any;
+            const nextMissions = Math.max(0, Math.floor(Number(memberPayload.missionsCompleted || 0))) + 1;
+
+            // Route through the spine so XP/level/Impact are server-validated and
+            // every team completion feeds the same Impact number the hooks consume.
+            await grantImpact({
+              userId: String(member.id),
+              source: "team",
+              baseXp: teamXp,
+              baseImpact: teamXp,
+              eco: teamEco,
+              meta: {
+                teamId,
+                missionId,
+                missionTitle: missionPayload.title || "Team Mission"
+              },
+              payloadPatch: { missionsCompleted: nextMissions }
+            });
+          }
+
+          return NextResponse.json({ success: true, completed: true });
+        }
+
+        // Increment progress
+        const updatedPayload = {
+          ...missionPayload,
+          completed_count: newCount
+        };
+
+        await query(
+          `insert into team_active_missions (id, team_id, mission_id, payload)
          values ($1, $2, $3, $4::jsonb)
          on conflict (id) do update
          set mission_id = excluded.mission_id,
              payload = excluded.payload,
              updated_at = now()`,
-        [activeMissionId, teamId, currentMissionId, JSON.stringify(updatedPayload)]
-      );
+          [activeMissionId, teamId, missionId, JSON.stringify(updatedPayload)]
+        );
 
-      return NextResponse.json({ success: true, completed: false });
+        return NextResponse.json({ success: true, completed: false });
+      });
     }
 
     return NextResponse.json({ error: { code: "invalid-request" } }, { status: 400 });

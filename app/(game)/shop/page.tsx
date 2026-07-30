@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
+import { useShopCatalog } from "@/lib/useCatalog";
 import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 import type { ShopItem, ShopMode } from "@/lib/catalog";
 
@@ -24,17 +26,16 @@ function ShopCardImage({ item, mode }: { item: ShopItem; mode: Mode }) {
   }
 
   return (
-    <img
+    <Image
       src={item.image}
       alt={item.name}
-      loading="lazy"
+      fill
+      sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
       onError={() => setImgError(true)}
-      className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
+      className="object-cover transition duration-300 group-hover:scale-110"
     />
   );
 }
-
-const EMPTY_CATALOG: Record<Mode, ShopItem[]> = { plants: [], eggs: [], chests: [] };
 
 export default function ShopPage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -42,33 +43,17 @@ export default function ShopPage() {
   const [mode, setMode] = useState<Mode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
   const [toast, setToast] = useState("");
-  const [catalog, setCatalog] = useState<Record<Mode, ShopItem[]>>(EMPTY_CATALOG);
-  const [loading, setLoading] = useState(true);
-
   // The catalog (incl. prices) is loaded from the server's read API and is
   // display-only — the /api/shop/buy route re-validates the price by id, so a
   // client cannot buy at a cheaper price even by tampering with this state.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/catalog/shop", { credentials: "include" });
-        const data = await res.json().catch(() => ({}));
-        if (!cancelled && res.ok && data?.catalog) {
-          setCatalog({
-            plants: Array.isArray(data.catalog.plants) ? data.catalog.plants : [],
-            eggs: Array.isArray(data.catalog.eggs) ? data.catalog.eggs : [],
-            chests: Array.isArray(data.catalog.chests) ? data.catalog.chests : []
-          });
-        }
-      } catch (error) {
-        console.error("Failed to load shop catalog:", error);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // SWR caches the catalog across navigations (shop → collection shares it).
+  const shopCatalog = useShopCatalog();
+  const catalog: Record<Mode, ShopItem[]> = {
+    plants: shopCatalog.plants as ShopItem[],
+    eggs: shopCatalog.eggs as ShopItem[],
+    chests: shopCatalog.chests as ShopItem[]
+  };
+  const loading = shopCatalog.isLoading;
 
   const items = catalog[mode] ?? [];
   const filtered = filter === "all" ? items : items.filter((item) => item.rarity === filter);

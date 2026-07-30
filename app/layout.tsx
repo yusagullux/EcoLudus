@@ -69,6 +69,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Runs synchronously in <head> before the body paints, so the stored theme is
+  // applied to <html data-theme> with no flash of the default (light) theme.
+  // Mirrors lib/useTheme.tsx's STORAGE_KEY / valid-theme list. The
+  // suppressHydrationWarning on <html> below silences the expected mismatch
+  // between the server-rendered <html> (no data-theme) and the client <html>
+  // (data-theme set by this script before hydration).
+  const themeInitScript = `(function(){try{var t=localStorage.getItem("ecoludus.theme");var v=["light","dark","liquid","dawn","bloom","aurora"];if(!t||v.indexOf(t)<0)t="light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -85,8 +93,9 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en" className={`${headingFont.variable} ${bodyFont.variable}`}>
+    <html lang="en" className={`${headingFont.variable} ${bodyFont.variable}`} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

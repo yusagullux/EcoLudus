@@ -38,6 +38,58 @@ type DocRecord = Record<string, unknown>;
 const DELETE_SENTINEL = "__delete_field__";
 const INCREMENT_SENTINEL = "__increment__";
 
+/**
+ * The ONLY fields a client may write on its own `users` document through the
+ * /api/store RPC (setDoc / updateDoc / addDoc). Everything else — the entire
+ * economy (xp, level, ecoPoints, impact, carbonReduced, treesPlanted,
+ * missionsCompleted, trustScore), inventory (eggs, chests, milestone_*),
+ * streak/claim gates (lastStreakRewardDay, claimedSocialRewards), and the
+ * photo-verification map (verifiedQuestProofs, written only by the locked
+ * /api/quests/verify route) — is mintable only through locked server routes
+ * (grantImpact, shop/buy, chests/open, …). Without this gate a client could
+ * `updateDoc({ ecoPoints: { __op: "__increment__", value: 99999 } })` or
+ * `setDoc({ xp: 999999 })` and mint the whole economy in one call, or forge a
+ * `verifiedQuestProofs` entry to bypass Gemini photo verification — making
+ * every locked reward route pointless (audit findings C1 + H7).
+ *
+ * The transitional fields that were once client-authoritative (animals,
+ * activePet, garden, plants, seeds, currentDailyQuests, dailyQuestsCompleted,
+ * lastQuestResetTime) are now server-authoritative — Phase 3 moved each to a
+ * locked server route (/api/garden/plant|remove, /api/pets/select,
+ * /api/quests/daily), so they have left the allowlist. A client can no longer
+ * forge a legendary onto a tile, max a pet's stats, or rig the daily quest set;
+ * the only client-writable user fields now are cosmetic/profile ones.
+ */
+const CLIENT_WRITABLE_USER_FIELDS = new Set<string>([
+  // Cosmetic / profile (permanent) — the only client-writable user fields.
+  "displayName",
+  "profileImage",
+  "settings",
+  "theme",
+  "preferences"
+]);
+
+/**
+ * Returns a shallow copy of `data` keeping only the allowlisted top-level user
+ * fields, and dropping any value that is a `{ __op }` sentinel object — clients
+ * must never send field-transform sentinels; integer deltas are minted only by
+ * locked server routes. Non-allowlisted keys (the entire economy) are dropped.
+ */
+function filterClientUserFields(data: DocRecord): DocRecord {
+  const allowed: DocRecord = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (!CLIENT_WRITABLE_USER_FIELDS.has(key)) {
+      continue;
+    }
+    if (value && typeof value === "object" && !Array.isArray(value) && "__op" in (value as Record<string, unknown>)) {
+      // Reject field-transform sentinels from clients.
+      continue;
+    }
+    allowed[key] = value;
+  }
+  return allowed;
+}
+
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -171,6 +223,24 @@ function sanitizeUserPayload(id: string, email: string, payload: DocRecord | nul
   };
 }
 
+// Public projection of a user for list endpoints (getDocs(["users"]) → friends
+// page, leaderboards). Returns ONLY the public display fields — never the full
+// payload, never the email. The full payload (own profile) still goes through
+// sanitizeUserPayload via readUser/getDoc; this is the least-privilege view for
+// listing OTHER users. Trimming here closes the over-disclosure where any
+// authenticated user could read every other user's full game state + email.
+function publicUserProjection(id: string, payload: DocRecord | null): DocRecord {
+  const p = (payload ?? {}) as Record<string, unknown>;
+  return {
+    id,
+    displayName: (p.displayName as string) || "Anonymous",
+    xp: Number(p.xp ?? 0),
+    level: Number(p.level ?? 1),
+    ecoPoints: Number(p.ecoPoints ?? 0),
+    profileImage: (p.profileImage as string | null) || null
+  };
+}
+
 async function readUser(id: string): Promise<DocRecord | null> {
   const result = await sql("select id, email, payload from users where id = $1 limit 1", [id]);
   const row = result.rows[0];
@@ -290,9 +360,20 @@ export async function setDocument(
       throw new Error("permission-denied");
     }
 
+    // Merge, don't replace: start from the existing payload (preserving the
+    // entire economy — xp/level/ecoPoints/impact/inventory/milestones — which the
+    // client is not allowed to overwrite) and overlay only the client-writable
+    // fields from `data`. This keeps a client `setDoc`/`addDoc` on its own user
+    // doc (or an `updateDoc` whose reconstructed payload carries the full blob)
+    // from minting or wiping economy state. See C1 in the audit.
+    const existing = await readUser(ref.id);
+    const base: DocRecord = existing ?? {};
     const payload: DocRecord = {
-      ...data,
-      email: session.email
+      ...base,
+      ...filterClientUserFields(data),
+      email: session.email,
+      // Preserve the canonical id/identity if base had them.
+      ...(base.id ? { id: base.id } : {})
     };
 
     const xpVal = Number(payload.xp ?? 0);
@@ -393,12 +474,20 @@ export async function updateDocument(
   session: SessionUser | null
 ): Promise<void> {
   ensureAuthenticated(session);
+  const ref = parseDocPath(path);
   const current = await getDocument(path, session);
   if (!current) {
     throw new Error("not-found");
   }
 
-  const next = applyPatch(current, updates);
+  // For the user document, strip the patch to client-writable fields before
+  // running applyPatch so a client-supplied `__op` sentinel on an economy
+  // field (xp/ecoPoints/impact/…) can never execute. setDocument re-merges
+  // against the live row afterward, so concurrent reward grants to the same
+  // user are not clobbered by this read-modify-write either.
+  const safeUpdates = ref.collection === "users" ? filterClientUserFields(updates) : updates;
+
+  const next = applyPatch(current, safeUpdates);
   await setDocument(path, next, session);
 }
 
@@ -481,7 +570,7 @@ export async function listDocuments(
 
     return result.rows.map((row) => ({
       id: row.id,
-      data: sanitizeUserPayload(row.id, row.email, row.payload)
+      data: publicUserProjection(row.id, row.payload)
     }));
   }
 

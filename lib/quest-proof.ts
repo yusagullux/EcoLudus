@@ -1,4 +1,4 @@
-import { sql } from "@/lib/db";
+import { transaction, selectUserForUpdate } from "@/lib/db";
 
 export type QuestProofMethod = "text" | "photo";
 
@@ -33,38 +33,42 @@ export async function markQuestProofVerified(
   questId: string,
   proof: Omit<VerifiedQuestProof, "questId" | "verifiedAt" | "resetKey">
 ) {
-  const userResult = await sql<UserPayloadRow>(
-    "select id, email, payload from users where id = $1 limit 1",
-    [userId]
-  );
-  const user = userResult.rows[0];
+  // Lock the user row and recompute verifiedQuestProofs from the locked payload,
+  // then write via the covered "update users set payload = … where id = …" string.
+  // The old unlocked full-payload overwrite raced concurrent reward grants on the
+  // same row (lost-update class, audit H7). Shallow-merging over the locked
+  // payload preserves all economy state; only verifiedQuestProofs changes.
+  return transaction(async (query) => {
+    const userResult = await selectUserForUpdate<UserPayloadRow>(query, userId);
+    const user = userResult.rows[0];
 
-  if (!user) {
-    return null;
-  }
-
-  const profile = user.payload || {};
-  const verifiedQuestProofs = {
-    ...getVerifiedQuestProofs(profile),
-    [questId]: {
-      ...proof,
-      questId,
-      verifiedAt: new Date().toISOString(),
-      resetKey: typeof profile.lastQuestResetTime === "string" ? profile.lastQuestResetTime : null
+    if (!user) {
+      return null;
     }
-  };
 
-  const nextProfile = {
-    ...profile,
-    verifiedQuestProofs
-  };
+    const profile = user.payload || {};
+    const verifiedQuestProofs = {
+      ...getVerifiedQuestProofs(profile),
+      [questId]: {
+        ...proof,
+        questId,
+        verifiedAt: new Date().toISOString(),
+        resetKey: typeof profile.lastQuestResetTime === "string" ? profile.lastQuestResetTime : null
+      }
+    };
 
-  await sql(
-    "update users set payload = $1::jsonb, updated_at = now() where id = $2",
-    [JSON.stringify(nextProfile), userId]
-  );
+    const nextProfile = {
+      ...profile,
+      verifiedQuestProofs
+    };
 
-  return nextProfile;
+    await query(
+      "update users set payload = $1::jsonb, updated_at = now() where id = $2",
+      [JSON.stringify(nextProfile), userId]
+    );
+
+    return nextProfile;
+  });
 }
 
 export function getMissingVerifiedQuestProofIds(

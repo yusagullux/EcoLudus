@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
-import { updateUserProfile } from "@/lib/auth-client";
+import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
 import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
@@ -74,13 +75,14 @@ function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; disco
   // opacity(0.55) softens it into a dark shape over the panel.
   if (!discovered) {
     return (
-      <img
+      <Image
         src={entry.image}
         alt=""
         aria-hidden="true"
-        loading="lazy"
+        fill
+        sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
         onError={() => setImgError(true)}
-        className={`h-full w-full ${fitClass} transition duration-300`}
+        className={`${fitClass} transition duration-300`}
         style={{ filter: "brightness(0) opacity(0.55)" }}
       />
     );
@@ -96,12 +98,13 @@ function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; disco
   }
 
   return (
-    <img
+    <Image
       src={entry.image}
       alt={entry.name}
-      loading="lazy"
+      fill
+      sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
       onError={() => setImgError(true)}
-      className={`h-full w-full ${fitClass} transition duration-300 group-hover:scale-110`}
+      className={`${fitClass} transition duration-300 group-hover:scale-110`}
     />
   );
 }
@@ -113,9 +116,19 @@ export default function CollectionPage() {
   const [filter, setFilter] = useState<"all" | Rarity>("all");
   const [toast, setToast] = useState("");
 
-  // Master lists (the full discoverable universe per tab).
-  const [shopCatalog, setShopCatalog] = useState<ShopCatalog | null>(null);
-  const [speciesCatalog, setSpeciesCatalog] = useState<SpeciesCatalog | null>(null);
+  // Master lists (the full discoverable universe per tab). SWR caches both
+  // across navigations — the shop catalog is shared with the shop page.
+  const shopCat = useShopCatalog();
+  const speciesCat = useSpeciesCatalog();
+  const shopCatalog: ShopCatalog = {
+    plants: shopCat.plants as MasterEntry[],
+    eggs: shopCat.eggs as MasterEntry[],
+    chests: shopCat.chests as MasterEntry[]
+  };
+  const speciesCatalog: SpeciesCatalog = {
+    pets: speciesCat.pets as MasterEntry[],
+    seeds: speciesCat.seeds as MasterEntry[]
+  };
 
   // Ticking Time state. Lazy-initialized so the seed timestamp is read once
   // (in render, not during module init) and stays stable across the initial
@@ -144,40 +157,6 @@ export default function CollectionPage() {
   const profileHatchings = Array.isArray(profile?.hatchings) ? profile.hatchings : [];
   const profileChests = Array.isArray(profile?.chests) ? profile.chests : [];
   const profileSeeds = Array.isArray(profile?.seeds) ? profile.seeds : [];
-
-  // Fetch the master catalogs once. Both endpoints are public reads —
-  // names/images aren't secret, and the hatch/chest routes re-validate every
-  // reward server-side, so a client can't forge anything by tampering here.
-  // The shop route wraps its payload under a `catalog` key (same contract as
-  // the shop page); the species route returns `{ pets, seeds }` flat. Both
-  // always resolve — a failed fetch falls back to empty arrays so the page
-  // renders (locked/empty) instead of hanging on "Loading…" forever.
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      fetch("/api/catalog/shop", { credentials: "include" })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null),
-      fetch("/api/catalog/species", { credentials: "include" })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null)
-    ]).then(([shop, species]) => {
-      if (cancelled) return;
-      const cat = shop?.catalog;
-      setShopCatalog({
-        plants: Array.isArray(cat?.plants) ? cat.plants : [],
-        eggs: Array.isArray(cat?.eggs) ? cat.eggs : [],
-        chests: Array.isArray(cat?.chests) ? cat.chests : []
-      });
-      setSpeciesCatalog({
-        pets: Array.isArray(species?.pets) ? species.pets : [],
-        seeds: Array.isArray(species?.seeds) ? species.seeds : []
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Per-mode master list + owned records.
   const masterList: MasterEntry[] =
@@ -464,22 +443,21 @@ export default function CollectionPage() {
   const selectActivePet = async (animal: any) => {
     if (!user?.uid || !profile) return;
     setSelectingPetId(String(animal.id));
-    const nextAnimals = profileAnimals.map((entry) => ({
-      ...entry,
-      active: entry.id === animal.id
-    }));
-    const updates = {
-      animals: nextAnimals,
-      activePet: animal.id
-    };
-    const result = await updateUserProfile(user.uid, updates);
+    // Server owns the switch under a row lock — toggles only the `active` flag on
+    // the canonical pet rows (stats untouched). See /api/pets/select.
+    const res = await fetch("/api/pets/select", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ petId: String(animal.id) })
+    });
+    const data = await res.json().catch(() => ({}));
     setSelectingPetId(null);
-    if (!result.success) {
-      showToast("Could not choose that companion. Please try again.");
+    if (!res.ok || !data?.success) {
+      showToast(data?.error?.message || "Could not choose that companion. Please try again.");
       return;
     }
-    if (typeof setProfile === "function") {
-      setProfile({ ...profile, ...updates });
+    if (typeof setProfile === "function" && profile) {
+      setProfile({ ...profile, animals: data.animals, activePet: data.activePet });
     }
     showToast(`${animal.name} is now your active companion.`);
   };
@@ -583,10 +561,12 @@ export default function CollectionPage() {
                         }`}
                         style={!isReady ? { boxShadow: `0 0 12px ${style.accent}20` } : undefined}
                       >
-                        <img
+                        <Image
                           src={`/images/eggs/${hatching.rarity}-egg.png`}
                           alt={hatching.name}
-                          className={`h-full w-full object-contain ${!isReady ? "animate-bounce" : "animate-egg-shake"}`}
+                          fill
+                          sizes="80px"
+                          className={`object-contain ${!isReady ? "animate-bounce" : "animate-egg-shake"}`}
                           style={{ animationDuration: !isReady ? "2.5s" : "0.8s" }}
                         />
                       </div>
@@ -663,7 +643,7 @@ export default function CollectionPage() {
       ) : filtered.length === 0 ? (
         <Panel>
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 text-center">
-            <img src="/images/plants/sunflower.png" alt="" className="h-20 w-20 object-contain opacity-60" />
+            <Image src="/images/plants/sunflower.png" alt="" width={80} height={80} className="object-contain opacity-60" />
             <div>
               <p className="font-serif text-xl font-extrabold" style={{ color: "var(--text-primary)" }}>Nothing matches that filter</p>
               <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>Try a different rarity, or the “all” filter.</p>
@@ -772,10 +752,12 @@ export default function CollectionPage() {
                   <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_65%)] animate-pulse" />
 
                   <div className={`relative h-44 w-44 transition ${isShaking ? "animate-egg-shake" : ""}`}>
-                    <img
+                    <Image
                       src={`/images/eggs/${activeHatching.rarity}-egg.png`}
                       alt={activeHatching.name}
-                      className="h-full w-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
+                      fill
+                      sizes="176px"
+                      className="object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
                     />
 
                     {/* SVG crack overlay depending on taps left */}
@@ -893,10 +875,12 @@ export default function CollectionPage() {
                   <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.1),transparent_65%)]" />
 
                   <div className={`relative h-44 w-44 transition ${chestState === "shaking" ? "animate-chest-shake animate-chest-glow" : ""}`}>
-                    <img
+                    <Image
                       src={`/images/chests/${activeChest.name.toLowerCase().replace(" ", "-")}.png`}
                       alt={activeChest.name}
-                      className="h-full w-full object-contain drop-shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
+                      fill
+                      sizes="176px"
+                      className="object-contain drop-shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
                     />
                     <div className="pointer-events-none absolute inset-x-6 top-8 h-10 rounded-full bg-yellow-300/25 blur-xl" />
                   </div>
@@ -934,10 +918,12 @@ export default function CollectionPage() {
                   {chestReward.type === "points" ? (
                     <div className="text-6xl select-none drop-shadow-md">🪙</div>
                   ) : (
-                    <img
+                    <Image
                       src={chestReward.image}
                       alt={chestReward.name}
-                      className="h-32 w-32 object-contain"
+                      width={128}
+                      height={128}
+                      className="object-contain"
                     />
                   )}
                 </div>

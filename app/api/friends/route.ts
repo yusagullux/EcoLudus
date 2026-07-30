@@ -1,385 +1,291 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { transaction, selectUserForUpdate, type DbQuery } from "@/lib/db";
 
-// Helper to persist a user payload to Postgres, keeping top-level
-// denormalised columns (xp, level, trust_score) in sync — mirrors
-// the logic in document-store.ts setDocument for the "users" collection.
-async function saveUserPayload(
-  userId: string,
-  email: string,
-  payload: Record<string, unknown>
+// Friend-relationship mutations (request / accept / decline / remove).
+//
+// Lost-update safety (audit H6): the old `saveUserPayload` helper re-wrote the
+// ENTIRE user payload (xp, ecoPoints, eggs, plants, …) for BOTH users from a
+// single stale unlocked read — so a friend accept that raced a concurrent
+// reward grant silently clobbered the grant. This version runs the whole op
+// inside one `transaction`, locks BOTH user rows with SELECT … FOR UPDATE
+// (in ascending id order, so two mutual requests can't deadlock), re-reads
+// both payloads under the lock, and writes back ONLY the friendship fields by
+// shallow-merging a patch over the locked payload. Economy state is preserved
+// because it's read fresh under the lock and untouched in the merge.
+//
+// The write uses the file-DB-covered "update users set payload = … , updated_at
+// = now() where id = …" string (lib/db.ts fileSql branch), so local no-DB dev
+// no longer crashes on friend actions (the old full-payload string had no
+// fileSql branch). Friends ops never touch xp/level/trust_score, so the
+// denormalised columns are deliberately left alone.
+
+type UserRow = { id: string; email: string; payload: Record<string, unknown> };
+
+type FriendshipPatch = Partial<{
+  friends: unknown[];
+  friendRequests: unknown[];
+  sentRequests: string[];
+  notifications: unknown[];
+}>;
+
+const UPDATE_USER_PAYLOAD =
+  "update users set payload = $1::jsonb, updated_at = now() where id = $2";
+
+const actionSchema = z.object({
+  action: z.enum(["request", "accept", "decline", "remove"]),
+  targetUserId: z.string().min(1)
+});
+
+const fid = (f: any) => f?.id || f?.uid;
+
+// Lock both user rows inside the caller's transaction, in ascending id order so
+// two mutual requests can't deadlock. Returns the rows keyed by role, or null
+// if either user is gone (caller returns 404).
+async function lockBoth(
+  query: DbQuery,
+  currentUserId: string,
+  targetUserId: string
+): Promise<{ current: UserRow; target: UserRow } | null> {
+  const order = [currentUserId, targetUserId].sort();
+  const a = await selectUserForUpdate<UserRow>(query, order[0]);
+  const b = await selectUserForUpdate<UserRow>(query, order[1]);
+  const aRow = a.rows[0];
+  const bRow = b.rows[0];
+  if (!aRow || !bRow) return null;
+  const byId = new Map<string, UserRow>([
+    [aRow.id, aRow],
+    [bRow.id, bRow]
+  ]);
+  return { current: byId.get(currentUserId)!, target: byId.get(targetUserId)! };
+}
+
+function nameOf(row: UserRow, fallback = "Explorer") {
+  return String(row.payload?.displayName ?? (row.email ? row.email.split("@")[0] : fallback));
+}
+
+function friendEntry(row: UserRow, other: UserRow) {
+  const op = other.payload ?? {};
+  return {
+    id: other.id,
+    displayName: nameOf(other),
+    xp: Number(op.xp || 0),
+    level: Number(op.level || 1),
+    ecoPoints: Number(op.ecoPoints || 0),
+    cheers: 0,
+    addedAt: new Date().toISOString()
+  };
+}
+
+// Pure computation of the accept patches from the LOCKED rows. Shared by the
+// "accept" action and the auto-accept path inside "request".
+function computeAccept(current: UserRow, target: UserRow): {
+  currentPatch: FriendshipPatch;
+  targetPatch: FriendshipPatch;
+} {
+  const cp = current.payload ?? {};
+  const tp = target.payload ?? {};
+
+  const currentPatch: FriendshipPatch = {
+    friendRequests: (Array.isArray(cp.friendRequests) ? cp.friendRequests : []).filter(
+      (r) => fid(r) !== target.id
+    ),
+    sentRequests: (Array.isArray(cp.sentRequests) ? cp.sentRequests : []).filter(
+      (id) => id !== target.id
+    ),
+    friends: [
+      ...(Array.isArray(cp.friends) ? cp.friends : []).filter((f) => fid(f) !== target.id),
+      friendEntry(current, target)
+    ]
+  };
+
+  const targetPatch: FriendshipPatch = {
+    friendRequests: (Array.isArray(tp.friendRequests) ? tp.friendRequests : []).filter(
+      (r) => fid(r) !== current.id
+    ),
+    sentRequests: (Array.isArray(tp.sentRequests) ? tp.sentRequests : []).filter(
+      (id) => id !== current.id
+    ),
+    friends: [
+      ...(Array.isArray(tp.friends) ? tp.friends : []).filter((f) => fid(f) !== current.id),
+      friendEntry(target, current)
+    ],
+    notifications: [
+      {
+        id: randomUUID(),
+        type: "friend_accepted",
+        title: "Friend Request Accepted",
+        message: `${nameOf(current)} accepted your friend request!`,
+        read: false,
+        createdAt: new Date().toISOString()
+      },
+      ...(Array.isArray(tp.notifications) ? tp.notifications : [])
+    ].slice(0, 20)
+  };
+
+  return { currentPatch, targetPatch };
+}
+
+// Apply a patch to a locked row and persist via the covered update string.
+async function applyPatch(
+  query: DbQuery,
+  row: UserRow,
+  patch: FriendshipPatch
 ) {
-  const merged: Record<string, unknown> = { ...payload, email };
-  const xpVal = Number(merged.xp ?? 0);
-  const levelVal = Number(merged.level ?? 1);
-  const trustScoreVal = Number(
-    (merged.trustScore ?? merged.trust_score ?? 50) as number
-  );
-
-  await sql(
-    `update users
-        set email        = $2,
-            xp           = $3,
-            level        = $4,
-            trust_score  = $5,
-            payload      = $6::jsonb,
-            updated_at   = now()
-      where id = $1`,
-    [userId, email, xpVal, levelVal, trustScoreVal, JSON.stringify(merged)]
-  );
+  if (Object.keys(patch).length === 0) return;
+  const nextPayload = { ...row.payload, ...patch };
+  await query(UPDATE_USER_PAYLOAD, [JSON.stringify(nextPayload), row.id]);
 }
 
 export async function POST(request: Request) {
   const session = await getSession();
-
   if (!session) {
-    return NextResponse.json(
-      { error: { code: "auth/unauthenticated" } },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
+  }
+
+  let body: z.infer<typeof actionSchema>;
+  try {
+    body = actionSchema.parse(await request.json());
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: { code: "invalid-argument", details: error.flatten() } },
+        { status: 400 }
+      );
+    }
+    throw error;
+  }
+
+  const currentUserId = session.userId!;
+  const targetUserId = body.targetUserId;
+
+  if (currentUserId === targetUserId) {
+    return NextResponse.json({ error: "Cannot perform action on yourself" }, { status: 400 });
   }
 
   try {
-    const body = await request.json();
-    const { action, targetUserId } = body;
+    return await transaction(async (query) => {
+      const locked = await lockBoth(query, currentUserId, targetUserId);
+      if (!locked) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      const { current, target } = locked;
+      const cp = current.payload ?? {};
+      const tp = target.payload ?? {};
 
-    if (!action || !targetUserId) {
-      return NextResponse.json(
-        { error: "Missing action or targetUserId" },
-        { status: 400 }
-      );
-    }
+      const currentFriends = Array.isArray(cp.friends) ? cp.friends : [];
+      const currentFriendRequests = Array.isArray(cp.friendRequests) ? cp.friendRequests : [];
+      const currentSentRequests = Array.isArray(cp.sentRequests) ? cp.sentRequests : [];
+      const targetFriendRequests = Array.isArray(tp.friendRequests) ? tp.friendRequests : [];
+      const targetSentRequests = Array.isArray(tp.sentRequests) ? tp.sentRequests : [];
+      const targetNotifications = Array.isArray(tp.notifications) ? tp.notifications : [];
 
-    const currentUserId = session.userId;
+      // ── ACTION: request ──────────────────────────────────────────────
+      if (body.action === "request") {
+        if (currentFriends.some((f) => fid(f) === targetUserId)) {
+          return NextResponse.json({ error: "You are already friends" }, { status: 400 });
+        }
 
-    if (currentUserId === targetUserId) {
-      return NextResponse.json(
-        { error: "Cannot perform action on yourself" },
-        { status: 400 }
-      );
-    }
+        // Target already sent us a request → auto-accept instead of a cross-request.
+        if (currentFriendRequests.some((r) => fid(r) === targetUserId)) {
+          const { currentPatch, targetPatch } = computeAccept(current, target);
+          await applyPatch(query, current, currentPatch);
+          await applyPatch(query, target, targetPatch);
+          return NextResponse.json({ success: true, message: "Friend request accepted" });
+        }
 
-    // ── Fetch both profiles ──────────────────────────────────────────
-    const [currentUserRes, targetUserRes] = await Promise.all([
-      sql("select id, email, payload from users where id = $1 limit 1", [
-        currentUserId,
-      ]),
-      sql("select id, email, payload from users where id = $1 limit 1", [
-        targetUserId,
-      ]),
-    ]);
+        if (currentSentRequests.includes(targetUserId)) {
+          return NextResponse.json({ error: "Request already sent" }, { status: 400 });
+        }
 
-    if (currentUserRes.rowCount === 0 || targetUserRes.rowCount === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+        const senderName = nameOf(current, "Someone");
+        const newRequest = {
+          id: currentUserId,
+          displayName: senderName,
+          level: Number(cp.level || 1),
+          xp: Number(cp.xp || 0),
+          requestedAt: new Date().toISOString()
+        };
 
-    const currentUserRow = currentUserRes.rows[0] as {
-      id: string;
-      email: string;
-      payload: Record<string, unknown>;
-    };
-    const targetUserRow = targetUserRes.rows[0] as {
-      id: string;
-      email: string;
-      payload: Record<string, unknown>;
-    };
+        const currentPatch: FriendshipPatch = {
+          sentRequests: [...currentSentRequests.filter((id) => id !== targetUserId), targetUserId]
+        };
+        const targetPatch: FriendshipPatch = {
+          friendRequests: [
+            ...targetFriendRequests.filter((r) => fid(r) !== currentUserId),
+            newRequest
+          ],
+          notifications: [
+            {
+              id: randomUUID(),
+              type: "friend_request",
+              title: "New Friend Request",
+              message: `${senderName} sent you a friend request!`,
+              read: false,
+              createdAt: new Date().toISOString(),
+              senderId: currentUserId
+            },
+            ...targetNotifications
+          ].slice(0, 20)
+        };
 
-    const cp = currentUserRow.payload || {}; // current payload
-    const tp = targetUserRow.payload || {}; // target payload
-
-    const currentFriends: any[] = Array.isArray(cp.friends) ? cp.friends : [];
-    const targetFriends: any[] = Array.isArray(tp.friends) ? tp.friends : [];
-
-    const currentFriendRequests: any[] = Array.isArray(cp.friendRequests)
-      ? cp.friendRequests
-      : [];
-    const targetFriendRequests: any[] = Array.isArray(tp.friendRequests)
-      ? tp.friendRequests
-      : [];
-
-    const currentSentRequests: string[] = Array.isArray(cp.sentRequests)
-      ? cp.sentRequests
-      : [];
-    const targetSentRequests: string[] = Array.isArray(tp.sentRequests)
-      ? tp.sentRequests
-      : [];
-
-    const targetNotifications: any[] = Array.isArray(tp.notifications)
-      ? tp.notifications
-      : [];
-
-    const fid = (f: any) => f?.id || f?.uid;
-
-    // ── ACTION: request ──────────────────────────────────────────────
-    if (action === "request") {
-      // Already friends?
-      if (currentFriends.some((f: any) => fid(f) === targetUserId)) {
-        return NextResponse.json(
-          { error: "You are already friends" },
-          { status: 400 }
-        );
+        await applyPatch(query, current, currentPatch);
+        await applyPatch(query, target, targetPatch);
+        return NextResponse.json({ success: true, message: "Friend request sent" });
       }
 
-      // If the target already sent US a request, auto-accept instead of
-      // creating a messy cross-request.
-      const hasIncomingFromTarget = currentFriendRequests.some(
-        (r: any) => fid(r) === targetUserId
-      );
-      if (hasIncomingFromTarget) {
-        // Delegate to the accept path by falling through below.
-        // We override `action` locally — this is safe because we never
-        // read it again after the if/else chain.
-        return await handleAccept(
-          currentUserId,
-          targetUserId,
-          currentUserRow,
-          targetUserRow,
-          cp,
-          tp,
-          currentFriends,
-          targetFriends,
-          currentFriendRequests,
-          targetSentRequests,
-          targetNotifications
-        );
+      // ── ACTION: accept ───────────────────────────────────────────────
+      if (body.action === "accept") {
+        if (!currentFriendRequests.some((r) => fid(r) === targetUserId)) {
+          return NextResponse.json(
+            { error: "No pending request from this user" },
+            { status: 400 }
+          );
+        }
+        const { currentPatch, targetPatch } = computeAccept(current, target);
+        await applyPatch(query, current, currentPatch);
+        await applyPatch(query, target, targetPatch);
+        return NextResponse.json({ success: true, message: "Friend request accepted" });
       }
 
-      // Already sent?
-      if (currentSentRequests.includes(targetUserId)) {
-        return NextResponse.json(
-          { error: "Request already sent" },
-          { status: 400 }
-        );
+      // ── ACTION: decline ──────────────────────────────────────────────
+      if (body.action === "decline") {
+        const currentPatch: FriendshipPatch = {
+          friendRequests: currentFriendRequests.filter((r) => fid(r) !== targetUserId)
+        };
+        const targetPatch: FriendshipPatch = {
+          sentRequests: targetSentRequests.filter((id) => id !== currentUserId)
+        };
+        await applyPatch(query, current, currentPatch);
+        await applyPatch(query, target, targetPatch);
+        return NextResponse.json({ success: true, message: "Friend request declined" });
       }
 
-      const senderName =
-        (cp.displayName as string) ||
-        currentUserRow.email?.split("@")[0] ||
-        "Someone";
-
-      // Build the incoming-request record stored on the target
-      const newRequest = {
-        id: currentUserId,
-        displayName: senderName,
-        level: Number(cp.level || 1),
-        xp: Number(cp.xp || 0),
-        requestedAt: new Date().toISOString(),
-      };
-
-      tp.friendRequests = [
-        ...targetFriendRequests.filter((r: any) => fid(r) !== currentUserId),
-        newRequest,
-      ];
-
-      cp.sentRequests = [
-        ...currentSentRequests.filter((id: string) => id !== targetUserId),
-        targetUserId,
-      ];
-
-      tp.notifications = [
-        {
-          id: randomUUID(),
-          type: "friend_request",
-          title: "New Friend Request",
-          message: `${senderName} sent you a friend request!`,
-          read: false,
-          createdAt: new Date().toISOString(),
-          senderId: currentUserId,
-        },
-        ...targetNotifications,
-      ].slice(0, 20);
-
-      await Promise.all([
-        saveUserPayload(currentUserId, currentUserRow.email, cp),
-        saveUserPayload(targetUserId, targetUserRow.email, tp),
-      ]);
-
-      return NextResponse.json({
-        success: true,
-        message: "Friend request sent",
-      });
-    }
-
-    // ── ACTION: accept ───────────────────────────────────────────────
-    if (action === "accept") {
-      const hasIncoming = currentFriendRequests.some(
-        (r: any) => fid(r) === targetUserId
-      );
-      if (!hasIncoming) {
-        return NextResponse.json(
-          { error: "No pending request from this user" },
-          { status: 400 }
-        );
+      // ── ACTION: remove ───────────────────────────────────────────────
+      if (body.action === "remove") {
+        const currentPatch: FriendshipPatch = {
+          friends: currentFriends.filter((f) => fid(f) !== targetUserId),
+          sentRequests: currentSentRequests.filter((id) => id !== targetUserId),
+          friendRequests: currentFriendRequests.filter((r) => fid(r) !== targetUserId)
+        };
+        const targetPatch: FriendshipPatch = {
+          friends: (Array.isArray(tp.friends) ? tp.friends : []).filter(
+            (f) => fid(f) !== currentUserId
+          ),
+          sentRequests: targetSentRequests.filter((id) => id !== currentUserId),
+          friendRequests: targetFriendRequests.filter((r) => fid(r) !== currentUserId)
+        };
+        await applyPatch(query, current, currentPatch);
+        await applyPatch(query, target, targetPatch);
+        return NextResponse.json({ success: true, message: "Friend removed" });
       }
 
-      return await handleAccept(
-        currentUserId,
-        targetUserId,
-        currentUserRow,
-        targetUserRow,
-        cp,
-        tp,
-        currentFriends,
-        targetFriends,
-        currentFriendRequests,
-        targetSentRequests,
-        targetNotifications
-      );
-    }
-
-    // ── ACTION: decline ──────────────────────────────────────────────
-    if (action === "decline") {
-      cp.friendRequests = currentFriendRequests.filter(
-        (r: any) => fid(r) !== targetUserId
-      );
-      tp.sentRequests = targetSentRequests.filter(
-        (id: string) => id !== currentUserId
-      );
-
-      await Promise.all([
-        saveUserPayload(currentUserId, currentUserRow.email, cp),
-        saveUserPayload(targetUserId, targetUserRow.email, tp),
-      ]);
-
-      return NextResponse.json({
-        success: true,
-        message: "Friend request declined",
-      });
-    }
-
-    // ── ACTION: remove ───────────────────────────────────────────────
-    if (action === "remove") {
-      cp.friends = currentFriends.filter(
-        (f: any) => fid(f) !== targetUserId
-      );
-      tp.friends = targetFriends.filter(
-        (f: any) => fid(f) !== currentUserId
-      );
-
-      // Also clean up any stale request artefacts
-      cp.sentRequests = currentSentRequests.filter(
-        (id: string) => id !== targetUserId
-      );
-      cp.friendRequests = currentFriendRequests.filter(
-        (r: any) => fid(r) !== targetUserId
-      );
-      tp.sentRequests = targetSentRequests.filter(
-        (id: string) => id !== currentUserId
-      );
-      tp.friendRequests = targetFriendRequests.filter(
-        (r: any) => fid(r) !== currentUserId
-      );
-
-      await Promise.all([
-        saveUserPayload(currentUserId, currentUserRow.email, cp),
-        saveUserPayload(targetUserId, targetUserRow.email, tp),
-      ]);
-
-      return NextResponse.json({
-        success: true,
-        message: "Friend removed",
-      });
-    }
-
-    return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
+      return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
+    });
   } catch (error) {
     console.error("Friends API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
-
-// ── Shared accept logic (used by both "accept" and auto-accept in "request") ──
-async function handleAccept(
-  currentUserId: string,
-  targetUserId: string,
-  currentUserRow: { id: string; email: string; payload: Record<string, unknown> },
-  targetUserRow: { id: string; email: string; payload: Record<string, unknown> },
-  cp: Record<string, unknown>,
-  tp: Record<string, unknown>,
-  currentFriends: any[],
-  targetFriends: any[],
-  currentFriendRequests: any[],
-  targetSentRequests: string[],
-  targetNotifications: any[]
-) {
-  const fid = (f: any) => f?.id || f?.uid;
-
-  const targetName =
-    (tp.displayName as string) ||
-    targetUserRow.email?.split("@")[0] ||
-    "Explorer";
-  const currentName =
-    (cp.displayName as string) ||
-    currentUserRow.email?.split("@")[0] ||
-    "Explorer";
-
-  // Remove from all request/sent tracking on BOTH sides
-  cp.friendRequests = (
-    Array.isArray(cp.friendRequests) ? cp.friendRequests : []
-  ).filter((r: any) => fid(r) !== targetUserId);
-  cp.sentRequests = (
-    Array.isArray(cp.sentRequests) ? cp.sentRequests : []
-  ).filter((id: string) => id !== targetUserId);
-
-  tp.friendRequests = (
-    Array.isArray(tp.friendRequests) ? tp.friendRequests : []
-  ).filter((r: any) => fid(r) !== currentUserId);
-  tp.sentRequests = (
-    Array.isArray(tp.sentRequests) ? tp.sentRequests : []
-  ).filter((id: string) => id !== currentUserId);
-
-  // Add to friends (deduplicate first)
-  cp.friends = [
-    ...currentFriends.filter((f: any) => fid(f) !== targetUserId),
-    {
-      id: targetUserId,
-      displayName: targetName,
-      xp: Number(tp.xp || 0),
-      level: Number(tp.level || 1),
-      ecoPoints: Number(tp.ecoPoints || 0),
-      cheers: 0,
-      addedAt: new Date().toISOString(),
-    },
-  ];
-
-  tp.friends = [
-    ...targetFriends.filter((f: any) => fid(f) !== currentUserId),
-    {
-      id: currentUserId,
-      displayName: currentName,
-      xp: Number(cp.xp || 0),
-      level: Number(cp.level || 1),
-      ecoPoints: Number(cp.ecoPoints || 0),
-      cheers: 0,
-      addedAt: new Date().toISOString(),
-    },
-  ];
-
-  // Notify the other user
-  tp.notifications = [
-    {
-      id: randomUUID(),
-      type: "friend_accepted",
-      title: "Friend Request Accepted",
-      message: `${currentName} accepted your friend request!`,
-      read: false,
-      createdAt: new Date().toISOString(),
-    },
-    ...targetNotifications,
-  ].slice(0, 20);
-
-  await Promise.all([
-    saveUserPayload(currentUserId, currentUserRow.email, cp),
-    saveUserPayload(targetUserId, targetUserRow.email, tp),
-  ]);
-
-  return NextResponse.json({
-    success: true,
-    message: "Friend request accepted",
-  });
 }
