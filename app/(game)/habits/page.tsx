@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import {
@@ -15,6 +14,7 @@ import {
   inputClass,
   heroAccents
 } from "@/components/game-ui";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 type Mission = {
   id: string;
@@ -272,20 +272,7 @@ export default function HabitsPage() {
       : "#c0392b";
 
   if (loadingMissions) {
-    return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <div className="logo-breathe relative h-14 w-14 overflow-hidden rounded-2xl bg-white shadow-[0_18px_38px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10">
-          <Image
-            src="/images/logo.png"
-            alt="EcoLudus logo"
-            fill
-            sizes="56px"
-            className="object-cover"
-          />
-        </div>
-        <p className="text-sm font-semibold text-forest-800">Loading habit missions...</p>
-      </div>
-    );
+    return <PageSkeleton metricCount={3} panels={[{ rows: 5 }, { rows: 3 }]} heroChips={3} />;
   }
 
   return (

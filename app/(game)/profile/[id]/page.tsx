@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel } from "@/components/game-ui";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { PublicProfileView, type PublicProfile } from "@/components/public-profile";
 
 export default function PublicProfilePage() {
@@ -37,11 +38,7 @@ export default function PublicProfilePage() {
   }, [id]);
 
   if (status === "loading") {
-    return (
-      <Panel>
-        <div className="p-8 text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Loading profile…</div>
-      </Panel>
-    );
+    return <PageSkeleton metricCount={6} panels={[{ rows: 2 }, { rows: 6 }, { rows: 4 }]} heroChips={3} />;
   }
 
   if (status === "error" || !profile) {

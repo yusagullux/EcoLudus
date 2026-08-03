@@ -20,7 +20,7 @@ import {
 } from "@/components/game-ui";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { LoadingState } from "@/components/ui/loading-state";
+import { PageSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 
@@ -285,7 +285,7 @@ export default function TeamPage() {
   };
 
   if (loading) {
-    return <LoadingState label="Loading team data…" />;
+    return <PageSkeleton metricCount={4} panels={[{ rows: 3 }, { rows: 3 }, { rows: 3 }]} heroChips={2} />;
   }
 
   const memberCount = team?.stats?.members || 0;
@@ -461,7 +461,7 @@ export default function TeamPage() {
           <Panel eyebrow="Mission library" title="Assign New Mission">
             <div className="grid gap-3 sm:grid-cols-2">
               {templates.length === 0 ? (
-                <LoadingState variant="inline" label="Loading missions…" className="col-span-full" />
+                <CardGridSkeleton count={4} cols="grid-cols-1 sm:grid-cols-2 col-span-full" />
               ) : templates.map((t) => {
                 const isAssigning = assigningId === t.id;
                 const isAlreadyActive = activeMissions.some((m) => m.mission_id === t.id);

@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { useShopCatalog } from "@/lib/useCatalog";
 import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
+import { CardGridSkeleton } from "@/components/ui/skeleton";
 import type { ShopItem, ShopMode } from "@/lib/catalog";
 
 type Mode = ShopMode;
@@ -130,7 +131,7 @@ export default function ShopPage() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         {loading ? (
-          <p className="col-span-full text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Loading shop…</p>
+          <CardGridSkeleton count={8} cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 col-span-full" />
         ) : filtered.length === 0 ? (
           <p className="col-span-full text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>No items in this category.</p>
         ) : filtered.map((item) => {

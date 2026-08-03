@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar } from "@/components/game-ui";
 import { ExplainerGrid } from "@/components/ui/explainer-grid";
-import { LoadingState } from "@/components/ui/loading-state";
+import { CardGridSkeleton } from "@/components/ui/skeleton";
 
 type CommunityStats = {
   totalUsers: number;
@@ -221,7 +221,7 @@ export default function ImpactPage() {
         }
       >
         {loadingCommunity ? (
-          <LoadingState variant="inline" label="Loading community stats…" />
+          <CardGridSkeleton count={6} cols="grid-cols-2 sm:grid-cols-3" compact />
         ) : community ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {[
