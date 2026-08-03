@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
+import { useToast } from "@/lib/toast";
 import { getAllUsers } from "@/lib/auth-client";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
 import { Avatar } from "@/components/avatar";
@@ -59,10 +60,10 @@ function getSocialStats(profile: any) {
 
 export default function FriendsPage() {
   const { user, profile, setProfile, refreshProfile } = useAuth();
+  const toast = useToast();
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [toast, setToast] = useState("");
   // Tracks which friend is currently being cheered to prevent concurrent submissions.
   const cheeringRef = useRef<string | null>(null);
 
@@ -132,11 +133,6 @@ export default function FriendsPage() {
       .slice(0, 8);
   }, [players, query, user?.uid, friendIds]);
 
-  const showToast = (message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(""), 3000);
-  };
-
   const sendFriendRequest = async (player: any) => {
     if (!user?.uid || !profile) return;
 
@@ -149,24 +145,24 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        showToast(typeof data.error === "string" ? data.error : "Could not send friend request.");
+        toast.error(typeof data.error === "string" ? data.error : "Could not send friend request.");
         return;
       }
 
       // The API may auto-accept if the target already sent us a request
       if (data.message === "Friend request accepted") {
         await refreshProfile();
-        showToast(`You and ${player.displayName || "player"} are now friends!`);
+        toast.success(`You and ${player.displayName || "player"} are now friends!`);
       } else {
         const nextSent = [...sentRequests, player.id];
         if (typeof setProfile === "function") {
           setProfile({ ...profile, sentRequests: nextSent });
         }
-        showToast(`Friend request sent to ${player.displayName || "player"}.`);
+        toast.success(`Friend request sent to ${player.displayName || "player"}.`);
       }
     } catch (err) {
       console.error(err);
-      showToast("Could not send friend request.");
+      toast.error("Could not send friend request.");
     }
   };
 
@@ -182,16 +178,16 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        showToast(typeof data.error === "string" ? data.error : "Could not accept friend request.");
+        toast.error(typeof data.error === "string" ? data.error : "Could not accept friend request.");
         return;
       }
 
       // Refresh the full profile from server to get clean state
       await refreshProfile();
-      showToast(`Accepted friend request from ${request.displayName || "player"}.`);
+      toast.success(`Accepted friend request from ${request.displayName || "player"}.`);
     } catch (err) {
       console.error(err);
-      showToast("Could not accept friend request.");
+      toast.error("Could not accept friend request.");
     }
   };
 
@@ -207,7 +203,7 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        showToast(typeof data.error === "string" ? data.error : "Could not decline friend request.");
+        toast.error(typeof data.error === "string" ? data.error : "Could not decline friend request.");
         return;
       }
 
@@ -216,10 +212,10 @@ export default function FriendsPage() {
       if (typeof setProfile === "function") {
         setProfile({ ...profile, friendRequests: nextRequests, sentRequests: nextSent });
       }
-      showToast(`Declined friend request from ${request.displayName || "player"}.`);
+      toast.show(`Declined friend request from ${request.displayName || "player"}.`);
     } catch (err) {
       console.error(err);
-      showToast("Could not decline friend request.");
+      toast.error("Could not decline friend request.");
     }
   };
 
@@ -241,11 +237,11 @@ export default function FriendsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        showToast(data?.error?.message || "Could not send cheer. Please try again.");
+        toast.error(data?.error?.message || "Could not send cheer. Please try again.");
         return;
       }
       await refreshProfile();
-      showToast(`Cheered ${friend.displayName || "friend"}: +${data.xpAwarded} XP, +${data.ecoAwarded} Eco.`);
+      toast.success(`Cheered ${friend.displayName || "friend"}: +${data.xpAwarded} XP, +${data.ecoAwarded} Eco.`);
     } finally {
       cheeringRef.current = null;
     }
@@ -264,11 +260,11 @@ export default function FriendsPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.success) {
-      showToast(data?.error?.message || "Could not claim reward. Please try again.");
+      toast.error(data?.error?.message || "Could not claim reward. Please try again.");
       return;
     }
     await refreshProfile();
-    showToast(`${quest.title} claimed: +${data.xpAwarded} XP, +${data.ecoAwarded} Eco.`);
+    toast.success(`${quest.title} claimed: +${data.xpAwarded} XP, +${data.ecoAwarded} Eco.`);
   };
 
   const removeFriend = async (friend: any) => {
@@ -283,16 +279,16 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        showToast(typeof data.error === "string" ? data.error : "Could not remove friend.");
+        toast.error(typeof data.error === "string" ? data.error : "Could not remove friend.");
         return;
       }
 
       // Refresh full profile for clean state (server also cleans stale request artifacts)
       await refreshProfile();
-      showToast("Friend removed.");
+      toast.show("Friend removed.");
     } catch (err) {
       console.error(err);
-      showToast("Could not remove friend.");
+      toast.error("Could not remove friend.");
     }
   };
 
@@ -487,12 +483,6 @@ export default function FriendsPage() {
           </div>
         )}
       </Panel>
-
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/useAuth";
 import { useTeamTemplates } from "@/lib/useCatalog";
+import { useToast } from "@/lib/toast";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
@@ -15,6 +16,7 @@ const difficultyColor: Record<string, string> = {
 
 export default function TeamPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [joined, setJoined] = useState(false);
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<any>(null);
@@ -22,7 +24,6 @@ export default function TeamPage() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [inputVal, setInputVal] = useState("");
-  const [toast, setToast] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   // Mission templates (titles, icons, xp/eco/needed) are loaded from the
@@ -72,11 +73,6 @@ export default function TeamPage() {
     fetchTeamData();
   }, [user?.uid]);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3500);
-  };
-
   const closeModals = () => {
     setShowCreateModal(false);
     setShowJoinModal(false);
@@ -98,14 +94,14 @@ export default function TeamPage() {
 
       if (response.ok) {
         closeModals();
-        showToast(`Team "${teamName}" created! Code: ${data.code}`);
+        toast.success(`Team "${teamName}" created! Code: ${data.code}`);
         await fetchTeamData();
       } else {
-        showToast(data.error?.message || data.error?.code || "Failed to create team");
+        toast.error(data.error?.message || data.error?.code || "Failed to create team");
       }
     } catch (error) {
       console.error("Create team error:", error);
-      showToast("Failed to create team");
+      toast.error("Failed to create team");
     }
   };
 
@@ -123,14 +119,14 @@ export default function TeamPage() {
 
       if (response.ok) {
         closeModals();
-        showToast(`Joined team "${data.teamName}"!`);
+        toast.success(`Joined team "${data.teamName}"!`);
         await fetchTeamData();
       } else {
-        showToast(data.error?.code || "Failed to join team");
+        toast.error(data.error?.code || "Failed to join team");
       }
     } catch (error) {
       console.error("Join team error:", error);
-      showToast("Failed to join team");
+      toast.error("Failed to join team");
     }
   };
 
@@ -143,25 +139,25 @@ export default function TeamPage() {
         setJoined(false);
         setTeam(null);
         setActiveMissions([]);
-        showToast("Left the team");
+        toast.success("Left the team");
       } else {
-        showToast("Failed to leave team");
+        toast.error("Failed to leave team");
       }
     } catch (error) {
       console.error("Leave team error:", error);
-      showToast("Failed to leave team");
+      toast.error("Failed to leave team");
     }
   };
 
   const handleAssignMission = async (t: TeamMissionTemplate) => {
     if (!user?.uid || !team?.id) return;
     if (activeMissions.length >= 3) {
-      showToast("Maximum 3 active missions allowed");
+      toast.show("Maximum 3 active missions allowed");
       return;
     }
     const alreadyActive = activeMissions.some((m) => m.mission_id === t.id);
     if (alreadyActive) {
-      showToast(`"${t.title}" is already active`);
+      toast.show(`"${t.title}" is already active`);
       return;
     }
 
@@ -182,14 +178,14 @@ export default function TeamPage() {
       const data = await response.json();
 
       if (response.ok) {
-        showToast(`"${t.title}" assigned to team!`);
+        toast.success(`"${t.title}" assigned to team!`);
         await fetchTeamData();
       } else {
-        showToast(data.error?.message || data.error?.code || "Failed to assign mission");
+        toast.error(data.error?.message || data.error?.code || "Failed to assign mission");
       }
     } catch (error) {
       console.error("Assign mission error:", error);
-      showToast("Failed to assign mission");
+      toast.error("Failed to assign mission");
     } finally {
       setAssigningId(null);
     }
@@ -248,9 +244,9 @@ export default function TeamPage() {
       }
 
       if (data.completed) {
-        showToast("🎉 Mission completed! Rewards granted to all members!");
+        toast.success("🎉 Mission completed! Rewards granted to all members!");
       } else {
-        showToast("Progress submitted! Keep going!");
+        toast.success("Progress submitted! Keep going!");
       }
 
       setActiveProofMission(null);
@@ -337,7 +333,7 @@ export default function TeamPage() {
                 </div>
               </div>
               <button
-                onClick={() => { navigator.clipboard?.writeText(team?.code || ""); showToast("Code copied!"); }}
+                onClick={() => { navigator.clipboard?.writeText(team?.code || ""); toast.show("Code copied!"); }}
                 className="min-h-11 self-start rounded-xl border border-forest-200 bg-white px-4 py-2 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
               >
                 Copy Code
@@ -641,13 +637,6 @@ export default function TeamPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ── Toast ── */}
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold shadow-xl" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
-          {toast}
         </div>
       )}
     </div>
