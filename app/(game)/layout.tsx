@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/useAuth";
 import { ThemeProvider } from "@/lib/useTheme";
+import { ToastProvider } from "@/lib/toast";
 import { Sidebar } from "@/components/sidebar";
 import Image from "next/image";
 
@@ -30,24 +31,26 @@ export default function GameLayout({
 
   return (
     <ThemeProvider>
-      <Sidebar user={user} profile={profile} />
+      <ToastProvider>
+        <Sidebar user={user} profile={profile} />
 
-      {/* ── Page wrapper ── */}
-      <div className="app-main-bg min-h-screen">
-        <main
-          className={[
-            /* Mobile: offset below top bar only (no bottom nav) */
-            "pt-[56px] pb-6 px-4 sm:px-5",
-            /* Desktop: offset for 240px sidebar, full available width */
-            "md:ml-[240px] md:pt-7 md:pb-8 md:px-8",
-          ].join(" ")}
-        >
-          {/* Content width: fills available space with a comfortable max */}
-          <div className="mx-auto w-full max-w-[1100px]">
-            {children}
-          </div>
-        </main>
-      </div>
+        {/* ── Page wrapper ── */}
+        <div className="app-main-bg min-h-screen">
+          <main
+            className={[
+              /* Mobile: offset below top bar only (no bottom nav) */
+              "pt-[56px] pb-6 px-4 sm:px-5",
+              /* Desktop: offset for 240px sidebar, full available width */
+              "md:ml-[240px] md:pt-7 md:pb-8 md:px-8",
+            ].join(" ")}
+          >
+            {/* Content width: fills available space with a comfortable max */}
+            <div className="mx-auto w-full max-w-[1100px]">
+              {children}
+            </div>
+          </main>
+        </div>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
