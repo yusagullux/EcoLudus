@@ -14,6 +14,8 @@ type QuestDefinition = {
   eco: number;
   catalogCarbonKg: number;
   difficulty: QuestDifficulty;
+  /** When false, the quest is honor-system: completable with no AI proof. Defaults to true. */
+  requiresProof: boolean;
 };
 
 type CarbonResult = {
@@ -56,6 +58,7 @@ const CATEGORY_ESTIMATES: Record<string, { activityId: string; parameters: Recor
 };
 
 let questCatalogPromise: Promise<Map<string, QuestDefinition>> | null = null;
+let catalogVersion: string | null = null;
 
 function roundCarbon(value: number) {
   return Math.max(0, Math.round(value * 100) / 100);
@@ -77,9 +80,12 @@ function loadQuestCatalog(): Promise<Map<string, QuestDefinition>> {
             ecoCoins?: number;
             carbonFootprintReduction?: number;
             difficulty?: string;
+            requiresProof?: boolean;
           }>;
         }>;
+        metadata?: { version?: string };
       };
+      catalogVersion = String(parsed.metadata?.version ?? "unknown");
       const quests = new Map<string, QuestDefinition>();
 
       const VALID_DIFFICULTIES: QuestDifficulty[] = ["easy", "medium", "hard"];
@@ -96,7 +102,8 @@ function loadQuestCatalog(): Promise<Map<string, QuestDefinition>> {
             xp: Number(quest.xp ?? 35),
             eco: Number(quest.ecoCoins ?? 25),
             catalogCarbonKg: Number(quest.carbonFootprintReduction ?? 0),
-            difficulty
+            difficulty,
+            requiresProof: quest.requiresProof !== false
           });
         }
       }
@@ -112,6 +119,17 @@ function loadQuestCatalog(): Promise<Map<string, QuestDefinition>> {
 export async function getQuestDefinition(questId: string) {
   const catalog = await loadQuestCatalog();
   return catalog.get(questId) ?? null;
+}
+
+/**
+ * The `metadata.version` from quests.json. Bumping the catalog version forces
+ * existing users to re-roll their daily set (the daily route gates its
+ * idempotent same-day return on this), so catalog changes ship immediately
+ * instead of waiting until the next UTC midnight.
+ */
+export async function getQuestCatalogVersion() {
+  await loadQuestCatalog();
+  return catalogVersion ?? "unknown";
 }
 
 /** All quest definitions in the catalog (id, title, category, xp, eco, carbon). */

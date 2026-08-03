@@ -214,7 +214,8 @@
           "xp": 35,
           "ecoCoins": 25,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "energy_2",
@@ -232,7 +233,8 @@
           "xp": 30,
           "ecoCoins": 20,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "energy_3",
@@ -250,7 +252,8 @@
           "xp": 25,
           "ecoCoins": 15,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "energy_4",
@@ -268,7 +271,8 @@
           "xp": 30,
           "ecoCoins": 20,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "energy_5",
@@ -286,7 +290,8 @@
           "xp": 30,
           "ecoCoins": 20,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "energy_6",
@@ -340,7 +345,8 @@
           "xp": 30,
           "ecoCoins": 20,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "energy_9",
@@ -358,7 +364,8 @@
           "xp": 25,
           "ecoCoins": 15,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "energy_10",
@@ -412,7 +419,8 @@
           "xp": 30,
           "ecoCoins": 20,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         }
       ]
     },
@@ -440,7 +448,8 @@
           "xp": 35,
           "ecoCoins": 25,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "transportation_2",
@@ -576,7 +585,8 @@
           "xp": 25,
           "ecoCoins": 15,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "water_2",
@@ -593,7 +603,7 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": true,
+          "requiresPhoto": false,
           "difficulty": "easy"
         },
         {
@@ -829,7 +839,7 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": true,
+          "requiresPhoto": false,
           "difficulty": "easy"
         },
         {
@@ -984,7 +994,8 @@
           "xp": 25,
           "ecoCoins": 15,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "sustainable_5",
@@ -1164,7 +1175,8 @@
           "xp": 30,
           "ecoCoins": 20,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "gamified_pet_1",
@@ -1182,7 +1194,8 @@
           "xp": 40,
           "ecoCoins": 30,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         },
         {
           "id": "gamified_hatch_1",
@@ -1200,13 +1213,14 @@
           "xp": 100,
           "ecoCoins": 80,
           "requiresPhoto": false,
-          "difficulty": "easy"
+          "difficulty": "easy",
+          "requiresProof": false
         }
       ]
     }
   ],
   "metadata": {
-    "version": "2.6.0",
+    "version": "2.7.0",
     "lastUpdated": "2026-08-03",
     "totalCategories": 7,
     "totalQuests": 63,
@@ -1214,6 +1228,10 @@
       "easy": "Universally doable, no purchase or special situation — surfaced first each day",
       "medium": "Doable for most but situational or higher effort — surfaces once easy pool is exhausted",
       "hard": "Requires purchase, hardware, or a specific situation — none remain in this catalog"
+    },
+    "proofPolicy": {
+      "requiresProofDefault": true,
+      "requiresProofFalse": "Honor-system quest — one-tap complete, no AI verification needed (used for invisible actions like turning off lights that leave no checkable artifact)"
     },
     "progressTypes": {
       "boolean": "One-time quest - becomes 1 when completed",

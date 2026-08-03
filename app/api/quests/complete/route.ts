@@ -222,7 +222,25 @@ export async function POST(request: Request) {
         );
       }
 
-      const missingVerifiedProofIds = getMissingVerifiedQuestProofIds(profile, questIds);
+      // Fetch every selected quest's definition up front. We need them for the
+      // carbon lookup regardless, and resolving them now lets us skip the
+      // verified-proof check for honor-system quests (requiresProof === false),
+      // which are trivial "invisible action" quests (turn off lights, unplug
+      // chargers, etc.) that have no checkable artifact and complete on trust.
+      const questDefs = new Map<string, NonNullable<Awaited<ReturnType<typeof getQuestDefinition>>>>();
+      for (const questId of questIds) {
+        const quest = await getQuestDefinition(questId);
+        if (!quest) {
+          return NextResponse.json(
+            { error: { code: "quests/not-found", questId } },
+            { status: 400 }
+          );
+        }
+        questDefs.set(questId, quest);
+      }
+
+      const proofRequiredIds = questIds.filter((id) => questDefs.get(id)?.requiresProof !== false);
+      const missingVerifiedProofIds = getMissingVerifiedQuestProofIds(profile, proofRequiredIds);
       if (missingVerifiedProofIds.length > 0) {
         return NextResponse.json(
           {
@@ -241,14 +259,7 @@ export async function POST(request: Request) {
       const completionRecords = [];
 
       for (const questId of questIds) {
-        const quest = await getQuestDefinition(questId);
-
-        if (!quest) {
-          return NextResponse.json(
-            { error: { code: "quests/not-found", questId } },
-            { status: 400 }
-          );
-        }
+        const quest = questDefs.get(questId)!;
 
         const carbon = await getQuestCarbonReduction(quest);
         completionRecords.push({

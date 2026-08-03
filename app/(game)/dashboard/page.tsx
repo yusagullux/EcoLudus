@@ -146,7 +146,11 @@ export default function DashboardPage() {
           xp: quest.xp || 35,
           eco: quest.ecoCoins || 25,
           carbon: quest.carbonFootprintReduction || 0.5,
-          requiresProof: true,
+          // Honor-system quests (requiresProof === false in quests.json) are
+          // trivial "invisible action" quests (turn off lights, unplug
+          // chargers…) with no checkable artifact — they complete on trust,
+          // one tap, no AI proof modal.
+          requiresProof: quest.requiresProof !== false,
           requiresPhoto: Boolean(quest.requiresPhoto)
         });
       });
@@ -332,6 +336,11 @@ export default function DashboardPage() {
 
     if (!verifiedQuestIds.includes(quest.id)) {
       if (!selectedQuestIds.includes(quest.id)) {
+        // Honor-system quest: select directly, no proof modal needed.
+        if (quest.requiresProof === false) {
+          setSelectedQuestIds((current) => [...current, quest.id]);
+          return;
+        }
         // Trigger modal for verification first
         setActiveTextVerifyQuest(quest);
         setProofType("text");
@@ -416,8 +425,9 @@ export default function DashboardPage() {
   const completeSelectedMissions = async () => {
     if (!user?.uid || !profile || selectedQuests.length === 0 || pendingCompletion) return;
 
-    // Double check that text proof is verified for all quests in selection
-    const unverified = selectedQuests.filter((q) => !verifiedQuestIds.includes(q.id));
+    // Double check that proof is verified for every proof-required quest in the
+    // selection. Honor-system quests (requiresProof === false) skip this.
+    const unverified = selectedQuests.filter((q) => q.requiresProof !== false && !verifiedQuestIds.includes(q.id));
     if (unverified.length > 0) {
       showToast(`Please verify proof for "${unverified[0].title}" first.`);
       setActiveTextVerifyQuest(unverified[0]);
@@ -623,7 +633,7 @@ export default function DashboardPage() {
                     <Pill>+{quest.xp} XP</Pill>
                     <span className="text-[11px] font-bold" style={{ color: "var(--text-muted)" }}>+{quest.eco} Eco</span>
                   </div>
-                  {!quest.done && (
+                  {!quest.done && quest.requiresProof !== false && (
                     <button
                       type="button"
                     onClick={(e) => {
@@ -643,6 +653,11 @@ export default function DashboardPage() {
                     >
                       {isVerified ? "Verified" : "Verify proof"}
                     </button>
+                  )}
+                  {!quest.done && quest.requiresProof === false && isSelected && (
+                    <span className="mt-1 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                      Ready
+                    </span>
                   )}
                 </div>
               </label>
