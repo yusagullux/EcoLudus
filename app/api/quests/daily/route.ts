@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
-import { getAllQuestDefinitions } from "@/lib/carbon-calc";
+import { getAllQuestDefinitions, getQuestCatalogVersion } from "@/lib/carbon-calc";
 
 // Server-validated daily-quest selection. The dashboard used to pick 5 quests
 // client-side with Math.random() and write `currentDailyQuests` through
@@ -59,6 +59,7 @@ export async function POST() {
 
   try {
     const allQuests = await getAllQuestDefinitions();
+    const catalogVersion = await getQuestCatalogVersion();
 
     return await transaction(async (query) => {
       const result = await selectUserForUpdate<{ payload: Record<string, unknown> }>(query, session.userId!);
@@ -72,10 +73,19 @@ export async function POST() {
       const currentDailyQuests = Array.isArray(profile.currentDailyQuests)
         ? (profile.currentDailyQuests as unknown[]).map(String)
         : [];
+      const storedCatalogVersion = profile.questCatalogVersion as string | undefined;
 
-      // Idempotent within the UTC day: if we already selected today, return the
-      // existing set (don't re-roll on every mount).
-      if (lastReset && currentDailyQuests.length > 0 && !isAfterMidnightUTC(lastReset)) {
+      // Idempotent within the UTC day AND across the same catalog version: if we
+      // already selected today for this catalog version, return the existing set
+      // (don't re-roll on every mount). A catalog version bump (e.g. new easy
+      // quests shipped) forces a re-roll so existing users see the new set
+      // immediately instead of waiting for the next UTC midnight.
+      if (
+        lastReset &&
+        currentDailyQuests.length > 0 &&
+        !isAfterMidnightUTC(lastReset) &&
+        storedCatalogVersion === catalogVersion
+      ) {
         return NextResponse.json({
           success: true,
           currentDailyQuests,
@@ -124,7 +134,8 @@ export async function POST() {
         lastQuestResetTime: now,
         currentDailyQuests: selectedIds,
         dailyQuestsCompleted: [],
-        verifiedQuestProofs: {}
+        verifiedQuestProofs: {},
+        questCatalogVersion: catalogVersion
       };
       await query("update users set payload = $1::jsonb, updated_at = now() where id = $2", [
         JSON.stringify(nextPayload),
