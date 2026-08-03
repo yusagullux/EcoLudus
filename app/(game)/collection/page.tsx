@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/useAuth";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
 import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { useToast } from "@/lib/toast";
+import { CardGridSkeleton } from "@/components/ui/skeleton";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
 // discoverable species (sourced from the catalog APIs), not just what the user
@@ -633,12 +634,7 @@ export default function CollectionPage() {
       )}
 
       {catalogLoading ? (
-        <Panel>
-          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center">
-            <div className="text-3xl animate-pulse">📖</div>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading collection book…</p>
-          </div>
-        </Panel>
+        <CardGridSkeleton count={10} cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" />
       ) : filtered.length === 0 ? (
         <Panel>
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 text-center">

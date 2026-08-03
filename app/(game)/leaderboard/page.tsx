@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel, Pill, heroAccents } from "@/components/game-ui";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { LoadingState } from "@/components/ui/loading-state";
+import { RowListSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/avatar";
 
 const medalLabel = ["1st", "2nd", "3rd"];
@@ -344,7 +344,7 @@ export default function LeaderboardPage() {
 
       {isLoading ? (
         <Panel>
-          <LoadingState variant="inline" label="Loading leaderboard…" />
+          <RowListSkeleton rows={8} variant="row" />
         </Panel>
       ) : tab === "individual" ? (
         <IndividualLeaderboard users={users} currentUserId={user?.uid} />

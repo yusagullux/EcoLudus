@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { getAllUsers } from "@/lib/auth-client";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, primaryButton, secondaryButton, inputClass, heroAccents } from "@/components/game-ui";
+import { RowListSkeleton } from "@/components/ui/skeleton";
 import { Avatar } from "@/components/avatar";
 
 function friendKey(friend: any) {
@@ -417,7 +418,7 @@ export default function FriendsPage() {
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {loading ? (
-            <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Loading players...</p>
+            <div className="col-span-full"><RowListSkeleton rows={4} variant="avatar" /></div>
           ) : candidates.length > 0 ? (
             candidates.map((player) => {
               const isSent = sentRequestsSet.has(player.id);
