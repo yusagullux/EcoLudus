@@ -12,7 +12,8 @@ import {
   Pill,
   primaryButton,
   secondaryButton,
-  inputClass
+  inputClass,
+  heroAccents
 } from "@/components/game-ui";
 
 type Mission = {
@@ -293,6 +294,7 @@ export default function HabitsPage() {
         eyebrow="Daily habits"
         title="Habit Tracker"
         description="Log your daily eco habits. Each verified submission earns XP and builds your trust score."
+        accent={heroAccents.habits}
       >
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="XP" value={xp.toLocaleString()} />
@@ -300,6 +302,7 @@ export default function HabitsPage() {
           <HeroMetric
             label={trustLabel}
             value={`${Math.round(trustScore)}/100`}
+            hint="Trust score reflects how reliably your photo proof is verified. It rises with honest submissions and affects the XP you earn."
           />
         </div>
       </PageHero>
@@ -317,7 +320,7 @@ export default function HabitsPage() {
       <Panel
         eyebrow="Available habits"
         title="Today's Habit Missions"
-        action={<Pill>{missions.length} missions</Pill>}
+        action={<Pill>{missions.length} mission{missions.length === 1 ? "" : "s"}</Pill>}
       >
         {missions.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-8 text-center text-forest-700/60">
@@ -358,7 +361,7 @@ export default function HabitsPage() {
                     <button
                       type="button"
                       onClick={() => openMission(mission)}
-                      className="rounded-full bg-forest-950 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-cream-100 transition hover:bg-forest-800"
+                      className="rounded-full bg-forest-950 px-3 py-1 text-[10px] font-extrabold tracking-[0.02em] text-cream-100 transition hover:bg-forest-800"
                     >
                       Log habit
                     </button>

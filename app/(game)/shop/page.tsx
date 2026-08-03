@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { useShopCatalog } from "@/lib/useCatalog";
-import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import type { ShopItem, ShopMode } from "@/lib/catalog";
 
 type Mode = ShopMode;
@@ -91,7 +91,7 @@ export default function ShopPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Nature store" title="Plant Shop" description="Spend EcoPoints on rare plants, mysterious eggs, and magical chests.">
+      <PageHero eyebrow="Nature store" title="Plant Shop" description="Spend EcoPoints on rare plants, mysterious eggs, and magical chests." accent={heroAccents.shop}>
         <HeroMetric label="EcoPoints" value={ecoPoints.toLocaleString()} />
       </PageHero>
 
@@ -111,12 +111,12 @@ export default function ShopPage() {
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
             {tabs.map((rarity) => (
               <button
                 key={rarity}
                 onClick={() => setFilter(rarity)}
-                className="rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
+                className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
                 style={filter === rarity
                   ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
                   : { background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--pill-text)" }}
@@ -153,7 +153,7 @@ export default function ShopPage() {
                 {item.hatchTime && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Hatches in {item.hatchTime}</p>}
                 {item.description && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{item.description}</p>}
                 <p className="font-serif text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>
-                  {item.price} <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>EP</span>
+                  {item.price} <span className="text-xs font-bold" title="EcoPoints" style={{ color: "var(--text-muted)" }}>EP</span>
                 </p>
                 <button
                   onClick={() => handleBuy(item)}

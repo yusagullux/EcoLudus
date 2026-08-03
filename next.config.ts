@@ -39,6 +39,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Hide the Next.js dev route indicator overlay in development so it doesn't
+  // obscure content during testing.
+  devIndicators: false,
   // Serve AVIF (preferred) and WebP for any next/image usage. The decorative
   // backgrounds under public/images are already shipped as .webp directly;
   // this configures the optimizer for when pages adopt next/image.

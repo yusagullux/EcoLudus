@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHero, Panel, Pill } from "@/components/game-ui";
+import { PageHero, Panel, Pill, heroAccents } from "@/components/game-ui";
 
 const PREMIUM_FEATURES = [
   {
@@ -122,6 +122,7 @@ export default function PremiumPage() {
         eyebrow="Unlock more impact"
         title="Premium"
         description="Supercharge your eco journey with advanced features. Coming soon — join the waitlist."
+        accent={heroAccents.premium}
       />
 
       {/* Coming soon banner */}
@@ -176,17 +177,25 @@ export default function PremiumPage() {
               ))}
             </ul>
 
-            <button
-              disabled={plan.disabled}
-              className="mt-6 w-full cursor-not-allowed rounded-xl py-2.5 text-xs font-extrabold uppercase tracking-wider transition"
-              style={
-                plan.highlight
-                  ? { background: "rgba(154,107,31,0.12)", color: "#9a6b1f" }
-                  : { background: "var(--bg-panel-alt)", color: "var(--text-muted)" }
-              }
-            >
-              {plan.cta}
-            </button>
+            {plan.name === "Free" ? (
+              <span
+                className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold"
+                style={{ background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}
+              >
+                <span aria-hidden>✓</span> {plan.cta}
+              </span>
+            ) : (
+              <span
+                className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-xs font-extrabold tracking-[0.02em]"
+                style={
+                  plan.highlight
+                    ? { borderColor: "rgba(154,107,31,0.4)", background: "rgba(154,107,31,0.08)", color: "#9a6b1f" }
+                    : { borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }
+                }
+              >
+                <span aria-hidden>🚧</span> {plan.cta}
+              </span>
+            )}
           </article>
         ))}
       </div>

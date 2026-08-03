@@ -1,0 +1,1130 @@
+[
+  {
+    "path": "/landing",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/landing",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_landing_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Play, protect, and grow a greener tomorrow."
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Gamified sustainability, made dailyPlay, protect, and grow a greener tomorrow.EcoLudus turns eco-friendly habits into a rewarding daily ritual — missions, collections, leaderboards, teams, and progress tracking, wrapped in a calm nature-inspired design.Start your journeySign inFree to join · No cred",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/landing",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/landing",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_landing_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Play, protect, and grow a greener tomorrow."
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Gamified sustainability, made dailyPlay, protect, and grow a greener tomorrow.EcoLudus turns eco-friendly habits into a rewarding daily ritual — missions, collections, leaderboards, teams, and progress tracking, wrapped in a calm nature-inspired design.Start your journeySign inFree to join · No cred",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/login",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/login",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_login_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 2,
+    "visibleH1s": [
+      "A focused operating room for sustainable habits.",
+      "Return to your daily eco rhythm."
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "email",
+        "label": true,
+        "aria": false,
+        "placeholder": "you@example.com"
+      },
+      {
+        "tag": "input",
+        "id": "password",
+        "label": true,
+        "aria": false,
+        "placeholder": "At least 6 characters"
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Forest EditionA focused operating room for sustainable habits.Quiet surfaces, strong hierarchy, and measured contrast keep the product useful while giving it a more distinctive identity.MissionsDaily actionsTeamsShared progressRewardsEcoPointsEcoLudusForest EditionAccount AccessReturn to your daily",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/login",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/login",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_login_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 2,
+    "visibleH1s": [
+      "Return to your daily eco rhythm."
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "email",
+        "label": true,
+        "aria": false,
+        "placeholder": "you@example.com"
+      },
+      {
+        "tag": "input",
+        "id": "password",
+        "label": true,
+        "aria": false,
+        "placeholder": "At least 6 characters"
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Forest EditionA focused operating room for sustainable habits.Quiet surfaces, strong hierarchy, and measured contrast keep the product useful while giving it a more distinctive identity.MissionsDaily actionsTeamsShared progressRewardsEcoPointsEcoLudusForest EditionAccount AccessReturn to your daily",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/signup",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/signup",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_signup_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 2,
+    "visibleH1s": [
+      "A focused operating room for sustainable habits.",
+      "Start building a greener routine."
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "email",
+        "label": true,
+        "aria": false,
+        "placeholder": "you@example.com"
+      },
+      {
+        "tag": "input",
+        "id": "password",
+        "label": true,
+        "aria": false,
+        "placeholder": "At least 6 characters"
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Forest EditionA focused operating room for sustainable habits.Quiet surfaces, strong hierarchy, and measured contrast keep the product useful while giving it a more distinctive identity.MissionsDaily actionsTeamsShared progressRewardsEcoPointsEcoLudusForest EditionNew ProfileStart building a greener",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/signup",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/signup",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_signup_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 2,
+    "visibleH1s": [
+      "Start building a greener routine."
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "email",
+        "label": true,
+        "aria": false,
+        "placeholder": "you@example.com"
+      },
+      {
+        "tag": "input",
+        "id": "password",
+        "label": true,
+        "aria": false,
+        "placeholder": "At least 6 characters"
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Forest EditionA focused operating room for sustainable habits.Quiet surfaces, strong hierarchy, and measured contrast keep the product useful while giving it a more distinctive identity.MissionsDaily actionsTeamsShared progressRewardsEcoPointsEcoLudusForest EditionNew ProfileStart building a greener",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/legal/terms",
+    "title": "Terms of Service - EcoLudus",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/legal/terms",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_legal_terms_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Terms of Service"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "← Back to homeTerms of ServiceLast updated: June 20261. Agreement to TermsBy accessing and using EcoLudus, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.2. Use LicensePermission is granted to t",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/legal/terms",
+    "title": "Terms of Service - EcoLudus",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/legal/terms",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_legal_terms_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Terms of Service"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "← Back to homeTerms of ServiceLast updated: June 20261. Agreement to TermsBy accessing and using EcoLudus, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.2. Use LicensePermission is granted to t",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/legal/privacy",
+    "title": "Privacy Policy - EcoLudus",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/legal/privacy",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_legal_privacy_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Privacy Policy"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "← Back to homePrivacy PolicyLast updated: June 20261. IntroductionEcoLudus (\"we\", \"our\", or \"us\") operates the EcoLudus website and application. This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our service and the choices you have asso",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/legal/privacy",
+    "title": "Privacy Policy - EcoLudus",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/legal/privacy",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_legal_privacy_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Privacy Policy"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "← Back to homePrivacy PolicyLast updated: June 20261. IntroductionEcoLudus (\"we\", \"our\", or \"us\") operates the EcoLudus website and application. This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our service and the choices you have asso",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/dashboard",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/dashboard",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_dashboard_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Welcome back, audit-1785767426831"
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Today's quest hubWelcome back, audit-17857674268310 of 5 missions complete today. Keep the rhythm focused and visible.XP0Eco0Level1Streak1dImpact this week0Current LevelLevel 1Missions Done0CO2 Reduced0.0 kgLogin Streak1 dayDaily rhythmActive StreakBest 1d1 day streakLog in each day to keep your eco",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/dashboard",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/dashboard",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_dashboard_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Welcome back, audit-1785767426831"
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Today's quest hubWelcome back, audit-17857674268310 of 5 missions complete today. Keep the rhythm focused and visible.XP0Eco0Level1Streak1dImpact this week0Current LevelLevel 1Missions Done0CO2 Reduced0.0 kgLogin Streak1 dayDaily rhythmActive StreakBest 1d1 day streakLog in each day to keep your eco",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/habits",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/habits",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_habits_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Habit Tracker"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Daily habitsHabit TrackerLog your daily eco habits. Each verified submission earns XP and builds your trust score.XP0Level1Moderate Trust50/100Trust Score50/100XP Earned0LevelLevel 1Available habitsToday's Habit Missions3 missionshealthDrink more waterMeasure in: cups or liters+25 XPLog habitwellbei",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/habits",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/habits",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_habits_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Habit Tracker"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Daily habitsHabit TrackerLog your daily eco habits. Each verified submission earns XP and builds your trust score.XP0Level1Moderate Trust50/100Trust Score50/100XP Earned0LevelLevel 1Available habitsToday's Habit Missions3 missionshealthDrink more waterMeasure in: cups or liters+25 XPLog habitwellbei",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/shop",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/shop",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_shop_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Plant Shop"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Nature storePlant ShopSpend EcoPoints on rare plants, mysterious eggs, and magical chests.EcoPoints0plantseggschestsallcommonrareepiclegendarycommonMossy Fern50 EPCan't affordcommonGolden Daisy60 EPCan't affordrareBlue Orchid180 EPCan't affordrareSpotted Aloe200 EPCan't affordepicMystic Bamboo450 EP",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/shop",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/shop",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_shop_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Plant Shop"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Nature storePlant ShopSpend EcoPoints on rare plants, mysterious eggs, and magical chests.EcoPoints0plantseggschestsallcommonrareepiclegendarycommonMossy Fern50 EPCan't affordcommonGolden Daisy60 EPCan't affordrareBlue Orchid180 EPCan't affordrareSpotted Aloe200 EPCan't affordepicMystic Bamboo450 EP",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/collection",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/collection",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_collection_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "My Collection"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fmint.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fsunflower.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Forchid.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fbasil.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fbamboo.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Flotus.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fcherry_blossom.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fdragonfruit.png&w=256&q=75"
+    ],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Your nature collectionMy CollectionDiscover every species. Locked entries reveal as you earn them.Plants0/8Eggs0/4Pets0/13Seeds0/8Chests0/4Eco0plantseggsanimalsseedschestsallcommonrareepiclegendaryDiscovered 0/8 plants🔒???🔒???🔒???🔒???🔒???🔒???🔒???🔒???",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/collection",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/collection",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_collection_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "My Collection"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fmint.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fsunflower.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Forchid.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fbasil.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fbamboo.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Flotus.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fcherry_blossom.png&w=256&q=75",
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fdragonfruit.png&w=256&q=75"
+    ],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Your nature collectionMy CollectionDiscover every species. Locked entries reveal as you earn them.Plants0/8Eggs0/4Pets0/13Seeds0/8Chests0/4Eco0plantseggsanimalsseedschestsallcommonrareepiclegendaryDiscovered 0/8 plants🔒???🔒???🔒???🔒???🔒???🔒???🔒???🔒???",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/garden",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/garden",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_garden_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Virtual Garden"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Your living worldVirtual GardenPlant shop plants and chest seeds, let them bloom, then come back for repeat EcoPoints and XP. Start with 4 tiles — unlock more with EcoPoints, up to 16.Planted0Bloomed0Ready0Inventory0Next actionGarden StatusStart your first plotPick an empty tile and choose a plant o",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/garden",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/garden",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_garden_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Virtual Garden"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Your living worldVirtual GardenPlant shop plants and chest seeds, let them bloom, then come back for repeat EcoPoints and XP. Start with 4 tiles — unlock more with EcoPoints, up to 16.Planted0Bloomed0Ready0Inventory0Next actionGarden StatusStart your first plotPick an empty tile and choose a plant o",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/pets",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/pets",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_pets_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Pets"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Companion carePetsTrain, feed, and bond with companions to earn small daily rewards and make them stronger travel partners.Pets0Happy0%Bond-No companions yetHatch eggs from your collection to unlock pets.InventoryChoose a Pet",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/pets",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/pets",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_pets_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Pets"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Companion carePetsTrain, feed, and bond with companions to earn small daily rewards and make them stronger travel partners.Pets0Happy0%Bond-No companions yetHatch eggs from your collection to unlock pets.InventoryChoose a Pet",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/insights",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/insights",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_insights_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Insights"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Weekly analyticsInsightsA dynamic view of quest completion, category balance, and reward growth.Today's quests0/5Quests last 7 days0Total missions cleared0XP earned0EcoPoints0Overall progress0%ActivityQuest Completion Trend7 days0Tue0Wed0Thu0Fri0Sat0Sun0MonBreakdownCategory DistributionRecycling0%0/",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/insights",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/insights",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_insights_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Insights"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Weekly analyticsInsightsA dynamic view of quest completion, category balance, and reward growth.Today's quests0/5Quests last 7 days0Total missions cleared0XP earned0EcoPoints0Overall progress0%ActivityQuest Completion Trend7 days0Tue0Wed0Thu0Fri0Sat0Sun0MonBreakdownCategory DistributionRecycling0%0/",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/impact",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/impact",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_impact_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Impact Dashboard"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Your real-world footprintImpact DashboardEvery quest completed has a real impact. Here's yours — and the community's.CO₂ saved0.0 kgTrees planted0Missions done0CO₂ Reduced0.0 kgTrees Planted0Missions Done0XP Earned0Real-world rewardsTree Planting Milestones0/6 claimedNext milestone🌳 Reach Level 5 →",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/impact",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/impact",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_impact_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Impact Dashboard"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Your real-world footprintImpact DashboardEvery quest completed has a real impact. Here's yours — and the community's.CO₂ saved0.0 kgTrees planted0Missions done0CO₂ Reduced0.0 kgTrees Planted0Missions Done0XP Earned0Real-world rewardsTree Planting Milestones0/6 claimedNext milestone🌳 Reach Level 5 →",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/premium",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/premium",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_premium_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Premium"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Unlock more impactPremiumSupercharge your eco journey with advanced features. Coming soon — join the waitlist.🚧Premium is in developmentAll features below are planned for a future release. Free tier remains free forever.Free$0forever✓5 daily quests✓Basic leaderboard✓Carbon tracking✓Tree planting mi",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/premium",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/premium",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_premium_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Premium"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Unlock more impactPremiumSupercharge your eco journey with advanced features. Coming soon — join the waitlist.🚧Premium is in developmentAll features below are planned for a future release. Free tier remains free forever.Free$0forever✓5 daily quests✓Basic leaderboard✓Carbon tracking✓Tree planting mi",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/profile",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/profile",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_profile_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "audit-1785767426831"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fsunflower.png&w=48&q=75"
+    ],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Level 1audit-1785767426831Your profileAXP0Missions0Streak1dEdit profileLevel1Missions Done0CO₂ Reduced0.0 kgEcoPoints0Current Streak1dBest Streak1dLogin activityStreak StatusLast login 2026-08-03Current run1 daysPersonal best1 daysAchievement trackingQuest Category ProgressRecycling0/10 quests0%0.0/",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/profile",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/profile",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_profile_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "audit-1785767426831"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [
+      "http://localhost:3000/_next/image?url=%2Fimages%2Fplants%2Fsunflower.png&w=48&q=75"
+    ],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Level 1audit-1785767426831Your profileAXP0Missions0Streak1dEdit profileLevel1Missions Done0CO₂ Reduced0.0 kgEcoPoints0Current Streak1dBest Streak1dLogin activityStreak StatusLast login 2026-08-03Current run1 daysPersonal best1 daysAchievement trackingQuest Category ProgressRecycling0/10 quests0%0.0/",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/team",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/team",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_team_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Team Hub"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Cooperative playTeam HubCollaborate on eco goals with your squad.Create TeamJoin via Code👥You're not part of a team yetCreate a cozy squad or join with a 6-character code.Start a TeamHave a Code?",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/team",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/team",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_team_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Team Hub"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Cooperative playTeam HubCollaborate on eco goals with your squad.Create TeamJoin via Code👥You're not part of a team yetCreate a cozy squad or join with a 6-character code.Start a TeamHave a Code?",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/friends",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/friends",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_friends_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Friends"
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": "Search by name or email"
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Social gardenFriendsAdd players, send cheers, and complete social quests that turn encouragement into progress.Friends0Your Level1Cheers0Your XP0Your EcoPoints0Friends Added0Cheers Today0/5Social questsFriend ChallengesAdd your first friendBuild your social garden by adding one player.0/1Reward: +35",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/friends",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/friends",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_friends_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Friends"
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": "Search by name or email"
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Social gardenFriendsAdd players, send cheers, and complete social quests that turn encouragement into progress.Friends0Your Level1Cheers0Your XP0Your EcoPoints0Friends Added0Cheers Today0/5Social questsFriend ChallengesAdd your first friendBuild your social garden by adding one player.0/1Reward: +35",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/leaderboard",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/leaderboard",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_leaderboard_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Leaderboard"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Global rankingsLeaderboardTop EcoLudus players and teams ranked by XP earned and missions completed.👤 Individual🌿 Team2ndAAnonymousLvl 134 XP1stYyusagullu06Lvl 2240 XP3rdTteam-test-1781345518072Lvl 10 XPFull listRankings8 players#PlayerLevelXP1Yyusagullu06Lvl 2Lv 2240XP2AAnonymousLvl 1Lv 134XP3Tte",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/leaderboard",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/leaderboard",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_leaderboard_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Leaderboard"
+    ],
+    "formInputs": [],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "Global rankingsLeaderboardTop EcoLudus players and teams ranked by XP earned and missions completed.👤 Individual🌿 Team2ndAAnonymousLvl 134 XP1stYyusagullu06Lvl 2240 XP3rdTteam-test-1781345518072Lvl 10 XPFull listRankings8 players#PlayerLevelXP1Yyusagullu06Lvl 2Lv 2240XP2AAnonymousLvl 1Lv 134XP3Tte",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/settings",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/settings",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_settings_1280x900.png",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Settings"
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "display-name",
+        "label": true,
+        "aria": false,
+        "placeholder": "Your name"
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "AccountSettingsUpdate your profile, choose a theme, and manage notifications.ProfileYour InfoAAdd picturePNG, JPEG, or WebP. We resize it to a square automatically.Display name19/32Emailaudit-1785767426831@example.comSave profileAppearanceThemeLight✓Calm forest greens on warm creamDarkDeep forest ni",
+    "redirected": false,
+    "serverError": false
+  },
+  {
+    "path": "/settings",
+    "title": "EcoLudus | Sustainable Habits & Rewards",
+    "status": 200,
+    "finalUrl": "http://localhost:3000/settings",
+    "consoleErrors": [],
+    "failedRequests": [],
+    "screenshotPath": "C:\\Users\\yusag\\Projects\\EcoLudus\\screenshots\\audit\\_settings_390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "h1Count": 1,
+    "visibleH1s": [
+      "Settings"
+    ],
+    "formInputs": [
+      {
+        "tag": "input",
+        "id": "",
+        "label": false,
+        "aria": false,
+        "placeholder": ""
+      },
+      {
+        "tag": "input",
+        "id": "display-name",
+        "label": true,
+        "aria": false,
+        "placeholder": "Your name"
+      }
+    ],
+    "brokenImages": [],
+    "missingAltImages": [],
+    "htmlValidationNotes": [],
+    "visibleTextPreview": "AccountSettingsUpdate your profile, choose a theme, and manage notifications.ProfileYour InfoAAdd picturePNG, JPEG, or WebP. We resize it to a square automatically.Display name19/32Emailaudit-1785767426831@example.comSave profileAppearanceThemeLight✓Calm forest greens on warm creamDarkDeep forest ni",
+    "redirected": false,
+    "serverError": false
+  }
+]

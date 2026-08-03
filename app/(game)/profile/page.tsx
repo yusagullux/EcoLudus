@@ -8,7 +8,7 @@ export default function ProfilePage() {
 
   const publicProfile: PublicProfile = {
     id: String(user?.uid ?? ""),
-    displayName: String(profile?.displayName || user?.email?.split("@")[0] || "Explorer"),
+    displayName: String(profile?.displayName || user?.email?.split("@")[0] || "Eco Explorer"),
     profileImage: typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null,
     xp: Number(profile?.xp ?? 0),
     level: Number(profile?.level ?? 1),

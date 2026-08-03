@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
-import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { useToast } from "@/lib/toast";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
@@ -73,13 +73,14 @@ function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; disco
   const fitClass = fit === "contain" ? "object-contain p-1.5" : "object-cover";
 
   // Locked entries render as a pure silhouette: brightness(0) kills color,
-  // opacity(0.55) softens it into a dark shape over the panel.
+  // opacity(0.55) softens it into a dark shape over the panel. The alt text is
+  // descriptive but non-spoilering — it tells assistive-tech users a discoverable
+  // species card is here without revealing the name shown as "???".
   if (!discovered) {
     return (
       <Image
         src={entry.image}
-        alt=""
-        aria-hidden="true"
+        alt="Locked species — not yet discovered"
         fill
         sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
         onError={() => setImgError(true)}
@@ -462,26 +463,26 @@ export default function CollectionPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Your nature collection" title="My Collection" description="Discover every species. Locked entries reveal as you earn them.">
+      <PageHero eyebrow="Your nature collection" title="My Collection" description="Discover every species. Locked entries reveal as you earn them." accent={heroAccents.collection}>
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Plants" value={`${stats.plants.found}/${stats.plants.total}`} />
           <HeroMetric label="Eggs" value={`${stats.eggs.found}/${stats.eggs.total}`} />
           <HeroMetric label="Pets" value={`${stats.animals.found}/${stats.animals.total}`} />
           <HeroMetric label="Seeds" value={`${stats.seeds.found}/${stats.seeds.total}`} />
           <HeroMetric label="Chests" value={`${stats.chests.found}/${stats.chests.total}`} />
-          <HeroMetric label="Eco" value={ecoPoints.toLocaleString()} />
+          <HeroMetric label="EcoPoints" value={ecoPoints.toLocaleString()} />
         </div>
       </PageHero>
 
       <Panel>
         <div className="flex flex-col gap-4">
           {/* Mode tabs */}
-          <div className="inline-flex w-fit rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
+          <div className="inline-flex w-fit max-w-full overflow-x-auto rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
             {(["plants", "eggs", "animals", "seeds", "chests"] as CollMode[]).map((itemMode) => (
               <button
                 key={itemMode}
                 onClick={() => { setMode(itemMode); setFilter("all"); }}
-                className="rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
+                className="shrink-0 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
                 style={mode === itemMode
                   ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
                   : { color: "var(--text-muted)" }}
@@ -491,12 +492,12 @@ export default function CollectionPage() {
             ))}
           </div>
           {/* Rarity filter */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
             {tabs.map((rarity) => (
               <button
                 key={rarity}
                 onClick={() => setFilter(rarity)}
-                className="rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
+                className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
                 style={filter === rarity
                   ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
                   : { background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--pill-text)" }}
@@ -594,12 +595,14 @@ export default function CollectionPage() {
                         <>
                           <button
                             onClick={() => warmEgg(hatching)}
+                            title="Warms the egg — costs 10 EcoPoints"
                             className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 text-[10px] font-black uppercase tracking-wider transition bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
                           >
                             🔥 Warm (10 EP)
                           </button>
                           <button
                             onClick={() => hatchInstantly(hatching)}
+                            title={`Hatch instantly — costs ${instantCost} EcoPoints`}
                             className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 text-[10px] font-black uppercase tracking-wider transition bg-forest-950 text-cream-100 hover:bg-forest-800"
                           >
                             ⚡ Hatch ({instantCost} EP)
@@ -639,7 +642,7 @@ export default function CollectionPage() {
       ) : filtered.length === 0 ? (
         <Panel>
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 text-center">
-            <Image src="/images/plants/sunflower.png" alt="" width={80} height={80} className="object-contain opacity-60" />
+            <Image src="/images/plants/sunflower.png" alt="No matching species illustration" width={80} height={80} className="object-contain opacity-60" />
             <div>
               <p className="font-serif text-xl font-extrabold" style={{ color: "var(--text-primary)" }}>Nothing matches that filter</p>
               <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>Try a different rarity, or the “all” filter.</p>
@@ -659,14 +662,31 @@ export default function CollectionPage() {
               <article
                 key={`${mode}-${entry.id}-${entry.name}`}
                 className="reveal-card group relative flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
-                style={{ borderColor: border, background: "var(--bg-card)" }}
+                style={{
+                  borderColor: border,
+                  background: "var(--bg-card)",
+                  borderStyle: discovered ? "solid" : "dashed"
+                }}
+                title={discovered ? undefined : "Complete quests to unlock"}
               >
                 {discovered && isActive && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
                 {!discovered && <span className="absolute left-2 top-2 z-10 text-base">🔒</span>}
 
                 {/* Framed card image design - full bleed aspect ratio */}
-                <div className="relative flex aspect-square items-center justify-center overflow-hidden" style={{ background: discovered ? `${style.accent}12` : "var(--bg-panel-alt)" }}>
+                <div
+                  className="relative flex aspect-square items-center justify-center overflow-hidden"
+                  style={{
+                    background: discovered ? `${style.accent}12` : "linear-gradient(160deg, var(--bg-panel-alt), color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel-alt)))"
+                  }}
+                >
                   <CardImage entry={entry} discovered={discovered} mode={mode} />
+                  {/* Hover affordance for locked cards — tells the user this is
+                      discoverable content, not a broken/empty tile. */}
+                  {!discovered && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 translate-y-full bg-black/55 px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-white opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                      Complete quests to unlock
+                    </div>
+                  )}
                   {discovered && <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{entry.rarity}</span>}
                   {discovered && count > 1 && <span className="absolute bottom-2 right-2 z-10 rounded-full bg-forest-950 px-2 py-0.5 text-[9px] font-extrabold text-cream-100">×{count}</span>}
                 </div>

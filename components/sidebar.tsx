@@ -161,7 +161,7 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
   const level = Number(profile?.level) || 1;
   const xp = Number(profile?.xp) || 0;
   const ecoPoints = Number(profile?.ecoPoints) || 0;
-  const displayName = String(profile?.displayName || user?.email?.split("@")[0] || "Explorer");
+  const displayName = String(profile?.displayName || user?.email?.split("@")[0] || "Eco Explorer");
   const profileImage = typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null;
 
   return (
@@ -181,10 +181,10 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
       {profile && (
         <div className="mx-3 mb-4 shrink-0">
           <div className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: "var(--sidebar-active-bg)" }}>
-            <Avatar name={displayName} src={profileImage} size={28} className="ring-2 ring-white/10" />
+            <Avatar name={displayName} src={profileImage} size={28} className="ring-2 ring-white/10 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-bold leading-tight" style={{ color: "var(--text-sidebar)" }}>{displayName}</p>
-              <p className="text-[9px]" style={{ color: "var(--text-sidebar-muted)" }}>Lv {level} · {xp.toLocaleString()} XP</p>
+              <p className="truncate text-[11px] font-bold leading-tight" style={{ color: "var(--text-sidebar)" }} title={displayName}>{displayName}</p>
+              <p className="mt-0.5 text-[9px]" style={{ color: "var(--text-sidebar-muted)" }}>Lv {level} · {xp.toLocaleString()} XP</p>
             </div>
           </div>
         </div>
@@ -374,7 +374,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
           {profile && (
             <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5" style={{ background: "var(--sidebar-active-bg)" }}>
               <Avatar
-                name={String(profile?.displayName || user?.email?.split("@")[0] || "Explorer")}
+                name={String(profile?.displayName || user?.email?.split("@")[0] || "Eco Explorer")}
                 src={typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null}
                 size={20}
               />

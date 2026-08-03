@@ -54,10 +54,20 @@ export function AuthCard({ mode }: AuthCardProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [rememberMe, setRememberMe] = useState(mode === "login");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  // Tracks fields the user has interacted with, so inline validation only
+  // appears after they've had a chance to type — not on the initial empty form.
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const content = copy[mode];
+
+  // Inline validation — recomputed every render so once a field is touched,
+  // the message updates live as they keep typing. Empty values are left to the
+  // native `required` attribute so we don't nag before the user starts.
+  const emailInvalid = touched.email && email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const passwordInvalid = touched.password && password.length > 0 && password.length < 6;
 
   useEffect(() => {
     if (mode !== "login" || !getRememberedSession()) {
@@ -102,6 +112,14 @@ export function AuthCard({ mode }: AuthCardProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    // Client-side guard: if the fields are invalid, surface the inline errors
+    // (by marking them touched) and bail before hitting the network.
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    const passwordOk = password.length >= 6;
+    if (!emailOk || !passwordOk) {
+      setTouched({ email: true, password: true });
+      return;
+    }
     setPending(true);
     const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/signup";
     try {
@@ -109,7 +127,12 @@ export function AuthCard({ mode }: AuthCardProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password })
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          // Only forward a display name on signup — the login route ignores it.
+          ...(mode === "signup" && displayName.trim() ? { displayName: displayName.trim() } : {})
+        })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.error?.code || "auth/internal-error");
@@ -138,9 +161,9 @@ export function AuthCard({ mode }: AuthCardProps) {
           <span className="inline-flex rounded-full border border-white/12 bg-white/8 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.24em] text-moss-200">
             Forest Edition
           </span>
-          <h1 className="mt-8 max-w-xl text-balance font-serif text-5xl font-extrabold leading-[1.04] text-cream-100">
+          <h2 className="mt-8 max-w-xl text-balance font-serif text-5xl font-extrabold leading-[1.04] text-cream-100">
             A focused operating room for sustainable habits.
-          </h1>
+          </h2>
           <p className="mt-6 max-w-md text-base leading-7 text-cream-100/68">
             Quiet surfaces, strong hierarchy, and measured contrast keep the product useful while giving it a more distinctive identity.
           </p>
@@ -178,6 +201,27 @@ export function AuthCard({ mode }: AuthCardProps) {
           <p className="mt-3 text-sm leading-6" style={{ color: "var(--text-secondary)" }}>{content.subtitle}</p>
 
           <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
+            {mode === "signup" && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="displayName" className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-secondary)" }}>
+                  Display name <span className="font-bold normal-case tracking-normal" style={{ color: "var(--text-muted)" }}>(optional)</span>
+                </label>
+                <input
+                  id="displayName"
+                  type="text"
+                  autoComplete="nickname"
+                  maxLength={50}
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  placeholder="e.g. Eco Explorer"
+                  className={inputClass}
+                />
+                <p className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>
+                  Shown on your profile, sidebar, and leaderboard. Leave blank to use your email prefix.
+                </p>
+              </div>
+            )}
+
             <div className="flex flex-col gap-1.5">
               <label htmlFor="email" className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-secondary)" }}>
                 Email
@@ -189,9 +233,17 @@ export function AuthCard({ mode }: AuthCardProps) {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                aria-invalid={emailInvalid || undefined}
+                aria-describedby={emailInvalid ? "email-error" : undefined}
                 placeholder="you@example.com"
                 className={inputClass}
               />
+              {emailInvalid && (
+                <p id="email-error" className="text-[11px] font-semibold text-rose-600">
+                  Enter a valid email address.
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -206,9 +258,17 @@ export function AuthCard({ mode }: AuthCardProps) {
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+                aria-invalid={passwordInvalid || undefined}
+                aria-describedby={passwordInvalid ? "password-error" : undefined}
                 placeholder="At least 6 characters"
                 className={inputClass}
               />
+              {passwordInvalid && (
+                <p id="password-error" className="text-[11px] font-semibold text-rose-600">
+                  Password must be at least 6 characters.
+                </p>
+              )}
             </div>
 
             {mode === "login" && (

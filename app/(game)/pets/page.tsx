@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { computeVitals } from "@/lib/pet-vitals";
-import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 
 function getPetImage(pet: any) {
   if (pet?.image) return pet.image;
@@ -237,19 +237,25 @@ export default function PetsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Companion care" title="Pets" description="Train, feed, and bond with companions to earn small daily rewards and make them stronger travel partners.">
+      <PageHero eyebrow="Companion care" title="Pets" description="Train, feed, and bond with companions to earn small daily rewards and make them stronger travel partners." accent={heroAccents.pets}>
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Pets" value={totalPets} />
-          <HeroMetric label="Happy" value={`${avgHappiness}%`} />
-          <HeroMetric label="Bond" value={selectedPet ? `Lv ${selectedBondLevel}` : "-"} />
+          <HeroMetric label="Happy" value={`${avgHappiness}%`} hint="Average happiness across all your companions." />
+          <HeroMetric
+            label="Bond"
+            value={selectedPet ? `Lv ${selectedBondLevel}` : "-"}
+            hint="Bond level grows as you train, feed, and spend time with a companion. Higher bond makes them stronger travel partners."
+          />
         </div>
       </PageHero>
 
       {!selectedPet ? (
         <Panel>
-          <div className="rounded-2xl border border-dashed p-10 text-center" style={{ borderColor: "var(--border-default)", color: "var(--text-muted)" }}>
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center" style={{ borderColor: "var(--border-default)", color: "var(--text-muted)" }}>
+            <span className="text-5xl" aria-hidden>🥚</span>
             <p className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>No companions yet</p>
-            <p className="mt-1 text-sm">Hatch eggs from your collection to unlock pets.</p>
+            <p className="max-w-xs text-sm">Hatch eggs from your collection to unlock pets, then train and feed them to grow your bond.</p>
+            <a href="/collection" className={`${primaryButton} mt-1`}>Browse your eggs</a>
           </div>
         </Panel>
       ) : (
@@ -310,7 +316,9 @@ export default function PetsPage() {
                       title={blocked ? `Daily eco limit reached (${MAX_ECO_ACTIONS_PER_DAY}/day)` : undefined}
                     >
                       {action.label}
-                      <span className="ml-1 opacity-70">{action.cost ? `${action.cost} EP` : `+${action.xp} XP`}</span>
+                      <span className="ml-1 opacity-70" title={action.cost ? "EcoPoints" : "Experience points"}>
+                        {action.cost ? `${action.cost} EP` : `+${action.xp} XP`}
+                      </span>
                     </button>
                   );
                 })}
