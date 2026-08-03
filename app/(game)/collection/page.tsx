@@ -477,7 +477,7 @@ export default function CollectionPage() {
       <Panel>
         <div className="flex flex-col gap-4">
           {/* Mode tabs */}
-          <div className="inline-flex w-fit max-w-full overflow-x-auto rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
+          <div className="no-scrollbar inline-flex w-fit max-w-full overflow-x-auto rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
             {(["plants", "eggs", "animals", "seeds", "chests"] as CollMode[]).map((itemMode) => (
               <button
                 key={itemMode}
@@ -492,7 +492,7 @@ export default function CollectionPage() {
             ))}
           </div>
           {/* Rarity filter */}
-          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible">
             {tabs.map((rarity) => (
               <button
                 key={rarity}

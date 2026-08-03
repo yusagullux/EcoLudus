@@ -425,6 +425,11 @@ a, button, input, textarea, select {
 .reveal-card:nth-child(4) { animation-delay: 105ms; }
 .reveal-card:nth-child(5) { animation-delay: 140ms; }
 
+/* Hide scrollbars on horizontal chip rows so they read as a single contained
+   strip (Shop/Collection filter bars) while staying touch-scrollable. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 .logo-breathe {
   animation: logoBreathe 2.4s cubic-bezier(0.37,0,0.63,1) infinite;
   will-change: transform, filter;

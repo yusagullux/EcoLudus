@@ -97,12 +97,12 @@ export default function ShopPage() {
 
       <Panel>
         <div className="flex flex-col gap-4">
-          <div className="inline-flex w-fit rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
+          <div className="no-scrollbar inline-flex w-fit max-w-full overflow-x-auto rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
             {(["plants", "eggs", "chests"] as Mode[]).map((itemMode) => (
               <button
                 key={itemMode}
                 onClick={() => { setMode(itemMode); setFilter("all"); }}
-                className="rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
+                className="shrink-0 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
                 style={mode === itemMode
                   ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
                   : { color: "var(--text-muted)" }}
@@ -111,7 +111,7 @@ export default function ShopPage() {
               </button>
             ))}
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible">
             {tabs.map((rarity) => (
               <button
                 key={rarity}
