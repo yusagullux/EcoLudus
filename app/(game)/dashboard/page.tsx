@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useQuests } from "@/lib/useQuests";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
@@ -255,7 +254,7 @@ export default function DashboardPage() {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   };
 
-  const displayName = profile?.displayName || user?.email?.split("@")[0] || "Explorer";
+  const displayName = String(profile?.displayName || user?.email?.split("@")[0] || "Eco Explorer");
   const xp = Number(profile?.xp ?? 0);
   const ecoPoints = Number(profile?.ecoPoints ?? 0);
   const level = Number(profile?.level ?? 1);
@@ -477,12 +476,51 @@ export default function DashboardPage() {
   };
 
   if (loading || loadingQuests) {
+    // Skeleton that mirrors the real dashboard layout (hero + metric grid + quest
+    // panel) so the page reserves the same space up front — no layout shift once
+    // useAuth and the daily quests resolve. White-on-dark bars suit the dark hero
+    // gradient; panel-alt bars shimmer against the panel surface.
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <div className="logo-breathe relative h-14 w-14 overflow-hidden rounded-2xl bg-white shadow-[0_18px_38px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10">
-          <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="56px" className="object-cover" />
+      <div className="flex flex-col gap-5" aria-busy="true" role="status" aria-live="polite">
+        <span className="sr-only">Loading your dashboard…</span>
+
+        {/* Hero skeleton */}
+        <div className="relative overflow-hidden rounded-[22px] p-6 sm:p-8" style={{ background: "var(--bg-hero)" }}>
+          <div className="flex flex-col gap-4">
+            <div className="h-3 w-24 animate-pulse rounded-full bg-white/25" />
+            <div className="h-8 w-2/3 animate-pulse rounded-lg bg-white/25" />
+            <div className="h-4 w-full max-w-xl animate-pulse rounded bg-white/15" />
+            <div className="mt-2 flex flex-wrap gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-14 w-20 animate-pulse rounded-xl bg-white/15" />
+              ))}
+            </div>
+          </div>
         </div>
-        <p className="text-sm font-semibold text-forest-800">Synchronizing daily quest rhythm...</p>
+
+        {/* Metric card grid skeleton */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-[18px] p-5"
+              style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)" }}
+            >
+              <div className="h-3 w-20 animate-pulse rounded bg-[var(--bg-panel-alt)]" />
+              <div className="mt-3 h-6 w-16 animate-pulse rounded bg-[var(--bg-panel-alt)]" />
+            </div>
+          ))}
+        </div>
+
+        {/* Quest panel skeleton */}
+        <div className="rounded-[18px] p-6" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)" }}>
+          <div className="h-4 w-32 animate-pulse rounded bg-[var(--bg-panel-alt)]" />
+          <div className="mt-5 flex flex-col gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-16 w-full animate-pulse rounded-xl bg-[var(--bg-panel-alt)]" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -491,15 +529,19 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-5">
       <PageHero
         eyebrow="Today's quest hub"
-        title={`Welcome back, ${displayName}`}
+        title={<>Welcome back, <span className="break-words" title={displayName}>{displayName}</span></>}
         description={`${completedToday} of ${quests.length} missions complete today. Keep the rhythm focused and visible.`}
       >
         <div className="flex flex-wrap gap-3">
-          <HeroMetric label="XP" value={xp.toLocaleString()} />
-          <HeroMetric label="Eco" value={ecoPoints.toLocaleString()} />
+          <HeroMetric label="XP" value={xp.toLocaleString()} hint="Experience points — earned from every completed quest. Level is derived from your total XP." />
+          <HeroMetric label="EcoPoints" value={ecoPoints.toLocaleString()} hint="EcoPoints are the in-app currency earned from quests — spend them in the Plant Shop." />
           <HeroMetric label="Level" value={level} />
-          <HeroMetric label="Streak" value={`${currentStreak}d`} />
-          <HeroMetric label="Impact this week" value={weekImpact === null ? "—" : weekImpact.toLocaleString()} />
+          <HeroMetric label="Streak" value={`${currentStreak}d`} hint="Consecutive days you've completed at least one quest. Keep the streak alive for bonus rewards." />
+          <HeroMetric
+            label="Impact this week"
+            value={weekImpact === null ? "—" : weekImpact.toLocaleString()}
+            hint="Total impact from quests completed this week. Complete quests to grow your weekly impact."
+          />
           {activePet && <HeroMetric label="Pet" value={activePet.name} />}
         </div>
       </PageHero>
@@ -646,7 +688,7 @@ export default function DashboardPage() {
                         setPhotoPreview(null);
                         setVerificationError(null);
                       }}
-                      className="mt-1 min-h-11 rounded-full px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider transition"
+                      className="mt-1 min-h-11 rounded-full px-3 py-2 text-[10px] font-extrabold tracking-[0.02em] transition"
                       style={isVerified
                         ? { background: "var(--sidebar-active-bg)", color: "var(--text-sidebar-muted)" }
                         : { background: "#fef3c7", color: "#92400e" }}
@@ -803,7 +845,7 @@ export default function DashboardPage() {
                   />
                   {photoPreview && (
                     <div className="overflow-hidden rounded-xl border border-forest-100 bg-forest-50 p-2 text-center">
-                      <img src={photoPreview} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
+                      <img src={photoPreview} alt="Preview" className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover" />
                     </div>
                   )}
                 </div>

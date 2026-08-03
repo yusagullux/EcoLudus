@@ -73,7 +73,7 @@ const CATEGORY_TOTALS: Record<string, number> = {
 };
 
 export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile; isOwner: boolean }) {
-  const displayName = profile.displayName || "Explorer";
+  const displayName = profile.displayName || "Eco Explorer";
   const xp = Number(profile.xp ?? 0);
   const ecoPoints = Number(profile.ecoPoints ?? 0);
   const level = Number(profile.level ?? 1);
@@ -106,7 +106,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow={`Level ${level}`} title={displayName} description={isOwner ? "Your profile" : "Public profile"}>
+      <PageHero eyebrow={`Level ${level}`} title={<span className="break-words" title={displayName}>{displayName}</span>} description={isOwner ? "Your profile" : "Public profile"}>
         <div className="flex flex-wrap items-center gap-3">
           <Avatar name={displayName} src={profile.profileImage} size={80} className="ring-2 ring-white/20" />
           <HeroMetric label="XP" value={xp.toLocaleString()} />
@@ -134,11 +134,11 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Current run</p>
-            <p className="mt-2 font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>{currentStreak} days</p>
+            <p className="mt-2 font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>{currentStreak} day{currentStreak === 1 ? "" : "s"}</p>
           </div>
           <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Personal best</p>
-            <p className="mt-2 font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>{longestStreak} days</p>
+            <p className="mt-2 font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>{longestStreak} day{longestStreak === 1 ? "" : "s"}</p>
           </div>
         </div>
       </Panel>
@@ -173,7 +173,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
         </div>
       </Panel>
 
-      <Panel eyebrow="Rare finds" title="Collection Book" action={<Pill>{profilePlants.reduce((sum: number, plant: { count?: number }) => sum + (plant.count ?? 1), 0)} plants</Pill>}>
+      <Panel eyebrow="Rare finds" title="Collection Book" action={<Pill>{(() => { const n = profilePlants.reduce((sum: number, plant: { count?: number }) => sum + (plant.count ?? 1), 0); return `${n} plant${n === 1 ? "" : "s"}`; })()}</Pill>}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {profilePlants.length > 0 ? (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -199,7 +199,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
           {isOwner && (
             <a href="/shop" className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-4 text-center transition hover:-translate-y-0.5" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}>
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--bg-panel)" }}>
-                <Image src="/images/plants/sunflower.png" alt="" width={40} height={40} className="object-contain" />
+                <Image src="/images/plants/sunflower.png" alt="Plant shop" width={40} height={40} className="object-contain" />
               </span>
               <span className="text-xs font-extrabold uppercase tracking-[0.08em]">Visit Shop</span>
             </a>

@@ -18,13 +18,36 @@ type PageHeroProps = {
   title: ReactNode;
   description: string;
   children?: ReactNode;
+  // Optional CSS background that overrides the default --bg-hero gradient so
+  // each section can carry its own accent color (blue for Insights, amber for
+  // Shop, purple for Team…). All accents in `heroAccents` below are dark
+  // gradients, so the white hero text stays readable across every theme.
+  accent?: string;
 };
 
-export function PageHero({ eyebrow, title, description, children }: PageHeroProps) {
+// Per-section hero accents. Dark, low-saturation gradients keyed by section so
+// the app's information hierarchy isn't a flat wall of identical forest-green
+// heroes. The default (no accent) keeps the theme's --bg-hero for the spine
+// pages (Dashboard, Impact, Profile).
+export const heroAccents = {
+  habits:      "linear-gradient(135deg, #0e1430 0%, #1a2a5a 55%, #2e4a8a 100%)",
+  shop:        "linear-gradient(135deg, #2e1d10 0%, #7b5832 55%, #b08d60 100%)",
+  collection:  "linear-gradient(135deg, #0a1f1f 0%, #0f3d3a 55%, #1e6b5e 100%)",
+  garden:      "linear-gradient(135deg, #0a1f10 0%, #115f2e 55%, #2e7a45 100%)",
+  pets:        "linear-gradient(135deg, #3a1525 0%, #6b2a45 55%, #a8456b 100%)",
+  insights:    "linear-gradient(135deg, #071828 0%, #0d3540 55%, #1e4a6b 100%)",
+  premium:     "linear-gradient(135deg, #2e2410 0%, #6b5215 55%, #b08d20 100%)",
+  team:        "linear-gradient(135deg, #2a1545 0%, #4a2a7a 55%, #7a4aa8 100%)",
+  friends:     "linear-gradient(135deg, #14203a 0%, #2a3a6b 55%, #4a6aa8 100%)",
+  leaderboard: "linear-gradient(135deg, #2e2410 0%, #6b5215 55%, #b08d20 100%)",
+  settings:    "linear-gradient(135deg, #0e1418 0%, #1e2a32 55%, #3a4a52 100%)"
+} as const;
+
+export function PageHero({ eyebrow, title, description, children, accent }: PageHeroProps) {
   return (
     <section
       className="relative overflow-hidden rounded-[22px] border border-white/10 px-5 py-6 sm:px-8 sm:py-8"
-      style={{ background: "var(--bg-hero)", boxShadow: "var(--shadow-hero)" }}
+      style={{ background: accent ?? "var(--bg-hero)", boxShadow: "var(--shadow-hero)" }}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/20" />
       <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -42,10 +65,24 @@ export function PageHero({ eyebrow, title, description, children }: PageHeroProp
 }
 
 // ── HeroMetric ────────────────────────────────────────────────
-export function HeroMetric({ label, value }: { label: string; value: ReactNode }) {
+export function HeroMetric({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
-    <div className="min-w-[70px] rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-center">
-      <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-moss-300">{label}</div>
+    <div
+      className="relative min-w-[70px] rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-center"
+      title={hint}
+    >
+      <div className="flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-[0.18em] text-moss-300">
+        {label}
+        {hint && (
+          <span
+            className="inline-flex h-3 w-3 items-center justify-center rounded-full border border-white/25 text-[8px] text-white/70"
+            aria-label="More info"
+            role="img"
+          >
+            i
+          </span>
+        )}
+      </div>
       <div className="mt-1 font-serif text-xl font-bold leading-none text-white">{value}</div>
     </div>
   );
@@ -61,10 +98,16 @@ export function MetricCard({ label, value, accent = "#2f6b46", wide = false }: M
       style={{ boxShadow: "var(--shadow-card)" }}
     >
       <div className="mb-2 h-[3px] w-7 rounded-full" style={{ background: accent }} />
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
+      <p
+        className="min-h-[1.6rem] text-[10px] font-bold uppercase tracking-[0.14em]"
+        style={{ color: "var(--text-muted)" }}
+      >
         {label}
       </p>
-      <p className="mt-1.5 font-serif text-2xl font-bold leading-none" style={{ color: "var(--text-primary)" }}>
+      <p
+        className="mt-1.5 min-h-[1.75rem] font-serif text-2xl font-bold leading-none"
+        style={{ color: "var(--text-primary)" }}
+      >
         {value}
       </p>
     </article>
@@ -78,11 +121,13 @@ type PanelProps = {
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  id?: string;
 };
 
-export function Panel({ eyebrow, title, action, children, className = "" }: PanelProps) {
+export function Panel({ eyebrow, title, action, children, className = "", id }: PanelProps) {
   return (
     <section
+      id={id}
       className={`t-panel rounded-[18px] ${className}`}
       style={{ boxShadow: "var(--shadow-card)" }}
     >
@@ -122,7 +167,13 @@ export function ProgressBar({ value, color = "#2f6b46" }: { value: number; color
   return (
     <div
       className="h-1.5 overflow-hidden rounded-full"
-      style={{ background: "var(--border-subtle, #e7ecdf)" }}
+      style={{
+        background: "var(--border-subtle, #e7ecdf)",
+        // Subtle inset edge so an empty (0%) bar is still visible — without it
+        // the track and the panel behind it are too close in value and the bar
+        // effectively disappears at 0%.
+        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--border-default, #dfe7d7) 70%, transparent)"
+      }}
     >
       <div
         className="h-full rounded-full transition-all duration-700 ease-out"
@@ -153,8 +204,11 @@ export function Pill({ children, active = false }: { children: ReactNode; active
 }
 
 // ── Buttons ───────────────────────────────────────────────────
+// Labels render in their natural (sentence) case — the source strings are
+// already cased correctly, so we no longer CSS-uppercase them. Wide all-caps
+// tracking made longer labels ("Select missions to complete") hard to scan.
 export const buttonBase =
-  "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+  "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold tracking-[0.02em] transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
 export const primaryButton =
   `${buttonBase} bg-forest-950 text-cream-100 shadow-[0_8px_24px_rgba(16,33,20,0.18)] hover:-translate-y-0.5 hover:bg-forest-800 focus-visible:ring-forest-600`;

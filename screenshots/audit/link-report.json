@@ -1,0 +1,10 @@
+{
+  "checked": [
+    "/landing",
+    "/login",
+    "/signup",
+    "/legal/terms",
+    "/legal/privacy"
+  ],
+  "broken": []
+}

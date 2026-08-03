@@ -356,6 +356,27 @@ label, button, input, select, textarea, nav {
   font-family: var(--font-body-font);
 }
 
+/* Visible keyboard focus for all interactive elements. The heavy custom
+   styling (theme vars, inline styles) can suppress native outlines, so we
+   enforce a clear :focus-visible ring that works across every theme. Mouse
+   clicks don't trigger :focus-visible, so this only shows for keyboard users. */
+:focus-visible {
+  outline: 2px solid var(--text-accent, #43653f);
+  outline-offset: 2px;
+}
+[data-theme="liquid"] :focus-visible {
+  outline-color: #5dcfe0;
+}
+[data-theme="aurora"] :focus-visible {
+  outline-color: #4ad6c7;
+}
+[data-theme="bloom"] :focus-visible {
+  outline-color: #c8478a;
+}
+[data-theme="dawn"] :focus-visible {
+  outline-color: #c2822a;
+}
+
 /* Explicit paragraph styling — Inter, relaxed line-height */
 p, li, td, th, blockquote, figcaption {
   font-family: var(--font-body-font);

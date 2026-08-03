@@ -16,6 +16,7 @@ import {
   primaryButton,
   secondaryButton,
   inputClass,
+  heroAccents,
 } from "@/components/game-ui";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -297,6 +298,7 @@ export default function TeamPage() {
         eyebrow="Cooperative play"
         title="Team Hub"
         description="Collaborate on eco goals with your squad."
+        accent={heroAccents.team}
       >
         {joined ? (
           <div className="flex flex-wrap gap-3">
@@ -635,7 +637,7 @@ export default function TeamPage() {
             {teamPhotoPreview && (
               <div className="mt-2 overflow-hidden rounded-xl border p-2 text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={teamPhotoPreview} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
+                <img src={teamPhotoPreview} alt="Preview" className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover" />
               </div>
             )}
           </div>

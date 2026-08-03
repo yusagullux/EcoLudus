@@ -1,9 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { MarketingShell } from "@/components/marketing-shell";
 import { LiveStatsCard } from "@/components/live-stats-card";
 import { GardenPreview } from "@/components/garden-preview";
+
+export const metadata: Metadata = {
+  title: "EcoLudus | Sustainable Habits, Real Impact",
+  description: "EcoLudus turns eco-friendly habits into a rewarding daily ritual. Complete quests, grow a virtual garden, collect species, and track your carbon footprint."
+};
 
 const features = [
   {

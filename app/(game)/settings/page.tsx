@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useTheme, type Theme } from "@/lib/useTheme";
-import { PageHero, Panel, primaryButton, inputClass } from "@/components/game-ui";
+import { PageHero, Panel, primaryButton, inputClass, heroAccents } from "@/components/game-ui";
 import { Avatar } from "@/components/avatar";
 import { useToast } from "@/lib/toast";
 
@@ -196,6 +196,7 @@ export default function SettingsPage() {
         eyebrow="Account"
         title="Settings"
         description="Update your profile, choose a theme, and manage notifications."
+        accent={heroAccents.settings}
       />
 
       {/* ── Profile ── */}

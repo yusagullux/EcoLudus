@@ -19,6 +19,7 @@ import {
   secondaryButton,
   rarityStyle,
   rarityBorder,
+  heroAccents,
   type Rarity
 } from "@/components/game-ui";
 
@@ -382,7 +383,7 @@ export default function GardenPage() {
         });
       }
       await refreshProfile();
-      toast.success(`Harvested ${data.harvested} plants. +${data.eco} EcoPoints, +${data.xp} XP.`);
+      toast.success(`Harvested ${data.harvested} plant${data.harvested === 1 ? "" : "s"}. +${data.eco} EcoPoints, +${data.xp} XP.`);
     } finally {
       isProcessing.current = false;
     }
@@ -428,6 +429,7 @@ export default function GardenPage() {
         eyebrow="Your living world"
         title="Virtual Garden"
         description="Plant shop plants and chest seeds, let them bloom, then come back for repeat EcoPoints and XP. Start with 4 tiles — unlock more with EcoPoints, up to 16."
+        accent={heroAccents.garden}
       >
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Planted" value={totalPlanted} />
@@ -636,11 +638,11 @@ export default function GardenPage() {
 
       <Panel eyebrow="Inventory" title="Your Plantables" action={<Pill>{totalPlantables} available</Pill>}>
         {plantableInventory.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <span className="text-4xl">*</span>
-            <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>No plantables yet</p>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Buy plants in the Shop or open chests in your Collection to find seeds.
+          <div className="flex flex-col items-center gap-3 py-10 text-center">
+            <span className="text-5xl" aria-hidden>🌱</span>
+            <p className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>No plantables yet</p>
+            <p className="max-w-xs text-sm" style={{ color: "var(--text-muted)" }}>
+              Buy plants in the Shop or open chests in your Collection to find seeds, then place them on a tile to grow.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               <a href="/shop" className={primaryButton}>Go to Shop</a>
@@ -763,7 +765,7 @@ export default function GardenPage() {
 
                     <div className="flex shrink-0 flex-col gap-1.5">
                       {ready && (
-                        <button type="button" onClick={() => harvest(tile.tileId)} className={primaryButton}>
+                        <button type="button" onClick={() => harvest(tile.tileId)} title={`Harvest for ${HARVEST_REWARDS[rarity]} EcoPoints`} className={primaryButton}>
                           +{HARVEST_REWARDS[rarity]} EP
                         </button>
                       )}

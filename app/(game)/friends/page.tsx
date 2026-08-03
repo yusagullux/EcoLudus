@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { getAllUsers } from "@/lib/auth-client";
-import { HeroMetric, MetricCard, PageHero, Panel, Pill, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
+import { HeroMetric, MetricCard, PageHero, Panel, Pill, primaryButton, secondaryButton, inputClass, heroAccents } from "@/components/game-ui";
 import { Avatar } from "@/components/avatar";
 
 function friendKey(friend: any) {
@@ -66,6 +66,9 @@ export default function FriendsPage() {
   const [query, setQuery] = useState("");
   // Tracks which friend is currently being cheered to prevent concurrent submissions.
   const cheeringRef = useRef<string | null>(null);
+  // Tracks which player id has an in-flight add/accept/decline so we can show a
+  // loading state on just that button (and block double-submits).
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const friends = Array.isArray(profile?.friends) ? profile.friends : [];
   const friendIds = new Set(friends.map(friendKey));
@@ -134,7 +137,8 @@ export default function FriendsPage() {
   }, [players, query, user?.uid, friendIds]);
 
   const sendFriendRequest = async (player: any) => {
-    if (!user?.uid || !profile) return;
+    if (!user?.uid || !profile || busyId) return;
+    setBusyId(player.id);
 
     try {
       const res = await fetch("/api/friends", {
@@ -163,18 +167,22 @@ export default function FriendsPage() {
     } catch (err) {
       console.error(err);
       toast.error("Could not send friend request.");
+    } finally {
+      setBusyId(null);
     }
   };
 
   const acceptFriendRequest = async (request: any) => {
-    if (!user?.uid || !profile) return;
+    if (!user?.uid || !profile || busyId) return;
+    const id = request.id || request.uid;
+    setBusyId(id);
 
     try {
       const res = await fetch("/api/friends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ action: "accept", targetUserId: request.id || request.uid })
+        body: JSON.stringify({ action: "accept", targetUserId: id })
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -188,18 +196,22 @@ export default function FriendsPage() {
     } catch (err) {
       console.error(err);
       toast.error("Could not accept friend request.");
+    } finally {
+      setBusyId(null);
     }
   };
 
   const declineFriendRequest = async (request: any) => {
-    if (!user?.uid || !profile) return;
+    if (!user?.uid || !profile || busyId) return;
+    const id = request.id || request.uid;
+    setBusyId(id);
 
     try {
       const res = await fetch("/api/friends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ action: "decline", targetUserId: request.id || request.uid })
+        body: JSON.stringify({ action: "decline", targetUserId: id })
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -207,8 +219,8 @@ export default function FriendsPage() {
         return;
       }
 
-      const nextRequests = friendRequests.filter((r: any) => (r.id || r.uid) !== (request.id || request.uid));
-      const nextSent = sentRequests.filter((id) => id !== (request.id || request.uid));
+      const nextRequests = friendRequests.filter((r: any) => (r.id || r.uid) !== id);
+      const nextSent = sentRequests.filter((sid) => sid !== id);
       if (typeof setProfile === "function") {
         setProfile({ ...profile, friendRequests: nextRequests, sentRequests: nextSent });
       }
@@ -216,6 +228,8 @@ export default function FriendsPage() {
     } catch (err) {
       console.error(err);
       toast.error("Could not decline friend request.");
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -302,8 +316,8 @@ export default function FriendsPage() {
   const cheersTodayDisplay = socialStats.lastCheerDate === todayKey() ? socialStats.cheersToday : 0;
 
   return (
-    <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Social garden" title="Friends" description="Add players, send cheers, and complete social quests that turn encouragement into progress.">
+    <div className="flex flex-col gap-5 overflow-x-hidden">
+      <PageHero eyebrow="Social garden" title="Friends" description="Add players, send cheers, and complete social quests that turn encouragement into progress." accent={heroAccents.friends}>
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Friends" value={friends.length} />
           <HeroMetric label="Your Level" value={myLevel} />
@@ -359,7 +373,7 @@ export default function FriendsPage() {
                 <Link href={`/profile/${req.id || req.uid}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
                   <Avatar name={req.displayName || "Anonymous"} src={req.profileImage} size={44} />
                   <div className="min-w-0">
-                    <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{req.displayName || "Anonymous"}</p>
+                    <p className="truncate font-serif text-base font-bold" title={req.displayName || "Anonymous"} style={{ color: "var(--text-primary)" }}>{req.displayName || "Anonymous"}</p>
                     <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>Wants to add you</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Pill>Lv {req.level || 1}</Pill>
@@ -368,11 +382,21 @@ export default function FriendsPage() {
                   </div>
                 </Link>
                 <div className="flex gap-2 shrink-0">
-                  <button type="button" onClick={() => acceptFriendRequest(req)} className={primaryButton}>
-                    Accept
+                  <button
+                    type="button"
+                    onClick={() => acceptFriendRequest(req)}
+                    disabled={busyId === (req.id || req.uid)}
+                    className={primaryButton}
+                  >
+                    {busyId === (req.id || req.uid) ? "Accepting…" : "Accept"}
                   </button>
-                  <button type="button" onClick={() => declineFriendRequest(req)} className={secondaryButton}>
-                    Decline
+                  <button
+                    type="button"
+                    onClick={() => declineFriendRequest(req)}
+                    disabled={busyId === (req.id || req.uid)}
+                    className={secondaryButton}
+                  >
+                    {busyId === (req.id || req.uid) ? "…" : "Decline"}
                   </button>
                 </div>
               </article>
@@ -381,7 +405,7 @@ export default function FriendsPage() {
         </Panel>
       )}
 
-      <Panel eyebrow="Add friends" title="Find Players">
+      <Panel id="find-players" eyebrow="Add friends" title="Find Players">
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
             value={query}
@@ -404,7 +428,7 @@ export default function FriendsPage() {
                   <Link href={`/profile/${player.id}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
                     <Avatar name={player.displayName} src={player.profileImage} size={44} />
                     <div className="min-w-0">
-                      <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{player.displayName}</p>
+                      <p className="truncate font-serif text-base font-bold" title={player.displayName} style={{ color: "var(--text-primary)" }}>{player.displayName}</p>
                       <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>EcoLudus player</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Pill>Lv {player.level || 1}</Pill>
@@ -418,12 +442,22 @@ export default function FriendsPage() {
                         Sent
                       </button>
                     ) : isIncoming ? (
-                      <button type="button" onClick={() => acceptFriendRequest(player)} className={primaryButton}>
-                        Accept
+                      <button
+                        type="button"
+                        onClick={() => acceptFriendRequest(player)}
+                        disabled={busyId === player.id}
+                        className={primaryButton}
+                      >
+                        {busyId === player.id ? "Accepting…" : "Accept"}
                       </button>
                     ) : (
-                      <button type="button" onClick={() => sendFriendRequest(player)} className={primaryButton}>
-                        Add
+                      <button
+                        type="button"
+                        onClick={() => sendFriendRequest(player)}
+                        disabled={busyId === player.id}
+                        className={primaryButton}
+                      >
+                        {busyId === player.id ? "Sending…" : "Add"}
                       </button>
                     )}
                   </div>
@@ -438,9 +472,11 @@ export default function FriendsPage() {
 
       <Panel eyebrow="Compare stats" title="Friend Board">
         {friends.length === 0 ? (
-          <div className="rounded-2xl border border-dashed p-8 text-center" style={{ borderColor: "var(--border-default)", color: "var(--text-muted)" }}>
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-8 text-center" style={{ borderColor: "var(--border-default)", color: "var(--text-muted)" }}>
+            <span className="text-4xl" aria-hidden>🌱</span>
             <p className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>No friends yet</p>
-            <p className="mt-1 text-sm">Search above to build your friend board.</p>
+            <p className="max-w-xs text-sm">Add fellow players to compare stats, send cheers, and complete social quests together.</p>
+            <a href="#find-players" className={`${primaryButton} mt-1`}>Find players to add</a>
           </div>
         ) : (
           <div className="flex flex-col divide-y overflow-hidden rounded-2xl border" style={{ borderColor: "var(--border-default)" }}>
@@ -449,21 +485,21 @@ export default function FriendsPage() {
               .sort((a, b) => Number(b.xp || 0) - Number(a.xp || 0))
               .map((friend, index) => (
                 <div key={friendKey(friend)} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl font-serif text-lg font-black" style={{ background: "var(--bg-panel)", color: "var(--text-primary)" }}>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-serif text-lg font-black" style={{ background: "var(--bg-panel)", color: "var(--text-primary)" }}>
                       #{index + 1}
                     </span>
-                    <Link href={`/profile/${friendKey(friend)}`} className="flex items-center gap-3 hover:opacity-80">
-                      <Avatar name={friend.displayName || friend.email || "Explorer"} src={friend.profileImage} size={40} />
-                      <div>
-                        <p className="font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{friend.displayName || friend.email}</p>
-                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    <Link href={`/profile/${friendKey(friend)}`} className="flex min-w-0 items-center gap-3 hover:opacity-80">
+                      <Avatar name={friend.displayName || friend.email || "Eco Explorer"} src={friend.profileImage} size={40} />
+                      <div className="min-w-0">
+                        <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }} title={friend.displayName || friend.email}>{friend.displayName || friend.email}</p>
+                        <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>
                           Level {friend.level || 1} - {Number(friend.xp || 0).toLocaleString()} XP - {Number(friend.cheers || 0)} cheers sent
                         </p>
                       </div>
                     </Link>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Pill active={Number(friend.xp || 0) <= myXp}>{Number(friend.xp || 0) <= myXp ? "You lead" : "Ahead"}</Pill>
                     <button
                       type="button"

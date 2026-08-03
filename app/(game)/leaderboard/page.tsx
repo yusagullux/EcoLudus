@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
-import { PageHero, Panel, Pill } from "@/components/game-ui";
+import { PageHero, Panel, Pill, heroAccents } from "@/components/game-ui";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Avatar } from "@/components/avatar";
@@ -328,6 +328,7 @@ export default function LeaderboardPage() {
         eyebrow="Global rankings"
         title="Leaderboard"
         description="Top EcoLudus players and teams ranked by XP earned and missions completed."
+        accent={heroAccents.leaderboard}
       />
 
       {/* Tab selector */}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useQuests } from "@/lib/useQuests";
-import { MetricCard, PageHero, Panel, Pill, ProgressBar } from "@/components/game-ui";
+import { MetricCard, PageHero, Panel, Pill, ProgressBar, heroAccents } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 
 const CATEGORIES_FALLBACK = [
@@ -102,7 +102,7 @@ export default function InsightsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Weekly analytics" title="Insights" description="A dynamic view of quest completion, category balance, and reward growth." />
+      <PageHero eyebrow="Weekly analytics" title="Insights" description="A dynamic view of quest completion, category balance, and reward growth." accent={heroAccents.insights} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {summaryCards.map((card) => (
