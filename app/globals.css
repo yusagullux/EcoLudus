@@ -123,6 +123,11 @@
   --pill-text:      #2f4f35;
   --pill-active-bg: #102016;
   --pill-active-text: #fcf9f2;
+
+  /* Shared shadows — forest-tinted on light themes */
+  --shadow-card:  0 8px 32px rgba(16,33,20,0.06);
+  --shadow-lift:  0 18px 44px rgba(16,33,20,0.16);
+  --shadow-hero:  0 20px 60px rgba(0,0,0,0.22);
 }
 
 [data-theme="dark"] {
@@ -157,6 +162,11 @@
   --pill-text:      #a8c8a0;
   --pill-active-bg: #e8f0e4;
   --pill-active-text: #102016;
+
+  /* Dark themes use stronger black shadows (forest tint is invisible) */
+  --shadow-card:  0 8px 32px rgba(0,0,0,0.28);
+  --shadow-lift:  0 18px 44px rgba(0,0,0,0.4);
+  --shadow-hero:  0 20px 60px rgba(0,0,0,0.5);
 }
 
 [data-theme="liquid"] {
@@ -191,6 +201,10 @@
   --pill-text:      #8ec8d8;
   --pill-active-bg: rgba(93,207,224,0.2);
   --pill-active-text: #e4f4ff;
+
+  --shadow-card:  0 8px 32px rgba(0,0,0,0.3);
+  --shadow-lift:  0 18px 44px rgba(0,0,0,0.42);
+  --shadow-hero:  0 20px 60px rgba(0,0,0,0.5);
 }
 
 /* Dawn — warm light theme: amber/terracotta accent on warm cream.
@@ -300,6 +314,10 @@
   --pill-text:      #9ab4e8;
   --pill-active-bg: rgba(74,216,192,0.2);
   --pill-active-text: #e6ecff;
+
+  --shadow-card:  0 8px 32px rgba(0,0,0,0.3);
+  --shadow-lift:  0 18px 44px rgba(0,0,0,0.42);
+  --shadow-hero:  0 20px 60px rgba(0,0,0,0.5);
 }
 
 /* ── BASE ───────────────────────────────────────────────── */
@@ -445,7 +463,8 @@ html {
 .t-sidebar-link {
   color: var(--text-sidebar-muted);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 11px 12px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 10px;

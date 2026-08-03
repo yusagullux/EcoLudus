@@ -125,12 +125,15 @@ export default function PremiumPage() {
       />
 
       {/* Coming soon banner */}
-      <div className="rounded-2xl border border-[#e6d3a6] bg-[#fbf4df] px-5 py-4">
+      <div
+        className="rounded-2xl border px-5 py-4"
+        style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}
+      >
         <div className="flex items-center gap-3">
           <span className="text-2xl">🚧</span>
           <div>
-            <p className="text-sm font-extrabold text-[#76511a]">Premium is in development</p>
-            <p className="mt-0.5 text-xs font-semibold text-[#76511a]/70">
+            <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>Premium is in development</p>
+            <p className="mt-0.5 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
               All features below are planned for a future release. Free tier remains free forever.
             </p>
           </div>
@@ -142,11 +145,14 @@ export default function PremiumPage() {
         {PLANS.map((plan) => (
           <article
             key={plan.name}
-            className={`flex flex-col rounded-[22px] border p-6 shadow-[0_12px_32px_rgba(26,45,29,0.06)] ${
-              plan.highlight
-                ? "border-[#e6d3a6] bg-[#fbf4df] ring-2 ring-[#c99a3a]/20"
-                : "border-[#dfe7d7] bg-[#fffefa]"
-            }`}
+            className="flex flex-col rounded-[22px] border p-6"
+            style={{
+              borderColor: plan.highlight ? "#e6d3a6" : "var(--border-default)",
+              background: "var(--bg-panel)",
+              boxShadow: plan.highlight
+                ? "0 12px 32px rgba(154,107,31,0.12), 0 0 0 2px rgba(201,154,58,0.2)"
+                : "var(--shadow-card)"
+            }}
           >
             {plan.highlight && (
               <div className="mb-3">
@@ -157,13 +163,13 @@ export default function PremiumPage() {
               {plan.name}
             </p>
             <div className="mt-2 flex items-end gap-1.5">
-              <span className="font-serif text-4xl font-extrabold text-forest-950">{plan.price}</span>
-              <span className="mb-1 text-xs font-semibold text-forest-700/54">{plan.period}</span>
+              <span className="font-serif text-4xl font-extrabold" style={{ color: "var(--text-primary)" }}>{plan.price}</span>
+              <span className="mb-1 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{plan.period}</span>
             </div>
 
             <ul className="mt-5 flex flex-col gap-2.5">
               {plan.features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2 text-xs font-semibold text-forest-800">
+                <li key={feature} className="flex items-start gap-2 text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>
                   <span className="mt-0.5 shrink-0 text-[10px]" style={{ color: plan.color }}>✓</span>
                   {feature}
                 </li>
@@ -172,11 +178,12 @@ export default function PremiumPage() {
 
             <button
               disabled={plan.disabled}
-              className={`mt-6 w-full rounded-xl py-2.5 text-xs font-extrabold uppercase tracking-wider transition ${
+              className="mt-6 w-full cursor-not-allowed rounded-xl py-2.5 text-xs font-extrabold uppercase tracking-wider transition"
+              style={
                 plan.highlight
-                  ? "bg-[#9a6b1f]/10 text-[#76511a] cursor-not-allowed"
-                  : "bg-forest-50 text-forest-700 cursor-not-allowed"
-              }`}
+                  ? { background: "rgba(154,107,31,0.12)", color: "#9a6b1f" }
+                  : { background: "var(--bg-panel-alt)", color: "var(--text-muted)" }
+              }
             >
               {plan.cta}
             </button>
@@ -190,7 +197,8 @@ export default function PremiumPage() {
           {PREMIUM_FEATURES.map(({ icon, title, desc, tag, color }) => (
             <div
               key={title}
-              className="relative overflow-hidden rounded-2xl border border-[#dfe7d7] bg-[#f7f9f2] p-4 opacity-75"
+              className="relative overflow-hidden rounded-2xl border p-4 opacity-80"
+              style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}
             >
               <div className="absolute right-3 top-3">
                 <span
@@ -201,14 +209,14 @@ export default function PremiumPage() {
                 </span>
               </div>
               <p className="text-2xl">{icon}</p>
-              <p className="mt-3 text-sm font-extrabold text-forest-950">{title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-forest-700/62">{desc}</p>
+              <p className="mt-3 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{title}</p>
+              <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{desc}</p>
               <div className="mt-3 flex items-center gap-1.5">
-                <span className="h-px flex-1 bg-[#e7ecdf]" />
-                <span className="text-[9px] font-extrabold uppercase tracking-wider text-forest-700/38">
+                <span className="h-px flex-1" style={{ background: "var(--border-default)" }} />
+                <span className="text-[9px] font-extrabold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                   Locked
                 </span>
-                <span className="h-px flex-1 bg-[#e7ecdf]" />
+                <span className="h-px flex-1" style={{ background: "var(--border-default)" }} />
               </div>
             </div>
           ))}
@@ -217,7 +225,7 @@ export default function PremiumPage() {
 
       {/* FAQ */}
       <Panel eyebrow="Questions" title="FAQ">
-        <div className="flex flex-col divide-y divide-[#e7ecdf]">
+        <div className="flex flex-col divide-y" style={{ borderColor: "var(--border-subtle)" }}>
           {[
             {
               q: "Will the free tier be limited?",
@@ -237,8 +245,8 @@ export default function PremiumPage() {
             }
           ].map(({ q, a }) => (
             <div key={q} className="py-4 first:pt-0 last:pb-0">
-              <p className="text-sm font-extrabold text-forest-950">{q}</p>
-              <p className="mt-1.5 text-xs leading-relaxed text-forest-700/62">{a}</p>
+              <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{q}</p>
+              <p className="mt-1.5 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{a}</p>
             </div>
           ))}
         </div>

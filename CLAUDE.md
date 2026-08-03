@@ -37,7 +37,7 @@ Copy `.env.example` to `.env.local`. Key variables:
 Next.js App Router. Two route layers:
 
 - **Root (marketing/unauth):** `app/page.tsx`, `app/landing`, `app/login`, `app/signup`, `app/legal/*`.
-- **`app/(game)/`** — authenticated app behind a shared `layout.tsx` that calls `useAuth()` and renders the `Sidebar` + `ThemeProvider`. Pages: `dashboard`, `habits`, `shop`, `collection`, `garden`, `pets`, `insights`, `impact`, `premium`, `profile`, `team`, `friends`, `leaderboard`, `ecomap`, `settings`.
+- **`app/(game)/`** — authenticated app behind a shared `layout.tsx` that calls `useAuth()` and renders the `Sidebar` + `ThemeProvider`. Pages: `dashboard`, `habits`, `shop`, `collection`, `garden`, `pets`, `insights`, `impact`, `premium`, `profile`, `team`, `friends`, `leaderboard`, `settings`.
 
 `app/layout.tsx` is the root layout (fonts: Baloo_2 headings, Inter body; Vercel Analytics; JSON-LD; manifest).
 
@@ -87,7 +87,7 @@ Three cron routes, all gated by `Authorization: Bearer <CRON_SECRET>` and export
 
 ### Styling
 
-Tailwind v4 (`@tailwindcss/postcss` + `postcss.config.cjs`, `app/globals.css`) plus hand-written CSS in `public/css/*` (linked via cache headers in `next.config.ts`). Theme toggle via `lib/useTheme.tsx` using CSS variables. `public/quests.json` is served as a static asset (1h cache).
+Tailwind v4 (`@tailwindcss/postcss` + `postcss.config.cjs`, `app/globals.css`). Theme toggle via `lib/useTheme.tsx` using CSS variables. `public/quests.json` is served as a static asset (1h cache).
 
 ## Conventions
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -160,6 +161,18 @@ export function AuthCard({ mode }: AuthCardProps) {
 
       <div className="flex items-center justify-center rounded-[28px] border px-6 py-12 shadow-[0_24px_70px_rgba(16,33,20,0.1)] backdrop-blur lg:rounded-l-none lg:px-14" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
         <div className="w-full max-w-sm">
+          {/* Compact branded header — visible only on mobile/tablet where the
+              full aside panel is hidden, so auth isn't a bare card. */}
+          <div className="mb-7 flex items-center gap-3 lg:hidden">
+            <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white shadow-[0_12px_28px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10">
+              <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="40px" className="object-cover" />
+            </div>
+            <div className="leading-none">
+              <div className="font-serif text-xl font-semibold tracking-wide" style={{ color: "var(--text-primary)" }}>EcoLudus</div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.24em]" style={{ color: "var(--text-muted)" }}>Forest Edition</div>
+            </div>
+          </div>
+
           <p className="text-[11px] font-extrabold uppercase tracking-[0.24em]" style={{ color: "var(--text-muted)" }}>{content.eyebrow}</p>
           <h1 className="mt-3 text-balance font-serif text-3xl font-extrabold leading-tight sm:text-4xl" style={{ color: "var(--text-primary)" }}>{content.title}</h1>
           <p className="mt-3 text-sm leading-6" style={{ color: "var(--text-secondary)" }}>{content.subtitle}</p>

@@ -54,11 +54,6 @@ export type ReminderMetadata = {
   pendingReminderId: string | null;
 };
 
-export type EcoMapCheckin = {
-  stopId: string;
-  checkedInAt: string;
-};
-
 /** Milestone flags written by rewards-sync. Keys are `milestone_<type>_<value>`. */
 export type MilestoneFlags = Partial<{
   milestone_level_5: boolean;
@@ -146,9 +141,6 @@ export interface UserProfile {
   reminderMetadata: ReminderMetadata;
   /** Opt-in to the weekly impact email cron. */
   emailWeeklyReport?: boolean;
-
-  // ── EcoMap ────────────────────────────────────────────────────────────────
-  ecoMapCheckins?: EcoMapCheckin[];
 
   // ── Quest proof ledger (photo/text verification results per quest) ─────────
   verifiedQuestProofs?: Record<string, VerifiedQuestProof>;

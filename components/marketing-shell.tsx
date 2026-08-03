@@ -32,7 +32,10 @@ export function MarketingShell({
       </div>
 
       {/* Sticky translucent header */}
-      <header className="sticky top-0 z-50 border-b border-forest-900/8 bg-[#f5f7ef]/80 backdrop-blur-xl supports-[backdrop-filter]:bg-[#f5f7ef]/72">
+      <header
+        className="sticky top-0 z-50 border-b backdrop-blur-xl"
+        style={{ borderColor: "color-mix(in srgb, var(--border-default) 60%, transparent)", backgroundColor: "color-mix(in srgb, var(--bg-panel) 82%, transparent)" }}
+      >
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8 lg:px-10">
         <Link href="/landing" className="group flex items-center gap-3 text-forest-900">
           <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white shadow-[0_12px_28px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10 transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-105">
@@ -79,7 +82,10 @@ export function MarketingShell({
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-forest-900/10 bg-[#f5f7ef]/95 backdrop-blur-xl">
+        <div
+          className="md:hidden fade-in border-b backdrop-blur-xl"
+          style={{ borderColor: "color-mix(in srgb, var(--border-default) 60%, transparent)", backgroundColor: "color-mix(in srgb, var(--bg-panel) 95%, transparent)" }}
+        >
           <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-4 sm:px-8">
             {navLinks.map((link) =>
               link.isEmail ? (

@@ -23,7 +23,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "recycling_2",
@@ -40,7 +41,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "medium"
         },
         {
           "id": "recycling_3",
@@ -57,7 +59,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "medium"
         },
         {
           "id": "recycling_4",
@@ -74,7 +77,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "medium"
         },
         {
           "id": "recycling_5",
@@ -91,7 +95,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "recycling_6",
@@ -108,7 +113,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "recycling_7",
@@ -125,7 +131,8 @@
           },
           "xp": 25,
           "ecoCoins": 15,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "recycling_8",
@@ -142,7 +149,8 @@
           },
           "xp": 45,
           "ecoCoins": 35,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "recycling_9",
@@ -159,7 +167,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "recycling_10",
@@ -176,7 +185,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         }
       ]
     },
@@ -203,7 +213,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_2",
@@ -220,7 +231,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_3",
@@ -237,7 +249,8 @@
           },
           "xp": 25,
           "ecoCoins": 15,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_4",
@@ -254,7 +267,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_5",
@@ -271,24 +285,26 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_6",
-          "shortName": "Switch to LED Light Bulbs",
-          "description": "Replace at least one incandescent light bulb with an energy-efficient LED bulb to reduce electricity consumption.",
-          "carbonFootprintReduction": 2,
+          "shortName": "Use Microwave Instead of Oven",
+          "description": "Reheat or cook one meal in the microwave instead of the oven — microwaves use far less energy for small meals.",
+          "carbonFootprintReduction": 0.6,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "bulb"
+            "unit": "meal"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false
+          "xp": 30,
+          "ecoCoins": 20,
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_7",
@@ -305,7 +321,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_8",
@@ -322,7 +339,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_9",
@@ -339,7 +357,8 @@
           },
           "xp": 25,
           "ecoCoins": 15,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_10",
@@ -356,24 +375,26 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "energy_11",
-          "shortName": "Use Laptop Instead of Desktop",
-          "description": "Use a laptop instead of a desktop computer when possible, as laptops consume significantly less energy.",
-          "carbonFootprintReduction": 1.5,
+          "shortName": "Cover Pots with a Lid While Cooking",
+          "description": "Put a lid on your pot or pan while cooking to trap heat, cook faster, and use less energy.",
+          "carbonFootprintReduction": 0.4,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "meal"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false
+          "xp": 30,
+          "ecoCoins": 20,
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "energy_12",
@@ -390,7 +411,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         }
       ]
     },
@@ -417,7 +439,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "transportation_2",
@@ -434,7 +457,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "transportation_3",
@@ -451,7 +475,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "transportation_4",
@@ -468,7 +493,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "transportation_5",
@@ -485,7 +511,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "transportation_6",
@@ -502,24 +529,26 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "transportation_7",
-          "shortName": "Work from Home",
-          "description": "Work from home or remotely for at least part of the day to avoid commuting and reduce transportation emissions.",
-          "carbonFootprintReduction": 3,
+          "shortName": "Walk or Roll for One Short Trip",
+          "description": "Walk, bike, or use a wheelchair/scooter for one short trip (under about 1 km) instead of driving, and snap a photo at your destination.",
+          "carbonFootprintReduction": 2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "trip"
           },
-          "xp": 45,
-          "ecoCoins": 35,
-          "requiresPhoto": false
+          "xp": 40,
+          "ecoCoins": 30,
+          "requiresPhoto": false,
+          "difficulty": "easy"
         }
       ]
     },
@@ -546,7 +575,8 @@
           },
           "xp": 25,
           "ecoCoins": 15,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "water_2",
@@ -563,24 +593,26 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "water_3",
-          "shortName": "Fix Leaky Faucet",
-          "description": "Fix a leaky faucet or report it to maintenance to prevent water waste. Even a small drip wastes gallons of water daily.",
-          "carbonFootprintReduction": 2,
+          "shortName": "Wash Vegetables in a Bowl",
+          "description": "Wash your vegetables in a bowl of water instead of under a running tap, then reuse the water for plants.",
+          "carbonFootprintReduction": 0.3,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "faucet"
+            "unit": "meal"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false
+          "xp": 30,
+          "ecoCoins": 20,
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "water_4",
@@ -597,30 +629,32 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "water_5",
-          "shortName": "Collect Rainwater",
-          "description": "Set up a container to collect rainwater for watering plants or other non-drinking uses to conserve tap water.",
-          "carbonFootprintReduction": 1.5,
+          "shortName": "Reuse Cooled Cooking Water for Plants",
+          "description": "After boiling pasta or vegetables, let the water cool and use it to water your plants instead of pouring it down the drain.",
+          "carbonFootprintReduction": 0.4,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "meal"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false
+          "xp": 30,
+          "ecoCoins": 20,
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "water_6",
-          "shortName": "Use Water-Saving Showerhead",
-          "description": "Install or use a low-flow showerhead to reduce water consumption while showering without sacrificing comfort.",
-          "carbonFootprintReduction": 1.2,
+          "shortName": "Use Bar Soap Instead of Body Wash",
+          "description": "Use a bar of soap instead of bottled body wash or hand wash to cut plastic packaging waste and save water.",
+          "carbonFootprintReduction": 0.4,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -629,9 +663,10 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false
+          "xp": 30,
+          "ecoCoins": 20,
+          "requiresPhoto": false,
+          "difficulty": "easy"
         }
       ]
     },
@@ -658,7 +693,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "cleanup_2",
@@ -675,7 +711,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "medium"
         },
         {
           "id": "cleanup_3",
@@ -692,7 +729,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "cleanup_4",
@@ -709,7 +747,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "cleanup_5",
@@ -726,13 +765,14 @@
           },
           "xp": 50,
           "ecoCoins": 40,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "cleanup_6",
-          "shortName": "Recycle Old Electronics",
-          "description": "Properly recycle or donate old electronics, batteries, or devices instead of throwing them in the trash.",
-          "carbonFootprintReduction": 2,
+          "shortName": "Declutter One Drawer or Shelf",
+          "description": "Sort through a single drawer or shelf, recycling or donating what you no longer need. Take a before/after photo to prove it.",
+          "carbonFootprintReduction": 1.5,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
             "type": "boolean",
@@ -743,7 +783,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         }
       ]
     },
@@ -770,7 +811,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "gardening_2",
@@ -787,7 +829,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "gardening_3",
@@ -804,7 +847,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": true
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "gardening_4",
@@ -821,7 +865,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "gardening_5",
@@ -838,7 +883,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "gardening_6",
@@ -855,7 +901,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         }
       ]
     },
@@ -882,7 +929,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "sustainable_2",
@@ -899,7 +947,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_3",
@@ -916,7 +965,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_4",
@@ -933,7 +983,8 @@
           },
           "xp": 25,
           "ecoCoins": 15,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_5",
@@ -950,7 +1001,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "sustainable_6",
@@ -967,7 +1019,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_7",
@@ -984,7 +1037,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "sustainable_8",
@@ -1001,7 +1055,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_9",
@@ -1018,7 +1073,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_10",
@@ -1035,7 +1091,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "sustainable_11",
@@ -1052,7 +1109,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_12",
@@ -1069,7 +1127,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "medium"
         },
         {
           "id": "sustainable_13",
@@ -1086,7 +1145,8 @@
           },
           "xp": 35,
           "ecoCoins": 25,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_14",
@@ -1103,7 +1163,8 @@
           },
           "xp": 30,
           "ecoCoins": 20,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "gamified_pet_1",
@@ -1120,7 +1181,8 @@
           },
           "xp": 40,
           "ecoCoins": 30,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         },
         {
           "id": "gamified_hatch_1",
@@ -1137,16 +1199,22 @@
           },
           "xp": 100,
           "ecoCoins": 80,
-          "requiresPhoto": false
+          "requiresPhoto": false,
+          "difficulty": "easy"
         }
       ]
     }
   ],
   "metadata": {
-    "version": "2.5.0",
-    "lastUpdated": "2024-12-19",
+    "version": "2.6.0",
+    "lastUpdated": "2026-08-03",
     "totalCategories": 7,
     "totalQuests": 63,
+    "difficultyLevels": {
+      "easy": "Universally doable, no purchase or special situation — surfaced first each day",
+      "medium": "Doable for most but situational or higher effort — surfaces once easy pool is exhausted",
+      "hard": "Requires purchase, hardware, or a specific situation — none remain in this catalog"
+    },
     "progressTypes": {
       "boolean": "One-time quest - becomes 1 when completed",
       "count": "Numerical quest - requires a specific number of actions",

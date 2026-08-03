@@ -2,8 +2,7 @@ import type { NextConfig } from "next";
 
 // Content-Security-Policy. Permissive-but-present as a first pass; ratchet
 // down after runtime testing. Covers the real external surface:
-//   - Leaflet is now bundled (npm `leaflet`), no longer loaded from unpkg
-//   - CARTO map tiles (/ecomap) and Supabase Storage public avatar images
+//   - Supabase Storage public avatar images
 //   - Vercel Analytics (va.vercel-scripts.com)
 //   - next/font (self-hosted) and Tailwind v4 + styled-jsx (inline styles)
 // External integrations (Gemini, Climatiq, Ecologi, SendGrid, Overpass) run
@@ -15,7 +14,7 @@ const csp = [
   // 'unsafe-inline' until a per-request nonce strategy is added.
   `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.cartocdn.com https://*.openstreetmap.org https://*.supabase.co",
+  "img-src 'self' data: blob: https://*.supabase.co",
   "font-src 'self' data:",
   "connect-src 'self' https://va.vercel-scripts.com",
   "object-src 'none'",
@@ -30,10 +29,10 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // geolocation=(self) is required by /ecomap check-in; everything else denied.
+  // No client-side device APIs are used; all denied.
   {
     key: "Permissions-Policy",
-    value: "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=()"
+    value: "geolocation=(), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=()"
   },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }
 ];
@@ -68,24 +67,6 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value: "public, max-age=31536000, immutable"
-          }
-        ]
-      },
-      {
-        source: "/css/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=86400, stale-while-revalidate=604800"
-          }
-        ]
-      },
-      {
-        source: "/js/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=86400, stale-while-revalidate=604800"
           }
         ]
       },

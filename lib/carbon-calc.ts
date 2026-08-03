@@ -3,6 +3,8 @@ import path from "path";
 import { sql } from "@/lib/db";
 import { logError } from "@/lib/logger";
 
+export type QuestDifficulty = "easy" | "medium" | "hard";
+
 type QuestDefinition = {
   id: string;
   title: string;
@@ -11,6 +13,7 @@ type QuestDefinition = {
   xp: number;
   eco: number;
   catalogCarbonKg: number;
+  difficulty: QuestDifficulty;
 };
 
 type CarbonResult = {
@@ -73,13 +76,18 @@ function loadQuestCatalog(): Promise<Map<string, QuestDefinition>> {
             xp?: number;
             ecoCoins?: number;
             carbonFootprintReduction?: number;
+            difficulty?: string;
           }>;
         }>;
       };
       const quests = new Map<string, QuestDefinition>();
 
+      const VALID_DIFFICULTIES: QuestDifficulty[] = ["easy", "medium", "hard"];
       for (const category of parsed.categories ?? []) {
         for (const quest of category.quests ?? []) {
+          const difficulty = (VALID_DIFFICULTIES as string[]).includes(quest.difficulty ?? "")
+            ? (quest.difficulty as QuestDifficulty)
+            : "medium";
           quests.set(quest.id, {
             id: quest.id,
             title: quest.shortName || quest.description || quest.id,
@@ -87,7 +95,8 @@ function loadQuestCatalog(): Promise<Map<string, QuestDefinition>> {
             categoryName: category.name,
             xp: Number(quest.xp ?? 35),
             eco: Number(quest.ecoCoins ?? 25),
-            catalogCarbonKg: Number(quest.carbonFootprintReduction ?? 0)
+            catalogCarbonKg: Number(quest.carbonFootprintReduction ?? 0),
+            difficulty
           });
         }
       }

@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel, Pill } from "@/components/game-ui";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { LoadingState } from "@/components/ui/loading-state";
 import { Avatar } from "@/components/avatar";
 
 const medalLabel = ["1st", "2nd", "3rd"];
@@ -57,7 +59,8 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                 className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition hover:-translate-y-0.5 ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""}`}
                 style={{
                   borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
-                  background: isGold ? "#fbf4df" : "var(--bg-panel)"
+                  background: "var(--bg-panel)",
+                  boxShadow: isGold ? "0 12px 32px rgba(154,107,31,0.14), 0 0 0 2px rgba(201,154,58,0.18)" : "var(--shadow-card)"
                 }}
               >
                 <span
@@ -68,10 +71,10 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                 </span>
                 <Avatar name={player.displayName} src={player.profileImage} size={64} className="shadow-sm" />
                 <div>
-                  <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "#102016" }}>
+                  <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "var(--text-primary)" }}>
                     {player.displayName}
                   </p>
-                  <p className="text-xs font-semibold" style={{ color: "rgba(47,79,53,0.6)" }}>
+                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
                     Lvl {player.level}
                   </p>
                 </div>
@@ -119,7 +122,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                 >
                   <div
                     className="text-center font-serif text-xl font-extrabold"
-                    style={{ color: isTop3 ? medalColors[rank - 1] : "#8fa083" }}
+                    style={{ color: isTop3 ? medalColors[rank - 1] : "var(--text-muted)" }}
                   >
                     {rank}
                   </div>
@@ -184,7 +187,8 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
                 className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""}`}
                 style={{
                   borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
-                  background: isGold ? "#fbf4df" : "var(--bg-panel)"
+                  background: "var(--bg-panel)",
+                  boxShadow: isGold ? "0 12px 32px rgba(154,107,31,0.14), 0 0 0 2px rgba(201,154,58,0.18)" : "var(--shadow-card)"
                 }}
               >
                 <span
@@ -195,10 +199,10 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
                 </span>
                 <span className="text-4xl" aria-hidden>🌿</span>
                 <div>
-                  <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "#102016" }}>
+                  <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "var(--text-primary)" }}>
                     {team.name}
                   </p>
-                  <p className="text-xs font-semibold" style={{ color: "rgba(47,79,53,0.6)" }}>
+                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
                     {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
                   </p>
                 </div>
@@ -250,10 +254,10 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
                   <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Code: {team.joinCode}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-extrabold text-forest-800">{team.memberCount}</p>
+                  <p className="text-sm font-extrabold" style={{ color: "var(--text-secondary)" }}>{team.memberCount}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-extrabold text-forest-800">{team.missionsCompleted}</p>
+                  <p className="text-sm font-extrabold" style={{ color: "var(--text-secondary)" }}>{team.missionsCompleted}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-serif text-base font-extrabold" style={{ color: "var(--text-primary)" }}>
@@ -327,25 +331,19 @@ export default function LeaderboardPage() {
       />
 
       {/* Tab selector */}
-      <div className="flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
-        {(["individual", "team"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className="min-h-11 flex-1 rounded-lg py-2.5 text-center text-xs font-extrabold uppercase tracking-wider transition"
-            style={tab === t
-              ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
-              : { color: "var(--text-muted)" }}
-          >
-            {t === "individual" ? "👤 Individual" : "🌿 Team"}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Leaderboard view"
+        value={tab}
+        onChange={(v) => setTab(v as "individual" | "team")}
+        options={[
+          { value: "individual", label: "👤 Individual" },
+          { value: "team", label: "🌿 Team" }
+        ]}
+      />
 
       {isLoading ? (
         <Panel>
-          <div className="p-8 text-center text-forest-700">Loading leaderboard...</div>
+          <LoadingState variant="inline" label="Loading leaderboard…" />
         </Panel>
       ) : tab === "individual" ? (
         <IndividualLeaderboard users={users} currentUserId={user?.uid} />

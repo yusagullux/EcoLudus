@@ -130,7 +130,7 @@ export function GardenPreview() {
         </svg>
 
         {/* Plants grid */}
-        <div className="relative grid h-80 grid-cols-3 gap-6">
+        <div className="relative grid h-80 grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6">
           {plants.map((plant) => (
             <div
               key={plant.id}

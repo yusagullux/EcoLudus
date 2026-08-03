@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { logOut } from "@/lib/auth-client";
 import { Avatar } from "@/components/avatar";
 
@@ -68,15 +68,6 @@ const navGroups: NavGroup[] = [
           </svg>
         )
       },
-      {
-        name: "EcoMap",
-        href: "/ecomap",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6-10l6 3m0 7l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 10m0 10V10" />
-          </svg>
-        )
-      }
     ]
   },
   {
@@ -291,6 +282,57 @@ export function Sidebar({ user, profile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+
+  // Mobile drawer a11y: Escape to close, focus trap, body scroll lock, focus
+  // restore — mirrors the shared Dialog component so the drawer isn't a step
+  // down in keyboard/screen-reader behaviour.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusables = () =>
+      Array.from(
+        drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+    focusables()[0]?.focus({ preventScroll: true });
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setMobileOpen(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const f = focusables();
+      if (f.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = f[0];
+      const last = f[f.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || !drawer.contains(active))) {
+        e.preventDefault();
+        last.focus({ preventScroll: true });
+      } else if (!e.shiftKey && (active === last || !drawer.contains(active))) {
+        e.preventDefault();
+        first.focus({ preventScroll: true });
+      }
+    };
+    document.addEventListener("keydown", handleKey, true);
+    return () => {
+      document.removeEventListener("keydown", handleKey, true);
+      document.body.style.overflow = prevOverflow;
+      previouslyFocused?.focus({ preventScroll: true });
+    };
+  }, [mobileOpen]);
 
   const handleLogout = async () => {
     if (confirm("Sign out of EcoLudus?")) {
@@ -364,6 +406,10 @@ export function Sidebar({ user, profile }: SidebarProps) {
             aria-hidden="true"
           />
           <div
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
             className="md:hidden t-sidebar fixed left-0 top-0 z-50 h-full w-[280px] overflow-y-auto sheet-slide"
             style={{ boxShadow: "4px 0 32px rgba(0,0,0,0.4)" }}
           >

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
+import { useToast } from "@/lib/toast";
 import { useShopCatalog } from "@/lib/useCatalog";
 import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 import type { ShopItem, ShopMode } from "@/lib/catalog";
@@ -42,7 +43,7 @@ export default function ShopPage() {
   const ecoPoints = Number(profile?.ecoPoints ?? 0);
   const [mode, setMode] = useState<Mode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
-  const [toast, setToast] = useState("");
+  const toast = useToast();
   // The catalog (incl. prices) is loaded from the server's read API and is
   // display-only — the /api/shop/buy route re-validates the price by id, so a
   // client cannot buy at a cheaper price even by tampering with this state.
@@ -61,14 +62,12 @@ export default function ShopPage() {
 
   const handleBuy = async (item: ShopItem) => {
     if (!profile || !user) {
-      setToast("Please log in to purchase items.");
-      setTimeout(() => setToast(""), 3000);
+      toast.error("Please log in to purchase items.");
       return;
     }
 
     if (ecoPoints < item.price) {
-      setToast(`Need ${item.price} EcoPoints; you have ${ecoPoints}.`);
-      setTimeout(() => setToast(""), 3000);
+      toast.error(`Need ${item.price} EcoPoints; you have ${ecoPoints}.`);
       return;
     }
 
@@ -82,14 +81,12 @@ export default function ShopPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.success) {
-      setToast(data?.error?.message || "Purchase failed. Please try again.");
-      setTimeout(() => setToast(""), 3000);
+      toast.error(data?.error?.message || "Purchase failed. Please try again.");
       return;
     }
 
     await refreshProfile();
-    setToast(`${item.name} added to collection!`);
-    setTimeout(() => setToast(""), 3000);
+    toast.success(`${item.name} added to collection!`);
   };
 
   return (
@@ -172,14 +169,6 @@ export default function ShopPage() {
         })}
       </div>
 
-      {toast && (
-        <div
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl"
-          style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}
-        >
-          {toast}
-        </div>
-      )}
     </div>
   );
 }
