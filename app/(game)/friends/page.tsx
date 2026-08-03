@@ -494,7 +494,7 @@ export default function FriendsPage() {
                       <div className="min-w-0">
                         <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }} title={friend.displayName || friend.email}>{friend.displayName || friend.email}</p>
                         <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>
-                          Level {friend.level || 1} - {Number(friend.xp || 0).toLocaleString()} XP - {Number(friend.cheers || 0)} cheers sent
+                          Level {friend.level || 1} - {Number(friend.xp || 0).toLocaleString()} XP - {Number(friend.cheers || 0)} cheer{Number(friend.cheers || 0) === 1 ? "" : "s"} sent
                         </p>
                       </div>
                     </Link>
