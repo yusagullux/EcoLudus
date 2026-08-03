@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/useAuth";
 import { useTheme, type Theme } from "@/lib/useTheme";
 import { PageHero, Panel, primaryButton, inputClass } from "@/components/game-ui";
 import { Avatar } from "@/components/avatar";
+import { useToast } from "@/lib/toast";
 
 const THEMES: { value: Theme; label: string; desc: string; preview: string }[] = [
   {
@@ -44,20 +45,6 @@ const THEMES: { value: Theme; label: string; desc: string; preview: string }[] =
     preview: "linear-gradient(135deg,#0a0f2e,#10183a,#0c1230)"
   }
 ];
-
-function Toast({ message, type }: { message: string; type: "success" | "error" }) {
-  return (
-    <div
-      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl"
-      style={{
-        background: type === "success" ? "var(--bg-sidebar)" : "#ef4444",
-        color: "var(--text-sidebar, #fcf9f2)"
-      }}
-    >
-      {message}
-    </div>
-  );
-}
 
 // Downscale an image file to a square of `max` px on a canvas, returned as a
 // JPEG blob. Keeps uploads tiny and avoids needing server-side image processing.
@@ -106,7 +93,7 @@ export default function SettingsPage() {
 
   // UI states
   const [savingProfile, setSavingProfile] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const toast = useToast();
 
   // Profile picture
   const [uploadingPicture, setUploadingPicture] = useState(false);
@@ -122,20 +109,15 @@ export default function SettingsPage() {
     }
   }, [profile, user]);
 
-  const showToast = (message: string, type: "success" | "error" = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
   async function handleSaveProfile() {
     if (!user?.uid || savingProfile) return;
     const name = displayName.trim();
     if (!name || name.length < 2) {
-      showToast("Name must be at least 2 characters.", "error");
+      toast.error("Name must be at least 2 characters.");
       return;
     }
     if (name.length > 32) {
-      showToast("Name must be 32 characters or fewer.", "error");
+      toast.error("Name must be 32 characters or fewer.");
       return;
     }
 
@@ -150,9 +132,9 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Save failed");
       await refreshProfile();
-      showToast("Settings saved!");
+      toast.success("Settings saved!");
     } catch (err: unknown) {
-      showToast((err as Error).message || "Could not save settings.", "error");
+      toast.error((err as Error).message || "Could not save settings.");
     } finally {
       setSavingProfile(false);
     }
@@ -179,9 +161,9 @@ export default function SettingsPage() {
         throw new Error(data?.error?.message || "Upload failed.");
       }
       await refreshProfile();
-      showToast("Profile picture updated!");
+      toast.success("Profile picture updated!");
     } catch (err: unknown) {
-      showToast((err as Error).message || "Could not upload picture.", "error");
+      toast.error((err as Error).message || "Could not upload picture.");
     } finally {
       setUploadingPicture(false);
     }
@@ -200,9 +182,9 @@ export default function SettingsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error?.message || "Remove failed.");
       await refreshProfile();
-      showToast("Profile picture removed.");
+      toast.success("Profile picture removed.");
     } catch (err: unknown) {
-      showToast((err as Error).message || "Could not remove picture.", "error");
+      toast.error((err as Error).message || "Could not remove picture.");
     } finally {
       setUploadingPicture(false);
     }
@@ -411,8 +393,6 @@ export default function SettingsPage() {
           ))}
         </div>
       </Panel>
-
-      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   );
 }

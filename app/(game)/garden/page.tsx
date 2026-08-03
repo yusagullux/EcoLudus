@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
+import { useToast } from "@/lib/toast";
 import {
   GARDEN_MAX_TILES,
   resolveGardenTiles,
@@ -183,10 +184,10 @@ function sortByRarityThenName(a: PlantableItem, b: PlantableItem): number {
 
 export default function GardenPage() {
   const { user, profile, setProfile, refreshProfile } = useAuth();
+  const toast = useToast();
   const isProcessing = useRef(false);
 
   const [now, setNow] = useState(() => Date.now());
-  const [toast, setToast] = useState("");
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
   const [harvestAnim, setHarvestAnim] = useState<number | null>(null);
 
@@ -249,11 +250,6 @@ export default function GardenPage() {
   const totalPlanted = tiles.length;
   const totalPlantables = plantableInventory.reduce((sum, item) => sum + item.count, 0);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3500);
-  };
-
   const placePlant = async (item: PlantableItem) => {
     if (selectingTile === null || !user?.uid || !profile || isProcessing.current) return;
     if (garden[selectingTile]) {
@@ -274,7 +270,7 @@ export default function GardenPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        showToast(data?.error?.message || "Could not plant. Please try again.");
+        toast.error(data?.error?.message || "Could not plant. Please try again.");
         return;
       }
       if (typeof setProfile === "function" && profile) {
@@ -283,7 +279,7 @@ export default function GardenPage() {
       }
       await refreshProfile();
       const plantedRarity = normalizeRarity(data.tile?.rarity ?? item.rarity);
-      showToast(`${item.itemName} planted. First harvest in ${formatDuration(GROW_DURATION[plantedRarity])}.`);
+      toast.success(`${item.itemName} planted. First harvest in ${formatDuration(GROW_DURATION[plantedRarity])}.`);
       setSelectingTile(null);
     } finally {
       isProcessing.current = false;
@@ -307,7 +303,7 @@ export default function GardenPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        showToast(data?.error?.message || "Could not remove plant.");
+        toast.error(data?.error?.message || "Could not remove plant.");
         return;
       }
       if (typeof setProfile === "function" && profile) {
@@ -316,7 +312,7 @@ export default function GardenPage() {
         setProfile({ ...profile, garden: data.garden, [key]: data[key] });
       }
       await refreshProfile();
-      showToast("Plant returned to your inventory.");
+      toast.success("Plant returned to your inventory.");
     } finally {
       isProcessing.current = false;
     }
@@ -339,7 +335,7 @@ export default function GardenPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        showToast(data?.error?.message || data?.message || "Harvest failed. Please try again.");
+        toast.error(data?.error?.message || data?.message || "Harvest failed. Please try again.");
         return;
       }
       if (typeof setProfile === "function" && profile) {
@@ -351,7 +347,7 @@ export default function GardenPage() {
         });
       }
       await refreshProfile();
-      showToast(`Harvested ${tileName(tile)}. +${data.eco} EcoPoints, +${data.xp} XP.`);
+      toast.success(`Harvested ${tileName(tile)}. +${data.eco} EcoPoints, +${data.xp} XP.`);
     } finally {
       isProcessing.current = false;
     }
@@ -369,7 +365,7 @@ export default function GardenPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        showToast(data?.error?.message || data?.message || "Harvest failed. Please try again.");
+        toast.error(data?.error?.message || data?.message || "Harvest failed. Please try again.");
         return;
       }
       if (typeof setProfile === "function" && profile) {
@@ -386,7 +382,7 @@ export default function GardenPage() {
         });
       }
       await refreshProfile();
-      showToast(`Harvested ${data.harvested} plants. +${data.eco} EcoPoints, +${data.xp} XP.`);
+      toast.success(`Harvested ${data.harvested} plants. +${data.eco} EcoPoints, +${data.xp} XP.`);
     } finally {
       isProcessing.current = false;
     }
@@ -399,7 +395,7 @@ export default function GardenPage() {
     if (!user?.uid || !profile || isProcessing.current || !canBuyMore) return;
     const balance = Number(profile.ecoPoints ?? 0) || 0;
     if (balance < nextCost) {
-      showToast(`Need ${nextCost} EcoPoints to unlock a tile; you have ${balance}.`);
+      toast.error(`Need ${nextCost} EcoPoints to unlock a tile; you have ${balance}.`);
       return;
     }
 
@@ -413,14 +409,14 @@ export default function GardenPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        showToast(data?.error?.message || "Could not unlock tile. Please try again.");
+        toast.error(data?.error?.message || "Could not unlock tile. Please try again.");
         return;
       }
       if (typeof setProfile === "function" && profile) {
         setProfile({ ...profile, ecoPoints: data.ecoPoints, gardenTiles: data.gardenTiles });
       }
       await refreshProfile();
-      showToast(`Tile unlocked! −${nextCost} EcoPoints.`);
+      toast.success(`Tile unlocked! −${nextCost} EcoPoints.`);
     } finally {
       isProcessing.current = false;
     }
@@ -798,15 +794,6 @@ export default function GardenPage() {
           ))}
         </div>
       </Panel>
-
-      {toast && (
-        <div
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl"
-          style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}
-        >
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

@@ -94,9 +94,29 @@ export async function POST() {
         return NextResponse.json({ error: { code: "quests/catalog-empty" } }, { status: 500 });
       }
 
+      // Bias the daily set toward easy quests so new and casual users get a
+      // friendly, low-friction set. Partition by difficulty, seed-shuffle each
+      // bucket, then concatenate easy → medium → hard before slicing. Because
+      // `completedQuests` is lifetime-cumulative and excluded above, users work
+      // through the easy pool first, then medium, then hard — a natural
+      // easy→hard progression over their lifetime (the pool resets to all
+      // quests once everything is done, so easy ones come back around).
       const dayKey = new Date().toISOString().slice(0, 10);
-      const shuffled = seededShuffle(available, `${session.userId}:${dayKey}`);
-      const selectedIds = shuffled.slice(0, DAILY_QUEST_COUNT).map((q) => q.id);
+      const seed = `${session.userId}:${dayKey}`;
+      const easy = seededShuffle(
+        available.filter((q) => q.difficulty === "easy"),
+        seed
+      );
+      const medium = seededShuffle(
+        available.filter((q) => q.difficulty === "medium"),
+        seed
+      );
+      const hard = seededShuffle(
+        available.filter((q) => q.difficulty === "hard"),
+        seed
+      );
+      const ordered = [...easy, ...medium, ...hard];
+      const selectedIds = ordered.slice(0, DAILY_QUEST_COUNT).map((q) => q.id);
 
       const now = new Date().toISOString();
       const nextPayload = {

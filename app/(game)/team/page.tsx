@@ -7,12 +7,36 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import type { TeamMissionTemplate } from "@/lib/catalog";
+import {
+  PageHero,
+  Panel,
+  Pill,
+  MetricCard,
+  ProgressBar,
+  primaryButton,
+  secondaryButton,
+  inputClass,
+} from "@/components/game-ui";
+import { Dialog } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/loading-state";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
-const difficultyColor: Record<string, string> = {
-  Easy: "bg-emerald-50 text-emerald-700",
-  Medium: "bg-amber-50 text-amber-700",
-  Hard: "bg-rose-50 text-rose-700",
+// Difficulty chips stay semantically colored (green/amber/red) but ride themed
+// surfaces via color-mix so they remain readable in dark/aurora/liquid instead
+// of the old bg-emerald-50/amber-50/rose-50 which washed out on dark themes.
+const difficultyChip: Record<string, { background: string; color: string }> = {
+  Easy:   { background: "color-mix(in srgb, #2f9e54 16%, var(--bg-panel))", color: "#2f9e54" },
+  Medium: { background: "color-mix(in srgb, #c98a0e 18%, var(--bg-panel))", color: "#c98a0e" },
+  Hard:   { background: "color-mix(in srgb, #db5a36 18%, var(--bg-panel))", color: "#db5a36" },
 };
+
+// Eco reward chip — green-tinted, themed. XP rewards use the neutral Pill.
+const ecoChipStyle = {
+  background: "color-mix(in srgb, #2f9e54 14%, var(--bg-panel))",
+  color: "#2f9e54",
+} as const;
 
 export default function TeamPage() {
   const { user } = useAuth();
@@ -260,104 +284,107 @@ export default function TeamPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <p className="text-forest-500">Loading team data...</p>
-      </div>
-    );
+    return <LoadingState label="Loading team data…" />;
   }
+
+  const memberCount = team?.stats?.members || 0;
 
   return (
     <div className="flex flex-col gap-5">
 
       {/* ── Hero ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-forest-950 px-8 py-8 text-cream-100">
-        <div className="pointer-events-none absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(ellipse_at_top_right,rgba(167,196,132,0.12),transparent_60%)]" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-moss-300">Cooperative play</p>
-            <h1 className="mt-2 font-serif text-3xl font-bold sm:text-4xl">Team Hub</h1>
-            <p className="mt-1 text-sm text-cream-100/60">Collaborate on eco goals with your squad.</p>
-          </div>
+      <PageHero
+        eyebrow="Cooperative play"
+        title="Team Hub"
+        description="Collaborate on eco goals with your squad."
+      >
+        {joined ? (
           <div className="flex flex-wrap gap-3">
-            {!joined ? (
-              <>
-                <button onClick={() => setShowCreateModal(true)} className="min-h-11 rounded-xl bg-cream-100 px-5 py-2.5 text-sm font-bold tracking-wide text-forest-950 hover:bg-white active:scale-[0.98] transition-all">
-                  Create Team
-                </button>
-                <button onClick={() => setShowJoinModal(true)} className="min-h-11 rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-white/12 transition-all">
-                  Join via Code
-                </button>
-              </>
-            ) : (
-              <button onClick={handleLeaveTeam} className="min-h-11 rounded-xl border border-white/25 bg-white/8 px-5 py-2.5 text-sm font-semibold text-cream-100/80 hover:bg-white/12 transition-all">
-                Leave Team
-              </button>
-            )}
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-center">
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-moss-300">Members</div>
+              <div className="mt-1 font-serif text-xl font-bold leading-none text-white">{memberCount}</div>
+            </div>
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-center">
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-moss-300">Shared XP</div>
+              <div className="mt-1 font-serif text-xl font-bold leading-none text-white">{(team?.stats?.xp || 0).toLocaleString()}</div>
+            </div>
           </div>
-        </div>
-      </div>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => setShowCreateModal(true)} className={primaryButton}>
+              Create Team
+            </button>
+            <button
+              onClick={() => setShowJoinModal(true)}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/25 bg-white/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-cream-100 transition hover:bg-white/20 active:scale-[0.97]"
+            >
+              Join via Code
+            </button>
+          </div>
+        )}
+      </PageHero>
 
       {/* ── Empty state ── */}
       {!joined ? (
-        <div className="flex min-h-[260px] flex-col items-center justify-center gap-5 rounded-2xl border-2 border-dashed p-10 text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl" style={{ background: "var(--bg-panel-alt)" }}>👥</div>
-          <div>
-            <p className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>You're not part of a team yet</p>
-            <p className="mt-1 text-sm max-w-xs mx-auto" style={{ color: "var(--text-muted)" }}>Create a cozy squad or join with a 6-character code.</p>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => setShowCreateModal(true)} className="min-h-11 rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all">
-              Start a Team
-            </button>
-            <button onClick={() => setShowJoinModal(true)} className="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-bold transition" style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}>
-              Have a Code?
-            </button>
-          </div>
-        </div>
+        <EmptyState
+          icon="👥"
+          title="You're not part of a team yet"
+          description="Create a cozy squad or join with a 6-character code."
+          action={
+            <div className="flex flex-wrap justify-center gap-3">
+              <button onClick={() => setShowCreateModal(true)} className={primaryButton}>
+                Start a Team
+              </button>
+              <button onClick={() => setShowJoinModal(true)} className={secondaryButton}>
+                Have a Code?
+              </button>
+            </div>
+          }
+        />
       ) : (
         <>
           {/* ── Team Overview ── */}
-          <div className="rounded-2xl border p-6" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Your team</p>
-                <h2 className="mt-0.5 font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{team?.name || "Team"}</h2>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="rounded-lg border px-3 py-1 text-xs font-bold" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-secondary)" }}>
-                    Code: {team?.code || "N/A"}
-                  </span>
-                  <span className="rounded-lg bg-forest-950 px-3 py-1 text-xs font-bold uppercase text-cream-100">
-                    {team?.role || "member"}
-                  </span>
-                </div>
+          <Panel
+            eyebrow="Your team"
+            title={team?.name || "Team"}
+            action={
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(team?.code || ""); toast.show("Code copied!"); }}
+                  className={secondaryButton}
+                >
+                  Copy Code
+                </button>
+                <button
+                  onClick={handleLeaveTeam}
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-rose-300/60 bg-rose-500/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-rose-600 transition hover:bg-rose-500/20 active:scale-[0.97]"
+                  style={{ color: "rgb(224 36 36 / 0.85)" }}
+                >
+                  Leave Team
+                </button>
               </div>
-              <button
-                onClick={() => { navigator.clipboard?.writeText(team?.code || ""); toast.show("Code copied!"); }}
-                className="min-h-11 self-start rounded-xl border border-forest-200 bg-white px-4 py-2 text-xs font-bold text-forest-900 hover:border-forest-400 transition-all"
+            }
+          >
+            <div className="flex flex-wrap gap-2">
+              <Pill>Code: {team?.code || "N/A"}</Pill>
+              <span
+                className="inline-flex items-center rounded-full bg-forest-950 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-cream-100"
               >
-                Copy Code
-              </button>
+                {team?.role || "member"}
+              </span>
             </div>
 
             {/* Stats grid */}
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { label: "XP Shared", value: (team?.stats?.xp || 0).toLocaleString(), accent: "#4CAF50" },
-                { label: "EcoPoints Shared", value: (team?.stats?.eco || 0).toLocaleString(), accent: "#06B6D4" },
-                { label: "Missions Cleared", value: team?.stats?.missions || 0, accent: "#F59E0B" },
-                { label: "Active Members", value: team?.stats?.members || 0, accent: "#8B5CF6" },
-              ].map(({ label, value, accent }) => (
-                <div key={label} className="rounded-xl border p-3" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", borderLeft: `3px solid ${accent}` }}>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>{label}</p>
-                  <p className="mt-1 font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{value}</p>
-                </div>
-              ))}
+              <MetricCard label="XP Shared" value={(team?.stats?.xp || 0).toLocaleString()} accent="#4CAF50" />
+              <MetricCard label="EcoPoints Shared" value={(team?.stats?.eco || 0).toLocaleString()} accent="#06B6D4" />
+              <MetricCard label="Missions Cleared" value={team?.stats?.missions || 0} accent="#F59E0B" />
+              <MetricCard label="Active Members" value={team?.stats?.members || 0} accent="#8B5CF6" />
             </div>
 
             {/* Members */}
             <div className="mt-5">
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-forest-500">Members</p>
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Members</p>
               <div className="flex flex-col divide-y overflow-hidden rounded-xl border" style={{ borderColor: "var(--border-default)" }}>
                 {team?.members?.length > 0 ? team.members.map((m: any, i: number) => (
                   <Link key={i} href={`/profile/${m.id}`} className="flex items-center justify-between px-4 py-3 transition hover:opacity-80" style={{ background: "var(--bg-panel)" }}>
@@ -374,24 +401,21 @@ export default function TeamPage() {
                 )}
               </div>
             </div>
-          </div>
+          </Panel>
 
           {/* ── Active Missions ── */}
-          <div className="rounded-2xl border p-6" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Active missions</p>
-                <h2 className="mt-0.5 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Team Missions</h2>
-              </div>
-              <span className="rounded-lg border px-3 py-1.5 text-xs font-bold" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-secondary)" }}>
-                {activeMissions.length}/3 active
-              </span>
-            </div>
+          <Panel
+            eyebrow="Active missions"
+            title="Team Missions"
+            action={<Pill>{activeMissions.length}/3 active</Pill>}
+          >
             {activeMissions.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-10 text-center text-forest-400">
-                <span className="text-3xl">🎯</span>
-                <p className="text-sm">No active missions yet. Assign one from the library below!</p>
-              </div>
+              <EmptyState
+                variant="plain"
+                icon="🎯"
+                title="No active missions yet"
+                description="Assign one from the library below!"
+              />
             ) : (
               <div className="flex flex-col gap-3">
                 {activeMissions.map((m) => {
@@ -402,14 +426,12 @@ export default function TeamPage() {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <p className="font-serif text-lg font-bold" style={{ color: "var(--text-primary)" }}>{m.icon} {m.title}</p>
                         <div className="flex gap-2">
-                          <span className="rounded-lg px-2.5 py-1 text-xs font-bold" style={{ background: "var(--bg-panel)", color: "var(--text-secondary)" }}>+{m.xp} XP</span>
-                          <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">+{m.eco} Eco</span>
+                          <Pill>+{m.xp} XP</Pill>
+                          <span className="rounded-lg px-2.5 py-1 text-xs font-bold" style={ecoChipStyle}>+{m.eco} Eco</span>
                         </div>
                       </div>
                       <div className="mt-3 flex items-center gap-3">
-                        <div className="flex-1 h-1.5 overflow-hidden rounded-full" style={{ background: "var(--border-default)" }}>
-                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: "var(--text-accent,#43653f)" }} />
-                        </div>
+                        <ProgressBar value={pct} />
                         <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>{m.done}/{m.needed}</span>
                       </div>
                       <button
@@ -421,27 +443,27 @@ export default function TeamPage() {
                           setTeamPhotoPreview(null);
                           setProofError(null);
                         }}
-                        className="mt-4 min-h-11 rounded-xl bg-forest-950 px-5 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
+                        disabled={isSubmitting}
+                        className={`mt-4 ${primaryButton}`}
                       >
-                        Submit Progress
+                        {isSubmitting ? "Submitting…" : "Submit Progress"}
                       </button>
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
+          </Panel>
 
           {/* ── Mission Library ── */}
-          <div className="rounded-2xl border p-6" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Mission library</p>
-            <h2 className="mt-0.5 mb-5 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Assign New Mission</h2>
+          <Panel eyebrow="Mission library" title="Assign New Mission">
             <div className="grid gap-3 sm:grid-cols-2">
               {templates.length === 0 ? (
-                <p className="col-span-full text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Loading missions…</p>
+                <LoadingState variant="inline" label="Loading missions…" className="col-span-full" />
               ) : templates.map((t) => {
                 const isAssigning = assigningId === t.id;
                 const isAlreadyActive = activeMissions.some((m) => m.mission_id === t.id);
+                const chip = difficultyChip[t.difficulty];
                 return (
                   <div key={t.id} className="flex flex-col gap-3 rounded-xl border p-4 transition" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                     <div>
@@ -449,18 +471,21 @@ export default function TeamPage() {
                       <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{t.description}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${difficultyColor[t.difficulty] ?? ""}`}
-                        style={!difficultyColor[t.difficulty] ? { background: "var(--bg-panel)", color: "var(--text-muted)" } : undefined}>
-                        {t.difficulty}
-                      </span>
-                      <span className="rounded-lg px-2.5 py-1 text-[10px] font-bold" style={{ background: "var(--bg-panel)", color: "var(--text-secondary)" }}>+{t.xp} XP</span>
-                      <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">+{t.eco} Eco</span>
-                      <span className="rounded-lg bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-600">{t.needed} teammates</span>
+                      {chip ? (
+                        <span className="rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide" style={chip}>
+                          {t.difficulty}
+                        </span>
+                      ) : (
+                        <Pill>{t.difficulty}</Pill>
+                      )}
+                      <Pill>+{t.xp} XP</Pill>
+                      <span className="rounded-lg px-2.5 py-1 text-[10px] font-bold" style={ecoChipStyle}>+{t.eco} Eco</span>
+                      <span className="rounded-lg px-2.5 py-1 text-[10px] font-bold" style={{ background: "var(--bg-panel)", color: "var(--text-muted)" }}>{t.needed} teammates</span>
                     </div>
                     <button
                       onClick={() => handleAssignMission(t)}
                       disabled={isAssigning || isAlreadyActive || activeMissions.length >= 3}
-                      className="mt-auto min-h-11 rounded-xl bg-forest-950 px-4 py-2.5 text-xs font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`mt-auto ${primaryButton}`}
                     >
                       {isAssigning ? "Assigning…" : isAlreadyActive ? "Already Active" : activeMissions.length >= 3 ? "Limit Reached" : "Assign"}
                     </button>
@@ -468,21 +493,17 @@ export default function TeamPage() {
                 );
               })}
             </div>
-          </div>
+          </Panel>
 
           {/* ── Team Leaderboard ── */}
-          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-            <div className="px-6 pt-5 pb-4 border-b" style={{ borderColor: "var(--border-subtle)" }}>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Ranking</p>
-              <h2 className="mt-0.5 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Team Leaderboard</h2>
-            </div>
-            <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+          <Panel eyebrow="Ranking" title="Team Leaderboard" className="overflow-hidden">
+            <div className="-mx-5 -my-5 divide-y sm:-mx-6 sm:-my-6" style={{ borderColor: "var(--border-subtle)" }}>
               {[...(team?.members || [])].sort((a: any, b: any) => (b.xp || 0) - (a.xp || 0)).map((m: any, i: number) => (
-                <Link key={i} href={`/profile/${m.id}`} className="flex items-center gap-4 px-6 py-3.5 transition hover:opacity-80" style={{ borderColor: "var(--border-subtle)" }}>
+                <Link key={i} href={`/profile/${m.id}`} className="flex items-center gap-4 px-5 py-3.5 transition hover:opacity-80 sm:px-6" style={{ borderColor: "var(--border-subtle)" }}>
                   <span className="w-6 text-center font-serif text-base font-black" style={{ color: "var(--text-muted)" }}>#{i + 1}</span>
                   <Avatar name={m.name || "Member"} src={m.profileImage} size={32} />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{m.name}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{m.name}</p>
                     <p className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>{m.role}</p>
                   </div>
                   <span className="font-serif text-base font-bold" style={{ color: "var(--text-secondary)" }}>{(m.xp || 0).toLocaleString()} XP</span>
@@ -492,153 +513,138 @@ export default function TeamPage() {
                 <div className="px-6 py-6 text-sm text-center" style={{ color: "var(--text-muted)" }}>No members to rank yet</div>
               )}
             </div>
-          </div>
+          </Panel>
         </>
       )}
 
-      {/* ── Modals ── */}
-      {(showCreateModal || showJoinModal) && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-forest-950/60 p-4 backdrop-blur-sm"
-          onClick={closeModals}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl p-7 shadow-[0_24px_60px_rgba(0,0,0,0.25)]"
-            style={{ background: "var(--bg-panel)", border: "1px solid var(--border-default)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-              {showCreateModal ? "Create a Team" : "Join a Team"}
-            </h3>
-            <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-              {showCreateModal ? "Name your squad so friends can recognize it." : "Enter the 6-character invite code."}
-            </p>
-            <input
-              value={inputVal}
-              onChange={(e) => setInputVal(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (showCreateModal ? handleCreateTeam() : handleJoinTeam())}
-              placeholder={showCreateModal ? "e.g. Green Guardians" : "e.g. ECO123"}
-              maxLength={showCreateModal ? 40 : 6}
-              className="mt-5 w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2"
-              style={{ borderColor: "var(--border-default)", background: "var(--bg-input)", color: "var(--text-primary)" }}
-            />
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                onClick={closeModals}
-                className="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
-                style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={showCreateModal ? handleCreateTeam : handleJoinTeam}
-                className="min-h-11 rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all"
-              >
-                {showCreateModal ? "Create" : "Join"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Create / Join Modal ── */}
+      <Dialog
+        open={showCreateModal || showJoinModal}
+        onClose={closeModals}
+        title={showCreateModal ? "Create a Team" : "Join a Team"}
+        description={showCreateModal ? "Name your squad so friends can recognize it." : "Enter the 6-character invite code."}
+        footer={
+          <>
+            <button onClick={closeModals} className={secondaryButton}>Cancel</button>
+            <button
+              onClick={showCreateModal ? handleCreateTeam : handleJoinTeam}
+              className={primaryButton}
+            >
+              {showCreateModal ? "Create" : "Join"}
+            </button>
+          </>
+        }
+      >
+        <input
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (showCreateModal ? handleCreateTeam() : handleJoinTeam())}
+          placeholder={showCreateModal ? "e.g. Green Guardians" : "e.g. ECO123"}
+          maxLength={showCreateModal ? 40 : 6}
+          className={inputClass}
+          autoFocus
+        />
+      </Dialog>
 
       {/* ── Submit Proof Modal ── */}
-      {activeProofMission && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl p-7 shadow-[0_24px_60px_rgba(0,0,0,0.25)]" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-default)" }}>
-            <h3 className="font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Submit Progress Proof</h3>
-            <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-              Proof for: <strong style={{ color: "var(--text-primary)" }}>"{activeProofMission.title}"</strong>
+      <Dialog
+        open={!!activeProofMission}
+        onClose={() => setActiveProofMission(null)}
+        title="Submit Progress Proof"
+        size="lg"
+        footer={
+          <>
+            <button type="button" onClick={() => setActiveProofMission(null)} className={secondaryButton}>Cancel</button>
+            <button
+              type="button"
+              onClick={handleSubmitProgress}
+              disabled={submittingProof || (proofType === "text" && teamTextProof.trim().length < 8) || (proofType === "photo" && !teamPhotoFile)}
+              className={primaryButton}
+            >
+              {submittingProof ? "Verifying…" : "Submit Proof"}
+            </button>
+          </>
+        }
+      >
+        <p className="mb-4 text-sm" style={{ color: "var(--text-muted)" }}>
+          Proof for: <strong style={{ color: "var(--text-primary)" }}>&ldquo;{activeProofMission?.title}&rdquo;</strong>
+        </p>
+
+        {/* Tab selector */}
+        <SegmentedControl
+          ariaLabel="Proof type"
+          value={proofType}
+          onChange={(v) => { setProofType(v as "text" | "photo"); setProofError(null); }}
+          options={[
+            { value: "text", label: "Text Description" },
+            { value: "photo", label: "Photo Upload" }
+          ]}
+        />
+
+        {proofType === "text" ? (
+          <div className="mt-5">
+            <label htmlFor="team-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+              Describe what you completed (min 8 characters)
+            </label>
+            <textarea
+              id="team-text-proof"
+              value={teamTextProof}
+              onChange={(e) => setTeamTextProof(e.target.value)}
+              placeholder="e.g. I commuted to work by bicycle today instead of driving."
+              rows={4}
+              className="w-full rounded-xl border px-4 py-3 text-sm outline-none resize-none transition focus:shadow-[0_0_0_3px_rgba(67,101,63,0.14)]"
+              style={{ borderColor: "var(--border-input)", background: "var(--bg-input)", color: "var(--text-primary)" }}
+            />
+            <p
+              className="mt-1 text-right text-[10px] font-bold"
+              style={{ color: teamTextProof.trim().length >= 8 ? "var(--text-accent, #43653f)" : "#e0593a" }}
+            >
+              {teamTextProof.trim().length}/8 min characters
             </p>
-
-            {/* Tab selector */}
-            <div className="mt-5 flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
-              <button type="button" onClick={() => { setProofType("text"); setProofError(null); }}
-                className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
-                style={proofType === "text" ? { background: "var(--bg-panel)", color: "var(--text-primary)" } : { color: "var(--text-muted)" }}>
-                Text Description
-              </button>
-              <button type="button" onClick={() => { setProofType("photo"); setProofError(null); }}
-                className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
-                style={proofType === "photo" ? { background: "var(--bg-panel)", color: "var(--text-primary)" } : { color: "var(--text-muted)" }}>
-                Photo Upload
-              </button>
-            </div>
-
-            {proofType === "text" ? (
-              <div className="mt-5">
-                <label htmlFor="team-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                  Describe what you completed (min 8 characters)
-                </label>
-                <textarea
-                  id="team-text-proof"
-                  value={teamTextProof}
-                  onChange={(e) => setTeamTextProof(e.target.value)}
-                  placeholder="e.g. I commuted to work by bicycle today instead of driving."
-                  rows={4}
-                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none resize-none transition"
-                  style={{ borderColor: "var(--border-input)", background: "var(--bg-input)", color: "var(--text-primary)" }}
-                />
-                <p className={`mt-1 text-right text-[10px] font-bold ${teamTextProof.trim().length >= 8 ? "" : "text-rose-500"}`}
-                  style={teamTextProof.trim().length >= 8 ? { color: "var(--text-accent,#43653f)" } : undefined}>
-                  {teamTextProof.trim().length}/8 min characters
-                </p>
-              </div>
-            ) : (
-              <div className="mt-5 flex flex-col gap-3">
-                <label className="block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                  Select a photo showing completion
-                </label>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => document.getElementById("team-photo-camera")?.click()}
-                    className="flex-1 rounded-xl border py-3 text-xs font-bold transition"
-                    style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-primary)" }}>
-                    📸 Take Photo
-                  </button>
-                  <button type="button" onClick={() => document.getElementById("team-photo-gallery")?.click()}
-                    className="flex-1 rounded-xl border py-3 text-xs font-bold transition"
-                    style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-primary)" }}>
-                    🖼️ Gallery
-                  </button>
-                  {teamPhotoFile && (
-                    <button type="button" onClick={() => { setTeamPhotoFile(null); setTeamPhotoPreview(null); }}
-                      className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 transition">
-                      Clear
-                    </button>
-                  )}
-                </div>
-                <input id="team-photo-camera" type="file" accept="image/*" capture="environment"
-                  onChange={(e) => { const f = e.target.files?.[0]; if(f){setTeamPhotoFile(f);const r=new FileReader();r.onload=()=>{if(typeof r.result==="string")setTeamPhotoPreview(r.result)};r.readAsDataURL(f); } }}
-                  className="sr-only" />
-                <input id="team-photo-gallery" type="file" accept="image/*"
-                  onChange={(e) => { const f = e.target.files?.[0]; if(f){setTeamPhotoFile(f);const r=new FileReader();r.onload=()=>{if(typeof r.result==="string")setTeamPhotoPreview(r.result)};r.readAsDataURL(f); } }}
-                  className="sr-only" />
-                {teamPhotoPreview && (
-                  <div className="mt-2 overflow-hidden rounded-xl border p-2 text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                    <img src={teamPhotoPreview} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {proofError && (
-              <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">{proofError}</div>
-            )}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={() => setActiveProofMission(null)}
-                className="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-semibold transition"
-                style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}>
-                Cancel
-              </button>
-              <button type="button" onClick={handleSubmitProgress}
-                disabled={submittingProof || (proofType==="text" && teamTextProof.trim().length < 8) || (proofType==="photo" && !teamPhotoFile)}
-                className="min-h-11 rounded-xl bg-forest-950 px-5 py-2.5 text-sm font-bold tracking-wide text-cream-100 hover:bg-forest-800 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                {submittingProof ? "Verifying…" : "Submit Proof"}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="mt-5 flex flex-col gap-3">
+            <label className="block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+              Select a photo showing completion
+            </label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => document.getElementById("team-photo-camera")?.click()}
+                className="flex-1 rounded-xl border py-3 text-xs font-bold transition"
+                style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-primary)" }}>
+                📸 Take Photo
+              </button>
+              <button type="button" onClick={() => document.getElementById("team-photo-gallery")?.click()}
+                className="flex-1 rounded-xl border py-3 text-xs font-bold transition"
+                style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-primary)" }}>
+                🖼️ Gallery
+              </button>
+              {teamPhotoFile && (
+                <button type="button" onClick={() => { setTeamPhotoFile(null); setTeamPhotoPreview(null); }}
+                  className="rounded-xl border border-rose-300/60 bg-rose-500/10 px-4 py-3 text-xs font-bold transition"
+                  style={{ color: "rgb(220 60 50)" }}>
+                  Clear
+                </button>
+              )}
+            </div>
+            <input id="team-photo-camera" type="file" accept="image/*" capture="environment"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) { setTeamPhotoFile(f); const r = new FileReader(); r.onload = () => { if (typeof r.result === "string") setTeamPhotoPreview(r.result); }; r.readAsDataURL(f); } }}
+              className="sr-only" />
+            <input id="team-photo-gallery" type="file" accept="image/*"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) { setTeamPhotoFile(f); const r = new FileReader(); r.onload = () => { if (typeof r.result === "string") setTeamPhotoPreview(r.result); }; r.readAsDataURL(f); } }}
+              className="sr-only" />
+            {teamPhotoPreview && (
+              <div className="mt-2 overflow-hidden rounded-xl border p-2 text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={teamPhotoPreview} alt="Preview" className="mx-auto max-h-40 rounded-lg object-cover" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {proofError && (
+          <ErrorBanner className="mt-4">{proofError}</ErrorBanner>
+        )}
+      </Dialog>
     </div>
   );
 }

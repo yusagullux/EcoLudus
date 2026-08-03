@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
 import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
+import { useToast } from "@/lib/toast";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
 // discoverable species (sourced from the catalog APIs), not just what the user
@@ -114,7 +115,7 @@ export default function CollectionPage() {
   const ecoPoints = Number(profile?.ecoPoints ?? 0);
   const [mode, setMode] = useState<CollMode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
-  const [toast, setToast] = useState("");
+  const toast = useToast();
 
   // Master lists (the full discoverable universe per tab). SWR caches both
   // across navigations — the shop catalog is shared with the shop page.
@@ -207,16 +208,11 @@ export default function CollectionPage() {
     return () => clearInterval(interval);
   }, [profileHatchings]);
 
-  const showToast = (message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(""), 3500);
-  };
-
   const incubateEgg = async (egg: any) => {
     if (!user?.uid || !profile) return;
 
     if (profileHatchings.length >= 3) {
-      showToast("All incubator slots are full! Hatch an egg to free up a slot.");
+      toast.error("All incubator slots are full! Hatch an egg to free up a slot.");
       return;
     }
 
@@ -229,19 +225,19 @@ export default function CollectionPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.success) {
-      showToast(data?.error?.message || "Could not place egg in incubator. Please try again.");
+      toast.error(data?.error?.message || "Could not place egg in incubator. Please try again.");
       return;
     }
 
     await refreshProfile();
-    showToast(`${egg.name} is now incubating in the Hatching Chamber!`);
+    toast.success(`${egg.name} is now incubating in the Hatching Chamber!`);
   };
 
   const warmEgg = async (hatching: any) => {
     if (!user?.uid || !profile) return;
 
     if (ecoPoints < 10) {
-      showToast("Need 10 EcoPoints to warm the egg!");
+      toast.error("Need 10 EcoPoints to warm the egg!");
       return;
     }
 
@@ -255,12 +251,12 @@ export default function CollectionPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.success) {
-      showToast(data?.error?.message || "Failed to warm egg. Please try again.");
+      toast.error(data?.error?.message || "Failed to warm egg. Please try again.");
       return;
     }
 
     await refreshProfile();
-    showToast("Warmed the egg! 15 minutes shaved off hatching time.");
+    toast.success("Warmed the egg! 15 minutes shaved off hatching time.");
   };
 
   const hatchInstantly = async (hatching: any) => {
@@ -270,7 +266,7 @@ export default function CollectionPage() {
     const cost = Math.max(10, Math.ceil(remainingTime / (3 * 60 * 1000))); // 1 EP per 3 minutes remaining, min 10
 
     if (ecoPoints < cost) {
-      showToast(`Need ${cost} EcoPoints to hatch instantly!`);
+      toast.error(`Need ${cost} EcoPoints to hatch instantly!`);
       return;
     }
 
@@ -283,12 +279,12 @@ export default function CollectionPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.success) {
-      showToast(data?.error?.message || "Instant hatching failed. Please try again.");
+      toast.error(data?.error?.message || "Instant hatching failed. Please try again.");
       return;
     }
 
     await refreshProfile();
-    showToast("Egg incubated! Ready to hatch.");
+    toast.success("Egg incubated! Ready to hatch.");
   };
 
   // The hatching reveal is purely cosmetic — the actual hatch (timing check,
@@ -306,7 +302,7 @@ export default function CollectionPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.success) {
-      showToast(data?.error?.message || "This egg is not ready to hatch yet.");
+      toast.error(data?.error?.message || "This egg is not ready to hatch yet.");
       await refreshProfile();
       return;
     }
@@ -364,7 +360,7 @@ export default function CollectionPage() {
     pendingAnimalRef.current = null;
     await refreshProfile();
 
-    showToast(`${revealedAnimal.name} was added to your collection book!`);
+    toast.success(`${revealedAnimal.name} was added to your collection book!`);
     setActiveHatching(null);
     setMode("animals");
   };
@@ -400,7 +396,7 @@ export default function CollectionPage() {
       if (!ok || !data?.success) {
         setChestState("closed");
         setActiveChest(null);
-        showToast(data?.error?.message || "Failed to open chest. Please try again.");
+        toast.error(data?.error?.message || "Failed to open chest. Please try again.");
         return;
       }
       setChestReward(data.reward);
@@ -424,11 +420,11 @@ export default function CollectionPage() {
     if (!chestReward) return;
 
     if (chestReward.type === "points") {
-      showToast(`Claimed ${chestReward.amount} EcoPoints!`);
+      toast.success(`Claimed ${chestReward.amount} EcoPoints!`);
     } else if (chestReward.type === "seed") {
-      showToast(`Got a ${chestReward.seedName}! 🌱 Plant it in your Garden.`);
+      toast.success(`Got a ${chestReward.seedName}! 🌱 Plant it in your Garden.`);
     } else {
-      showToast(`Got a ${chestReward.name}! Check your eggs.`);
+      toast.success(`Got a ${chestReward.name}! Check your eggs.`);
     }
 
     setActiveChest(null);
@@ -453,13 +449,13 @@ export default function CollectionPage() {
     const data = await res.json().catch(() => ({}));
     setSelectingPetId(null);
     if (!res.ok || !data?.success) {
-      showToast(data?.error?.message || "Could not choose that companion. Please try again.");
+      toast.error(data?.error?.message || "Could not choose that companion. Please try again.");
       return;
     }
     if (typeof setProfile === "function" && profile) {
       setProfile({ ...profile, animals: data.animals, activePet: data.activePet });
     }
-    showToast(`${animal.name} is now your active companion.`);
+    toast.success(`${animal.name} is now your active companion.`);
   };
 
   const catalogLoading = !shopCatalog || !speciesCatalog;
@@ -963,14 +959,6 @@ export default function CollectionPage() {
         </div>
       )}
 
-      {toast && (
-        <div
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl"
-          style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}
-        >
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

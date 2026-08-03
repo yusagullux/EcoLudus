@@ -23,8 +23,8 @@ type PageHeroProps = {
 export function PageHero({ eyebrow, title, description, children }: PageHeroProps) {
   return (
     <section
-      className="relative overflow-hidden rounded-[22px] border border-white/10 px-5 py-6 shadow-[0_20px_60px_rgba(0,0,0,0.22)] sm:px-8 sm:py-8"
-      style={{ background: "var(--bg-hero)" }}
+      className="relative overflow-hidden rounded-[22px] border border-white/10 px-5 py-6 sm:px-8 sm:py-8"
+      style={{ background: "var(--bg-hero)", boxShadow: "var(--shadow-hero)" }}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/20" />
       <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -58,6 +58,7 @@ export function MetricCard({ label, value, accent = "#2f6b46", wide = false }: M
   return (
     <article
       className={`t-panel rounded-[16px] p-4 transition hover:-translate-y-0.5 ${wide ? "sm:col-span-2" : ""}`}
+      style={{ boxShadow: "var(--shadow-card)" }}
     >
       <div className="mb-2 h-[3px] w-7 rounded-full" style={{ background: accent }} />
       <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
@@ -82,7 +83,8 @@ type PanelProps = {
 export function Panel({ eyebrow, title, action, children, className = "" }: PanelProps) {
   return (
     <section
-      className={`t-panel rounded-[18px] shadow-[0_8px_32px_rgba(0,0,0,0.06)] ${className}`}
+      className={`t-panel rounded-[18px] ${className}`}
+      style={{ boxShadow: "var(--shadow-card)" }}
     >
       {(eyebrow || title || action) && (
         <div

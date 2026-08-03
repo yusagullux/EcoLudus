@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
+import { useToast } from "@/lib/toast";
 import {
   HeroMetric,
   MetricCard,
@@ -151,12 +152,7 @@ export default function HabitsPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmissionResult | null>(null);
 
-  const [toast, setToast] = useState("");
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3500);
-  };
+  const toast = useToast();
 
   useEffect(() => {
     async function loadMissions() {
@@ -239,11 +235,11 @@ export default function HabitsPage() {
       await refreshProfile();
 
       if (data.verification?.status === "APPROVED") {
-        showToast(`Habit logged! +${data.rewards.xpAwarded} XP earned.`);
+        toast.success(`Habit logged! +${data.rewards.xpAwarded} XP earned.`);
       } else if (data.verification?.status === "PARTIAL") {
-        showToast(`Partial credit: +${data.rewards.xpAwarded} XP. See feedback below.`);
+        toast.success(`Partial credit: +${data.rewards.xpAwarded} XP. See feedback below.`);
       } else {
-        showToast("Submission reviewed — see feedback below.");
+        toast.show("Submission reviewed — see feedback below.");
       }
     } catch (err: any) {
       setSubmitError(err.message || "An unexpected error occurred.");
@@ -613,12 +609,6 @@ export default function HabitsPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
-          {toast}
         </div>
       )}
     </div>

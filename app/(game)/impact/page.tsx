@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar } from "@/components/game-ui";
+import { ExplainerGrid } from "@/components/ui/explainer-grid";
+import { LoadingState } from "@/components/ui/loading-state";
 
 type CommunityStats = {
   totalUsers: number;
@@ -43,29 +45,32 @@ function MilestoneRow({
   const progress = Math.min(100, Math.round((current / milestone.value) * 100));
 
   return (
-    <div className="grid grid-cols-[1fr_80px_72px] items-center gap-4 border-b border-[#edf1e8] bg-[#fffefa] px-5 py-4 last:border-0 hover:bg-[#f7f9f2]">
-      <div>
-        <p className="text-sm font-extrabold text-forest-950">{milestone.label}</p>
+    <div
+      className="flex flex-col gap-3 border-t px-5 py-4 first:border-t-0 transition hover:bg-[var(--bg-panel-alt)] sm:flex-row sm:items-center sm:gap-4"
+      style={{ borderColor: "var(--border-subtle)" }}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{milestone.label}</p>
         <div className="mt-1.5">
           <ProgressBar value={progress} color={claimed ? "#2f6b46" : "#9fb78c"} />
         </div>
-        <p className="mt-1 text-xs font-semibold text-forest-700/50">
+        <p className="mt-1 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
           {claimed
             ? "Completed"
             : `${current.toLocaleString()} / ${milestone.value.toLocaleString()}`}
         </p>
       </div>
-      <div className="text-center">
-        <span className="text-lg">🌳</span>
-        <p className="text-xs font-extrabold text-forest-800">×{milestone.trees}</p>
-      </div>
-      <div className="text-right">
+      <div className="flex shrink-0 items-center justify-between gap-4 sm:justify-end sm:gap-3">
+        <div className="flex items-center gap-1.5">
+          <span className="text-lg">🌳</span>
+          <span className="text-xs font-extrabold" style={{ color: "var(--text-secondary)" }}>×{milestone.trees}</span>
+        </div>
         {claimed ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold text-emerald-700">
             ✓ Done
           </span>
         ) : (
-          <span className="inline-flex items-center rounded-full bg-[#f4f7ef] px-2.5 py-1 text-[10px] font-extrabold text-forest-600">
+          <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-extrabold" style={{ background: "var(--pill-bg)", color: "var(--text-muted)" }}>
             {progress}%
           </span>
         )}
@@ -97,7 +102,6 @@ export default function ImpactPage() {
   }, []);
 
   const xp = Number(profile?.xp ?? 0);
-  const level = Number(profile?.level ?? 1);
   const carbonReduced = Number(profile?.carbonReduced ?? 0);
   const missionsCompleted = Number(profile?.missionsCompleted ?? 0);
   const treesPlanted = Number(profile?.treesPlanted ?? 0);
@@ -145,11 +149,14 @@ export default function ImpactPage() {
         }
       >
         {nextMilestone && (
-          <div className="mb-4 rounded-xl border border-[#d6e8c2] bg-[#f0f8e8] px-4 py-3">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-forest-600">
+          <div
+            className="mb-4 rounded-xl border px-4 py-3"
+            style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}
+          >
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-accent)" }}>
               Next milestone
             </p>
-            <p className="mt-0.5 text-sm font-extrabold text-forest-950">
+            <p className="mt-0.5 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
               🌳 {nextMilestone.label} → plants {nextMilestone.trees} tree
               {nextMilestone.trees > 1 ? "s" : ""}
             </p>
@@ -177,14 +184,18 @@ export default function ImpactPage() {
             ) : undefined
           }
         >
-          <div className="-mx-5 -mt-5 divide-y divide-[#e7ecdf] sm:-mx-6 sm:-mt-6">
+          <div className="-mx-5 -mt-5 divide-y sm:-mx-6 sm:-mt-6" style={{ borderColor: "var(--border-subtle)" }}>
             {notifications.slice(0, 10).map((notification: any) => (
-              <div key={notification.id} className={`flex items-start gap-3 px-5 py-4 sm:px-6 ${!notification.read ? "bg-[#f0f8e8]" : ""}`}>
+              <div
+                key={notification.id}
+                className="flex items-start gap-3 px-5 py-4 sm:px-6"
+                style={!notification.read ? { background: "var(--bg-panel-alt)" } : undefined}
+              >
                 <span className="mt-0.5 text-lg">{notification.type === "tree_planted" ? "🌳" : "🔔"}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-extrabold text-forest-950">{notification.title}</p>
-                  <p className="mt-0.5 text-xs font-semibold text-forest-700/60">{notification.message}</p>
-                  <p className="mt-1 text-[10px] font-bold text-forest-700/40">
+                  <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{notification.title}</p>
+                  <p className="mt-0.5 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{notification.message}</p>
+                  <p className="mt-1 text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
                     {new Date(notification.createdAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -203,16 +214,14 @@ export default function ImpactPage() {
         title="Community Impact"
         action={
           community ? (
-            <span className="text-[10px] font-bold text-forest-700/50">
+            <span className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
               {community.source === "stale-cache" ? "Cached" : "Live"}
             </span>
           ) : undefined
         }
       >
         {loadingCommunity ? (
-          <div className="py-8 text-center text-sm font-semibold text-forest-700/50">
-            Loading community stats...
-          </div>
+          <LoadingState variant="inline" label="Loading community stats…" />
         ) : community ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {[
@@ -245,24 +254,24 @@ export default function ImpactPage() {
                 icon: "🕒"
               }
             ].map(({ label, value, icon }) => (
-              <div key={label} className="rounded-2xl bg-[#f4f7ef] p-4">
+              <div key={label} className="rounded-2xl p-4" style={{ background: "var(--bg-panel-alt)" }}>
                 <p className="text-lg">{icon}</p>
-                <p className="mt-2 text-sm font-extrabold text-forest-950">{value}</p>
-                <p className="mt-0.5 text-[11px] font-semibold text-forest-700/56">{label}</p>
+                <p className="mt-2 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{value}</p>
+                <p className="mt-0.5 text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>{label}</p>
               </div>
             ))}
           </div>
         ) : (
-          <div className="py-8 text-center text-sm font-semibold text-forest-700/50">
+          <p className="py-8 text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
             Community stats unavailable.
-          </div>
+          </p>
         )}
       </Panel>
 
       {/* How trees are planted */}
       <Panel eyebrow="Partners" title="How Tree Planting Will Work">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
+        <ExplainerGrid
+          items={[
             {
               icon: "🏆",
               title: "Hit a milestone",
@@ -278,14 +287,8 @@ export default function ImpactPage() {
               title: "Track your forest",
               desc: "Your trees counter grows here on your Impact Dashboard in real time."
             }
-          ].map(({ icon, title, desc }) => (
-            <div key={title} className="rounded-2xl bg-[#f4f7ef] p-4">
-              <p className="text-2xl">{icon}</p>
-              <p className="mt-2 text-sm font-extrabold text-forest-950">{title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-forest-700/62">{desc}</p>
-            </div>
-          ))}
-        </div>
+          ]}
+        />
       </Panel>
     </div>
   );

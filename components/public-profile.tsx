@@ -180,8 +180,8 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
             profilePlants.map((plant: any) => (
               <article key={plant.id} className="reveal-card group flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition hover:-translate-y-1" style={{ borderColor: rarityBorder[plant.rarity as Rarity] ?? "#d9e2d2", background: "var(--bg-card)" }}>
                 <span className="relative flex aspect-square w-full max-w-32 items-center justify-center rounded-2xl p-4" style={{ background: `${rarityStyle[plant.rarity as Rarity]?.accent ?? "#2f6b46"}12` }}>
-                  <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-white shadow-sm border border-forest-100/60 overflow-hidden p-2">
-                    <Image src={getPlantImage(plant)} alt={plant.name} fill sizes="96px" className="object-contain transition group-hover:scale-110 mix-blend-multiply dark:mix-blend-normal" />
+                  <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl shadow-sm overflow-hidden p-2" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)" }}>
+                    <Image src={getPlantImage(plant)} alt={plant.name} fill sizes="96px" className="object-contain transition group-hover:scale-110" />
                   </div>
                 </span>
                 <p className="text-sm font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>{plant.name}</p>

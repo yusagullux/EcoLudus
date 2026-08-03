@@ -38,22 +38,13 @@ export const metadata: Metadata = {
     description: "Turn eco actions into rewards. Grow your virtual collection and track your carbon footprint in a modern nature-inspired experience.",
     url: "https://ecoludus.com",
     siteName: "EcoLudus",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "EcoLudus Dashboard Preview"
-      }
-    ],
     locale: "en_US",
     type: "website"
   },
   twitter: {
     card: "summary_large_image",
     title: "EcoLudus | Sustainable Habits & Rewards",
-    description: "Turn eco actions into rewards and grow your virtual collection in a modern nature-inspired experience.",
-    images: ["/og-image.jpg"]
+    description: "Turn eco actions into rewards and grow your virtual collection in a modern nature-inspired experience."
   },
   icons: {
     icon: [

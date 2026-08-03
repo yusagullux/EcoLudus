@@ -18,7 +18,6 @@ export type ImpactSource =
   | "quests"
   | "private"
   | "team"
-  | "ecomap"
   | "petCare"
   | "garden"
   | "egg"
@@ -181,7 +180,7 @@ export async function grantImpact(input: GrantImpactInput): Promise<GrantImpactR
 
   // If the caller already opened a transaction and locked the user row, run
   // inside it. Otherwise do the own-read + own-transaction path (unchanged for
-  // non-reward callers like streak/apply, garden, friend, ecomap, private).
+  // non-reward callers like streak/apply, garden, friend, private).
   if (input.tx) {
     return run(input.tx.query, input.tx.user);
   }

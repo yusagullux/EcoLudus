@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
+import { useToast } from "@/lib/toast";
 import { computeVitals } from "@/lib/pet-vitals";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 
@@ -103,7 +104,7 @@ export default function PetsPage() {
   const { user, profile, setProfile, refreshProfile } = useAuth();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hearts, setHearts] = useState<Array<{ id: number; dx: string; dy: string }>>([]);
-  const [toast, setToast] = useState("");
+  const toast = useToast();
   // Prevents concurrent care-action submissions (double-click / button spam).
   const isProcessing = useRef(false);
   const pets = Array.isArray(profile?.animals) ? profile.animals.map(normalizePet) : [];
@@ -112,11 +113,6 @@ export default function PetsPage() {
   const selectedPet = useMemo(() => {
     return pets.find((pet) => pet.id === (selectedId || activePetId)) || pets[0] || null;
   }, [pets, selectedId, activePetId]);
-
-  const showToast = (message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(""), 3000);
-  };
 
   const selectActivePet = async (pet: any) => {
     if (!user?.uid || !profile) return;
@@ -131,14 +127,14 @@ export default function PetsPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.success) {
-      showToast(data?.error?.message || "Could not choose that companion.");
+      toast.error(data?.error?.message || "Could not choose that companion.");
       return;
     }
     setSelectedId(pet.id);
     if (typeof setProfile === "function" && profile) {
       setProfile({ ...profile, animals: data.animals, activePet: data.activePet });
     }
-    showToast(`${pet.name} is traveling with you now.`);
+    toast.success(`${pet.name} is traveling with you now.`);
   };
 
   // Heart-burst animation (purely visual — fires regardless of server outcome).
@@ -168,7 +164,7 @@ export default function PetsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        showToast(data?.error?.message || "Pet action did not save.");
+        toast.error(data?.error?.message || "Pet action did not save.");
         return;
       }
       if (typeof setProfile === "function" && profile) {
@@ -204,7 +200,7 @@ export default function PetsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        showToast(data?.error?.message || "Care action did not save. Please try again.");
+        toast.error(data?.error?.message || "Care action did not save. Please try again.");
         return;
       }
       if (typeof setProfile === "function" && profile) {
@@ -217,7 +213,7 @@ export default function PetsPage() {
       }
       await refreshProfile();
       const ecoGained = Number(data.ecoGained ?? 0);
-      showToast(`${action.label}: +${action.xp} XP${ecoGained ? `, +${ecoGained} Eco` : ""}.`);
+      toast.success(`${action.label}: +${action.xp} XP${ecoGained ? `, +${ecoGained} Eco` : ""}.`);
     } finally {
       isProcessing.current = false;
     }
@@ -403,11 +399,6 @@ export default function PetsPage() {
         </div>
       </Panel>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

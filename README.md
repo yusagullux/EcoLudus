@@ -19,7 +19,6 @@ Our mission is to inspire millions of people to adopt eco-friendly habits throug
 - **Pets & garden** — hatch and raise companion animals, grow a personal garden.
 - **Teams** — create/join teams (up to 8 members) via join codes, collaborate on team missions with difficulty-based rewards and cooldowns.
 - **Social** — global leaderboard, friends, user profiles with stats.
-- **EcoMap** — geographic eco-stops.
 - **Real-world impact** — milestone tree planting via Ecologi; weekly impact emails via SendGrid.
 
 ---

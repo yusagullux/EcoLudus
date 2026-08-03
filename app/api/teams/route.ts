@@ -327,8 +327,8 @@ export async function POST(request: Request) {
       }
 
       if (photoProof) {
-        // Parse + size-validate the same way /api/ecostops and /api/photo-verification
-        // do, then dedupe by image hash so a single photo can't be reused across
+        // Parse + size-validate the same way /api/photo-verification
+        // does, then dedupe by image hash so a single photo can't be reused across
         // submissions (previously this route decoded base64 with no checks).
         const photo = parsePhotoProof(photoProof, mimeType);
         if (!photo) {
