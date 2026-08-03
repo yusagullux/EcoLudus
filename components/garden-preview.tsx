@@ -101,16 +101,16 @@ export function GardenPreview() {
   };
 
   return (
-    <div className="rounded-[2rem] border border-forest-900/10 bg-white/70 p-8 shadow-[0_24px_50px_rgba(16,33,20,0.08)] backdrop-blur sm:p-10">
+    <div className="mk-surface rounded-[2rem] p-8 shadow-[0_24px_50px_rgba(16,33,20,0.08)] sm:p-10">
       <div className="mb-6 flex items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-forest-700/70">Interactive preview</p>
-          <h3 className="mt-2 font-serif text-3xl text-forest-950">Your virtual garden</h3>
-          <p className="mt-2 text-sm text-forest-900/70">Click plants to grow them — hand-drawn, live in the browser.</p>
+          <p className="mk-c-muted text-xs font-bold uppercase tracking-[0.2em]">Interactive preview</p>
+          <h3 className="mk-c-primary mt-2 font-serif text-3xl">Your virtual garden</h3>
+          <p className="mk-c-secondary mt-2 text-sm">Click plants to grow them — hand-drawn, live in the browser.</p>
         </div>
       </div>
 
-      <div className="relative mx-auto max-w-xl rounded-2xl border-2 border-dashed border-forest-900/15 bg-[linear-gradient(180deg,#eff3e8_0%,#dce7d5_100%)] p-8">
+      <div className="mk-bg-alt relative mx-auto max-w-xl rounded-2xl border-2 border-dashed p-8" style={{ borderColor: "color-mix(in srgb, var(--border-default) 50%, transparent)" }}>
         {/* Garden background decorations */}
         <svg
           className="pointer-events-none absolute inset-0 opacity-30"
@@ -141,11 +141,12 @@ export function GardenPreview() {
             >
               <div
                 className={`flex flex-col items-center rounded-xl transition-all ${
-                  hoveredId === plant.id ? "bg-white/50 p-2" : ""
+                  hoveredId === plant.id ? "p-2" : ""
                 }`}
+                style={hoveredId === plant.id ? { background: "color-mix(in srgb, var(--bg-panel) 60%, transparent)" } : undefined}
               >
                 <PlantStage stage={plant.stage} color={plant.color} />
-                <div className="mt-2 text-xs text-forest-900/50 capitalize">
+                <div className="mk-c-muted mt-2 text-xs capitalize">
                   {plant.stage}
                 </div>
               </div>
@@ -155,10 +156,10 @@ export function GardenPreview() {
       </div>
 
       <div className="mt-6 flex items-center justify-between">
-        <div className="text-xs text-forest-900/60">
-          <span className="font-semibold text-forest-900">{plants.filter((p) => p.stage === "flower").length}</span>{" "}
-          in bloom • 
-          <span className="ml-2 font-semibold text-forest-900">{plants.filter((p) => p.stage === "seed").length}</span>{" "}
+        <div className="mk-c-muted text-xs">
+          <span className="mk-c-primary font-semibold">{plants.filter((p) => p.stage === "flower").length}</span>{" "}
+          in bloom •
+          <span className="mk-c-primary ml-2 font-semibold">{plants.filter((p) => p.stage === "seed").length}</span>{" "}
           sprouting soon
         </div>
         <button
@@ -170,7 +171,7 @@ export function GardenPreview() {
               }))
             )
           }
-          className="text-xs font-medium text-forest-700 hover:text-forest-900 underline"
+          className="mk-c-accent text-xs font-medium underline hover:opacity-80"
         >
           Reset garden
         </button>

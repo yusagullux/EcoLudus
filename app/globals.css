@@ -648,6 +648,63 @@ html {
   color: #334155 !important;
 }
 
+/* ── MARKETING / THEME-AWARE SURFACES ──────────────────────────
+   Shared by the landing page, marketing shell, live-stats card, and
+   garden preview. These keep the marketing surfaces readable across
+   every theme (light/dark/liquid/dawn/bloom/aurora) by deriving from
+   the theme CSS variables instead of hardcoded forest/cream hexes. */
+
+.mk-surface {
+  background: color-mix(in srgb, var(--bg-panel) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-default) 70%, transparent);
+  color: var(--text-primary);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.mk-surface-solid {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+/* Rich dark "hero" surface — the dark CTA band + the Forest pulse card.
+   Uses the theme's dark sidebar color so it contrasts correctly on every
+   theme (incl. aurora, where the forest/cream scale flips). */
+.mk-hero {
+  background: linear-gradient(135deg, var(--bg-sidebar) 0%, color-mix(in srgb, var(--text-accent) 35%, var(--bg-sidebar)) 100%);
+  color: var(--text-sidebar);
+}
+.mk-btn-primary {
+  background: var(--bg-sidebar);
+  color: var(--text-sidebar);
+  box-shadow: var(--shadow-lift);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.mk-btn-primary:hover {
+  background: color-mix(in srgb, var(--text-accent) 28%, var(--bg-sidebar));
+}
+.mk-btn-ghost {
+  background: color-mix(in srgb, var(--bg-panel) 70%, transparent);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.mk-btn-ghost:hover {
+  background: var(--bg-panel);
+}
+/* Text + border helpers (one-off color hooks that Tailwind's forest
+   utilities can't provide on non-forest themes). */
+.mk-c-primary  { color: var(--text-primary); }
+.mk-c-secondary { color: var(--text-secondary); }
+.mk-c-muted    { color: var(--text-muted); }
+.mk-c-accent   { color: var(--text-accent); }
+.mk-c-sidebar  { color: var(--text-sidebar); }
+.mk-c-sidebar-muted { color: var(--text-sidebar-muted); }
+.mk-bd         { border-color: var(--border-default); }
+.mk-bd-subtle  { border-color: var(--border-subtle); }
+.mk-bg-alt     { background: var(--bg-panel-alt); }
+
 /* ── REDUCED MOTION ──────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
