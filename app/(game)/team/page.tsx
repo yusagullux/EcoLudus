@@ -11,7 +11,7 @@ import {
   PageHero,
   Panel,
   Pill,
-  MetricCard,
+  StatGrid,
   ProgressBar,
   primaryButton,
   secondaryButton,
@@ -377,12 +377,15 @@ export default function TeamPage() {
             </div>
 
             {/* Stats grid */}
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <MetricCard label="XP Shared" value={(team?.stats?.xp || 0).toLocaleString()} accent="#4CAF50" />
-              <MetricCard label="EcoPoints Shared" value={(team?.stats?.eco || 0).toLocaleString()} accent="#06B6D4" />
-              <MetricCard label="Missions Cleared" value={team?.stats?.missions || 0} accent="#F59E0B" />
-              <MetricCard label="Active Members" value={team?.stats?.members || 0} accent="#8B5CF6" />
-            </div>
+            <StatGrid
+              className="mt-5 grid-cols-2 gap-3 sm:grid-cols-4"
+              items={[
+                { label: "XP Shared", value: (team?.stats?.xp || 0).toLocaleString(), accent: "#4CAF50" },
+                { label: "EcoPoints Shared", value: (team?.stats?.eco || 0).toLocaleString(), accent: "#06B6D4" },
+                { label: "Missions Cleared", value: team?.stats?.missions || 0, accent: "#F59E0B" },
+                { label: "Active Members", value: team?.stats?.members || 0, accent: "#8B5CF6" }
+              ]}
+            />
 
             {/* Members */}
             <div className="mt-5">

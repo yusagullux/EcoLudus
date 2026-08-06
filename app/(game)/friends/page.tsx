@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { getAllUsers } from "@/lib/auth-client";
-import { HeroMetric, MetricCard, PageHero, Panel, Pill, primaryButton, secondaryButton, inputClass, heroAccents } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, StatGrid, primaryButton, secondaryButton, inputClass, heroAccents } from "@/components/game-ui";
 import { RowListSkeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/avatar";
 
 function friendKey(friend: any) {
@@ -326,12 +327,14 @@ export default function FriendsPage() {
         </div>
       </PageHero>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="Your XP" value={myXp.toLocaleString()} accent="#2f6b46" />
-        <MetricCard label="Your EcoPoints" value={myEcoPoints.toLocaleString()} accent="#9a6b1f" />
-        <MetricCard label="Friends Added" value={friends.length} accent="#2f5f86" />
-        <MetricCard label="Cheers Today" value={`${cheersTodayDisplay}/5`} accent="#62508f" />
-      </div>
+      <StatGrid
+        items={[
+          { label: "Your XP", value: myXp.toLocaleString(), accent: "#2f6b46" },
+          { label: "Your EcoPoints", value: myEcoPoints.toLocaleString(), accent: "#9a6b1f" },
+          { label: "Friends Added", value: friends.length, accent: "#2f5f86" },
+          { label: "Cheers Today", value: `${cheersTodayDisplay}/5`, accent: "#62508f" }
+        ]}
+      />
 
       <Panel eyebrow="Social quests" title="Friend Challenges">
         <div className="grid gap-3 lg:grid-cols-3">
@@ -473,12 +476,13 @@ export default function FriendsPage() {
 
       <Panel eyebrow="Compare stats" title="Friend Board">
         {friends.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-8 text-center" style={{ borderColor: "var(--border-default)", color: "var(--text-muted)" }}>
-            <span className="text-4xl" aria-hidden>🌱</span>
-            <p className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>No friends yet</p>
-            <p className="max-w-xs text-sm">Add fellow players to compare stats, send cheers, and complete social quests together.</p>
-            <a href="#find-players" className={`${primaryButton} mt-1`}>Find players to add</a>
-          </div>
+          <EmptyState
+            variant="card"
+            icon="🌱"
+            title="No friends yet"
+            description="Add fellow players to compare stats, send cheers, and complete social quests together."
+            action={<a href="#find-players" className={primaryButton}>Find players to add</a>}
+          />
         ) : (
           <div className="flex flex-col divide-y overflow-hidden rounded-2xl border" style={{ borderColor: "var(--border-default)" }}>
             {friends

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useQuests } from "@/lib/useQuests";
-import { MetricCard, PageHero, Panel, Pill, ProgressBar, heroAccents } from "@/components/game-ui";
+import { PageHero, Panel, Pill, ProgressBar, StatGrid, heroAccents } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 
 const CATEGORIES_FALLBACK = [
@@ -104,11 +104,7 @@ export default function InsightsPage() {
     <div className="flex flex-col gap-5">
       <PageHero eyebrow="Weekly analytics" title="Insights" description="A dynamic view of quest completion, category balance, and reward growth." accent={heroAccents.insights} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {summaryCards.map((card) => (
-          <MetricCard key={card.label} {...card} />
-        ))}
-      </div>
+      <StatGrid className="grid-cols-2 gap-3 sm:grid-cols-3" items={summaryCards} />
 
       <Panel eyebrow="Activity" title="Quest Completion Trend" action={<Pill>7 days</Pill>}>
         <div className="flex h-44 items-end gap-1.5 sm:gap-2.5">
@@ -141,16 +137,22 @@ export default function InsightsPage() {
           {categoriesProgress.map(({ name, image, color, done, total }) => {
             const pct = Math.round((done / total) * 100);
             return (
-              <div key={name} className="grid grid-cols-[minmax(120px,160px)_1fr_44px_44px] items-center gap-3 rounded-xl px-2 py-1.5 transition" style={{ background: "transparent" }}>
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: "var(--bg-panel-alt)" }}>
-                    <CategoryIcon name={name} color={color} className="h-5 w-5" />
-                  </span>
-                  <span className="truncate text-xs font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</span>
+              <div key={name} className="flex flex-col gap-1.5 rounded-xl px-2 py-1.5 transition sm:grid sm:grid-cols-[minmax(120px,160px)_1fr_44px_44px] sm:items-center sm:gap-3" style={{ background: "transparent" }}>
+                <div className="flex min-w-0 items-center justify-between gap-2 sm:contents">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: "var(--bg-panel-alt)" }}>
+                      <CategoryIcon name={name} color={color} className="h-5 w-5" />
+                    </span>
+                    <span className="truncate text-xs font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 sm:hidden">
+                    <span className="text-xs font-extrabold" style={{ color }}>{pct}%</span>
+                    <span className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{done}/{total}</span>
+                  </div>
                 </div>
                 <ProgressBar value={pct} color={color} />
-                <span className="text-right text-xs font-extrabold" style={{ color }}>{pct}%</span>
-                <span className="text-right text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{done}/{total}</span>
+                <span className="hidden text-right text-xs font-extrabold sm:block" style={{ color }}>{pct}%</span>
+                <span className="hidden text-right text-xs font-semibold sm:block" style={{ color: "var(--text-muted)" }}>{done}/{total}</span>
               </div>
             );
           })}

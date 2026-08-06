@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { useShopCatalog } from "@/lib/useCatalog";
-import { HeroMetric, PageHero, Panel, Pill, primaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, PillTabBar, PillFilterBar, primaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import type { ShopItem, ShopMode } from "@/lib/catalog";
 
@@ -98,34 +98,16 @@ export default function ShopPage() {
 
       <Panel>
         <div className="flex flex-col gap-4">
-          <div className="no-scrollbar inline-flex w-fit max-w-full overflow-x-auto rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
-            {(["plants", "eggs", "chests"] as Mode[]).map((itemMode) => (
-              <button
-                key={itemMode}
-                onClick={() => { setMode(itemMode); setFilter("all"); }}
-                className="shrink-0 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
-                style={mode === itemMode
-                  ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
-                  : { color: "var(--text-muted)" }}
-              >
-                {itemMode}
-              </button>
-            ))}
-          </div>
-          <div className="no-scrollbar flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible">
-            {tabs.map((rarity) => (
-              <button
-                key={rarity}
-                onClick={() => setFilter(rarity)}
-                className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
-                style={filter === rarity
-                  ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
-                  : { background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--pill-text)" }}
-              >
-                {rarity}
-              </button>
-            ))}
-          </div>
+          <PillTabBar<Mode>
+            value={mode}
+            options={["plants", "eggs", "chests"] as const}
+            onChange={(v) => { setMode(v); setFilter("all"); }}
+          />
+          <PillFilterBar<"all" | Rarity>
+            value={filter}
+            options={tabs}
+            onChange={setFilter}
+          />
         </div>
       </Panel>
 

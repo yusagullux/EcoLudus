@@ -15,6 +15,9 @@ import {
   heroAccents
 } from "@/components/game-ui";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Dialog } from "@/components/ui/dialog";
+import { VERDICT_STYLES } from "@/lib/ui-shared";
 
 type Mission = {
   id: string;
@@ -49,40 +52,6 @@ type SubmissionResult = {
     nextScore: number;
     delta: number;
   };
-};
-
-const VERDICT_STYLES: Record<
-  string,
-  { bg: string; text: string; border: string; icon: string; label: string }
-> = {
-  APPROVED: {
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
-    icon: "✓",
-    label: "Approved"
-  },
-  PARTIAL: {
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-200",
-    icon: "◐",
-    label: "Partial Credit"
-  },
-  REJECTED: {
-    bg: "bg-rose-50",
-    text: "text-rose-700",
-    border: "border-rose-200",
-    icon: "✗",
-    label: "Rejected"
-  },
-  FLAGGED: {
-    bg: "bg-red-50",
-    text: "text-red-800",
-    border: "border-red-300",
-    icon: "⚑",
-    label: "Flagged"
-  }
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -310,10 +279,11 @@ export default function HabitsPage() {
         action={<Pill>{missions.length} mission{missions.length === 1 ? "" : "s"}</Pill>}
       >
         {missions.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-8 text-center text-forest-700/60">
-            <span className="text-4xl">🌱</span>
-            <p className="text-sm font-bold">No habit missions available right now.</p>
-          </div>
+          <EmptyState
+            variant="plain"
+            icon="🌱"
+            title="No habit missions available right now."
+          />
         ) : (
           <div className="-mx-5 -mt-5 divide-y divide-[#e7ecdf] sm:-mx-6 sm:-mt-6">
             {missions.map((mission) => {
@@ -390,216 +360,206 @@ export default function HabitsPage() {
 
       {/* ── Submission Modal ── */}
       {activeMission && !result && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)]" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-            <button
-              onClick={closeModal}
-              className="absolute right-5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full transition text-lg font-bold"
-              style={{ background: "var(--bg-panel-alt)", color: "var(--text-primary)" }}
-              aria-label="Close"
-            >
-              ×
-            </button>
-
-            <div className="flex flex-col gap-4">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
-                  Log habit
-                </p>
-                <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  {activeMission.title}
-                </h3>
-                <p className="mt-1 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
-                  Category: {activeMission.category} · Base reward: {activeMission.base_xp} XP
-                </p>
-              </div>
-
-              {activeMission.metadata?.preferredBeforeAfter && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
-                      Before{activeMission.metadata.unitHint ? ` (${activeMission.metadata.unitHint})` : ""}
-                    </label>
-                    <input
-                      type="text"
-                      value={beforeValue}
-                      onChange={(e) => setBeforeValue(e.target.value)}
-                      placeholder={`e.g. 20 ${activeMission.metadata.unitHint ?? ""}`}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
-                      After{activeMission.metadata.unitHint ? ` (${activeMission.metadata.unitHint})` : ""}
-                    </label>
-                    <input
-                      type="text"
-                      value={afterValue}
-                      onChange={(e) => setAfterValue(e.target.value)}
-                      placeholder={`e.g. 12 ${activeMission.metadata.unitHint ?? ""}`}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
-                  Describe what you did *
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={`e.g. I ${activeMission.title.toLowerCase()} today by...`}
-                  rows={4}
-                  className={`${inputClass} resize-none`}
-                />
-                <p
-                  className={`mt-1 text-right text-[10px] font-bold ${description.trim().length >= 8 ? "" : "text-rose-500"}`}
-                  style={description.trim().length >= 8 ? { color: "var(--text-accent,#43653f)" } : undefined}
-                >
-                  {description.trim().length}/8 min characters
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
-                  Self-confidence (1 = very unsure, 5 = very sure)
-                </label>
-                <ConfidenceSelector value={confidence} onChange={setConfidence} />
-              </div>
-
-              {submitError && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
-                  {submitError}
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || description.trim().length < 8}
-                  className={`flex-1 ${primaryButton}`}
-                >
-                  {submitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />
-                      Verifying...
-                    </span>
-                  ) : (
-                    "Submit & Verify"
-                  )}
-                </button>
-                <button onClick={closeModal} className={secondaryButton}>
-                  Cancel
-                </button>
-              </div>
+        <Dialog
+          open
+          onClose={closeModal}
+          size="lg"
+          footer={
+            <>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || description.trim().length < 8}
+                className={`flex-1 ${primaryButton}`}
+              >
+                {submitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />
+                    Verifying...
+                  </span>
+                ) : (
+                  "Submit & Verify"
+                )}
+              </button>
+              <button onClick={closeModal} className={secondaryButton}>
+                Cancel
+              </button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
+                Log habit
+              </p>
+              <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                {activeMission.title}
+              </h3>
+              <p className="mt-1 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                Category: {activeMission.category} · Base reward: {activeMission.base_xp} XP
+              </p>
             </div>
+
+            {activeMission.metadata?.preferredBeforeAfter && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
+                    Before{activeMission.metadata.unitHint ? ` (${activeMission.metadata.unitHint})` : ""}
+                  </label>
+                  <input
+                    type="text"
+                    value={beforeValue}
+                    onChange={(e) => setBeforeValue(e.target.value)}
+                    placeholder={`e.g. 20 ${activeMission.metadata.unitHint ?? ""}`}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
+                    After{activeMission.metadata.unitHint ? ` (${activeMission.metadata.unitHint})` : ""}
+                  </label>
+                  <input
+                    type="text"
+                    value={afterValue}
+                    onChange={(e) => setAfterValue(e.target.value)}
+                    placeholder={`e.g. 12 ${activeMission.metadata.unitHint ?? ""}`}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
+                Describe what you did *
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={`e.g. I ${activeMission.title.toLowerCase()} today by...`}
+                rows={4}
+                className={`${inputClass} resize-none`}
+              />
+              <p
+                className={`mt-1 text-right text-[10px] font-bold ${description.trim().length >= 8 ? "" : "text-rose-500"}`}
+                style={description.trim().length >= 8 ? { color: "var(--text-accent,#43653f)" } : undefined}
+              >
+                {description.trim().length}/8 min characters
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>
+                Self-confidence (1 = very unsure, 5 = very sure)
+              </label>
+              <ConfidenceSelector value={confidence} onChange={setConfidence} />
+            </div>
+
+            {submitError && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                {submitError}
+              </div>
+            )}
           </div>
-        </div>
+        </Dialog>
       )}
 
       {/* ── Result Modal ── */}
       {activeMission && result && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)]" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-            <div className="flex flex-col gap-5">
-              {/* Verdict header */}
-              {(() => {
-                const style =
-                  VERDICT_STYLES[result.verification.status] ?? VERDICT_STYLES.REJECTED;
-                return (
-                  <div
-                    className={`flex items-center gap-3 rounded-2xl border px-5 py-4 ${style.bg} ${style.border}`}
-                  >
-                    <span className={`text-3xl font-extrabold ${style.text}`}>
-                      {style.icon}
+        <Dialog
+          open
+          onClose={closeModal}
+          size="lg"
+          footer={<button onClick={closeModal} className={`w-full ${primaryButton}`}>Done</button>}
+        >
+          <div className="flex flex-col gap-5">
+            {/* Verdict header */}
+            {(() => {
+              const style =
+                VERDICT_STYLES[result.verification.status] ?? VERDICT_STYLES.REJECTED;
+              return (
+                <div
+                  className={`flex items-center gap-3 rounded-2xl border px-5 py-4 ${style.bg} ${style.border}`}
+                >
+                  <span className={`text-3xl font-extrabold ${style.text}`}>
+                    {style.icon}
+                  </span>
+                  <div>
+                    <p className={`text-sm font-extrabold ${style.text}`}>
+                      {style.label}
+                    </p>
+                    <p className={`mt-0.5 text-xs font-semibold ${style.text} opacity-80`}>
+                      {result.verification.confidence}% confidence ·{" "}
+                      {result.verification.realism_score}% realism
+                    </p>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <p className={`text-xl font-extrabold ${style.text}`}>
+                      +{result.rewards.xpAwarded} XP
+                    </p>
+                    <p className={`text-[10px] font-bold ${style.text} opacity-70`}>
+                      of {result.rewards.baseXp} base XP
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Gemini reasoning */}
+            <div className="rounded-xl px-4 py-3" style={{ background: "var(--bg-panel-alt)" }}>
+              <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+                Verification feedback
+              </p>
+              <p className="text-xs leading-relaxed text-forest-900">
+                {result.verification.reasoning}
+              </p>
+              {result.verification.risk_flags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {result.verification.risk_flags.map((flag) => (
+                    <span
+                      key={flag}
+                      className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700"
+                    >
+                      {flag.replace(/_/g, " ")}
                     </span>
-                    <div>
-                      <p className={`text-sm font-extrabold ${style.text}`}>
-                        {style.label}
-                      </p>
-                      <p className={`mt-0.5 text-xs font-semibold ${style.text} opacity-80`}>
-                        {result.verification.confidence}% confidence ·{" "}
-                        {result.verification.realism_score}% realism
-                      </p>
-                    </div>
-                    <div className="ml-auto text-right">
-                      <p className={`text-xl font-extrabold ${style.text}`}>
-                        +{result.rewards.xpAwarded} XP
-                      </p>
-                      <p className={`text-[10px] font-bold ${style.text} opacity-70`}>
-                        of {result.rewards.baseXp} base XP
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
+                  ))}
+                </div>
+              )}
+            </div>
 
-              {/* Gemini reasoning */}
-              <div className="rounded-xl px-4 py-3" style={{ background: "var(--bg-panel-alt)" }}>
-                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                  Verification feedback
+            {/* Trust delta */}
+            <div className="grid grid-cols-3 divide-x rounded-xl border text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+              <div className="py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+                  Trust before
                 </p>
-                <p className="text-xs leading-relaxed text-forest-900">
-                  {result.verification.reasoning}
+                <p className="mt-0.5 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
+                  {result.trust.previousScore.toFixed(1)}
                 </p>
-                {result.verification.risk_flags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {result.verification.risk_flags.map((flag) => (
-                      <span
-                        key={flag}
-                        className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700"
-                      >
-                        {flag.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
-
-              {/* Trust delta */}
-              <div className="grid grid-cols-3 divide-x rounded-xl border text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <div className="py-3">
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                    Trust before
-                  </p>
-                  <p className="mt-0.5 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
-                    {result.trust.previousScore.toFixed(1)}
-                  </p>
-                </div>
-                <div className="py-3">
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                    Change
-                  </p>
-                  <p
-                    className={`mt-0.5 text-sm font-extrabold ${
-                      result.trust.delta >= 0 ? "text-emerald-600" : "text-rose-600"
-                    }`}
-                  >
-                    {result.trust.delta >= 0 ? "+" : ""}
-                    {result.trust.delta.toFixed(1)}
-                  </p>
-                </div>
-                <div className="py-3">
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                    Trust now
-                  </p>
-                  <p className="mt-0.5 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
-                    {result.trust.nextScore.toFixed(1)}
-                  </p>
-                </div>
+              <div className="py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+                  Change
+                </p>
+                <p
+                  className={`mt-0.5 text-sm font-extrabold ${
+                    result.trust.delta >= 0 ? "text-emerald-600" : "text-rose-600"
+                  }`}
+                >
+                  {result.trust.delta >= 0 ? "+" : ""}
+                  {result.trust.delta.toFixed(1)}
+                </p>
               </div>
-
-              <button
-                onClick={closeModal}
-                className={`w-full ${primaryButton}`}
-              >
-                Done
-              </button>
+              <div className="py-3">
+                <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+                  Trust now
+                </p>
+                <p className="mt-0.5 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
+                  {result.trust.nextScore.toFixed(1)}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );
