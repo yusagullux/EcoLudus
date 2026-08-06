@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel } from "@/components/game-ui";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PublicProfileView, type PublicProfile } from "@/components/public-profile";
 
 export default function PublicProfilePage() {
@@ -46,11 +47,12 @@ export default function PublicProfilePage() {
       <div className="flex flex-col gap-5">
         <PageHero eyebrow="Profile" title="Profile not found" description="This explorer may not exist or is unavailable." />
         <Panel>
-          <div className="flex flex-col items-center gap-3 p-8 text-center">
-            <span className="text-4xl">🌿</span>
-            <p className="text-sm font-bold" style={{ color: "var(--text-muted)" }}>We couldn't load this profile.</p>
-            <Link href="/leaderboard" className="font-bold underline">Back to leaderboard</Link>
-          </div>
+          <EmptyState
+            variant="plain"
+            icon="🌿"
+            title="We couldn't load this profile."
+            action={<Link href="/leaderboard" className="font-bold underline">Back to leaderboard</Link>}
+          />
         </Panel>
       </div>
     );

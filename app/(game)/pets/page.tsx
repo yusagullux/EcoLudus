@@ -6,20 +6,13 @@ import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { computeVitals } from "@/lib/pet-vitals";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
+import { PET_EMOJI } from "@/lib/ui-shared";
+import { EmptyState } from "@/components/ui/empty-state";
 
 function getPetImage(pet: any) {
   if (pet?.image) return pet.image;
   return `/images/pets/${String(pet?.name || "cat").toLowerCase()}.png`;
 }
-
-// Emoji fallback for a missing pet asset — keeps the card from showing a
-// broken-image icon. Mirrors the collection page's animalEmoji map.
-const PET_EMOJI: Record<string, string> = {
-  Cat: "🐱", Dog: "🐶", Rabbit: "🐰", Bee: "🐝", Mouse: "🐭", Worm: "🪱",
-  Deer: "🦌", Owl: "🦉", Panda: "🐼", Cobra: "🐍", Jaguar: "🐆", Wolf: "🐺",
-  Bear: "🐻", Eagle: "🦅", Lynx: "🐱", Shark: "🦈", Whale: "🐋", Tiger: "🐯",
-  Lion: "🦁", Phoenix: "🔥", Dragon: "🐉", Kraken: "🐙", Octapus: "🐙"
-};
 
 // Pet card image. `fit="cover"` (default) fills the frame like the shop/collection
 // tiles for a uniform grid; `fit="contain"` letterboxes the whole creature and is
@@ -251,12 +244,13 @@ export default function PetsPage() {
 
       {!selectedPet ? (
         <Panel>
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center" style={{ borderColor: "var(--border-default)", color: "var(--text-muted)" }}>
-            <span className="text-5xl" aria-hidden>🥚</span>
-            <p className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>No companions yet</p>
-            <p className="max-w-xs text-sm">Hatch eggs from your collection to unlock pets, then train and feed them to grow your bond.</p>
-            <a href="/collection" className={`${primaryButton} mt-1`}>Browse your eggs</a>
-          </div>
+          <EmptyState
+            variant="card"
+            icon="🥚"
+            title="No companions yet"
+            description="Hatch eggs from your collection to unlock pets, then train and feed them to grow your bond."
+            action={<a href="/collection" className={primaryButton}>Browse your eggs</a>}
+          />
         </Panel>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">

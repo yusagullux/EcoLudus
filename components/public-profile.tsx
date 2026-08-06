@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, ProgressBar, StatGrid, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 import { Avatar } from "@/components/avatar";
+import { PLANT_IMAGES } from "@/lib/ui-shared";
 
 // Shared profile view rendered for both the owner's own profile and other
 // users' public profiles. The `profile` prop is a normalized public shape —
@@ -37,20 +38,9 @@ const categories = [
   { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b", maxCo2: 0.6, badge: "Green Thumb" }
 ];
 
-const plantAssetByName: Record<string, string> = {
-  "Mossy Fern": "/images/plants/mint.png",
-  "Golden Daisy": "/images/plants/sunflower.png",
-  "Blue Orchid": "/images/plants/orchid.png",
-  "Spotted Aloe": "/images/plants/basil.png",
-  "Mystic Bamboo": "/images/plants/bamboo.png",
-  "Crystal Lotus": "/images/plants/lotus.png",
-  "Aurora Blossom": "/images/plants/cherry_blossom.png",
-  "Ember Cactus": "/images/plants/dragonfruit.png"
-};
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getPlantImage(plant: any) {
-  return plant.image || plantAssetByName[plant.name] || "/images/plants/sunflower.png";
+  return plant.image || PLANT_IMAGES[plant.name] || "/images/plants/sunflower.png";
 }
 
 // Quest id prefixes that map to each category id in quests.json.
@@ -124,11 +114,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
         </div>
       </PageHero>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {statCards.map((card) => (
-          <MetricCard key={card.label} {...card} />
-        ))}
-      </div>
+      <StatGrid className="grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" items={statCards} />
 
       <Panel eyebrow="Login activity" title="Streak Status" action={<Pill>Last login {lastLoginDate}</Pill>}>
         <div className="grid gap-3 sm:grid-cols-2">

@@ -1,15 +1,66 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ElementType, type ReactNode } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { PageHero, Panel, Pill, heroAccents } from "@/components/game-ui";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { RowListSkeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/avatar";
 
 const medalLabel = ["1st", "2nd", "3rd"];
 const medalColors = ["#9a6b1f", "#5d6f7a", "#8a4f25"];
+
+// Responsive grid-column templates for the ranking tables. Each template is
+// used twice (header row + every data row) so keeping them as named constants
+// means a column change lands in one place and the header/row can't drift
+// out of sync. The mobile (3-col) layout drops the redundant columns; the
+// sm: layout restores them. `grid` is added by the caller so the same const
+// works for both the header and the row.
+const INDIV_COLS = "grid-cols-[40px_1fr_auto] gap-3 sm:grid-cols-[56px_1fr_100px_130px] sm:gap-4";
+const TEAM_COLS = "grid-cols-[40px_1fr_auto] gap-3 sm:grid-cols-[56px_1fr_100px_120px_100px] sm:gap-4";
+
+// Shared top-3 podium card. Individual and team leaderboards render the same
+// medal-bordered shell — only the body (avatar vs. team emoji + name line) and
+// the wrapper element (Link vs. div) differ, so those are passed in. Collapses
+// two near-identical ~30-line cards into one.
+function PodiumCard({
+  rank,
+  xp,
+  as: Tag = "div",
+  href,
+  hover = false,
+  children
+}: {
+  rank: number;
+  xp: number;
+  as?: ElementType;
+  href?: string;
+  hover?: boolean;
+  children: ReactNode;
+}) {
+  const isGold = rank === 1;
+  return (
+    <Tag
+      {...(href ? { href } : {})}
+      className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""} ${hover ? "hover:-translate-y-0.5" : ""}`}
+      style={{
+        borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
+        background: "var(--bg-panel)",
+        boxShadow: isGold ? "0 12px 32px rgba(154,107,31,0.14), 0 0 0 2px rgba(201,154,58,0.18)" : "var(--shadow-card)"
+      }}
+    >
+      <span className="font-serif text-3xl font-extrabold" style={{ color: medalColors[rank - 1] }}>
+        {medalLabel[rank - 1]}
+      </span>
+      {children}
+      <p className="font-serif text-xl font-extrabold" style={{ color: medalColors[rank - 1] }}>
+        {xp.toLocaleString()} XP
+      </p>
+    </Tag>
+  );
+}
 
 type Player = {
   id: string;
@@ -38,7 +89,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
   if (sorted.length === 0) {
     return (
       <Panel>
-        <div className="p-8 text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>No players yet. Be the first to join!</div>
+        <EmptyState variant="plain" title="No players yet. Be the first to join!" />
       </Panel>
     );
   }
@@ -51,24 +102,8 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
           {podium.map((player, index) => {
             if (!player) return <div key={index} />;
             const rank = podiumRank[index];
-            const isGold = rank === 1;
             return (
-              <Link
-                key={player.id}
-                href={`/profile/${player.id}`}
-                className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition hover:-translate-y-0.5 ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""}`}
-                style={{
-                  borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
-                  background: "var(--bg-panel)",
-                  boxShadow: isGold ? "0 12px 32px rgba(154,107,31,0.14), 0 0 0 2px rgba(201,154,58,0.18)" : "var(--shadow-card)"
-                }}
-              >
-                <span
-                  className="font-serif text-3xl font-extrabold"
-                  style={{ color: medalColors[rank - 1] }}
-                >
-                  {medalLabel[rank - 1]}
-                </span>
+              <PodiumCard key={player.id} as={Link} href={`/profile/${player.id}`} hover rank={rank} xp={player.xp}>
                 <Avatar name={player.displayName} src={player.profileImage} size={64} className="shadow-sm" />
                 <div>
                   <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "var(--text-primary)" }}>
@@ -78,13 +113,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                     Lvl {player.level}
                   </p>
                 </div>
-                <p
-                  className="font-serif text-xl font-extrabold"
-                  style={{ color: medalColors[rank - 1] }}
-                >
-                  {player.xp.toLocaleString()} XP
-                </p>
-              </Link>
+              </PodiumCard>
             );
           })}
         </div>
@@ -98,11 +127,11 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
         className="overflow-hidden"
       >
         <div className="-mx-5 -my-5 overflow-x-auto sm:-mx-6 sm:-my-6">
-          <div className="min-w-[580px]">
-            <div className="grid grid-cols-[56px_1fr_100px_130px] items-center gap-4 border-b px-5 py-3" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
+          <div className="sm:min-w-[580px]">
+            <div className={`grid ${INDIV_COLS} border-b px-5 py-3`} style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
               <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>#</span>
               <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Player</span>
-              <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Level</span>
+              <span className="hidden text-right text-[10px] font-extrabold uppercase tracking-[0.16em] sm:block" style={{ color: "var(--text-muted)" }}>Level</span>
               <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>XP</span>
             </div>
 
@@ -114,7 +143,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                 <Link
                   key={player.id}
                   href={`/profile/${player.id}`}
-                  className={`grid grid-cols-[56px_1fr_100px_130px] items-center gap-4 border-b px-5 py-4 last:border-0 transition hover:opacity-80`}
+                  className={`grid ${INDIV_COLS} items-center border-b px-5 py-4 last:border-0 transition hover:opacity-80`}
                   style={{
                     borderColor: "var(--border-subtle)",
                     background: isCurrentUser ? "var(--sidebar-active-bg)" : "var(--bg-panel)"
@@ -136,7 +165,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
                       <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Lvl {player.level}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="hidden text-right sm:block">
                     <Pill>Lv {player.level}</Pill>
                   </div>
                   <div className="text-right">
@@ -159,11 +188,12 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
   if (teams.length === 0) {
     return (
       <Panel>
-        <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <span className="text-4xl">🌿</span>
-          <p className="text-sm font-bold" style={{ color: "var(--text-muted)" }}>No teams yet.</p>
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>Create or join a team to compete here.</p>
-        </div>
+        <EmptyState
+          variant="plain"
+          icon="🌿"
+          title="No teams yet."
+          description="Create or join a team to compete here."
+        />
       </Panel>
     );
   }
@@ -180,23 +210,8 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
           {teamPodium.map((team, index) => {
             if (!team) return <div key={index} />;
             const rank = teamPodiumRank[index];
-            const isGold = rank === 1;
             return (
-              <div
-                key={team.id}
-                className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""}`}
-                style={{
-                  borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
-                  background: "var(--bg-panel)",
-                  boxShadow: isGold ? "0 12px 32px rgba(154,107,31,0.14), 0 0 0 2px rgba(201,154,58,0.18)" : "var(--shadow-card)"
-                }}
-              >
-                <span
-                  className="font-serif text-3xl font-extrabold"
-                  style={{ color: medalColors[rank - 1] }}
-                >
-                  {medalLabel[rank - 1]}
-                </span>
+              <PodiumCard key={team.id} rank={rank} xp={team.totalXP}>
                 <span className="text-4xl" aria-hidden>🌿</span>
                 <div>
                   <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "var(--text-primary)" }}>
@@ -206,13 +221,7 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
                     {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
                   </p>
                 </div>
-                <p
-                  className="font-serif text-xl font-extrabold"
-                  style={{ color: medalColors[rank - 1] }}
-                >
-                  {team.totalXP.toLocaleString()} XP
-                </p>
-              </div>
+              </PodiumCard>
             );
           })}
         </div>
@@ -225,12 +234,12 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
         className="overflow-hidden"
       >
       <div className="-mx-5 -my-5 overflow-x-auto sm:-mx-6 sm:-my-6">
-        <div className="min-w-[600px]">
-          <div className="grid grid-cols-[56px_1fr_100px_120px_100px] items-center gap-4 border-b px-5 py-3" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
+        <div className="sm:min-w-[600px]">
+          <div className={`grid ${TEAM_COLS} border-b px-5 py-3`} style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
             <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>#</span>
             <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Team</span>
-            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Members</span>
-            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Missions</span>
+            <span className="hidden text-right text-[10px] font-extrabold uppercase tracking-[0.16em] sm:block" style={{ color: "var(--text-muted)" }}>Members</span>
+            <span className="hidden text-right text-[10px] font-extrabold uppercase tracking-[0.16em] sm:block" style={{ color: "var(--text-muted)" }}>Missions</span>
             <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Team XP</span>
           </div>
 
@@ -240,7 +249,7 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
             return (
               <div
                 key={team.id}
-                className="grid grid-cols-[56px_1fr_100px_120px_100px] items-center gap-4 border-b px-5 py-4 last:border-0 transition"
+                className={`grid ${TEAM_COLS} items-center border-b px-5 py-4 last:border-0 transition`}
                 style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel)" }}
               >
                 <div
@@ -251,12 +260,14 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{team.name}</p>
-                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Code: {team.joinCode}</p>
+                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                    <span className="sm:hidden">{team.memberCount} members · </span>Code: {team.joinCode}
+                  </p>
                 </div>
-                <div className="text-right">
+                <div className="hidden text-right sm:block">
                   <p className="text-sm font-extrabold" style={{ color: "var(--text-secondary)" }}>{team.memberCount}</p>
                 </div>
-                <div className="text-right">
+                <div className="hidden text-right sm:block">
                   <p className="text-sm font-extrabold" style={{ color: "var(--text-secondary)" }}>{team.missionsCompleted}</p>
                 </div>
                 <div className="text-right">

@@ -114,6 +114,29 @@ export function MetricCard({ label, value, accent = "#2f6b46", wide = false }: M
   );
 }
 
+// ── StatGrid ───────────────────────────────────────────────────
+// A declarative grid of MetricCards. Pages used to hand-write the grid wrapper
+// and inline each <MetricCard>; pulling both into one component means the
+// responsive column layout is named in one place and the page just declares
+// the data. `className` controls only the grid tracks/spacing so each page
+// can pick its own breakpoint (sm:grid-cols-4, lg:grid-cols-4, …).
+type StatGridItem = { label: string; value: ReactNode; accent?: string };
+export function StatGrid({
+  items,
+  className = "grid-cols-2 gap-3 lg:grid-cols-4"
+}: {
+  items: StatGridItem[];
+  className?: string;
+}) {
+  return (
+    <div className={`grid ${className}`}>
+      {items.map((it) => (
+        <MetricCard key={it.label} label={it.label} value={it.value} accent={it.accent} />
+      ))}
+    </div>
+  );
+}
+
 // ── Panel ─────────────────────────────────────────────────────
 type PanelProps = {
   eyebrow?: string;
@@ -200,6 +223,74 @@ export function Pill({ children, active = false }: { children: ReactNode; active
     >
       {children}
     </span>
+  );
+}
+
+// ── PillTabBar / PillFilterBar ─────────────────────────────────
+// Horizontal chip selectors shared by the Shop and Collection pages, which
+// used to inline these two bars byte-for-byte. PillTabBar is the segmented
+// "mode" switch (one option active, fills the track); PillFilterBar is the
+// rarity filter row (scrolls on mobile, wraps from sm: up). Both scroll
+// horizontally without a scrollbar on narrow viewports so the chips never
+// force page-level horizontal overflow.
+export function PillTabBar<T extends string>({
+  value,
+  options,
+  onChange
+}: {
+  value: T;
+  options: readonly T[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div
+      className="no-scrollbar inline-flex w-fit max-w-full overflow-x-auto rounded-full p-1"
+      style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}
+    >
+      {options.map((opt) => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          className="shrink-0 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
+          style={
+            value === opt
+              ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
+              : { color: "var(--text-muted)" }
+          }
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function PillFilterBar<T extends string>({
+  value,
+  options,
+  onChange
+}: {
+  value: T;
+  options: readonly T[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="no-scrollbar flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
+          style={
+            value === opt
+              ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
+              : { background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--pill-text)" }
+          }
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
   );
 }
 

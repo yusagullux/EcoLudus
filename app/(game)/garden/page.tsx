@@ -22,6 +22,8 @@ import {
   heroAccents,
   type Rarity
 } from "@/components/game-ui";
+import { PLANT_IMAGES } from "@/lib/ui-shared";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const TOTAL_TILES = GARDEN_MAX_TILES;
 
@@ -78,17 +80,6 @@ type PlantableItem = {
   rarity: Rarity;
   count: number;
   raw: any;
-};
-
-const PLANT_IMAGES: Record<string, string> = {
-  "Mossy Fern": "/images/plants/mint.png",
-  "Golden Daisy": "/images/plants/sunflower.png",
-  "Blue Orchid": "/images/plants/orchid.png",
-  "Spotted Aloe": "/images/plants/basil.png",
-  "Mystic Bamboo": "/images/plants/bamboo.png",
-  "Crystal Lotus": "/images/plants/lotus.png",
-  "Aurora Blossom": "/images/plants/cherry_blossom.png",
-  "Ember Cactus": "/images/plants/dragonfruit.png"
 };
 
 const STAGE_COLOR: Record<GrowthStage, string> = {
@@ -638,17 +629,18 @@ export default function GardenPage() {
 
       <Panel eyebrow="Inventory" title="Your Plantables" action={<Pill>{totalPlantables} available</Pill>}>
         {plantableInventory.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-10 text-center">
-            <span className="text-5xl" aria-hidden>🌱</span>
-            <p className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>No plantables yet</p>
-            <p className="max-w-xs text-sm" style={{ color: "var(--text-muted)" }}>
-              Buy plants in the Shop or open chests in your Collection to find seeds, then place them on a tile to grow.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <a href="/shop" className={primaryButton}>Go to Shop</a>
-              <a href="/collection" className={secondaryButton}>Open Chests</a>
-            </div>
-          </div>
+          <EmptyState
+            variant="plain"
+            icon="🌱"
+            title="No plantables yet"
+            description="Buy plants in the Shop or open chests in your Collection to find seeds, then place them on a tile to grow."
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <a href="/shop" className={primaryButton}>Go to Shop</a>
+                <a href="/collection" className={secondaryButton}>Open Chests</a>
+              </div>
+            }
+          />
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {plantableInventory.map((item) => {

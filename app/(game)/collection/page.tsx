@@ -4,9 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
-import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, PillTabBar, PillFilterBar, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { useToast } from "@/lib/toast";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PET_EMOJI } from "@/lib/ui-shared";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
 // discoverable species (sourced from the catalog APIs), not just what the user
@@ -54,13 +56,8 @@ const HATCH_DURATIONS: Record<Rarity, number> = {
 
 // Image-error fallback for pets only (the catalog image path is the source of
 // truth for every other species). Kept small — a missing pet asset falls back
-// to an emoji rather than a broken-image icon.
-const animalEmoji: Record<string, string> = {
-  Cat: "🐱", Dog: "🐶", Rabbit: "🐰", Bee: "🐝", Mouse: "🐭", Worm: "🪱",
-  Deer: "🦌", Owl: "🦉", Panda: "🐼", Cobra: "🐍", Jaguar: "🐆",
-  Wolf: "🐺", Bear: "🐻", Eagle: "🦅", Lynx: "🐱", Shark: "🦈", Whale: "🐋",
-  Tiger: "🐯", Lion: "🦁", Phoenix: "🔥", Dragon: "🐉", Kraken: "🐙", Octapus: "🐙"
-};
+// to an emoji rather than a broken-image icon. The emoji map itself is shared
+// with the pets page via `PET_EMOJI` in lib/ui-shared so the two can't drift.
 
 function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; discovered: boolean; mode: CollMode; fit?: "cover" | "contain" }) {
   const [imgError, setImgError] = useState(false);
@@ -92,7 +89,7 @@ function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; disco
   }
 
   if (mode === "animals" && imgError) {
-    const emoji = animalEmoji[entry.name] || "🐾";
+    const emoji = PET_EMOJI[entry.name] || "🐾";
     return (
       <div className="flex h-full w-full items-center justify-center text-5xl select-none transition duration-300 group-hover:scale-120 drop-shadow-sm">
         {emoji}
@@ -478,35 +475,17 @@ export default function CollectionPage() {
       <Panel>
         <div className="flex flex-col gap-4">
           {/* Mode tabs */}
-          <div className="no-scrollbar inline-flex w-fit max-w-full overflow-x-auto rounded-full p-1" style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}>
-            {(["plants", "eggs", "animals", "seeds", "chests"] as CollMode[]).map((itemMode) => (
-              <button
-                key={itemMode}
-                onClick={() => { setMode(itemMode); setFilter("all"); }}
-                className="shrink-0 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
-                style={mode === itemMode
-                  ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
-                  : { color: "var(--text-muted)" }}
-              >
-                {itemMode}
-              </button>
-            ))}
-          </div>
+          <PillTabBar<CollMode>
+            value={mode}
+            options={["plants", "eggs", "animals", "seeds", "chests"] as const}
+            onChange={(v) => { setMode(v); setFilter("all"); }}
+          />
           {/* Rarity filter */}
-          <div className="no-scrollbar flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible">
-            {tabs.map((rarity) => (
-              <button
-                key={rarity}
-                onClick={() => setFilter(rarity)}
-                className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
-                style={filter === rarity
-                  ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
-                  : { background: "var(--pill-bg)", border: "1px solid var(--pill-border)", color: "var(--pill-text)" }}
-              >
-                {rarity}
-              </button>
-            ))}
-          </div>
+          <PillFilterBar<"all" | Rarity>
+            value={filter}
+            options={tabs}
+            onChange={setFilter}
+          />
         </div>
       </Panel>
 
@@ -514,11 +493,12 @@ export default function CollectionPage() {
       {mode === "eggs" && (
         <Panel title="🥚 Hatching Chamber" eyebrow="Active Incubators (Max 3 Slots)">
           {profileHatchings.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-              <div className="text-4xl mb-2">💤</div>
-              <p className="font-bold">No eggs are currently incubating.</p>
-              <p className="text-xs">Place an egg from your collection below into the chamber.</p>
-            </div>
+            <EmptyState
+              variant="plain"
+              icon="💤"
+              title="No eggs are currently incubating."
+              description="Place an egg from your collection below into the chamber."
+            />
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {profileHatchings.map((hatching) => {

@@ -3,17 +3,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useQuests } from "@/lib/useQuests";
-import { HeroMetric, MetricCard, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, ProgressBar, StatGrid, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 import PhotoVerification from "@/components/photo-verification";
+import { Dialog } from "@/components/ui/dialog";
 import { requiredXP } from "@/lib/level-system";
-
-const VERDICT_STYLES: Record<string, { bg: string; text: string; border: string; icon: string; label: string }> = {
-  APPROVED: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", icon: "✓", label: "Approved" },
-  PARTIAL:  { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",   icon: "◐", label: "Partial Credit" },
-  REJECTED: { bg: "bg-rose-50",    text: "text-rose-700",    border: "border-rose-200",    icon: "✗", label: "Rejected" },
-  FLAGGED:  { bg: "bg-red-50",     text: "text-red-800",     border: "border-red-300",     icon: "⚑", label: "Flagged" },
-};
 
 const CATEGORIES = [
   { name: "Recycling", image: "/images/forest.webp", color: "#2f6b46" },
@@ -24,16 +18,6 @@ const CATEGORIES = [
   { name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b" },
   { name: "Sustainable Living", image: "/images/plants/lotus.png", color: "#3e8c7c" }
 ];
-
-const CATEGORY_IMAGES: Record<string, string> = {
-  recycling: "/images/forest.webp",
-  energy_saving: "/images/background.webp",
-  transportation: "/images/mountains.webp",
-  water_saving: "/images/nature.webp",
-  cleanup_missions: "/images/night.webp",
-  gardening_nature: "/images/forest.webp",
-  sustainable_living: "/images/mountains.webp"
-};
 
 const MAX_PROOF_PHOTO_BYTES = 10 * 1024 * 1024;
 const MIN_PROOF_PHOTO_BYTES = 5 * 1024;
@@ -546,12 +530,14 @@ export default function DashboardPage() {
         </div>
       </PageHero>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard label="Current Level" value={`Level ${level}`} accent="#2f6b46" />
-        <MetricCard label="Missions Done" value={missionsCompleted} accent="#2f5f86" />
-        <MetricCard label="CO2 Reduced" value={`${(+carbonReduced || 0).toFixed(1)} kg`} accent="#237482" />
-        <MetricCard label="Login Streak" value={`${currentStreak} day${currentStreak === 1 ? "" : "s"}`} accent="#9a6b1f" />
-      </div>
+      <StatGrid
+        items={[
+          { label: "Current Level", value: `Level ${level}`, accent: "#2f6b46" },
+          { label: "Missions Done", value: missionsCompleted, accent: "#2f5f86" },
+          { label: "CO2 Reduced", value: `${(+carbonReduced || 0).toFixed(1)} kg`, accent: "#237482" },
+          { label: "Login Streak", value: `${currentStreak} day${currentStreak === 1 ? "" : "s"}`, accent: "#9a6b1f" }
+        ]}
+      />
 
       <Panel eyebrow="Daily rhythm" title="Active Streak" action={<Pill active>Best {longestStreak}d</Pill>}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -563,11 +549,11 @@ export default function DashboardPage() {
               Log in each day to keep your eco momentum alive.
             </p>
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {Array.from({ length: 7 }).map((_, index) => (
               <span
                 key={index}
-                className="h-8 w-8 rounded-full border"
+                className="h-7 w-7 rounded-full border sm:h-8 sm:w-8"
                 style={{
                   borderColor: "var(--border-default)",
                   background: index < Math.min(currentStreak, 7) ? "var(--pill-active-bg)" : "var(--bg-panel-alt)"
@@ -604,15 +590,18 @@ export default function DashboardPage() {
 
       {/* Streak reward popup */}
       {streakReward && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-[24px] border p-8 text-center shadow-[0_24px_70px_rgba(0,0,0,0.3)]"
-            style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
+        <Dialog
+          open
+          onClose={() => setStreakReward(null)}
+          size="sm"
+          footer={<button onClick={() => setStreakReward(null)} className={`w-full ${primaryButton}`}>Claim & Continue</button>}
+        >
+          <div className="flex flex-col items-center text-center">
             <div className="text-5xl mb-4">🎉</div>
             <h3 className="font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Streak Reward!</h3>
             <p className="mt-2 text-sm font-semibold" style={{ color: "var(--text-muted)" }}>{streakReward.label}</p>
-            <button onClick={() => setStreakReward(null)} className={`mt-6 w-full ${primaryButton}`}>Claim & Continue</button>
           </div>
-        </div>
+        </Dialog>
       )}
 
       <Panel
@@ -718,201 +707,193 @@ export default function DashboardPage() {
 
       {/* ── Proof Verification Modal (Text + Photo) ── */}
       {activeTextVerifyQuest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
-        <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)]" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-            <button
-              onClick={() => {
-                setActiveTextVerifyQuest(null);
-                setTextProof("");
-                setPhotoFile(null);
-                setPhotoPreview(null);
-                setVerificationError(null);
-              }}
-              className="absolute right-5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-forest-100 text-forest-900 hover:bg-forest-200 transition text-lg font-bold"
-              aria-label="Close modal"
-            >
-              ×
-            </button>
-            <div className="flex flex-col gap-4">
+        <Dialog
+          open
+          onClose={() => {
+            setActiveTextVerifyQuest(null);
+            setTextProof("");
+            setPhotoFile(null);
+            setPhotoPreview(null);
+            setVerificationError(null);
+          }}
+          size="lg"
+          footer={
+            <>
+              <button
+                onClick={handleVerifyProof}
+                disabled={
+                  verifyingText ||
+                  (proofType === "text" && textProof.trim().length < 8) ||
+                  (proofType === "photo" && !photoFile)
+                }
+                className={`flex-1 ${primaryButton}`}
+              >
+                {verifyingText ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />
+                    Reviewing proof...
+                  </span>
+                ) : (
+                  "Submit Proof"
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTextVerifyQuest(null);
+                  setTextProof("");
+                  setPhotoFile(null);
+                  setPhotoPreview(null);
+                  setVerificationError(null);
+                }}
+                className={secondaryButton}
+              >
+                Cancel
+              </button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div className="pr-10">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Quest verification</p>
+              <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Verify proof for: {activeTextVerifyQuest.title}</h3>
+              <p className="mt-2 text-sm leading-6" style={{ color: "var(--text-muted)" }}>
+                {questRequiresPhoto(questsData, activeTextVerifyQuest.id)
+                  ? "This quest needs a photo proof upload."
+                  : "You can verify with either text or a photo."}
+              </p>
+            </div>
+
+            {/* Proof type tabs */}
+            <div className="flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
+              <button
+                type="button"
+                disabled={questRequiresPhoto(questsData, activeTextVerifyQuest.id)}
+                onClick={() => { setProofType("text"); setVerificationError(null); }}
+                className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
+                style={proofType === "text"
+                  ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
+                  : questRequiresPhoto(questsData, activeTextVerifyQuest.id)
+                  ? { color: "var(--text-muted)", opacity: 0.45 }
+                  : { color: "var(--text-muted)" }}
+              >
+                ✏️ Text Proof
+              </button>
+              <button
+                type="button"
+                onClick={() => { setProofType("photo"); setVerificationError(null); }}
+                className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
+                style={proofType === "photo"
+                  ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
+                  : { color: "var(--text-muted)" }}
+              >
+                📷 Photo Proof
+              </button>
+            </div>
+
+            {proofType === "text" ? (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>Quest verification</p>
-                <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Verify proof for: {activeTextVerifyQuest.title}</h3>
-                <p className="mt-2 text-sm leading-6" style={{ color: "var(--text-muted)" }}>
-                  {questRequiresPhoto(questsData, activeTextVerifyQuest.id)
-                    ? "This quest needs a photo proof upload."
-                    : "You can verify with either text or a photo."}
+                <label htmlFor="quest-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+                  Describe what you did to complete this quest
+                </label>
+                <textarea
+                  id="quest-text-proof"
+                  value={textProof}
+                  onChange={(e) => setTextProof(e.target.value)}
+                  placeholder="e.g. I collected 5 plastic bottles from my kitchen and sorted them into the recycling bin..."
+                  rows={4}
+                  className={`${inputClass} resize-none`}
+                />
+                <p className={`mt-1 text-right text-[10px] font-bold ${textProof.trim().length >= 8 ? "" : "text-rose-500"}`} style={textProof.trim().length >= 8 ? { color: "var(--text-accent, #43653f)" } : undefined}>
+                  {textProof.trim().length}/8 min characters
                 </p>
               </div>
-
-              {/* Proof type tabs */}
-              <div className="flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
-                <button
-                  type="button"
-                  disabled={questRequiresPhoto(questsData, activeTextVerifyQuest.id)}
-                  onClick={() => { setProofType("text"); setVerificationError(null); }}
-                  className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
-                  style={proofType === "text"
-                    ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
-                    : questRequiresPhoto(questsData, activeTextVerifyQuest.id)
-                    ? { color: "var(--text-muted)", opacity: 0.45 }
-                    : { color: "var(--text-muted)" }}
-                >
-                  ✏️ Text Proof
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setProofType("photo"); setVerificationError(null); }}
-                  className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
-                  style={proofType === "photo"
-                    ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
-                    : { color: "var(--text-muted)" }}
-                >
-                  📷 Photo Proof
-                </button>
-              </div>
-
-              {proofType === "text" ? (
-                <div>
-                  <label htmlFor="quest-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                    Describe what you did to complete this quest
-                  </label>
-                  <textarea
-                    id="quest-text-proof"
-                    value={textProof}
-                    onChange={(e) => setTextProof(e.target.value)}
-                    placeholder="e.g. I collected 5 plastic bottles from my kitchen and sorted them into the recycling bin..."
-                    rows={4}
-                    className={`${inputClass} resize-none`}
-                  />
-                  <p className={`mt-1 text-right text-[10px] font-bold ${textProof.trim().length >= 8 ? "" : "text-rose-500"}`} style={textProof.trim().length >= 8 ? { color: "var(--text-accent, #43653f)" } : undefined}>
-                    {textProof.trim().length}/8 min characters
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                    Upload a photo showing quest completion
-                  </label>
-                  <div className="flex gap-2">
+            ) : (
+              <div className="flex flex-col gap-3">
+                <label className="block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
+                  Upload a photo showing quest completion
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("quest-photo-camera")?.click()}
+                    className="flex-1 rounded-xl border py-3 text-xs font-bold transition-all"
+                    style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}
+                  >
+                    📸 Take Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("quest-photo-gallery")?.click()}
+                    className="flex-1 rounded-xl border py-3 text-xs font-bold transition-all"
+                    style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}
+                  >
+                    🖼️ Gallery
+                  </button>
+                  {photoFile && (
                     <button
                       type="button"
-                      onClick={() => document.getElementById("quest-photo-camera")?.click()}
-                      className="flex-1 rounded-xl border py-3 text-xs font-bold transition-all"
-                      style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}
+                      onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                      className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 hover:border-rose-300 transition-all"
                     >
-                      📸 Take Photo
+                      Clear
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => document.getElementById("quest-photo-gallery")?.click()}
-                      className="flex-1 rounded-xl border py-3 text-xs font-bold transition-all"
-                      style={{ borderColor: "var(--border-default)", color: "var(--text-primary)", background: "var(--bg-panel-alt)" }}
-                    >
-                      🖼️ Gallery
-                    </button>
-                    {photoFile && (
-                      <button
-                        type="button"
-                        onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
-                        className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 hover:border-rose-300 transition-all"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                  {/* Camera input (opens native camera on mobile) */}
-                  <input
-                    id="quest-photo-camera"
-                    type="file"
-                    accept={ACCEPTED_PROOF_PHOTO_TYPES.join(",")}
-                    capture="environment"
-                    onChange={(e) => {
-                      handleProofPhotoSelected(e.target.files?.[0] || null);
-                      e.currentTarget.value = "";
-                    }}
-                    className="sr-only"
-                  />
-                  {/* Gallery input (opens photo library) */}
-                  <input
-                    id="quest-photo-gallery"
-                    type="file"
-                    accept={ACCEPTED_PROOF_PHOTO_TYPES.join(",")}
-                    onChange={(e) => {
-                      handleProofPhotoSelected(e.target.files?.[0] || null);
-                      e.currentTarget.value = "";
-                    }}
-                    className="sr-only"
-                  />
-                  {photoPreview && (
-                    <div className="overflow-hidden rounded-xl border border-forest-100 bg-forest-50 p-2 text-center">
-                      <img src={photoPreview} alt="Preview" className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover" />
-                    </div>
                   )}
                 </div>
-              )}
-
-              {verificationError && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
-                  {verificationError}
-                </div>
-              )}
-
-              <div className="mt-4 flex gap-3">
-                <button
-                  onClick={handleVerifyProof}
-                  disabled={
-                    verifyingText ||
-                    (proofType === "text" && textProof.trim().length < 8) ||
-                    (proofType === "photo" && !photoFile)
-                  }
-                  className={`flex-1 ${primaryButton}`}
-                >
-                  {verifyingText ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />
-                      Reviewing proof...
-                    </span>
-                  ) : (
-                    "Submit Proof"
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTextVerifyQuest(null);
-                    setTextProof("");
-                    setPhotoFile(null);
-                    setPhotoPreview(null);
-                    setVerificationError(null);
+                {/* Camera input (opens native camera on mobile) */}
+                <input
+                  id="quest-photo-camera"
+                  type="file"
+                  accept={ACCEPTED_PROOF_PHOTO_TYPES.join(",")}
+                  capture="environment"
+                  onChange={(e) => {
+                    handleProofPhotoSelected(e.target.files?.[0] || null);
+                    e.currentTarget.value = "";
                   }}
-                  className={secondaryButton}
-                >
-                  Cancel
-                </button>
+                  className="sr-only"
+                />
+                {/* Gallery input (opens photo library) */}
+                <input
+                  id="quest-photo-gallery"
+                  type="file"
+                  accept={ACCEPTED_PROOF_PHOTO_TYPES.join(",")}
+                  onChange={(e) => {
+                    handleProofPhotoSelected(e.target.files?.[0] || null);
+                    e.currentTarget.value = "";
+                  }}
+                  className="sr-only"
+                />
+                {photoPreview && (
+                  <div className="overflow-hidden rounded-xl border border-forest-100 bg-forest-50 p-2 text-center">
+                    <img src={photoPreview} alt="Preview" className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover" />
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+
+            {verificationError && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                {verificationError}
+              </div>
+            )}
           </div>
-        </div>
+        </Dialog>
       )}
 
       {completedPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="w-full max-w-lg rounded-[24px] border p-6 shadow-[0_28px_70px_rgba(0,0,0,0.3)]" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-forest-950 text-2xl font-extrabold text-cream-100">✓</div>
-              <div>
-                <h3 className="text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>Mission complete!</h3>
-                <p className="mt-1 text-sm leading-6" style={{ color: "var(--text-muted)" }}>{completedPopup}</p>
-              </div>
+        <Dialog
+          open
+          onClose={() => setCompletedPopup(null)}
+          size="lg"
+          footer={<button onClick={() => setCompletedPopup(null)} className={secondaryButton}>Close</button>}
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-forest-950 text-2xl font-extrabold text-cream-100">✓</div>
+            <div>
+              <h3 className="text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>Mission complete!</h3>
+              <p className="mt-1 text-sm leading-6" style={{ color: "var(--text-muted)" }}>{completedPopup}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setCompletedPopup(null)}
-              className="mt-5 inline-flex rounded-full bg-forest-950 px-5 py-2.5 text-sm font-extrabold text-cream-100 hover:bg-forest-800 transition"
-            >
-              Close
-            </button>
           </div>
-        </div>
+        </Dialog>
       )}
 
 

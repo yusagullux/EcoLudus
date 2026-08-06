@@ -7,6 +7,13 @@
     "composio": {
       "type": "http",
       "url": "https://connect.composio.dev/mcp"
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
     }
   }
 }
