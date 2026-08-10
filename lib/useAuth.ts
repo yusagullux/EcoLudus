@@ -84,7 +84,7 @@ export function useAuth() {
     clearRememberedSession();
     if (typeof window !== "undefined") {
       const path = window.location.pathname;
-      if (path !== "/landing" && path !== "/login" && path !== "/signup") {
+      if (path !== "/" && path !== "/login" && path !== "/signup") {
         router.push("/login");
       }
     }

@@ -162,14 +162,14 @@ export async function POST(request: Request) {
   const targetUserId = body.targetUserId;
 
   if (currentUserId === targetUserId) {
-    return NextResponse.json({ error: "Cannot perform action on yourself" }, { status: 400 });
+    return NextResponse.json({ error: { code: "friends/self-action", message: "You cannot perform this action on yourself." } }, { status: 400 });
   }
 
   try {
     return await transaction(async (query) => {
       const locked = await lockBoth(query, currentUserId, targetUserId);
       if (!locked) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
+        return NextResponse.json({ error: { code: "auth/user-not-found", message: "User not found." } }, { status: 404 });
       }
       const { current, target } = locked;
       const cp = current.payload ?? {};
@@ -185,7 +185,7 @@ export async function POST(request: Request) {
       // ── ACTION: request ──────────────────────────────────────────────
       if (body.action === "request") {
         if (currentFriends.some((f) => fid(f) === targetUserId)) {
-          return NextResponse.json({ error: "You are already friends" }, { status: 400 });
+          return NextResponse.json({ error: { code: "friends/already-friends", message: "You are already friends." } }, { status: 400 });
         }
 
         // Target already sent us a request → auto-accept instead of a cross-request.
@@ -197,7 +197,7 @@ export async function POST(request: Request) {
         }
 
         if (currentSentRequests.includes(targetUserId)) {
-          return NextResponse.json({ error: "Request already sent" }, { status: 400 });
+          return NextResponse.json({ error: { code: "friends/request-already-sent", message: "Request already sent." } }, { status: 400 });
         }
 
         const senderName = nameOf(current, "Someone");
@@ -240,7 +240,7 @@ export async function POST(request: Request) {
       if (body.action === "accept") {
         if (!currentFriendRequests.some((r) => fid(r) === targetUserId)) {
           return NextResponse.json(
-            { error: "No pending request from this user" },
+            { error: { code: "friends/no-pending-request", message: "No pending request from this user." } },
             { status: 400 }
           );
         }
@@ -282,10 +282,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, message: "Friend removed" });
       }
 
-      return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
+      return NextResponse.json({ error: { code: "invalid-argument", message: "Unsupported action." } }, { status: 400 });
     });
   } catch (error) {
     console.error("Friends API error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: { code: "internal-error" } }, { status: 500 });
   }
 }

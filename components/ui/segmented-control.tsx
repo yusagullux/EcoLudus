@@ -78,7 +78,7 @@ export function SegmentedControl({
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(opt.value)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40 ${fullWidth ? "flex-1" : ""}`}
+            className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40 ${fullWidth ? "flex-1" : ""}`}
             style={
               selected
                 ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }

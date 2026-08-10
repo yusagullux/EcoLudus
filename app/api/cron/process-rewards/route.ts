@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { processMilestonesForAllUsers } from "@/lib/rewards-sync";
 import { logError } from "@/lib/logger";
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 /**
  * Nightly cron job — plants trees for users who have hit milestones.
@@ -11,10 +12,7 @@ import { logError } from "@/lib/logger";
  *     -H "Authorization: Bearer <CRON_SECRET>"
  */
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

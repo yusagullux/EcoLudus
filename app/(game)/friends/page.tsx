@@ -161,7 +161,7 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        toast.error(typeof data.error === "string" ? data.error : "Could not send friend request.");
+        toast.error(data.error?.message || (typeof data.error === "string" ? data.error : "Could not send friend request."));
         return;
       }
 
@@ -198,7 +198,7 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        toast.error(typeof data.error === "string" ? data.error : "Could not accept friend request.");
+        toast.error(data.error?.message || (typeof data.error === "string" ? data.error : "Could not accept friend request."));
         return;
       }
 
@@ -227,7 +227,7 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        toast.error(typeof data.error === "string" ? data.error : "Could not decline friend request.");
+        toast.error(data.error?.message || (typeof data.error === "string" ? data.error : "Could not decline friend request."));
         return;
       }
 
@@ -305,7 +305,7 @@ export default function FriendsPage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        toast.error(typeof data.error === "string" ? data.error : "Could not remove friend.");
+        toast.error(data.error?.message || (typeof data.error === "string" ? data.error : "Could not remove friend."));
         return;
       }
 

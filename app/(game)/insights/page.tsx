@@ -120,7 +120,7 @@ export default function InsightsPage() {
             return (
               <StaggerItem key={weekDays[index]} as="div" className="flex flex-1 flex-col items-center gap-1.5">
                 <span className="text-[10px] font-extrabold" style={{ color: "var(--text-primary)" }}>{count}</span>
-                <div className="flex h-32 w-full items-end rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
+                <div className="flex h-32 w-full items-end rounded-xl p-1" aria-hidden="true" style={{ background: "var(--bg-panel-alt)" }}>
                   <div
                     className="w-full rounded-lg transition-all duration-700"
                     style={{

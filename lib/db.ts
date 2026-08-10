@@ -496,13 +496,26 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result(row ? ([{ payload: clone(row.payload) }] as unknown as T[]) : []);
   }
 
-  if (normalized === "select id, user_id, payload from mission_logs") {
-    const rows = store.mission_logs.map((row) => ({
-      id: row.id,
-      user_id: row.user_id,
-      payload: clone(row.payload)
-    }));
-    return result(rows as unknown as T[]);
+  if (
+    normalized ===
+    "select count(distinct user_id) as active_users, count(*) as total_missions, coalesce(sum((payload->>'xp')::numeric), 0) as total_xp, coalesce(sum((payload->>'carbonreduced')::numeric), 0) as total_co2_reduced from mission_logs"
+  ) {
+    // File-store mirror of the live-stats aggregate. Computes the same single
+    // row in JS instead of loading every row into the caller.
+    const logs = store.mission_logs;
+    const activeUsers = new Set(logs.map((row) => row.user_id)).size;
+    const totalMissions = logs.length;
+    const totalXp = logs.reduce(
+      (sum, row) => sum + (Number((row.payload as Record<string, unknown>)?.xp) || 0),
+      0
+    );
+    const totalCo2 = logs.reduce(
+      (sum, row) => sum + (Number((row.payload as Record<string, unknown>)?.carbonReduced) || 0),
+      0
+    );
+    return result([
+      { active_users: activeUsers, total_missions: totalMissions, total_xp: totalXp, total_co2_reduced: totalCo2 }
+    ] as unknown as T[]);
   }
 
   if (

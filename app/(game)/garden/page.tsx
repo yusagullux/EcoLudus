@@ -573,9 +573,10 @@ export default function GardenPage() {
               >
                 {tile ? (
                   <div className="relative h-full w-full">
-                    {/* Framed image — object-contain (like Collection's creature
-                        displays) so the whole plant fits in the tile instead of
-                        being cropped, letterboxed on the rarity accent color. */}
+                    {/* Full-bleed square-crop — object-cover fills the whole tile
+                        (matches the Shop and Collection Pokédex grids) instead of
+                        letterboxing the plant on the rarity accent color. The
+                        rarity still reads via the tile border + top-right chip. */}
                     <div
                       className="absolute inset-0 flex items-center justify-center overflow-hidden"
                       style={{ background: `color-mix(in srgb, ${rStyle.accent} 12%, var(--bg-panel-alt))` }}
@@ -586,7 +587,7 @@ export default function GardenPage() {
                         fill
                         sizes="(max-width: 640px) 45vw, 120px"
                         className={[
-                          "object-contain p-1 transition duration-300",
+                          "object-cover transition duration-300",
                           isAnimating ? "scale-150" : ""
                         ].join(" ")}
                         style={{

@@ -2,17 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { getQuestDefinition } from "@/lib/carbon-calc";
-import { MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, isValidBase64ImagePayload, verifyTextProofWithGemini, verifyImageWithProvider } from "@/lib/photo-verification";
+import { MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, isValidBase64ImagePayload, verifyTextProofWithGemini, verifyImageWithProvider, GEMINI_SUPPORTED_IMAGE_MIME_TYPES } from "@/lib/photo-verification";
 import { markQuestProofVerified } from "@/lib/quest-proof";
 
 // Validate the request shape at the boundary (project convention). Semantic
 // checks (proof presence, base64 validity, size) remain below for their
-// specific messages.
+// specific messages. `mimeType` is constrained to the formats Gemini actually
+// accepts (plus the common `image/jpg` alias) so a spoofed/non-image type is
+// rejected here with a clear 400 rather than passed through; the buffer is
+// still re-derived from magic bytes downstream, so this is defense-in-depth.
+// textProof/photoProof are bounded to keep oversized payloads off the provider
+// and out of memory before the byte-size check runs.
 const verifySchema = z.object({
   questId: z.string().min(1),
-  textProof: z.string().optional(),
-  photoProof: z.string().optional(),
-  mimeType: z.string().optional()
+  textProof: z.string().max(5000).optional(),
+  photoProof: z.string().max(15_000_000).optional(),
+  mimeType: z.enum([...GEMINI_SUPPORTED_IMAGE_MIME_TYPES, "image/jpg"] as unknown as [string, ...string[]]).optional()
 });
 
 export async function POST(request: Request) {

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { logOut } from "@/lib/auth-client";
 import { Avatar } from "@/components/avatar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type SidebarProps = { user: any; profile: any };
 
@@ -332,11 +333,17 @@ export function Sidebar({ user, profile }: SidebarProps) {
     };
   }, [mobileOpen]);
 
-  const handleLogout = async () => {
-    if (confirm("Sign out of EcoLudus?")) {
-      const res = await logOut();
-      if (res.success) router.push("/landing");
-    }
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  // Open the in-app confirmation instead of the blocking native confirm().
+  const handleLogout = () => {
+    setLogoutOpen(true);
+  };
+
+  const confirmLogout = async () => {
+    const res = await logOut();
+    if (res.success) router.push("/");
+    setLogoutOpen(false);
   };
 
   return (
@@ -436,6 +443,17 @@ export function Sidebar({ user, profile }: SidebarProps) {
         </>
       )}
       {/* NOTE: Mobile bottom nav removed — use hamburger menu instead */}
+
+      {/* ── Sign-out confirmation (replaces native confirm()) ── */}
+      <ConfirmDialog
+        open={logoutOpen}
+        title="Sign out of EcoLudus?"
+        message="You can sign back in anytime with your email and password."
+        confirmLabel="Sign out"
+        danger
+        onConfirm={confirmLogout}
+        onClose={() => setLogoutOpen(false)}
+      />
     </>
   );
 }

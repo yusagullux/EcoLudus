@@ -9,6 +9,7 @@ import { HeroMetric, PageHero, Panel, Pill, ProgressBar, StatGrid, primaryButton
 import { CategoryIcon } from "@/components/category-icon";
 import PhotoVerification from "@/components/photo-verification";
 import { Dialog } from "@/components/ui/dialog";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { requiredXP } from "@/lib/level-system";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/lib/animations";
@@ -781,31 +782,15 @@ export default function DashboardPage() {
             </div>
 
             {/* Proof type tabs */}
-            <div className="flex rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
-              <button
-                type="button"
-                disabled={questRequiresPhoto(questsData, activeTextVerifyQuest.id)}
-                onClick={() => { setProofType("text"); setVerificationError(null); }}
-                className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
-                style={proofType === "text"
-                  ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
-                  : questRequiresPhoto(questsData, activeTextVerifyQuest.id)
-                  ? { color: "var(--text-muted)", opacity: 0.45 }
-                  : { color: "var(--text-muted)" }}
-              >
-                ✏️ Text Proof
-              </button>
-              <button
-                type="button"
-                onClick={() => { setProofType("photo"); setVerificationError(null); }}
-                className="min-h-11 flex-1 rounded-lg py-2 text-center text-xs font-extrabold uppercase tracking-wider transition"
-                style={proofType === "photo"
-                  ? { background: "var(--bg-panel)", color: "var(--text-primary)" }
-                  : { color: "var(--text-muted)" }}
-              >
-                📷 Photo Proof
-              </button>
-            </div>
+            <SegmentedControl
+              ariaLabel="Proof type"
+              value={proofType}
+              onChange={(v) => { setProofType(v as "text" | "photo"); setVerificationError(null); }}
+              options={[
+                { value: "text", label: "✏️ Text Proof", disabled: questRequiresPhoto(questsData, activeTextVerifyQuest.id) },
+                { value: "photo", label: "📷 Photo Proof" }
+              ]}
+            />
 
             {proofType === "text" ? (
               <div>

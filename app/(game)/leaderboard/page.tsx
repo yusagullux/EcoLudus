@@ -98,7 +98,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
   return (
     <>
       {/* Podium */}
-      {sorted.length >= 2 && (
+      {sorted.length >= 1 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {podium.map((player, index) => {
             if (!player) return <div key={index} />;
@@ -206,7 +206,7 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
   return (
     <>
       {/* Podium */}
-      {sorted.length >= 2 && (
+      {sorted.length >= 1 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {teamPodium.map((team, index) => {
             if (!team) return <div key={index} />;

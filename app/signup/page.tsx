@@ -4,7 +4,8 @@ import { MarketingShell } from "@/components/marketing-shell";
 
 export const metadata: Metadata = {
   title: "Create your profile | EcoLudus",
-  description: "Sign up for EcoLudus and turn eco-friendly habits into a rewarding daily ritual with quests, a virtual garden, and real impact tracking."
+  description: "Sign up for EcoLudus and turn eco-friendly habits into a rewarding daily ritual with quests, a virtual garden, and real impact tracking.",
+  alternates: { canonical: "/signup" }
 };
 
 export default function SignupPage() {

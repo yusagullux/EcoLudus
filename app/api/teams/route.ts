@@ -1,10 +1,47 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
+import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql, transaction, selectTeamActiveMissionForUpdate } from "@/lib/db";
+import { sql, transaction, selectTeamActiveMissionForUpdate, selectUserForUpdate } from "@/lib/db";
 import { verifyImageWithProvider, verifyTextProofWithGemini, parsePhotoProof, createImageHash, getExistingPhotoHash, savePhotoHash } from "@/lib/photo-verification";
 import { grantImpact } from "@/lib/impact-service";
 import { getTeamMissionTemplate } from "@/lib/catalog-server";
+
+// Join codes are generated with a CSPRNG (crypto.randomBytes) instead of
+// Math.random — Math.random is not cryptographically secure and a predictable
+// PRNG would let an attacker enumerate join codes to infiltrate private teams.
+// The alphabet omits ambiguous glyphs (I, O, 0, 1) so codes are readible when
+// spoken or typed. `b & 31` maps each byte to an alphabet index with no bias
+// (256 is a multiple of 32). Six chars ≈ 30 bits of entropy from a CSPRNG.
+const JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function generateJoinCode() {
+  return Array.from(randomBytes(6), (b) => JOIN_CODE_ALPHABET[b & 31]).join("");
+}
+
+// Validate the POST body at the boundary (project convention). `action` is the
+// discriminator; the remaining fields are all optional and gated by the branch
+// they apply to. title/icon/xp/eco/needed are accepted for backward
+// compatibility but IGNORED — the catalog template (assign) and the mission
+// row (submit_progress) are the server-side source of truth, so a client cannot
+// start a mission with inflated rewards. textProof/photoProof/mimeType flow
+// into Gemini verification and the photo store, so they are typed and bounded
+// here to keep garbage off the provider and out of the DB.
+const teamPostSchema = z.object({
+  action: z.enum(["create", "join", "assign", "submit_progress"]),
+  teamName: z.string().trim().min(1).max(60).optional(),
+  teamCode: z.string().trim().min(1).max(20).optional(),
+  teamId: z.string().min(1).max(80).optional(),
+  missionId: z.string().min(1).max(80).optional(),
+  activeMissionId: z.string().min(1).max(80).optional(),
+  title: z.string().max(120).optional(),
+  icon: z.string().max(40).optional(),
+  xp: z.number().int().nonnegative().max(100000).optional(),
+  eco: z.number().int().nonnegative().max(100000).optional(),
+  needed: z.number().int().nonnegative().max(1000).optional(),
+  textProof: z.string().max(5000).optional(),
+  photoProof: z.string().max(15_000_000).optional(),
+  mimeType: z.string().max(100).optional()
+});
 
 async function getUserTeamId(userId: string) {
   const result = await sql(
@@ -145,8 +182,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const { action, teamName, teamCode, teamId, missionId, activeMissionId, title, icon, xp, eco, needed, textProof, photoProof, mimeType } = body;
+    let body: z.infer<typeof teamPostSchema>;
+    try {
+      body = teamPostSchema.parse(await request.json());
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: { code: "invalid-argument", details: error.flatten() } },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
+    const { action, teamName, teamCode, teamId, missionId, activeMissionId, textProof, photoProof, mimeType } = body;
     const userId = session.userId;
 
     // Create a new team
@@ -163,7 +211,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const code = generateJoinCode();
       const teamId = randomUUID();
 
       await sql(
@@ -389,8 +437,12 @@ export async function POST(request: Request) {
       // write N+1 (lost increment) or both enter the completion branch
       // (double-completion + double-grant). The member reward grants run AFTER
       // the lock decision and at most once (only the request that flips the
-      // count to `needed` enters the completion branch); they use their own
-      // transactions since they touch a separate user row per member.
+      // count to `needed` enters the completion branch); each member's user row
+      // is then locked with SELECT … FOR UPDATE (in ascending id order, so two
+      // concurrent mission completions on the same team can't deadlock) and the
+      // grant runs INSIDE this same transaction via `tx`, so a member's
+      // missionsCompleted / xp / eco / impact can't be clobbered by a concurrent
+      // reward grant on that member (lost-update class).
       return await transaction(async (query) => {
         const lockedResult = await selectTeamActiveMissionForUpdate<{ payload: any; mission_id: string }>(
           query,
@@ -436,9 +488,14 @@ export async function POST(request: Request) {
             [logId, teamId, missionId, JSON.stringify(completedPayload)]
           );
 
-          // Reward all members in the team. The lock above guarantees this runs
-          // for exactly one completion of this mission (no double-grant). Each
-          // grant opens its own transaction on the member's user row.
+          // Reward all members in the team. The mission-row lock above
+          // guarantees this runs for exactly one completion of this mission
+          // (no double-grant). The join string is kept identical to the
+          // file-DB-covered form (lib/db.ts fileSql branch) so local no-DB dev
+          // still works; we sort in JS — not ORDER BY — to avoid changing the
+          // normalized SQL text. Sorting by id gives a consistent lock-acquisition
+          // order across concurrent mission completions on the same team, so two
+          // such transactions can't deadlock waiting on each other's member rows.
           const membersResult = await query(
             `select distinct u.id, u.email, u.payload
              from team_active_missions tam
@@ -450,14 +507,42 @@ export async function POST(request: Request) {
           const teamXp = Math.max(0, Math.floor(Number(missionPayload.xp || 0)));
           const teamEco = Math.max(0, Math.floor(Number(missionPayload.eco || 0)));
 
-          for (const member of membersResult.rows) {
-            const memberPayload = member.payload as any;
-            const nextMissions = Math.max(0, Math.floor(Number(memberPayload.missionsCompleted || 0))) + 1;
+          const sortedMembers = [...membersResult.rows].sort((a, b) =>
+            String(a.id).localeCompare(String(b.id))
+          );
+
+          for (const member of sortedMembers) {
+            const memberId = String(member.id);
+
+            // Lock the member's user row on this transaction's client and re-read
+            // their CURRENT payload under the lock before computing the
+            // missionsCompleted bump. The join payload above is stale by the time
+            // we reach here; computing nextMissions from it (the old code) let a
+            // concurrent reward grant on the same member be silently clobbered —
+            // a lost-update on missionsCompleted (and on xp/eco/impact, since the
+            // grant itself previously did an unlocked read). grantImpact now runs
+            // INSIDE this locked transaction via `tx`, so the whole grant is
+            // atomic with the member lock.
+            const locked = await selectUserForUpdate<{
+              id: string;
+              email: string;
+              xp: number | null;
+              level: number | null;
+              trust_score: number | null;
+              payload: Record<string, unknown>;
+            }>(query, memberId);
+            const lockedMember = locked.rows[0];
+            if (!lockedMember) continue; // member vanished mid-completion — skip
+
+            const currentMissions = Math.max(
+              0,
+              Math.floor(Number(lockedMember.payload?.missionsCompleted ?? 0))
+            );
 
             // Route through the spine so XP/level/Impact are server-validated and
             // every team completion feeds the same Impact number the hooks consume.
             await grantImpact({
-              userId: String(member.id),
+              userId: memberId,
               source: "team",
               baseXp: teamXp,
               baseImpact: teamXp,
@@ -467,7 +552,8 @@ export async function POST(request: Request) {
                 missionId,
                 missionTitle: missionPayload.title || "Team Mission"
               },
-              payloadPatch: { missionsCompleted: nextMissions }
+              payloadPatch: { missionsCompleted: currentMissions + 1 },
+              tx: { query, user: lockedMember }
             });
           }
 

@@ -25,6 +25,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ecoludus.com"),
+  alternates: { canonical: "/" },
   title: "EcoLudus | Sustainable Habits & Rewards",
   description: "Play, protect, and grow. EcoLudus is a gamified environmental sustainability platform that turns eco-friendly habits into a rewarding daily ritual.",
   manifest: "/manifest.json",

@@ -254,7 +254,7 @@ export function PillTabBar<T extends string>({
           type="button"
           key={opt}
           onClick={() => onChange(opt)}
-          className="shrink-0 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
+          className="shrink-0 min-h-11 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
           style={
             value === opt
               ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
@@ -284,7 +284,7 @@ export function PillFilterBar<T extends string>({
           type="button"
           key={opt}
           onClick={() => onChange(opt)}
-          className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
+          className="shrink-0 min-h-11 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
           style={
             value === opt
               ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }

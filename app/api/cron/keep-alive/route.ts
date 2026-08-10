@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { isDatabaseSetupError, sql } from "@/lib/db";
 import { logError } from "@/lib/logger";
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 /**
  * Keep-alive cron — pings the database on a regular schedule so the Supabase
@@ -12,10 +13,7 @@ import { logError } from "@/lib/logger";
  * Always returns 200 so Vercel Cron does not flag wake-up latency as a failure.
  */
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
