@@ -339,41 +339,47 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
       {/* ── Notifications ── */}
       <StaggerItem as="div">
       <Panel eyebrow="Notifications" title="Email Preferences">
-        <label className="flex cursor-pointer items-start gap-4 rounded-xl p-3 transition hover:opacity-80">
-          {/* Toggle */}
-          <button
-            type="button"
-            onClick={() => setWeeklyReport((v) => !v)}
-            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-            style={{
-              background: weeklyReport ? "var(--text-accent, #43653f)" : "var(--border-default)",
-              // @ts-expect-error CSS custom property for ring offset color
-              "--tw-ring-offset-color": "var(--bg-panel)"
-            }}
-            role="switch"
-            aria-checked={weeklyReport}
-            aria-label="Toggle weekly impact report emails"
-            onKeyDown={(e) => {
-              if (e.key === " " || e.key === "Enter") {
-                e.preventDefault();
-                setWeeklyReport((v) => !v);
-              }
-            }}
+        {/* Whole row is a single role="switch" button so the entire target is
+            clickable and keyboard-accessible. The previous markup nested this
+            <button> inside a <label>, which is invalid HTML (a <label> cannot
+            wrap interactive content) and caused a double-toggle: a native
+            <button> already activates on Space/Enter, and the manual onKeyDown
+            handler fired a second toggle, leaving the state unchanged. The name
+            comes from the visible title via aria-labelledby and the description
+            via aria-describedby. */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={weeklyReport}
+          aria-labelledby="weekly-report-label"
+          aria-describedby="weekly-report-desc"
+          onClick={() => setWeeklyReport((v) => !v)}
+          className="flex w-full cursor-pointer items-start gap-4 rounded-xl p-3 text-left transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          style={{
+            background: "transparent",
+            // @ts-expect-error CSS custom property for ring offset color
+            "--tw-ring-offset-color": "var(--bg-panel)"
+          }}
+        >
+          <span
+            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors"
+            style={{ background: weeklyReport ? "var(--text-accent, #43653f)" : "var(--border-default)" }}
+            aria-hidden="true"
           >
             <span
               className="absolute top-0.5 h-4 w-4 transform rounded-full shadow transition-transform"
               style={{ background: "var(--text-inverse)", left: weeklyReport ? "18px" : "2px" }}
             />
-          </button>
-          <div>
-            <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
+          </span>
+          <span className="flex flex-col">
+            <span id="weekly-report-label" className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
               Weekly Impact Report
-            </p>
-            <p className="mt-0.5 text-xs" style={{ color: "var(--text-muted)" }}>
+            </span>
+            <span id="weekly-report-desc" className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
               A personalised email every Monday with your XP, CO₂ reduced, trees planted, and rank movement.
-            </p>
-          </div>
-        </label>
+            </span>
+          </span>
+        </button>
 
         <div className="mt-3">
           <button

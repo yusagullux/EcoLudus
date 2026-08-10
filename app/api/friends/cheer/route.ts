@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { sql, transaction, selectUserForUpdate } from "@/lib/db";
+import { transaction, selectUserForUpdate } from "@/lib/db";
 import { grantImpact, type ImpactUser, type GrantImpactResult } from "@/lib/impact-service";
 
 // Server-validated friend cheer. The friends page used to enforce the 5/day
@@ -144,14 +144,27 @@ export async function POST(request: Request) {
 
   // Grant a small Impact to the friend too, plus a notification. Best-effort,
   // AFTER the cheerer's locked transaction committed — never fail the cheerer.
+  // The friend is a SEPARATE user row, so this opens its own transaction and
+  // locks the friend's row with SELECT … FOR UPDATE before computing the
+  // notification list and granting. Without the lock, the unlocked read → write
+  // here could race a concurrent reward grant on the friend (e.g. the friend
+  // completing a quest at the same moment) and clobber one side's payload — a
+  // lost-update that could drop the notification OR the friend's quest reward.
   let friendNotified = false;
   try {
-    const friendResult = await sql<{ email: string; payload: Record<string, unknown> }>(
-      "select id, email, payload from users where id = $1 limit 1",
-      [parsed.friendId]
-    );
-    if (friendResult.rowCount !== 0) {
-      const friendProfile = friendResult.rows[0].payload ?? {};
+    friendNotified = await transaction(async (query) => {
+      const friendResult = await selectUserForUpdate<{
+        id: string;
+        email: string;
+        xp: number | null;
+        level: number | null;
+        trust_score: number | null;
+        payload: Record<string, unknown>;
+      }>(query, parsed.friendId);
+      if (friendResult.rowCount === 0) return false;
+
+      const friendUser = friendResult.rows[0];
+      const friendProfile = friendUser.payload ?? {};
       const existingNotifications = Array.isArray(friendProfile.notifications)
         ? (friendProfile.notifications as Array<Record<string, unknown>>)
         : [];
@@ -165,15 +178,18 @@ export async function POST(request: Request) {
       };
       const nextNotifications = [notification, ...existingNotifications].slice(0, 20);
 
+      // Run the grant INSIDE this locked transaction via `tx` so the
+      // notification patch + Impact grant are atomic with the friend lock.
       await grantImpact({
         userId: parsed.friendId,
         source: "friend",
         baseImpact: FRIEND_IMPACT,
         meta: { cheeredBy: session.userId, cheeredByName: cheererName },
-        payloadPatch: { notifications: nextNotifications }
+        payloadPatch: { notifications: nextNotifications },
+        tx: { query, user: friendUser }
       });
-      friendNotified = true;
-    }
+      return true;
+    });
   } catch (friendError) {
     // The friend grant is best-effort — never fail the cheerer's reward.
     console.error("Friend cheer notification error:", friendError);

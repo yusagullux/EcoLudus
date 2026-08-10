@@ -3,14 +3,15 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Terms of Service - EcoLudus",
-  description: "Terms of Service for EcoLudus"
+  description: "Terms of Service for EcoLudus",
+  alternates: { canonical: "/legal/terms" }
 };
 
 export default function TermsPage() {
   return (
     <MarketingShell>
       <section className="mx-auto max-w-3xl px-5 py-12 sm:px-8 lg:px-10">
-        <Link href="/landing" className="mb-8 inline-block text-sm font-medium transition hover:opacity-80" style={{ color: "var(--text-accent)" }}>
+        <Link href="/" className="mb-8 inline-block text-sm font-medium transition hover:opacity-80" style={{ color: "var(--text-accent)" }}>
           ← Back to home
         </Link>
 

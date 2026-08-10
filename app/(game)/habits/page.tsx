@@ -92,8 +92,10 @@ function ConfidenceSelector({
             key={v}
             type="button"
             title={label}
+            aria-label={label}
+            aria-pressed={active}
             onClick={() => onChange(v)}
-            className="flex-1 rounded-xl py-2 text-xs font-extrabold transition"
+            className="flex-1 min-h-11 rounded-xl py-2 text-xs font-extrabold transition"
             style={active
               ? { background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }
               : { background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}

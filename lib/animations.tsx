@@ -175,21 +175,27 @@ export function StaggerItem({ children, className = "", as = "div", id, style, t
 
 // ── AnimatedNumber ──────────────────────────────────────────────
 function useAnimatedNumber(value: number, duration = 700) {
-  const [display, setDisplay] = useState(value);
-  const startRef = useRef({ value: display, time: 0 });
-  const rafRef = useRef<number | null>(null);
   const prefersReducedMotion = useReducedMotion();
+  const [display, setDisplay] = useState(value);
+  // Mirror of `display` so the animation effect can read the latest animated
+  // value as its start point WITHOUT depending on `display` (which would
+  // re-run the effect every animation frame). The ref is written inside an
+  // effect — the recommended place for ref writes — not during render.
+  const displayRef = useRef(value);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (prefersReducedMotion) {
-      setDisplay(value);
-      return;
-    }
+    displayRef.current = display;
+  }, [display]);
+
+  useEffect(() => {
+    // Reduced motion: no animation. The hook returns `value` directly below, so
+    // there's no need to setState here (which would be a cascading render).
+    if (prefersReducedMotion) return;
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    const startValue = display;
+    const startValue = displayRef.current;
     const startTime = performance.now();
-    startRef.current = { value: startValue, time: startTime };
 
     const step = (now: number) => {
       const elapsed = now - startTime;
@@ -208,7 +214,9 @@ function useAnimatedNumber(value: number, duration = 700) {
     };
   }, [value, duration, prefersReducedMotion]);
 
-  return display;
+  // When reduced motion is on, show the target value immediately — no animated
+  // intermediate, no setState-in-effect.
+  return prefersReducedMotion ? value : display;
 }
 
 type AnimatedNumberProps = {

@@ -8,6 +8,7 @@ import { HeroMetric, PageHero, Panel, Pill, primaryButton, secondaryButton, Pill
 import { useToast } from "@/lib/toast";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PET_EMOJI } from "@/lib/ui-shared";
 import { StaggerContainer, StaggerItem, TabPanel } from "@/lib/animations";
 
@@ -152,6 +153,11 @@ export default function CollectionPage() {
   const [chestParticles, setChestParticles] = useState<Array<{ id: number; dx: number; dy: number; color: string }>>([]);
   const [selectingPetId, setSelectingPetId] = useState<string | null>(null);
 
+  // Pending "hatch instantly" confirmation (replaces the native confirm() that
+  // used to gate the EcoPoint spend). Holds the hatching + the cost quoted at
+  // open time; the cost is recomputed at confirm time in case the timer ticked.
+  const [confirmHatch, setConfirmHatch] = useState<{ hatching: any; cost: number } | null>(null);
+
   const profilePlants = Array.isArray(profile?.plants) ? profile.plants : [];
   const profileEggs = Array.isArray(profile?.eggs) ? profile.eggs : [];
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
@@ -209,6 +215,41 @@ export default function CollectionPage() {
     return () => clearInterval(interval);
   }, [profile]);
 
+  // a11y for the two fullscreen reveal modals (hatching + chest): lock body
+  // scroll while either is open and allow Escape to dismiss where the modal also
+  // shows its ✕ button. These are short-lived, bespoke reveal animations, so
+  // rather than port them to the shared Dialog (which would risk the particle /
+  // tap choreography), we add the two behaviours the hand-rolled markup lacked.
+  // Escape is gated to mirror each modal's close-button visibility:
+  //   - hatching: dismissable only before the reveal completes (tapsLeft > 0 and
+  //     nothing revealed yet); after the reveal the user must claim the pet.
+  //   - chest: dismissable only in the "closed" state.
+  useEffect(() => {
+    const hatchingOpen = !!activeHatching;
+    const chestOpen = !!activeChest;
+    if (!hatchingOpen && !chestOpen) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (hatchingOpen && tapsLeft > 0 && !revealedAnimal) {
+        e.stopPropagation();
+        setActiveHatching(null);
+      } else if (chestOpen && chestState === "closed") {
+        e.stopPropagation();
+        setActiveChest(null);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey, true);
+    };
+  }, [activeHatching, activeChest, tapsLeft, revealedAnimal, chestState]);
+
   const incubateEgg = async (egg: any) => {
     if (!user?.uid || !profile) return;
 
@@ -260,7 +301,7 @@ export default function CollectionPage() {
     toast.success("Warmed the egg! 15 minutes shaved off hatching time.");
   };
 
-  const hatchInstantly = async (hatching: any) => {
+  const hatchInstantly = (hatching: any) => {
     if (!user?.uid || !profile) return;
 
     const remainingTime = Math.max(0, hatching.endTime - nowTime);
@@ -271,7 +312,25 @@ export default function CollectionPage() {
       return;
     }
 
-    if (!confirm(`Hatch this egg instantly for ${cost} EcoPoints?`)) return;
+    // Defer the EcoPoint spend to an in-app confirmation dialog (replaces the
+    // blocking native confirm()).
+    setConfirmHatch({ hatching, cost });
+  };
+
+  const confirmHatchInstantly = async () => {
+    const pending = confirmHatch;
+    if (!pending) return;
+    const { hatching } = pending;
+
+    // Recompute the cost at confirm time — the timer may have ticked down while
+    // the dialog was open, lowering the remaining-time price.
+    const remainingTime = Math.max(0, hatching.endTime - nowTime);
+    const cost = Math.max(10, Math.ceil(remainingTime / (3 * 60 * 1000)));
+    if (ecoPoints < cost) {
+      toast.error(`Need ${cost} EcoPoints to hatch instantly!`);
+      setConfirmHatch(null);
+      return;
+    }
 
     const res = await fetch("/api/eggs/incubate", {
       method: "POST",
@@ -279,6 +338,7 @@ export default function CollectionPage() {
       body: JSON.stringify({ action: "instant", hatchingId: hatching.id })
     });
     const data = await res.json().catch(() => ({}));
+    setConfirmHatch(null);
     if (!res.ok || !data?.success) {
       toast.error(data?.error?.message || "Instant hatching failed. Please try again.");
       return;
@@ -315,7 +375,7 @@ export default function CollectionPage() {
     setParticles([]);
   };
 
-  const handleEggTap = (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
+  const handleEggTap = () => {
     if (tapsLeft <= 0 || !activeHatching) return;
 
     setIsShaking(true);
@@ -658,6 +718,7 @@ export default function CollectionPage() {
                   borderStyle: discovered ? "solid" : "dashed"
                 }}
                 title={discovered ? undefined : "Complete quests to unlock"}
+                aria-label={discovered ? undefined : "Locked species — complete quests to unlock"}
               >
                 {discovered && isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
                 {!discovered && <span className="absolute left-2 top-2 z-10 text-base">🔒</span>}
@@ -673,7 +734,7 @@ export default function CollectionPage() {
                   {/* Hover affordance for locked cards — tells the user this is
                       discoverable content, not a broken/empty tile. */}
                   {!discovered && (
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 translate-y-full px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wide opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100" style={{ background: "color-mix(in srgb, var(--text-primary) 70%, transparent)", color: "var(--text-inverse)" }}>
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 translate-y-full px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wide opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100" style={{ background: "color-mix(in srgb, var(--text-primary) 70%, transparent)", color: "var(--text-inverse)" }}>
                       Complete quests to unlock
                     </div>
                   )}
@@ -753,17 +814,10 @@ export default function CollectionPage() {
                   <p className="mt-1.5 text-xs text-[var(--text-muted)]">Tap the egg to break the shell!</p>
                 </div>
 
-                <div
-                  role="button"
-                  tabIndex={0}
+                <button
+                  type="button"
                   aria-label="Tap egg to crack the shell"
                   onClick={handleEggTap}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleEggTap(e);
-                    }
-                  }}
                   className="relative flex h-60 w-60 cursor-pointer items-center justify-center rounded-full bg-[var(--bg-panel-alt)] shadow-inner transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-accent)] focus-visible:ring-offset-2"
                   style={{ ["--tw-ring-offset-color" as string]: "var(--bg-card)" }}
                 >
@@ -799,7 +853,7 @@ export default function CollectionPage() {
                   <div className="absolute bottom-4 rounded-full bg-[var(--bg-sidebar)] px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--text-sidebar)]">
                     Taps Left: {tapsLeft}
                   </div>
-                </div>
+                </button>
 
                 <div className="w-full max-w-[240px]">
                   <div className="h-2 w-full rounded-full bg-[var(--border-subtle)] overflow-hidden">
@@ -854,7 +908,7 @@ export default function CollectionPage() {
               <button
                 type="button"
                 onClick={() => setActiveHatching(null)}
-                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-panel-alt)] text-[var(--text-muted)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-primary)]"
+                className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-panel-alt)] text-[var(--text-muted)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-primary)]"
                 aria-label="Close modal"
               >
                 ✕
@@ -888,7 +942,7 @@ export default function CollectionPage() {
             {chestState !== "opened" ? (
               <div className="flex flex-col items-center gap-6 py-6">
                 <div>
-                  <h3 className="font-serif text-2xl font-black text-yellow-500">Opening Chest...</h3>
+                  <h3 className="font-serif text-2xl font-black text-[var(--text-warning)]">Opening Chest...</h3>
                   <p className="mt-1.5 text-xs text-[var(--text-muted)]">Brace yourself for mysterious rewards!</p>
                 </div>
 
@@ -909,14 +963,14 @@ export default function CollectionPage() {
                   </div>
                 </div>
 
-                <div className="text-xs font-black uppercase text-yellow-500 animate-pulse">
+                <div className="text-xs font-black uppercase text-[var(--text-warning)] animate-pulse">
                   {chestState === "shaking" ? "Unlocking Magic..." : "Ready to Open"}
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-6 py-6 animate-bounce-in">
                 <div>
-                  <span className="rounded-full bg-yellow-500/20 px-3.5 py-1 text-xs font-black uppercase tracking-widest text-yellow-500">
+                  <span className="rounded-full bg-[color-mix(in_srgb,var(--text-warning)_20%,transparent)] px-3.5 py-1 text-xs font-black uppercase tracking-widest text-[var(--text-warning)]">
                     Chest Opened!
                   </span>
                   <h3 className="mt-4 font-serif text-3xl font-black text-[var(--text-primary)]">
@@ -978,7 +1032,7 @@ export default function CollectionPage() {
               <button
                 type="button"
                 onClick={() => setActiveChest(null)}
-                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-panel-alt)] text-[var(--text-muted)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-primary)]"
+                className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-panel-alt)] text-[var(--text-muted)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-primary)]"
                 aria-label="Close modal"
               >
                 ✕
@@ -987,6 +1041,16 @@ export default function CollectionPage() {
           </div>
         </div>
       )}
+
+      {/* ── Hatch-instantly confirmation (replaces native confirm()) ── */}
+      <ConfirmDialog
+        open={!!confirmHatch}
+        title="Hatch egg instantly?"
+        message={`Spend ${confirmHatch?.cost ?? 0} EcoPoints to hatch this egg right now?`}
+        confirmLabel="Hatch now"
+        onConfirm={confirmHatchInstantly}
+        onClose={() => setConfirmHatch(null)}
+      />
 
     </StaggerContainer>
   );

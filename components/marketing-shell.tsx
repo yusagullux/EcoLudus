@@ -18,9 +18,9 @@ export function MarketingShell({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: "/landing#about", label: "About" },
-    { href: "/landing#features", label: "Features" },
-    { href: "/landing#experience", label: "Experience" },
+    { href: "/#about", label: "About" },
+    { href: "/#features", label: "Features" },
+    { href: "/#experience", label: "Experience" },
     { href: "mailto:hello@ecoludus.com", label: "Contact", isEmail: true },
   ];
 
@@ -43,7 +43,7 @@ export function MarketingShell({
         style={{ borderColor: "color-mix(in srgb, var(--border-default) 60%, transparent)", backgroundColor: "color-mix(in srgb, var(--bg-panel) 82%, transparent)" }}
       >
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8 lg:px-10">
-        <Link href="/landing" className="mk-c-primary group flex items-center gap-3">
+        <Link href="/" className="mk-c-primary group flex items-center gap-3">
           <div className="mk-surface relative h-10 w-10 overflow-hidden rounded-xl shadow-[0_12px_28px_rgba(0,0,0,0.16)] transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-105">
             <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="40px" className="object-cover" priority />
           </div>
@@ -148,8 +148,8 @@ export function MarketingShell({
           <div>
             <h3 className="mk-c-muted text-xs font-bold uppercase tracking-[0.16em]">Product</h3>
             <nav className="mt-4 space-y-2.5">
-              <Link href="/landing#features" className="mk-c-secondary block text-sm transition-colors hover:text-[var(--text-primary)]">Features</Link>
-              <Link href="/landing#about" className="mk-c-secondary block text-sm transition-colors hover:text-[var(--text-primary)]">About</Link>
+              <Link href="/#features" className="mk-c-secondary block text-sm transition-colors hover:text-[var(--text-primary)]">Features</Link>
+              <Link href="/#about" className="mk-c-secondary block text-sm transition-colors hover:text-[var(--text-primary)]">About</Link>
               <a href="mailto:hello@ecoludus.com" className="mk-c-secondary block text-sm transition-colors hover:text-[var(--text-primary)]">Contact</a>
             </nav>
           </div>

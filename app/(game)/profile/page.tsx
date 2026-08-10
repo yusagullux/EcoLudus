@@ -2,10 +2,17 @@
 
 import { useAuth } from "@/lib/useAuth";
 import { PublicProfileView, type PublicProfile } from "@/components/public-profile";
+import { PageSkeleton } from "@/components/ui/skeleton";
 import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 export default function ProfilePage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
+
+  // Avoid flashing zero-state defaults (0 XP, "Eco Explorer", 0 missions) while
+  // the profile is still bootstrapping — show a skeleton until it resolves.
+  if (loading && !profile) {
+    return <PageSkeleton metricCount={4} panels={[{ rows: 6 }, { rows: 4 }]} heroChips={2} />;
+  }
 
   const publicProfile: PublicProfile = {
     id: String(user?.uid ?? ""),

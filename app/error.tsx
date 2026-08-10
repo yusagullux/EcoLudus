@@ -61,7 +61,7 @@ export default function GlobalError({
           Go to dashboard
         </Link>
         <Link
-          href="/landing"
+          href="/"
           className="inline-flex min-h-11 items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition hover:opacity-80"
           style={{ color: "var(--text-muted)" }}
         >

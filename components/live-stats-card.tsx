@@ -2,24 +2,26 @@ import { isDatabaseSetupError, sql } from "@/lib/db";
 
 async function getAggregatedStats() {
   try {
-    // Fetch all mission logs - these queries are supported by the file database
-    const missionLogsResult = await sql(`
-      SELECT id, user_id, payload FROM mission_logs
+    // Single aggregate row — O(1) memory regardless of how many missions have
+    // been logged. The previous form loaded every mission_logs row into memory
+    // and reduced in JS on every landing render, which would not scale.
+    // (payload->>'xp') is null when the key is absent, and SUM skips nulls, so
+    // missing fields contribute 0 rather than erroring.
+    const result = await sql(`
+      SELECT
+        COUNT(DISTINCT user_id) AS active_users,
+        COUNT(*) AS total_missions,
+        COALESCE(SUM((payload->>'xp')::numeric), 0) AS total_xp,
+        COALESCE(SUM((payload->>'carbonReduced')::numeric), 0) AS total_co2_reduced
+      FROM mission_logs
     `);
 
-    const missionLogs = missionLogsResult.rows as any[];
-
-    // Calculate aggregations manually
-    const activeUsers = new Set(missionLogs.map((log) => log.user_id)).size;
-    const totalMissions = missionLogs.length;
-    const totalXp = missionLogs.reduce((sum, log) => sum + (parseInt(log.payload?.xp) || 0), 0);
-    const totalCO2Reduced = missionLogs.reduce((sum, log) => sum + (parseFloat(log.payload?.carbonReduced) || 0), 0);
-
+    const row = (result.rows as Array<Record<string, string | number>>)[0] ?? {};
     return {
-      active_users: activeUsers,
-      total_missions: totalMissions,
-      total_xp: totalXp,
-      total_co2_reduced: totalCO2Reduced
+      active_users: Number(row.active_users ?? 0),
+      total_missions: Number(row.total_missions ?? 0),
+      total_xp: Number(row.total_xp ?? 0),
+      total_co2_reduced: Number(row.total_co2_reduced ?? 0)
     };
   } catch (error) {
     if (!isDatabaseSetupError(error)) {

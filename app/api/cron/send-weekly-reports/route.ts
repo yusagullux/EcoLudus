@@ -3,6 +3,7 @@ import { sql } from "@/lib/db";
 import { getImpactSince } from "@/lib/impact-service";
 import { buildWeeklyReportHtml, buildWeeklyReportText, type WeeklyReportData } from "@/lib/email-templates/weekly-report";
 import { logger, logError } from "@/lib/logger";
+import { verifyCronSecret } from "@/lib/cron-auth";
 
 /**
  * Weekly email cron — sends personalised impact reports every Monday at 08:00 UTC.
@@ -14,10 +15,7 @@ import { logger, logError } from "@/lib/logger";
  *   CRON_SECRET       — shared secret to authenticate this endpoint
  */
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

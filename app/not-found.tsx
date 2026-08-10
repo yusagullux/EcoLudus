@@ -33,7 +33,7 @@ export default function NotFound() {
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/landing"
+            href="/"
             className="mk-btn-primary inline-flex min-h-11 items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition hover:-translate-y-0.5"
           >
             Back to home

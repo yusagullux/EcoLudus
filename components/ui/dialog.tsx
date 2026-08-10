@@ -167,7 +167,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             style={{
               background: "var(--bg-panel-alt)",
               color: "var(--text-muted)",

@@ -3,14 +3,15 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Privacy Policy - EcoLudus",
-  description: "Privacy Policy for EcoLudus - how we protect your data"
+  description: "Privacy Policy for EcoLudus - how we protect your data",
+  alternates: { canonical: "/legal/privacy" }
 };
 
 export default function PrivacyPage() {
   return (
     <MarketingShell>
       <section className="mx-auto max-w-3xl px-5 py-12 sm:px-8 lg:px-10">
-        <Link href="/landing" className="mb-8 inline-block text-sm font-medium transition hover:opacity-80" style={{ color: "var(--text-accent)" }}>
+        <Link href="/" className="mb-8 inline-block text-sm font-medium transition hover:opacity-80" style={{ color: "var(--text-accent)" }}>
           ← Back to home
         </Link>
 
