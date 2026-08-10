@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import {
@@ -24,6 +25,8 @@ import {
 } from "@/components/game-ui";
 import { PLANT_IMAGES } from "@/lib/ui-shared";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 const TOTAL_TILES = GARDEN_MAX_TILES;
 
@@ -177,11 +180,12 @@ function sortByRarityThenName(a: PlantableItem, b: PlantableItem): number {
 export default function GardenPage() {
   const { user, profile, setProfile, refreshProfile } = useAuth();
   const toast = useToast();
-  const isProcessing = useRef(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [now, setNow] = useState(() => Date.now());
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
   const [harvestAnim, setHarvestAnim] = useState<number | null>(null);
+  const [tileToRemove, setTileToRemove] = useState<number | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 30_000);
@@ -189,8 +193,6 @@ export default function GardenPage() {
   }, []);
 
   const garden: GardenState = (profile?.garden as GardenState) ?? {};
-  const ownedPlants: any[] = Array.isArray(profile?.plants) ? profile.plants : [];
-  const ownedSeeds: any[] = Array.isArray(profile?.seeds) ? profile.seeds : [];
 
   // Unlocked tile count — derived (and migrated) server-side too, so the
   // client and /api/garden/buy-tile always agree. Tiles 0..unlocked-1 are
@@ -200,6 +202,9 @@ export default function GardenPage() {
   const nextCost = canBuyMore ? nextTileCost(unlocked) : 0;
 
   const plantableInventory = useMemo(() => {
+    const ownedPlants: any[] = Array.isArray(profile?.plants) ? profile.plants : [];
+    const ownedSeeds: any[] = Array.isArray(profile?.seeds) ? profile.seeds : [];
+
     const plants: PlantableItem[] = ownedPlants
       .filter((plant) => countOf(plant) > 0)
       .map((plant) => ({
@@ -232,7 +237,7 @@ export default function GardenPage() {
       });
 
     return [...plants, ...seeds].sort(sortByRarityThenName);
-  }, [ownedPlants, ownedSeeds]);
+  }, [profile]);
 
   const tiles = Object.values(garden).filter(Boolean);
   const occupiedTiles = new Set(Object.keys(garden).map(Number));
@@ -243,13 +248,13 @@ export default function GardenPage() {
   const totalPlantables = plantableInventory.reduce((sum, item) => sum + item.count, 0);
 
   const placePlant = async (item: PlantableItem) => {
-    if (selectingTile === null || !user?.uid || !profile || isProcessing.current) return;
+    if (selectingTile === null || !user?.uid || !profile || isProcessing) return;
     if (garden[selectingTile]) {
       setSelectingTile(null);
       return;
     }
 
-    isProcessing.current = true;
+    setIsProcessing(true);
     try {
       // Server owns placement: it validates the tile is unlocked + empty, that
       // we actually own the item, and resolves rarity/name/image from the server
@@ -274,16 +279,16 @@ export default function GardenPage() {
       toast.success(`${item.itemName} planted. First harvest in ${formatDuration(GROW_DURATION[plantedRarity])}.`);
       setSelectingTile(null);
     } finally {
-      isProcessing.current = false;
+      setIsProcessing(false);
     }
   };
 
   const removePlant = async (tileId: number) => {
-    if (!user?.uid || !profile || isProcessing.current) return;
+    if (!user?.uid || !profile || isProcessing) return;
     const tile = garden[tileId];
     if (!tile) return;
 
-    isProcessing.current = true;
+    setIsProcessing(true);
     try {
       // Server owns removal + the inventory refund under a row lock, so we can't
       // end up with the item back AND the tile still placed (duplication), and the
@@ -306,16 +311,22 @@ export default function GardenPage() {
       await refreshProfile();
       toast.success("Plant returned to your inventory.");
     } finally {
-      isProcessing.current = false;
+      setIsProcessing(false);
     }
   };
 
-  const harvest = async (tileId: number) => {
-    if (!user?.uid || !profile || isProcessing.current) return;
-    const tile = garden[tileId];
-    if (!tile || !canHarvest(tile, Date.now())) return;
+  const confirmRemovePlant = async () => {
+    if (tileToRemove === null) return;
+    await removePlant(tileToRemove);
+    setTileToRemove(null);
+  };
 
-    isProcessing.current = true;
+  const harvest = async (tileId: number) => {
+    if (!user?.uid || !profile || isProcessing) return;
+    const tile = garden[tileId];
+    if (!tile || !canHarvest(tile, now)) return;
+
+    setIsProcessing(true);
     try {
       setHarvestAnim(tileId);
       setTimeout(() => setHarvestAnim(null), 800);
@@ -341,14 +352,14 @@ export default function GardenPage() {
       await refreshProfile();
       toast.success(`Harvested ${tileName(tile)}. +${data.eco} EcoPoints, +${data.xp} XP.`);
     } finally {
-      isProcessing.current = false;
+      setIsProcessing(false);
     }
   };
 
   const harvestAll = async () => {
-    if (!user?.uid || !profile || isProcessing.current || harvestableTiles.length === 0) return;
+    if (!user?.uid || !profile || isProcessing || harvestableTiles.length === 0) return;
 
-    isProcessing.current = true;
+    setIsProcessing(true);
     try {
       const res = await fetch("/api/garden/harvest", {
         method: "POST",
@@ -376,7 +387,7 @@ export default function GardenPage() {
       await refreshProfile();
       toast.success(`Harvested ${data.harvested} plant${data.harvested === 1 ? "" : "s"}. +${data.eco} EcoPoints, +${data.xp} XP.`);
     } finally {
-      isProcessing.current = false;
+      setIsProcessing(false);
     }
   };
 
@@ -384,14 +395,14 @@ export default function GardenPage() {
   // (see /api/garden/buy-tile), so we never write gardenTiles/ecoPoints
   // directly here — we just send the request and refresh from the response.
   const buyTile = async () => {
-    if (!user?.uid || !profile || isProcessing.current || !canBuyMore) return;
+    if (!user?.uid || !profile || isProcessing || !canBuyMore) return;
     const balance = Number(profile.ecoPoints ?? 0) || 0;
     if (balance < nextCost) {
       toast.error(`Need ${nextCost} EcoPoints to unlock a tile; you have ${balance}.`);
       return;
     }
 
-    isProcessing.current = true;
+    setIsProcessing(true);
     try {
       const res = await fetch("/api/garden/buy-tile", {
         method: "POST",
@@ -410,12 +421,14 @@ export default function GardenPage() {
       await refreshProfile();
       toast.success(`Tile unlocked! −${nextCost} EcoPoints.`);
     } finally {
-      isProcessing.current = false;
+      setIsProcessing(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <>
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
       <PageHero
         eyebrow="Your living world"
         title="Virtual Garden"
@@ -429,7 +442,9 @@ export default function GardenPage() {
           <HeroMetric label="Inventory" value={totalPlantables} />
         </div>
       </PageHero>
+      </StaggerItem>
 
+      <StaggerItem as="div">
       <div className="grid gap-3 md:grid-cols-3">
         <Panel eyebrow="Next action" title={harvestableCount > 0 ? "Harvest Ready" : "Garden Status"}>
           <div className="flex items-center justify-between gap-3">
@@ -475,7 +490,9 @@ export default function GardenPage() {
           </p>
         </Panel>
       </div>
+      </StaggerItem>
 
+      <StaggerItem as="section">
       <Panel
         eyebrow="Your garden"
         title="Tile Grid"
@@ -517,7 +534,7 @@ export default function GardenPage() {
                   key={tileId}
                   type="button"
                   onClick={buyTile}
-                  disabled={!affordable || isProcessing.current}
+                  disabled={!affordable || isProcessing}
                   className="group flex aspect-square flex-col items-center justify-center rounded-2xl border text-center transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                   style={{
                     borderColor: affordable ? "var(--text-accent, #43653f)" : "var(--border-default)",
@@ -544,12 +561,12 @@ export default function GardenPage() {
                 }}
                 className={[
                   "relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-2xl border text-center transition",
-                  selectingTile === tileId ? "ring-2 ring-forest-600 ring-offset-2" : "",
+                  selectingTile === tileId ? "ring-2 ring-[var(--text-accent)] ring-offset-2" : "",
                   tile ? "cursor-default" : "cursor-pointer hover:-translate-y-0.5"
                 ].join(" ")}
                 style={{
                   borderColor: tile ? (rarityBorder[rarity] ?? "var(--border-default)") : "var(--border-default)",
-                  background: tile ? `${rStyle.accent}14` : "var(--bg-panel-alt)",
+                  background: tile ? `color-mix(in srgb, ${rStyle.accent} 14%, var(--bg-panel-alt))` : "var(--bg-panel-alt)",
                   ["--tw-ring-offset-color" as string]: "var(--bg-panel)"
                 }}
                 aria-label={tile ? `${tileName(tile)} - ${stage}` : `Empty tile ${tileId + 1}`}
@@ -561,7 +578,7 @@ export default function GardenPage() {
                         being cropped, letterboxed on the rarity accent color. */}
                     <div
                       className="absolute inset-0 flex items-center justify-center overflow-hidden"
-                      style={{ background: `${rStyle.accent}12` }}
+                      style={{ background: `color-mix(in srgb, ${rStyle.accent} 12%, var(--bg-panel-alt))` }}
                     >
                       <Image
                         src={tileImage(tile)}
@@ -573,7 +590,7 @@ export default function GardenPage() {
                           isAnimating ? "scale-150" : ""
                         ].join(" ")}
                         style={{
-                          filter: stage === "bloomed" ? "drop-shadow(0 0 6px gold)" : "drop-shadow(0 2px 5px rgba(0,0,0,0.35))",
+                          filter: stage === "bloomed" ? "drop-shadow(0 0 6px var(--text-accent))" : "drop-shadow(0 2px 5px color-mix(in srgb, var(--text-primary) 35%, transparent))",
                           opacity: STAGE_OPACITY[stage!]
                         }}
                       />
@@ -592,8 +609,9 @@ export default function GardenPage() {
                     ) : (
                       <span
                         className={`absolute bottom-1 left-1 z-10 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ${
-                          ready ? "bg-amber-500 text-white" : "bg-black/55 text-white"
+                          ready ? "bg-amber-500 text-white" : "text-[var(--text-inverse)]"
                         }`}
+                        style={ready ? undefined : { background: "color-mix(in srgb, var(--text-primary) 55%, transparent)" }}
                       >
                         {ready ? "Harvest" : "Resting"}
                       </span>
@@ -626,7 +644,9 @@ export default function GardenPage() {
           </div>
         )}
       </Panel>
+      </StaggerItem>
 
+      <StaggerItem as="section">
       <Panel eyebrow="Inventory" title="Your Plantables" action={<Pill>{totalPlantables} available</Pill>}>
         {plantableInventory.length === 0 ? (
           <EmptyState
@@ -636,8 +656,8 @@ export default function GardenPage() {
             description="Buy plants in the Shop or open chests in your Collection to find seeds, then place them on a tile to grow."
             action={
               <div className="flex flex-wrap justify-center gap-2">
-                <a href="/shop" className={primaryButton}>Go to Shop</a>
-                <a href="/collection" className={secondaryButton}>Open Chests</a>
+                <Link href="/shop" className={primaryButton}>Go to Shop</Link>
+                <Link href="/collection" className={secondaryButton}>Open Chests</Link>
               </div>
             }
           />
@@ -656,14 +676,14 @@ export default function GardenPage() {
                   className="group flex min-h-[172px] flex-col items-center gap-2 rounded-2xl border p-3 text-center transition hover:-translate-y-0.5"
                   style={{
                     borderColor: canPlantHere ? rStyle.accent : rBorder,
-                    background: canPlantHere ? `${rStyle.accent}18` : "var(--bg-card)",
+                    background: canPlantHere ? `color-mix(in srgb, ${rStyle.accent} 18%, var(--bg-card))` : "var(--bg-card)",
                     cursor: canPlantHere ? "pointer" : "default",
                     opacity: canPlantHere ? 1 : 0.78
                   }}
                 >
                   <div
                     className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl"
-                    style={{ background: `${rStyle.accent}14` }}
+                    style={{ background: `color-mix(in srgb, ${rStyle.accent} 14%, var(--bg-card))` }}
                   >
                     <Image
                       src={item.image}
@@ -688,7 +708,7 @@ export default function GardenPage() {
                   <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
                     Blooms in {formatDuration(GROW_DURATION[item.rarity])}
                   </p>
-                  {canPlantHere && <span className="text-[10px] font-extrabold text-emerald-600">Tap to plant</span>}
+                  {canPlantHere && <span className="text-[10px] font-extrabold" style={{ color: "var(--text-accent)" }}>Tap to plant</span>}
                 </button>
               );
             })}
@@ -700,8 +720,10 @@ export default function GardenPage() {
           </p>
         )}
       </Panel>
+      </StaggerItem>
 
       {tiles.length > 0 && (
+      <StaggerItem as="section">
         <Panel eyebrow="Growing now" title="Plant Status" action={harvestableCount > 0 ? <Pill active>{harvestableCount} ready</Pill> : undefined}>
           <div className="flex flex-col divide-y" style={{ borderColor: "var(--border-subtle)" }}>
             {tiles
@@ -719,7 +741,7 @@ export default function GardenPage() {
                   <div key={tile.tileId} className="flex items-center gap-4 py-4">
                     <div
                       className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border"
-                      style={{ borderColor: rarityBorder[rarity] ?? "var(--border-default)", background: `${rStyle.accent}14` }}
+                      style={{ borderColor: rarityBorder[rarity] ?? "var(--border-default)", background: `color-mix(in srgb, ${rStyle.accent} 14%, var(--bg-card))` }}
                     >
                       <Image
                         src={tileImage(tile)}
@@ -761,7 +783,7 @@ export default function GardenPage() {
                           +{HARVEST_REWARDS[rarity]} EP
                         </button>
                       )}
-                      <button type="button" onClick={() => removePlant(tile.tileId)} className={secondaryButton}>
+                      <button type="button" onClick={() => setTileToRemove(tile.tileId)} className={secondaryButton}>
                         Remove
                       </button>
                     </div>
@@ -770,8 +792,10 @@ export default function GardenPage() {
               })}
           </div>
         </Panel>
+      </StaggerItem>
       )}
 
+      <StaggerItem as="section">
       <Panel eyebrow="Guide" title="Garden Rules">
         <div className="grid gap-3 sm:grid-cols-3">
           {[
@@ -788,6 +812,19 @@ export default function GardenPage() {
           ))}
         </div>
       </Panel>
-    </div>
+      </StaggerItem>
+
+    </StaggerContainer>
+
+      <ConfirmDialog
+        open={tileToRemove !== null}
+        onClose={() => setTileToRemove(null)}
+        title="Remove plant?"
+        message="The plant will return to your inventory, but its growth progress on this tile will be lost."
+        confirmLabel="Remove Plant"
+        danger
+        onConfirm={confirmRemovePlant}
+      />
+    </>
   );
 }

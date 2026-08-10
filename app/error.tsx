@@ -25,7 +25,7 @@ export default function GlobalError({
   return (
     <section className="mx-auto flex min-h-[100vh] w-full max-w-3xl flex-col items-center justify-center gap-6 px-5 py-20 text-center sm:px-8" style={{ background: "var(--bg-page)", color: "var(--text-primary)" }}>
       <div
-        className="flex h-24 w-24 items-center justify-center rounded-[28px] border text-5xl shadow-[0_18px_38px_rgba(16,33,20,0.16)]"
+        className="flex h-24 w-24 items-center justify-center rounded-[28px] border text-5xl shadow-[0_18px_38px_rgba(0,0,0,0.16)]"
         style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}
         aria-hidden="true"
       >
@@ -50,13 +50,13 @@ export default function GlobalError({
         <button
           type="button"
           onClick={reset}
-          className="mk-btn-primary inline-flex min-h-11 items-center justify-center rounded-full px-6 py-3 text-sm font-semibold shadow-[0_14px_30px_rgba(16,33,20,0.1)] transition hover:-translate-y-0.5"
+          className="mk-btn-primary inline-flex min-h-11 items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition hover:-translate-y-0.5"
         >
           Try again
         </button>
         <Link
           href="/dashboard"
-          className="mk-btn-ghost inline-flex min-h-11 items-center justify-center rounded-full px-6 py-3 text-sm font-semibold shadow-[0_10px_26px_rgba(16,33,20,0.07)] backdrop-blur transition hover:-translate-y-0.5"
+          className="mk-btn-ghost inline-flex min-h-11 items-center justify-center rounded-full px-6 py-3 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5"
         >
           Go to dashboard
         </Link>

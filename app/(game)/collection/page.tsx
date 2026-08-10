@@ -4,11 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
-import { HeroMetric, PageHero, Panel, primaryButton, secondaryButton, PillTabBar, PillFilterBar, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, primaryButton, secondaryButton, PillTabBar, PillFilterBar, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { useToast } from "@/lib/toast";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PET_EMOJI } from "@/lib/ui-shared";
+import { StaggerContainer, StaggerItem, TabPanel } from "@/lib/animations";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
 // discoverable species (sourced from the catalog APIs), not just what the user
@@ -83,7 +84,7 @@ function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; disco
         sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
         onError={() => setImgError(true)}
         className={`${fitClass} transition duration-300`}
-        style={{ filter: "brightness(0) opacity(0.55)" }}
+        style={{ filter: "grayscale(1) brightness(0.7)", opacity: 0.75 }}
       />
     );
   }
@@ -200,12 +201,13 @@ export default function CollectionPage() {
 
   // Countdown timer effect
   useEffect(() => {
-    if (profileHatchings.length === 0) return;
+    const hatchings = Array.isArray(profile?.hatchings) ? profile.hatchings : [];
+    if (hatchings.length === 0) return;
     const interval = setInterval(() => {
       setNowTime(Date.now());
     }, 1000);
     return () => clearInterval(interval);
-  }, [profileHatchings]);
+  }, [profile]);
 
   const incubateEgg = async (egg: any) => {
     if (!user?.uid || !profile) return;
@@ -313,15 +315,11 @@ export default function CollectionPage() {
     setParticles([]);
   };
 
-  const handleEggTap = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleEggTap = (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
     if (tapsLeft <= 0 || !activeHatching) return;
 
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 150);
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
 
     // Spawn sparks at click location
     const newParticles = Array.from({ length: 8 }).map((_, idx) => ({
@@ -460,37 +458,43 @@ export default function CollectionPage() {
   const catalogLoading = !shopCatalog || !speciesCatalog;
 
   return (
-    <div className="flex flex-col gap-5">
-      <PageHero eyebrow="Your nature collection" title="My Collection" description="Discover every species. Locked entries reveal as you earn them." accent={heroAccents.collection}>
-        <div className="flex flex-wrap gap-3">
-          <HeroMetric label="Plants" value={`${stats.plants.found}/${stats.plants.total}`} />
-          <HeroMetric label="Eggs" value={`${stats.eggs.found}/${stats.eggs.total}`} />
-          <HeroMetric label="Pets" value={`${stats.animals.found}/${stats.animals.total}`} />
-          <HeroMetric label="Seeds" value={`${stats.seeds.found}/${stats.seeds.total}`} />
-          <HeroMetric label="Chests" value={`${stats.chests.found}/${stats.chests.total}`} />
-          <HeroMetric label="EcoPoints" value={ecoPoints.toLocaleString()} />
-        </div>
-      </PageHero>
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
+        <PageHero eyebrow="Your nature collection" title="My Collection" description="Discover every species. Locked entries reveal as you earn them." accent={heroAccents.collection}>
+          <div className="flex flex-wrap gap-3">
+            <HeroMetric label="Plants" value={`${stats.plants.found}/${stats.plants.total}`} />
+            <HeroMetric label="Eggs" value={`${stats.eggs.found}/${stats.eggs.total}`} />
+            <HeroMetric label="Pets" value={`${stats.animals.found}/${stats.animals.total}`} />
+            <HeroMetric label="Seeds" value={`${stats.seeds.found}/${stats.seeds.total}`} />
+            <HeroMetric label="Chests" value={`${stats.chests.found}/${stats.chests.total}`} />
+            <HeroMetric label="EcoPoints" value={ecoPoints} />
+          </div>
+        </PageHero>
+      </StaggerItem>
 
-      <Panel>
-        <div className="flex flex-col gap-4">
-          {/* Mode tabs */}
-          <PillTabBar<CollMode>
-            value={mode}
-            options={["plants", "eggs", "animals", "seeds", "chests"] as const}
-            onChange={(v) => { setMode(v); setFilter("all"); }}
-          />
-          {/* Rarity filter */}
-          <PillFilterBar<"all" | Rarity>
-            value={filter}
-            options={tabs}
-            onChange={setFilter}
-          />
-        </div>
-      </Panel>
+      <StaggerItem as="div">
+        <Panel>
+          <div className="flex flex-col gap-4">
+            {/* Mode tabs */}
+            <PillTabBar<CollMode>
+              value={mode}
+              options={["plants", "eggs", "animals", "seeds", "chests"] as const}
+              onChange={(v) => { setMode(v); setFilter("all"); }}
+            />
+            {/* Rarity filter */}
+            <PillFilterBar<"all" | Rarity>
+              value={filter}
+              options={tabs}
+              onChange={setFilter}
+            />
+          </div>
+        </Panel>
+      </StaggerItem>
 
-      {/* ── Active Hatching Pods (Incubator Chamber) ── */}
-      {mode === "eggs" && (
+      <StaggerItem as="div">
+        <TabPanel activeKey={`${mode}-${filter}`}>
+          {/* ── Active Hatching Pods (Incubator Chamber) ── */}
+          {mode === "eggs" && (
         <Panel title="🥚 Hatching Chamber" eyebrow="Active Incubators (Max 3 Slots)">
           {profileHatchings.length === 0 ? (
             <EmptyState
@@ -523,9 +527,9 @@ export default function CollectionPage() {
                   <article
                     key={hatching.id}
                     className={`relative flex flex-col rounded-[22px] border p-4 transition-all duration-300 ${
-                      isWarming ? "animate-egg-shake animate-heat-pulse border-red-400" : ""
+                      isWarming ? "animate-egg-shake animate-heat-pulse border-[var(--text-error)]" : ""
                     }`}
-                    style={{ borderColor: isReady ? "#22c55e" : border, background: "var(--bg-card)" }}
+                    style={{ borderColor: isReady ? "var(--text-accent)" : border, background: "var(--bg-card)" }}
                   >
                     <span className={`absolute right-3 top-3 rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-wider ${style.chip}`}>
                       {hatching.rarity}
@@ -534,10 +538,16 @@ export default function CollectionPage() {
                     <div className="flex items-center gap-4">
                       {/* Incubator glass pod design */}
                       <div
-                        className={`relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm border border-forest-100/60 overflow-hidden p-1.5 ${
-                          !isReady ? "animate-pulse" : "border-green-300 shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+                        className={`relative flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl shadow-sm overflow-hidden p-1.5 ${
+                          !isReady ? "animate-pulse" : ""
                         }`}
-                        style={!isReady ? { boxShadow: `0 0 12px ${style.accent}20` } : undefined}
+                        style={{
+                          background: "var(--bg-panel)",
+                          border: `1px solid ${isReady ? "var(--text-accent)" : "var(--border-subtle)"}`,
+                          boxShadow: isReady
+                            ? "0 0 15px color-mix(in srgb, var(--text-accent) 20%, transparent)"
+                            : `0 0 12px color-mix(in srgb, ${style.accent} 12%, transparent)`
+                        }}
                       >
                         <Image
                           src={`/images/eggs/${hatching.rarity}-egg.png`}
@@ -556,15 +566,15 @@ export default function CollectionPage() {
                             <p className="mt-1 font-mono text-xs font-black" style={{ color: "var(--text-accent)" }}>
                               ⏳ {timeString}
                             </p>
-                            <div className="mt-2 h-1.5 w-full rounded-full bg-forest-100 overflow-hidden">
+                            <div className="mt-2 h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--border-subtle)" }}>
                               <div
                                 className="h-full rounded-full transition-all duration-1000 ease-out"
-                                style={{ width: `${progressPct}%`, backgroundColor: style.accent }}
+                                style={{ width: `${progressPct}%`, background: style.accent }}
                               />
                             </div>
                           </>
                         ) : (
-                          <p className="mt-1 text-xs font-extrabold uppercase tracking-wide text-green-600 animate-pulse">
+                          <p className="mt-1 text-xs font-extrabold uppercase tracking-wide animate-pulse" style={{ color: "var(--text-accent)" }}>
                             ✨ Ready to hatch!
                           </p>
                         )}
@@ -575,24 +585,27 @@ export default function CollectionPage() {
                       {!isReady ? (
                         <>
                           <button
+                            type="button"
                             onClick={() => warmEgg(hatching)}
                             title="Warms the egg — costs 10 EcoPoints"
-                            className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 text-[10px] font-black uppercase tracking-wider transition bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+                            className="flex-1 flex items-center justify-center gap-1.5 rounded-full border border-rose-300/60 bg-rose-500/10 py-2 text-[10px] font-black uppercase tracking-wider text-rose-600 transition hover:bg-rose-500/20"
                           >
                             🔥 Warm (10 EP)
                           </button>
                           <button
+                            type="button"
                             onClick={() => hatchInstantly(hatching)}
                             title={`Hatch instantly — costs ${instantCost} EcoPoints`}
-                            className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 text-[10px] font-black uppercase tracking-wider transition bg-forest-950 text-cream-100 hover:bg-forest-800"
+                            className={`flex-1 ${primaryButton}`}
                           >
                             ⚡ Hatch ({instantCost} EP)
                           </button>
                         </>
                       ) : (
                         <button
+                          type="button"
                           onClick={() => startHatchingReveal(hatching)}
-                          className="w-full flex items-center justify-center gap-2 rounded-full py-2 text-xs font-black uppercase tracking-wider transition bg-green-600 text-white hover:bg-green-700 shadow-md shadow-green-500/10 animate-bounce"
+                          className={`w-full ${primaryButton} animate-bounce`}
                         >
                           🥚 Open Egg!
                         </button>
@@ -626,7 +639,7 @@ export default function CollectionPage() {
           </div>
         </Panel>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <StaggerContainer className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" as="div" staggerDelay={0.04}>
           {filtered.map((entry) => {
             const owned = ownedByName.get(entry.name);
             const discovered = !!owned;
@@ -635,9 +648,10 @@ export default function CollectionPage() {
             const count = Number(owned?.count ?? 1);
             const isActive = !!owned?.active;
             return (
-              <article
+              <StaggerItem
                 key={`${mode}-${entry.id}-${entry.name}`}
-                className="reveal-card group relative flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
+                as="article"
+                className="group relative flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
                 style={{
                   borderColor: border,
                   background: "var(--bg-card)",
@@ -645,26 +659,26 @@ export default function CollectionPage() {
                 }}
                 title={discovered ? undefined : "Complete quests to unlock"}
               >
-                {discovered && isActive && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
+                {discovered && isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
                 {!discovered && <span className="absolute left-2 top-2 z-10 text-base">🔒</span>}
 
                 {/* Framed card image design - full bleed aspect ratio */}
                 <div
                   className="relative flex aspect-square items-center justify-center overflow-hidden"
                   style={{
-                    background: discovered ? `${style.accent}12` : "linear-gradient(160deg, var(--bg-panel-alt), color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel-alt)))"
+                    background: discovered ? `color-mix(in srgb, ${style.accent} 7%, var(--bg-card))` : "linear-gradient(160deg, var(--bg-panel-alt), color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel-alt)))"
                   }}
                 >
                   <CardImage entry={entry} discovered={discovered} mode={mode} />
                   {/* Hover affordance for locked cards — tells the user this is
                       discoverable content, not a broken/empty tile. */}
                   {!discovered && (
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 translate-y-full bg-black/55 px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-white opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 translate-y-full px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wide opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100" style={{ background: "color-mix(in srgb, var(--text-primary) 70%, transparent)", color: "var(--text-inverse)" }}>
                       Complete quests to unlock
                     </div>
                   )}
                   {discovered && <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{entry.rarity}</span>}
-                  {discovered && count > 1 && <span className="absolute bottom-2 right-2 z-10 rounded-full bg-forest-950 px-2 py-0.5 text-[9px] font-extrabold text-cream-100">×{count}</span>}
+                  {discovered && count > 1 && <span className="absolute bottom-2 right-2 z-10"><Pill active>×{count}</Pill></span>}
                 </div>
 
                 <div className="flex flex-1 flex-col gap-2 p-3">
@@ -703,16 +717,18 @@ export default function CollectionPage() {
                   )}
                   {/* plants + seeds: display-only, no action button */}
                 </div>
-              </article>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       )}
+    </TabPanel>
+  </StaggerItem>
 
       {/* ── Interactive Hatching Modal ── */}
       {activeHatching && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md fade-in">
-          <div className="relative w-full max-w-md rounded-[32px] border border-white/10 bg-gradient-to-b from-[#1c2e21] to-[#0c1810] p-6 text-center text-white shadow-2xl animate-modal-in">
+        <div role="dialog" aria-modal="true" aria-label="Hatching reveal" className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md fade-in">
+          <div className="relative w-full max-w-md rounded-[32px] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 text-center text-[var(--text-primary)] shadow-2xl animate-modal-in">
 
             {/* Sparkle Particles container */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
@@ -733,15 +749,25 @@ export default function CollectionPage() {
             {!revealedAnimal ? (
               <div className="flex flex-col items-center gap-6 py-6">
                 <div>
-                  <h3 className="font-serif text-2xl font-black text-moss-300">Incubator Chamber</h3>
-                  <p className="mt-1.5 text-xs text-white/60">Tap the egg to break the shell!</p>
+                  <h3 className="font-serif text-2xl font-black text-[var(--text-primary)]">Incubator Chamber</h3>
+                  <p className="mt-1.5 text-xs text-[var(--text-muted)]">Tap the egg to break the shell!</p>
                 </div>
 
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Tap egg to crack the shell"
                   onClick={handleEggTap}
-                  className="relative flex h-60 w-60 cursor-pointer items-center justify-center rounded-full bg-white/5 shadow-inner transition hover:scale-105"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleEggTap(e);
+                    }
+                  }}
+                  className="relative flex h-60 w-60 cursor-pointer items-center justify-center rounded-full bg-[var(--bg-panel-alt)] shadow-inner transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-accent)] focus-visible:ring-offset-2"
+                  style={{ ["--tw-ring-offset-color" as string]: "var(--bg-card)" }}
                 >
-                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_65%)] animate-pulse" />
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--text-primary)_8%,transparent),transparent_65%)] animate-pulse" />
 
                   <div className={`relative h-44 w-44 transition ${isShaking ? "animate-egg-shake" : ""}`}>
                     <Image
@@ -770,15 +796,15 @@ export default function CollectionPage() {
                     )}
                   </div>
 
-                  <div className="absolute bottom-4 rounded-full bg-black/40 px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-moss-300">
+                  <div className="absolute bottom-4 rounded-full bg-[var(--bg-sidebar)] px-3.5 py-1 text-[10px] font-black uppercase tracking-wider text-[var(--text-sidebar)]">
                     Taps Left: {tapsLeft}
                   </div>
                 </div>
 
                 <div className="w-full max-w-[240px]">
-                  <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-2 w-full rounded-full bg-[var(--border-subtle)] overflow-hidden">
                     <div
-                      className="h-full bg-green-500 transition-all duration-300"
+                      className="h-full bg-[var(--text-accent)] transition-all duration-300"
                       style={{ width: `${((5 - tapsLeft) / 5) * 100}%` }}
                     />
                   </div>
@@ -787,18 +813,21 @@ export default function CollectionPage() {
             ) : (
               <div className="flex flex-col items-center gap-6 py-6 animate-bounce-in">
                 <div>
-                  <span className="rounded-full bg-green-500/20 px-3.5 py-1 text-xs font-black uppercase tracking-widest text-green-400">
+                  <span className="rounded-full px-3.5 py-1 text-xs font-black uppercase tracking-widest bg-[var(--toast-success-bg)] text-[var(--toast-success-fg)]">
                     Hatched Successfully!
                   </span>
-                  <h3 className="mt-4 font-serif text-3xl font-black text-white">Meet {revealedAnimal.name}!</h3>
-                  <p className="mt-1 text-xs text-white/50">A rare eco companion was added to your collection.</p>
+                  <h3 className="mt-4 font-serif text-3xl font-black text-[var(--text-primary)]">Meet {revealedAnimal.name}!</h3>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">A rare eco companion was added to your collection.</p>
                 </div>
 
                 <div
-                  className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-white/10 bg-white/5 shadow-2xl p-6 overflow-hidden"
+                  className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-panel-alt)] shadow-2xl p-6 overflow-hidden"
                   style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)" }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-tr from-green-500/10 to-transparent pointer-events-none" />
+                  <div
+                    className="absolute inset-0 bg-gradient-to-tr to-transparent pointer-events-none"
+                    style={{ background: "linear-gradient(to top right, color-mix(in srgb, var(--text-accent) 10%, transparent), transparent)" }}
+                  />
                   <CardImage entry={revealedAnimal} discovered mode="animals" fit="contain" />
                 </div>
 
@@ -806,14 +835,15 @@ export default function CollectionPage() {
                   <span className={`rounded-full px-3.5 py-1 text-[10px] font-black uppercase tracking-widest ${rarityStyle[revealedAnimal.rarity as Rarity]?.chip}`}>
                     {revealedAnimal.rarity}
                   </span>
-                  <p className="mt-3 text-xs leading-relaxed max-w-[280px] text-white/70">
+                  <p className="mt-3 text-xs leading-relaxed max-w-[280px] text-[var(--text-muted)]">
                     {revealedAnimal.name} is a {revealedAnimal.rarity} companion that will accompany you on your sustainable missions!
                   </p>
                 </div>
 
                 <button
+                  type="button"
                   onClick={claimAnimal}
-                  className="w-full max-w-[280px] rounded-full py-3.5 text-xs font-black uppercase tracking-wider transition bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/25 active:scale-[0.98]"
+                  className={`w-full max-w-[280px] ${primaryButton}`}
                 >
                   Claim Pet & Continue
                 </button>
@@ -822,8 +852,9 @@ export default function CollectionPage() {
 
             {tapsLeft > 0 && (
               <button
+                type="button"
                 onClick={() => setActiveHatching(null)}
-                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 hover:text-white"
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-panel-alt)] text-[var(--text-muted)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-primary)]"
                 aria-label="Close modal"
               >
                 ✕
@@ -835,8 +866,8 @@ export default function CollectionPage() {
 
       {/* ── Interactive Chest Opening Modal ── */}
       {activeChest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md fade-in">
-          <div className="relative w-full max-w-md rounded-[32px] border border-white/10 bg-gradient-to-b from-[#1c222e] to-[#0c1018] p-6 text-center text-white shadow-2xl animate-modal-in">
+        <div role="dialog" aria-modal="true" aria-label="Chest opening" className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md fade-in">
+          <div className="relative w-full max-w-md rounded-[32px] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 text-center text-[var(--text-primary)] shadow-2xl animate-modal-in">
 
             {/* Sparkle Particles container */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
@@ -857,12 +888,12 @@ export default function CollectionPage() {
             {chestState !== "opened" ? (
               <div className="flex flex-col items-center gap-6 py-6">
                 <div>
-                  <h3 className="font-serif text-2xl font-black text-yellow-400">Opening Chest...</h3>
-                  <p className="mt-1.5 text-xs text-white/60">Brace yourself for mysterious rewards!</p>
+                  <h3 className="font-serif text-2xl font-black text-yellow-500">Opening Chest...</h3>
+                  <p className="mt-1.5 text-xs text-[var(--text-muted)]">Brace yourself for mysterious rewards!</p>
                 </div>
 
                 <div
-                  className="relative flex h-60 w-60 items-center justify-center rounded-full bg-white/5 shadow-inner animate-pulse"
+                  className="relative flex h-60 w-60 items-center justify-center rounded-full bg-[var(--bg-panel-alt)] shadow-inner animate-pulse"
                 >
                   <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.1),transparent_65%)]" />
 
@@ -885,17 +916,17 @@ export default function CollectionPage() {
             ) : (
               <div className="flex flex-col items-center gap-6 py-6 animate-bounce-in">
                 <div>
-                  <span className="rounded-full bg-yellow-500/20 px-3.5 py-1 text-xs font-black uppercase tracking-widest text-yellow-400">
+                  <span className="rounded-full bg-yellow-500/20 px-3.5 py-1 text-xs font-black uppercase tracking-widest text-yellow-500">
                     Chest Opened!
                   </span>
-                  <h3 className="mt-4 font-serif text-3xl font-black text-white">
+                  <h3 className="mt-4 font-serif text-3xl font-black text-[var(--text-primary)]">
                     {chestReward.type === "points"
                       ? `+${chestReward.amount} EcoPoints!`
                       : chestReward.type === "seed"
                       ? `${chestReward.seedName}!`
                       : `Unlocked ${chestReward.name}!`}
                   </h3>
-                  <p className="mt-1 text-xs text-white/50">
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
                     {chestReward.type === "seed"
                       ? "Head to your Garden and plant it — it grows over 7 days! 🌱"
                       : "Your reward has been added to your profile."}
@@ -903,7 +934,7 @@ export default function CollectionPage() {
                 </div>
 
                 <div
-                  className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-white/10 bg-white/5 shadow-2xl p-6 overflow-hidden"
+                  className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-panel-alt)] shadow-2xl p-6 overflow-hidden"
                   style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)" }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/10 to-transparent pointer-events-none" />
@@ -924,7 +955,7 @@ export default function CollectionPage() {
                   <span className={`rounded-full px-3.5 py-1 text-[10px] font-black uppercase tracking-widest ${rarityStyle[chestReward.rarity as Rarity]?.chip}`}>
                     {chestReward.rarity}
                   </span>
-                  <p className="mt-3 text-xs leading-relaxed max-w-[280px] text-white/70">
+                  <p className="mt-3 text-xs leading-relaxed max-w-[280px] text-[var(--text-muted)]">
                     {chestReward.type === "points"
                       ? "Spend these EcoPoints in the Plant Shop to buy more eggs and chests!"
                       : chestReward.type === "seed"
@@ -934,8 +965,9 @@ export default function CollectionPage() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={claimChestReward}
-                  className="w-full max-w-[280px] rounded-full py-3.5 text-xs font-black uppercase tracking-wider transition bg-yellow-500 text-black hover:bg-yellow-600 shadow-lg shadow-yellow-500/25 active:scale-[0.98] font-bold"
+                  className={`w-full max-w-[280px] ${primaryButton}`}
                 >
                   Claim & Continue
                 </button>
@@ -944,8 +976,9 @@ export default function CollectionPage() {
 
             {chestState === "closed" && (
               <button
+                type="button"
                 onClick={() => setActiveChest(null)}
-                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 hover:text-white"
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-panel-alt)] text-[var(--text-muted)] hover:bg-[var(--border-subtle)] hover:text-[var(--text-primary)]"
                 aria-label="Close modal"
               >
                 ✕
@@ -955,6 +988,6 @@ export default function CollectionPage() {
         </div>
       )}
 
-    </div>
+    </StaggerContainer>
   );
 }

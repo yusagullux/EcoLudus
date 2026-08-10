@@ -39,7 +39,7 @@ export async function LiveStatsCard() {
   const stats = await getAggregatedStats();
 
   return (
-    <div className="mk-surface rounded-[2rem] p-5 shadow-[0_35px_90px_rgba(16,33,20,0.16)]">
+    <div className="mk-surface rounded-[2rem] p-5 shadow-[var(--shadow-lift)]">
       <div className="mk-hero relative overflow-hidden rounded-[1.5rem] p-6 shadow-inner sm:p-7">
         <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-10 blur-2xl" style={{ background: "var(--text-accent)" }} />
         <div className="relative flex items-start justify-between gap-4">

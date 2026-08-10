@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useTheme, type Theme } from "@/lib/useTheme";
 import { PageHero, Panel, primaryButton, inputClass, heroAccents } from "@/components/game-ui";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 import { Avatar } from "@/components/avatar";
 import { useToast } from "@/lib/toast";
 
@@ -83,13 +84,20 @@ function resizeImage(file: File, max: number): Promise<Blob> {
   });
 }
 
-export default function SettingsPage() {
-  const { user, profile, refreshProfile } = useAuth();
-  const { theme, setTheme } = useTheme();
+type SettingsFormProps = {
+  user: ReturnType<typeof useAuth>["user"];
+  profile: ReturnType<typeof useAuth>["profile"];
+  refreshProfile: ReturnType<typeof useAuth>["refreshProfile"];
+  theme: Theme;
+  setTheme: (t: Theme) => void;
+};
 
-  // Profile fields
-  const [displayName, setDisplayName] = useState("");
-  const [weeklyReport, setWeeklyReport] = useState(true);
+function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: SettingsFormProps) {
+  // Profile fields are initialized from the profile prop. The parent remounts
+  // this component with a key derived from the relevant profile fields, so we
+  // never need a setState-in-effect to sync form state.
+  const [displayName, setDisplayName] = useState(String(profile?.displayName || user?.email?.split("@")[0] || ""));
+  const [weeklyReport, setWeeklyReport] = useState(profile?.emailWeeklyReport !== false);
 
   // UI states
   const [savingProfile, setSavingProfile] = useState(false);
@@ -100,14 +108,6 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profileImage = typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null;
   const avatarName = displayName || user?.email?.split("@")[0] || "Explorer";
-
-  // Populate from profile once loaded
-  useEffect(() => {
-    if (profile) {
-      setDisplayName(String(profile.displayName || user?.email?.split("@")[0] || ""));
-      setWeeklyReport(profile.emailWeeklyReport !== false);
-    }
-  }, [profile, user]);
 
   async function handleSaveProfile() {
     if (!user?.uid || savingProfile) return;
@@ -191,15 +191,18 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
       <PageHero
         eyebrow="Account"
         title="Settings"
         description="Update your profile, choose a theme, and manage notifications."
         accent={heroAccents.settings}
       />
+      </StaggerItem>
 
       {/* ── Profile ── */}
+      <StaggerItem as="div">
       <Panel eyebrow="Profile" title="Your Info">
         <div className="flex flex-col gap-4">
           {/* Profile picture */}
@@ -273,6 +276,7 @@ export default function SettingsPage() {
           </div>
 
           <button
+            type="button"
             onClick={handleSaveProfile}
             disabled={savingProfile || displayName.trim().length < 2}
             className={primaryButton}
@@ -281,15 +285,17 @@ export default function SettingsPage() {
           </button>
         </div>
       </Panel>
+      </StaggerItem>
 
       {/* ── Theme ── */}
+      <StaggerItem as="div">
       <Panel eyebrow="Appearance" title="Theme">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StaggerContainer className="grid grid-cols-1 gap-3 sm:grid-cols-3" as="div">
           {THEMES.map((t) => {
             const active = theme === t.value;
             return (
+              <StaggerItem key={t.value} as="div">
               <button
-                key={t.value}
                 type="button"
                 onClick={() => setTheme(t.value)}
                 className="group flex flex-col overflow-hidden rounded-2xl border-2 text-left transition hover:-translate-y-0.5"
@@ -312,7 +318,7 @@ export default function SettingsPage() {
                     {active && (
                       <span
                         className="flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-black"
-                        style={{ background: "var(--text-accent, #43653f)", color: "#fff" }}
+                        style={{ background: "var(--text-accent, #43653f)", color: "var(--text-inverse)" }}
                       >
                         ✓
                       </span>
@@ -323,31 +329,42 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </button>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       </Panel>
+      </StaggerItem>
 
       {/* ── Notifications ── */}
+      <StaggerItem as="div">
       <Panel eyebrow="Notifications" title="Email Preferences">
         <label className="flex cursor-pointer items-start gap-4 rounded-xl p-3 transition hover:opacity-80">
           {/* Toggle */}
-          <div className="relative mt-0.5 shrink-0">
-            <div
-              onClick={() => setWeeklyReport((v) => !v)}
-              className="flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors"
-              style={{ background: weeklyReport ? "var(--text-accent, #43653f)" : "var(--border-default)" }}
-              role="checkbox"
-              aria-checked={weeklyReport}
-              tabIndex={0}
-              onKeyDown={(e) => e.key === " " && setWeeklyReport((v) => !v)}
-            >
-              <span
-                className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-                style={{ transform: weeklyReport ? "translateX(18px)" : "translateX(2px)" }}
-              />
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => setWeeklyReport((v) => !v)}
+            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            style={{
+              background: weeklyReport ? "var(--text-accent, #43653f)" : "var(--border-default)",
+              // @ts-expect-error CSS custom property for ring offset color
+              "--tw-ring-offset-color": "var(--bg-panel)"
+            }}
+            role="switch"
+            aria-checked={weeklyReport}
+            aria-label="Toggle weekly impact report emails"
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                setWeeklyReport((v) => !v);
+              }
+            }}
+          >
+            <span
+              className="absolute top-0.5 h-4 w-4 transform rounded-full shadow transition-transform"
+              style={{ background: "var(--text-inverse)", left: weeklyReport ? "18px" : "2px" }}
+            />
+          </button>
           <div>
             <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
               Weekly Impact Report
@@ -360,6 +377,7 @@ export default function SettingsPage() {
 
         <div className="mt-3">
           <button
+            type="button"
             onClick={handleSaveProfile}
             disabled={savingProfile}
             className={primaryButton}
@@ -368,8 +386,10 @@ export default function SettingsPage() {
           </button>
         </div>
       </Panel>
+      </StaggerItem>
 
       {/* ── Account info ── */}
+      <StaggerItem as="div">
       <Panel eyebrow="Account" title="Details">
         <div className="flex flex-col gap-2">
           {[
@@ -394,6 +414,31 @@ export default function SettingsPage() {
           ))}
         </div>
       </Panel>
-    </div>
+      </StaggerItem>
+    </StaggerContainer>
+  );
+}
+
+function profileFormKey(profile: SettingsFormProps["profile"], user: SettingsFormProps["user"]): string {
+  // Remount the form whenever the server-side profile fields we edit change,
+  // so the form stays in sync without a setState-in-effect anti-pattern.
+  if (!profile) return "settings-loading";
+  const displayName = String(profile.displayName || user?.email?.split("@")[0] || "");
+  return `settings-${user?.uid || "anon"}-${displayName}-${String(profile.emailWeeklyReport)}-${typeof profile.profileImage}`;
+}
+
+export default function SettingsPage() {
+  const { user, profile, refreshProfile } = useAuth();
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <SettingsForm
+      key={profileFormKey(profile, user)}
+      user={user}
+      profile={profile}
+      refreshProfile={refreshProfile}
+      theme={theme}
+      setTheme={setTheme}
+    />
   );
 }

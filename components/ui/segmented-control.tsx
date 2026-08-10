@@ -91,7 +91,7 @@ export function SegmentedControl({
                 className="rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none"
                 style={
                   selected
-                    ? { background: "rgba(255,255,255,0.22)", color: "inherit" }
+                    ? { background: "color-mix(in srgb, var(--pill-active-text) 22%, transparent)", color: "inherit" }
                     : { background: "var(--pill-border)", color: "var(--pill-text)" }
                 }
               >

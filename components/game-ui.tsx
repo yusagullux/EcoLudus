@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AnimatedNumber, AnimatedProgressBar } from "@/lib/animations";
 
 // ── Shared rarity styles ──────────────────────────────────────
 export type Rarity = "common" | "rare" | "epic" | "legendary";
@@ -66,6 +67,7 @@ export function PageHero({ eyebrow, title, description, children, accent }: Page
 
 // ── HeroMetric ────────────────────────────────────────────────
 export function HeroMetric({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
+  const numericValue = typeof value === "number" ? value : null;
   return (
     <div
       className="relative min-w-[70px] rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-center"
@@ -83,7 +85,9 @@ export function HeroMetric({ label, value, hint }: { label: string; value: React
           </span>
         )}
       </div>
-      <div className="mt-1 font-serif text-xl font-bold leading-none text-white">{value}</div>
+      <div className="mt-1 font-serif text-xl font-bold leading-none text-white">
+        {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
+      </div>
     </div>
   );
 }
@@ -92,6 +96,7 @@ export function HeroMetric({ label, value, hint }: { label: string; value: React
 type MetricCardProps = { label: string; value: ReactNode; accent?: string; wide?: boolean };
 
 export function MetricCard({ label, value, accent = "#2f6b46", wide = false }: MetricCardProps) {
+  const numericValue = typeof value === "number" ? value : null;
   return (
     <article
       className={`t-panel rounded-[16px] p-4 transition hover:-translate-y-0.5 ${wide ? "sm:col-span-2" : ""}`}
@@ -108,7 +113,7 @@ export function MetricCard({ label, value, accent = "#2f6b46", wide = false }: M
         className="mt-1.5 min-h-[1.75rem] font-serif text-2xl font-bold leading-none"
         style={{ color: "var(--text-primary)" }}
       >
-        {value}
+        {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
       </p>
     </article>
   );
@@ -198,10 +203,7 @@ export function ProgressBar({ value, color = "#2f6b46" }: { value: number; color
         boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--border-default, #dfe7d7) 70%, transparent)"
       }}
     >
-      <div
-        className="h-full rounded-full transition-all duration-700 ease-out"
-        style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: color }}
-      />
+      <AnimatedProgressBar value={value} color={color} />
     </div>
   );
 }
@@ -249,6 +251,7 @@ export function PillTabBar<T extends string>({
     >
       {options.map((opt) => (
         <button
+          type="button"
           key={opt}
           onClick={() => onChange(opt)}
           className="shrink-0 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
@@ -278,6 +281,7 @@ export function PillFilterBar<T extends string>({
     <div className="no-scrollbar flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible">
       {options.map((opt) => (
         <button
+          type="button"
           key={opt}
           onClick={() => onChange(opt)}
           className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"

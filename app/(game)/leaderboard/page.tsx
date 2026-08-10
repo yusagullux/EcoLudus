@@ -8,9 +8,10 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { RowListSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/avatar";
+import { StaggerContainer, StaggerItem, TabPanel } from "@/lib/animations";
 
 const medalLabel = ["1st", "2nd", "3rd"];
-const medalColors = ["#9a6b1f", "#5d6f7a", "#8a4f25"];
+const medalColors = ["var(--text-warning)", "var(--text-accent)", "var(--text-warning)"];
 
 // Responsive grid-column templates for the ranking tables. Each template is
 // used twice (header row + every data row) so keeping them as named constants
@@ -46,9 +47,9 @@ function PodiumCard({
       {...(href ? { href } : {})}
       className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""} ${hover ? "hover:-translate-y-0.5" : ""}`}
       style={{
-        borderColor: isGold ? "#e6d3a6" : "var(--border-default)",
+        borderColor: isGold ? "var(--text-warning)" : "var(--border-default)",
         background: "var(--bg-panel)",
-        boxShadow: isGold ? "0 12px 32px rgba(154,107,31,0.14), 0 0 0 2px rgba(201,154,58,0.18)" : "var(--shadow-card)"
+        boxShadow: isGold ? "var(--shadow-lift), 0 0 0 2px color-mix(in srgb, var(--text-warning) 18%, transparent)" : "var(--shadow-card)"
       }}
     >
       <span className="font-serif text-3xl font-extrabold" style={{ color: medalColors[rank - 1] }}>
@@ -261,7 +262,7 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{team.name}</p>
                   <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
-                    <span className="sm:hidden">{team.memberCount} members · </span>Code: {team.joinCode}
+                    {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
                   </p>
                 </div>
                 <div className="hidden text-right sm:block">
@@ -334,15 +335,18 @@ export default function LeaderboardPage() {
   const isLoading = tab === "individual" ? loadingUsers : loadingTeams;
 
   return (
-    <div className="flex flex-col gap-5">
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
       <PageHero
         eyebrow="Global rankings"
         title="Leaderboard"
         description="Top EcoLudus players and teams ranked by XP earned and missions completed."
         accent={heroAccents.leaderboard}
       />
+      </StaggerItem>
 
       {/* Tab selector */}
+      <StaggerItem as="div">
       <SegmentedControl
         ariaLabel="Leaderboard view"
         value={tab}
@@ -352,7 +356,10 @@ export default function LeaderboardPage() {
           { value: "team", label: "🌿 Team" }
         ]}
       />
+      </StaggerItem>
 
+      <StaggerItem as="div">
+      <TabPanel activeKey={isLoading ? "loading" : tab}>
       {isLoading ? (
         <Panel>
           <RowListSkeleton rows={8} variant="row" />
@@ -362,6 +369,8 @@ export default function LeaderboardPage() {
       ) : (
         <TeamLeaderboard teams={teams} />
       )}
-    </div>
+      </TabPanel>
+      </StaggerItem>
+    </StaggerContainer>
   );
 }

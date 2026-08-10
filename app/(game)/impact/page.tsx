@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/useAuth";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, StatGrid } from "@/components/game-ui";
 import { ExplainerGrid } from "@/components/ui/explainer-grid";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 type CommunityStats = {
   totalUsers: number;
@@ -52,7 +53,7 @@ function MilestoneRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{milestone.label}</p>
         <div className="mt-1.5">
-          <ProgressBar value={progress} color={claimed ? "#2f6b46" : "#9fb78c"} />
+          <ProgressBar value={progress} color={claimed ? "var(--text-accent)" : "var(--text-muted)"} />
         </div>
         <p className="mt-1 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
           {claimed
@@ -66,13 +67,9 @@ function MilestoneRow({
           <span className="text-xs font-extrabold" style={{ color: "var(--text-secondary)" }}>×{milestone.trees}</span>
         </div>
         {claimed ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold text-emerald-700">
-            ✓ Done
-          </span>
+          <Pill active>✓ Done</Pill>
         ) : (
-          <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-extrabold" style={{ background: "var(--pill-bg)", color: "var(--text-muted)" }}>
-            {progress}%
-          </span>
+          <Pill>{progress}%</Pill>
         )}
       </div>
     </div>
@@ -117,7 +114,8 @@ export default function ImpactPage() {
   );
 
   return (
-    <div className="flex flex-col gap-5">
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
       <PageHero
         eyebrow="Your real-world footprint"
         title="Impact Dashboard"
@@ -129,19 +127,23 @@ export default function ImpactPage() {
           <HeroMetric label="Missions done" value={missionsCompleted} />
         </div>
       </PageHero>
+      </StaggerItem>
 
       {/* Personal stats */}
+      <StaggerItem as="div">
       <StatGrid
         className="grid-cols-2 gap-3 sm:grid-cols-4"
         items={[
-          { label: "CO₂ Reduced", value: `${carbonReduced.toFixed(1)} kg`, accent: "#237482" },
-          { label: "Trees Planted", value: treesPlanted, accent: "#2f6b46" },
-          { label: "Missions Done", value: missionsCompleted, accent: "#62508f" },
-          { label: "XP Earned", value: xp.toLocaleString(), accent: "#9a6b1f" }
+          { label: "CO₂ Reduced", value: `${carbonReduced.toFixed(1)} kg`, accent: "var(--text-accent)" },
+          { label: "Trees Planted", value: treesPlanted, accent: "var(--text-accent)" },
+          { label: "Missions Done", value: missionsCompleted, accent: "var(--text-accent)" },
+          { label: "XP Earned", value: xp.toLocaleString(), accent: "var(--text-accent)" }
         ]}
       />
+      </StaggerItem>
 
       {/* Tree milestones */}
+      <StaggerItem as="section">
       <Panel
         eyebrow="Real-world rewards"
         title="Tree Planting Milestones"
@@ -175,9 +177,11 @@ export default function ImpactPage() {
           ))}
         </div>
       </Panel>
+      </StaggerItem>
 
       {/* Notifications */}
       {notifications.length > 0 && (
+        <StaggerItem as="section">
         <Panel
           eyebrow="Eco activity"
           title="Notifications"
@@ -203,15 +207,17 @@ export default function ImpactPage() {
                   </p>
                 </div>
                 {!notification.read && (
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500 mt-2" />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--text-accent)] mt-2" />
                 )}
               </div>
             ))}
           </div>
         </Panel>
+        </StaggerItem>
       )}
 
       {/* Community stats */}
+      <StaggerItem as="section">
       <Panel
         eyebrow="Global community"
         title="Community Impact"
@@ -226,7 +232,7 @@ export default function ImpactPage() {
         {loadingCommunity ? (
           <CardGridSkeleton count={6} cols="grid-cols-2 sm:grid-cols-3" compact />
         ) : community ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3" as="div" staggerDelay={0.05}>
             {[
               { label: "Total Members", value: community.totalUsers.toLocaleString(), icon: "👥" },
               {
@@ -257,21 +263,23 @@ export default function ImpactPage() {
                 icon: "🕒"
               }
             ].map(({ label, value, icon }) => (
-              <div key={label} className="rounded-2xl p-4" style={{ background: "var(--bg-panel-alt)" }}>
+              <StaggerItem key={label} as="div" className="rounded-2xl p-4" style={{ background: "var(--bg-panel-alt)" }}>
                 <p className="text-lg">{icon}</p>
                 <p className="mt-2 text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{value}</p>
                 <p className="mt-0.5 text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>{label}</p>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         ) : (
           <p className="py-8 text-center text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
             Community stats unavailable.
           </p>
         )}
       </Panel>
+      </StaggerItem>
 
       {/* How trees are planted */}
+      <StaggerItem as="section">
       <Panel eyebrow="Partners" title="How Tree Planting Will Work">
         <ExplainerGrid
           items={[
@@ -293,6 +301,7 @@ export default function ImpactPage() {
           ]}
         />
       </Panel>
-    </div>
+      </StaggerItem>
+    </StaggerContainer>
   );
 }

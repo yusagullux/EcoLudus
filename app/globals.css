@@ -58,8 +58,8 @@
     to { transform: translateY(0) scale(1); opacity: 1; }
   }
   @keyframes logoBreathe {
-    0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 12px 18px rgba(16,33,20,0.14)); }
-    50% { transform: translateY(-4px) scale(1.04); filter: drop-shadow(0 18px 24px rgba(16,33,20,0.2)); }
+    0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 12px 18px rgba(0,0,0,0.14)); }
+    50% { transform: translateY(-4px) scale(1.04); filter: drop-shadow(0 18px 24px rgba(0,0,0,0.2)); }
   }
   @keyframes slideInLeft {
     from { transform: translateX(-100%); opacity: 0; }
@@ -124,9 +124,9 @@
   --pill-active-bg: #102016;
   --pill-active-text: #fcf9f2;
 
-  /* Shared shadows — forest-tinted on light themes */
-  --shadow-card:  0 8px 32px rgba(16,33,20,0.06);
-  --shadow-lift:  0 18px 44px rgba(16,33,20,0.16);
+  /* Shared shadows — neutral so every light theme (incl. dawn/bloom) looks cohesive */
+  --shadow-card:  0 8px 32px rgba(0,0,0,0.08);
+  --shadow-lift:  0 18px 44px rgba(0,0,0,0.14);
   --shadow-hero:  0 20px 60px rgba(0,0,0,0.22);
 }
 
@@ -320,6 +320,74 @@
   --shadow-hero:  0 20px 60px rgba(0,0,0,0.5);
 }
 
+/* Rarity tints — shared hue, theme-aware blend/text so the chips stay readable
+   on every light and dark theme without hardcoded light-hex surfaces. */
+:root,
+[data-theme="light"],
+[data-theme="dawn"],
+[data-theme="bloom"] {
+  --rarity-common:    #4ade80;
+  --rarity-rare:      #38bdf8;
+  --rarity-epic:      #a78bfa;
+  --rarity-legendary: #fbbf24;
+
+  --rarity-common-text:    #166534;
+  --rarity-rare-text:      #075985;
+  --rarity-epic-text:      #5b21b6;
+  --rarity-legendary-text: #92400e;
+}
+
+[data-theme="dark"],
+[data-theme="liquid"],
+[data-theme="aurora"] {
+  --rarity-common-text:    #86efac;
+  --rarity-rare-text:      #7dd3fc;
+  --rarity-epic-text:      #c4b5fd;
+  --rarity-legendary-text: #fcd34d;
+}
+
+:root,
+[data-theme="light"],
+[data-theme="dawn"],
+[data-theme="bloom"] {
+  --text-error:   #be123c;
+  --text-warning: #b45309;
+}
+
+[data-theme="dark"],
+[data-theme="liquid"],
+[data-theme="aurora"] {
+  --text-error:   #fb7185;
+  --text-warning: #fbbf24;
+}
+
+:root {
+  /* Focus glow for custom inputs/textareas — blends the theme accent at low
+     opacity so it works on both light and dark input backgrounds. */
+  --focus-ring: color-mix(in srgb, var(--text-accent) 14%, transparent);
+}
+
+/* Toast notifications — solid semantic colors on light themes, flipped to
+   light-on-dark for dark themes so they remain eye-catching and readable. */
+:root,
+[data-theme="light"],
+[data-theme="dawn"],
+[data-theme="bloom"] {
+  --toast-success-bg: #1f6b46;
+  --toast-success-fg: #ffffff;
+  --toast-error-bg:   #b91c1c;
+  --toast-error-fg:   #ffffff;
+}
+
+[data-theme="dark"],
+[data-theme="liquid"],
+[data-theme="aurora"] {
+  --toast-success-bg: #86efac;
+  --toast-success-fg: #14532d;
+  --toast-error-bg:   #fca5a5;
+  --toast-error-fg:   #7f1d1d;
+}
+
 /* ── BASE ───────────────────────────────────────────────── */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -473,15 +541,22 @@ html {
   color: var(--text-primary);
 }
 
+/* Primary CTA button — theme-aware dark surface with light text. Kept as a
+   dedicated class so it composes cleanly with the Tailwind buttonBase utility
+   without fighting over the transition property. */
+.t-btn-primary {
+  background: var(--bg-sidebar);
+  color: var(--text-sidebar);
+}
+.t-btn-primary:hover {
+  background: color-mix(in srgb, var(--text-accent) 30%, var(--bg-sidebar));
+}
+
 .t-input::placeholder { color: var(--text-muted); }
 .t-input:focus {
   border-color: var(--text-accent);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(67,101,63,0.14);
-}
-
-[data-theme="liquid"] .t-input:focus {
-  box-shadow: 0 0 0 3px rgba(93,207,224,0.18);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-accent) 16%, transparent);
 }
 
 /* Sidebar nav */
@@ -731,6 +806,23 @@ html {
 .mk-bd-subtle  { border-color: var(--border-subtle); }
 .mk-bg-alt     { background: var(--bg-panel-alt); }
 
+/* Rarity chips/borders (game-ui.tsx). Background blends with the panel;
+   border blends with the default border. Text color flips for dark themes. */
+.rarity-common-chip    { background: color-mix(in srgb, var(--rarity-common) 14%, var(--bg-panel));    color: var(--rarity-common-text); }
+.rarity-rare-chip      { background: color-mix(in srgb, var(--rarity-rare) 14%, var(--bg-panel));      color: var(--rarity-rare-text); }
+.rarity-epic-chip      { background: color-mix(in srgb, var(--rarity-epic) 14%, var(--bg-panel));      color: var(--rarity-epic-text); }
+.rarity-legendary-chip { background: color-mix(in srgb, var(--rarity-legendary) 14%, var(--bg-panel)); color: var(--rarity-legendary-text); }
+
+:root,
+[data-theme="light"],
+[data-theme="dawn"],
+[data-theme="bloom"] {
+  --rarity-common-border:    color-mix(in srgb, var(--rarity-common) 35%, var(--border-default));
+  --rarity-rare-border:      color-mix(in srgb, var(--rarity-rare) 35%, var(--border-default));
+  --rarity-epic-border:      color-mix(in srgb, var(--rarity-epic) 35%, var(--border-default));
+  --rarity-legendary-border: color-mix(in srgb, var(--rarity-legendary) 35%, var(--border-default));
+}
+
 /* ── REDUCED MOTION ──────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -741,6 +833,8 @@ html {
     transition-duration: 1ms !important;
   }
   .reveal-card, .logo-breathe { animation: none; will-change: auto; }
+  /* Motion library primitives read useReducedMotion() at runtime; this CSS
+     guard catches any plain CSS transitions/animations that bypass JS hooks. */
 }
 
 /* ── UNIVERSAL CONTRAST FIX ──────────────────────────────────

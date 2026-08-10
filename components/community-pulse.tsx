@@ -46,8 +46,8 @@ export function CommunityPulse() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-forest-900/10 bg-white/60 px-6 py-5 text-center">
-        <p className="text-sm text-forest-900/60">Loading community data...</p>
+      <div className="mk-surface rounded-2xl px-6 py-5 text-center">
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading community data...</p>
       </div>
     );
   }
@@ -57,49 +57,49 @@ export function CommunityPulse() {
   }
 
   return (
-    <div className="rounded-2xl border border-forest-900/10 bg-white/80 px-6 py-6 shadow-[0_14px_34px_rgba(16,33,20,0.08)] backdrop-blur sm:px-10 sm:py-7">
+    <div className="mk-surface rounded-2xl px-6 py-6 shadow-[var(--shadow-lift)] backdrop-blur sm:px-10 sm:py-7">
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-forest-900/60">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em]" style={{ color: "var(--text-muted)" }}>
           <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-forest-500 opacity-60" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-forest-600" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: "var(--text-accent)" }} />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: "var(--text-accent)" }} />
           </span>
           Community pulse
         </div>
         <div className="flex flex-wrap items-center justify-center gap-8 text-center sm:gap-10">
           <div>
-            <div className="font-serif text-3xl font-bold text-forest-950">
+            <div className="font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
               {stats.members.toLocaleString()}
             </div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-forest-900/55">
+            <div className="mt-1 text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
               Members
             </div>
           </div>
 
-          <div className="hidden h-10 w-px bg-forest-900/10 sm:block" />
+          <div className="hidden h-10 w-px sm:block" style={{ background: "var(--border-default)" }} />
 
           <div>
-            <div className="font-serif text-3xl font-bold text-forest-950">
+            <div className="font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
               {stats.totalMissions.toLocaleString()}
             </div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-forest-900/55">
+            <div className="mt-1 text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
               Missions Completed
             </div>
           </div>
 
-          <div className="hidden h-10 w-px bg-forest-900/10 sm:block" />
+          <div className="hidden h-10 w-px sm:block" style={{ background: "var(--border-default)" }} />
 
           <div>
-            <div className="font-serif text-3xl font-bold text-forest-950">
+            <div className="font-serif text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
               {stats.totalCO2kg.toLocaleString()}<span className="text-xl">kg</span>
             </div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-forest-900/55">
+            <div className="mt-1 text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
               CO₂ Avoided
             </div>
           </div>
         </div>
       </div>
-      <div className="mt-4 border-t border-forest-900/8 pt-3 text-center text-[11px] text-forest-900/50 sm:text-right">
+      <div className="mt-4 border-t pt-3 text-center text-[11px] sm:text-right" style={{ borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>
         Real data • Updated {new Date(stats.updated).toLocaleTimeString()}
       </div>
     </div>

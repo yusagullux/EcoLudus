@@ -17,7 +17,9 @@ import {
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog } from "@/components/ui/dialog";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { VERDICT_STYLES } from "@/lib/ui-shared";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 type Mission = {
   id: string;
@@ -233,19 +235,21 @@ export default function HabitsPage() {
 
   const trustColor =
     trustScore >= 75
-      ? "#2f6b46"
+      ? "var(--text-accent)"
       : trustScore >= 45
-      ? "#9a6b1f"
+      ? "var(--text-warning)"
       : trustScore >= 25
-      ? "#2f5f86"
-      : "#c0392b";
+      ? "var(--text-accent)"
+      : "var(--text-error)";
 
   if (loadingMissions) {
     return <PageSkeleton metricCount={3} panels={[{ rows: 5 }, { rows: 3 }]} heroChips={3} />;
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <>
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
       <PageHero
         eyebrow="Daily habits"
         title="Habit Tracker"
@@ -262,17 +266,21 @@ export default function HabitsPage() {
           />
         </div>
       </PageHero>
+      </StaggerItem>
 
+      <StaggerItem as="div">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <MetricCard
           label="Trust Score"
           value={`${Math.round(trustScore)}/100`}
           accent={trustColor}
         />
-        <MetricCard label="XP Earned" value={xp.toLocaleString()} accent="#2f6b46" />
-        <MetricCard label="Level" value={`Level ${level}`} accent="#2f5f86" />
+        <MetricCard label="XP Earned" value={xp.toLocaleString()} accent="var(--text-accent)" />
+        <MetricCard label="Level" value={`Level ${level}`} accent="var(--text-accent)" />
       </div>
+      </StaggerItem>
 
+      <StaggerItem as="section">
       <Panel
         eyebrow="Available habits"
         title="Today's Habit Missions"
@@ -285,7 +293,7 @@ export default function HabitsPage() {
             title="No habit missions available right now."
           />
         ) : (
-          <div className="-mx-5 -mt-5 divide-y divide-[#e7ecdf] sm:-mx-6 sm:-mt-6">
+          <div className="-mx-5 -mt-5 divide-y divide-[var(--border-subtle)] sm:-mx-6 sm:-mt-6">
             {missions.map((mission) => {
               const color = CATEGORY_COLORS[mission.category] ?? "#4c7a3b";
               const unitHint = mission.metadata?.unitHint ?? "";
@@ -318,7 +326,7 @@ export default function HabitsPage() {
                     <button
                       type="button"
                       onClick={() => openMission(mission)}
-                      className="rounded-full bg-forest-950 px-3 py-1 text-[10px] font-extrabold tracking-[0.02em] text-cream-100 transition hover:bg-forest-800"
+                      className={primaryButton}
                     >
                       Log habit
                     </button>
@@ -329,7 +337,9 @@ export default function HabitsPage() {
           </div>
         )}
       </Panel>
+      </StaggerItem>
 
+      <StaggerItem as="section">
       <Panel eyebrow="How it works" title="About Habit Verification">
         <div className="grid gap-3 sm:grid-cols-3">
           {[
@@ -357,6 +367,9 @@ export default function HabitsPage() {
           ))}
         </div>
       </Panel>
+      </StaggerItem>
+
+    </StaggerContainer>
 
       {/* ── Submission Modal ── */}
       {activeMission && !result && (
@@ -367,20 +380,21 @@ export default function HabitsPage() {
           footer={
             <>
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={submitting || description.trim().length < 8}
-                className={`flex-1 ${primaryButton}`}
+                className={`flex-1 ${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[color-mix(in_srgb,var(--text-sidebar)_40%,transparent)] border-t-[var(--text-sidebar)]" />
                     Verifying...
                   </span>
                 ) : (
                   "Submit & Verify"
                 )}
               </button>
-              <button onClick={closeModal} className={secondaryButton}>
+              <button type="button" onClick={closeModal} className={secondaryButton}>
                 Cancel
               </button>
             </>
@@ -440,8 +454,8 @@ export default function HabitsPage() {
                 className={`${inputClass} resize-none`}
               />
               <p
-                className={`mt-1 text-right text-[10px] font-bold ${description.trim().length >= 8 ? "" : "text-rose-500"}`}
-                style={description.trim().length >= 8 ? { color: "var(--text-accent,#43653f)" } : undefined}
+                className="mt-1 text-right text-[10px] font-bold"
+                style={{ color: description.trim().length >= 8 ? "var(--text-accent)" : "var(--text-error)" }}
               >
                 {description.trim().length}/8 min characters
               </p>
@@ -454,11 +468,7 @@ export default function HabitsPage() {
               <ConfidenceSelector value={confidence} onChange={setConfidence} />
             </div>
 
-            {submitError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
-                {submitError}
-              </div>
-            )}
+            {submitError && <ErrorBanner>{submitError}</ErrorBanner>}
           </div>
         </Dialog>
       )}
@@ -469,7 +479,7 @@ export default function HabitsPage() {
           open
           onClose={closeModal}
           size="lg"
-          footer={<button onClick={closeModal} className={`w-full ${primaryButton}`}>Done</button>}
+          footer={<button type="button" onClick={closeModal} className={`w-full ${primaryButton}`}>Done</button>}
         >
           <div className="flex flex-col gap-5">
             {/* Verdict header */}
@@ -509,7 +519,7 @@ export default function HabitsPage() {
               <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
                 Verification feedback
               </p>
-              <p className="text-xs leading-relaxed text-forest-900">
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-primary)" }}>
                 {result.verification.reasoning}
               </p>
               {result.verification.risk_flags.length > 0 && (
@@ -517,7 +527,7 @@ export default function HabitsPage() {
                   {result.verification.risk_flags.map((flag) => (
                     <span
                       key={flag}
-                      className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700"
+                      className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-600"
                     >
                       {flag.replace(/_/g, " ")}
                     </span>
@@ -561,6 +571,6 @@ export default function HabitsPage() {
           </div>
         </Dialog>
       )}
-    </div>
+    </>
   );
 }

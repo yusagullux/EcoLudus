@@ -20,14 +20,15 @@ type ErrorBannerProps = {
 
 export function ErrorBanner({ children, variant = "error", items, className = "" }: ErrorBannerProps) {
   const isWarning = variant === "warning";
-  const style = isWarning
-    ? { borderColor: "#f2e5bb", background: "#fff9e6", color: "#92601b" }
-    : { borderColor: "#fecdd3", background: "#fff1f2", color: "#9f1239" };
 
   return (
     <div
       className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${className}`}
-      style={style}
+      style={{
+        background: "var(--bg-panel-alt)",
+        borderColor: "var(--border-default)",
+        color: isWarning ? "var(--text-warning)" : "var(--text-error)"
+      }}
       role={isWarning ? "note" : "alert"}
     >
       {items && items.length > 0 ? (

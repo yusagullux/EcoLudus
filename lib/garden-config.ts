@@ -15,7 +15,6 @@ export const GARDEN_TILE_COST_STEP = 50;
 // persisted and in range, trust it. Otherwise derive a sensible default that
 // never orphans plants a user already placed: at least the start count, at
 // least one past the highest occupied tile id, and never above the max.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function resolveGardenTiles(profile: any): number {
   const stored = Number(profile?.gardenTiles);
   if (Number.isFinite(stored) && stored >= GARDEN_START_TILES && stored <= GARDEN_MAX_TILES) {

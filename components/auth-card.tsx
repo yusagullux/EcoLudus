@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { inputClass, primaryButton } from "@/components/game-ui";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import {
   clearRememberedSession,
   getRememberedSession,
@@ -156,7 +157,7 @@ export function AuthCard({ mode }: AuthCardProps) {
 
   return (
     <section className="mx-auto grid min-h-[calc(100vh-96px)] w-full max-w-6xl px-5 pb-14 pt-6 sm:px-8 lg:grid-cols-[0.92fr_1fr] lg:px-0">
-      <aside className="hidden flex-col justify-between rounded-l-[28px] bg-[linear-gradient(145deg,#102016_0%,#203b29_58%,#5f7c52_100%)] p-12 text-cream-100 shadow-[0_30px_90px_rgba(16,33,20,0.2)] lg:flex">
+      <aside className="hidden flex-col justify-between rounded-l-[28px] bg-[linear-gradient(145deg,#102016_0%,#203b29_58%,#5f7c52_100%)] p-12 text-cream-100 shadow-[0_30px_90px_rgba(0,0,0,0.2)] lg:flex">
         <div>
           <span className="inline-flex rounded-full border border-white/12 bg-white/8 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.24em] text-moss-200">
             Forest Edition
@@ -182,12 +183,12 @@ export function AuthCard({ mode }: AuthCardProps) {
         </div>
       </aside>
 
-      <div className="flex items-center justify-center rounded-[28px] border px-6 py-12 shadow-[0_24px_70px_rgba(16,33,20,0.1)] backdrop-blur lg:rounded-l-none lg:px-14" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
+      <div className="flex items-center justify-center rounded-[28px] border px-6 py-12 shadow-[0_24px_70px_rgba(0,0,0,0.1)] backdrop-blur lg:rounded-l-none lg:px-14" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
         <div className="w-full max-w-sm">
           {/* Compact branded header — visible only on mobile/tablet where the
               full aside panel is hidden, so auth isn't a bare card. */}
           <div className="mb-7 flex items-center gap-3 lg:hidden">
-            <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white shadow-[0_12px_28px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10">
+            <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white shadow-[0_12px_28px_rgba(0,0,0,0.16)] ring-1 ring-[var(--border-default)]">
               <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="40px" className="object-cover" />
             </div>
             <div className="leading-none">
@@ -277,17 +278,13 @@ export function AuthCard({ mode }: AuthCardProps) {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(event) => setRememberMe(event.target.checked)}
-                  className="h-4 w-4 rounded accent-forest-900"
+                  className="h-4 w-4 rounded accent-[var(--text-accent)]"
                 />
                 Remember me on this browser
               </label>
             )}
 
-            {error && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
-                {error}
-              </div>
-            )}
+            {error && <ErrorBanner>{error}</ErrorBanner>}
 
             <button type="submit" disabled={pending} className={`mt-1 w-full ${primaryButton}`}>
               {pending ? content.pending : content.submit}
