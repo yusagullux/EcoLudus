@@ -44,7 +44,7 @@ export function MarketingShell({
       >
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8 lg:px-10">
         <Link href="/landing" className="mk-c-primary group flex items-center gap-3">
-          <div className="mk-surface relative h-10 w-10 overflow-hidden rounded-xl shadow-[0_12px_28px_rgba(16,33,20,0.16)] transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-105">
+          <div className="mk-surface relative h-10 w-10 overflow-hidden rounded-xl shadow-[0_12px_28px_rgba(0,0,0,0.16)] transition-transform duration-300 ease-out group-hover:-translate-y-0.5 group-hover:scale-105">
             <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="40px" className="object-cover" priority />
           </div>
           <div className="leading-none">
@@ -68,7 +68,7 @@ export function MarketingShell({
           )}
           <Link
             href={ctaHref}
-            className="mk-btn-ghost rounded-full px-5 py-2.5 text-sm font-semibold shadow-[0_10px_26px_rgba(16,33,20,0.07)] backdrop-blur transition-all hover:-translate-y-0.5"
+            className="mk-btn-ghost rounded-full px-5 py-2.5 text-sm font-semibold shadow-[0_10px_26px_rgba(0,0,0,0.07)] backdrop-blur transition-all hover:-translate-y-0.5"
           >
             {ctaLabel}
           </Link>
@@ -76,6 +76,7 @@ export function MarketingShell({
 
         {/* Mobile Menu Button */}
         <button
+          type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="mk-c-primary flex flex-col gap-1.5 rounded-lg p-2 md:hidden"
           aria-label="Toggle menu"
@@ -117,7 +118,7 @@ export function MarketingShell({
             <div className="mk-bd-subtle mt-2 border-t pt-3">
               <Link
                 href={ctaHref}
-                className="mk-btn-primary inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold shadow-[0_14px_30px_rgba(16,33,20,0.1)]"
+                className="mk-btn-primary inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold shadow-[0_14px_30px_rgba(0,0,0,0.1)]"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {ctaLabel}

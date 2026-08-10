@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { getAllUsers } from "@/lib/auth-client";
-import { HeroMetric, PageHero, Panel, Pill, StatGrid, primaryButton, secondaryButton, inputClass, heroAccents } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, StatGrid, primaryButton, secondaryButton, dangerButton, inputClass, heroAccents } from "@/components/game-ui";
 import { RowListSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Avatar } from "@/components/avatar";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 function friendKey(friend: any) {
   return friend?.id || friend?.uid || friend?.email;
@@ -71,9 +73,9 @@ export default function FriendsPage() {
   // Tracks which player id has an in-flight add/accept/decline so we can show a
   // loading state on just that button (and block double-submits).
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [friendToRemove, setFriendToRemove] = useState<any | null>(null);
 
-  const friends = Array.isArray(profile?.friends) ? profile.friends : [];
-  const friendIds = new Set(friends.map(friendKey));
+  const friends = useMemo(() => Array.isArray(profile?.friends) ? profile.friends : [], [profile]);
   const socialStats = getSocialStats(profile);
   const claimedSocialRewards = getClaimedSocialRewards(profile);
 
@@ -82,6 +84,13 @@ export default function FriendsPage() {
   const friendRequestsSet = new Set(friendRequests.map((r: any) => r.id || r.uid));
   const sentRequestsSet = new Set(sentRequests);
 
+  // setProfile is recreated each render from context; keep a ref so the refresh
+  // effect below can depend only on stable data rather than an unstable callback.
+  const setProfileRef = useRef(setProfile);
+  useEffect(() => {
+    setProfileRef.current = setProfile;
+  }, [setProfile]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -89,34 +98,7 @@ export default function FriendsPage() {
       setLoading(true);
       const result = await getAllUsers();
       if (!cancelled) {
-        const livePlayers: any[] = result.success ? result.data || [] : [];
-        setPlayers(livePlayers);
-
-        // Refresh stale XP/level snapshots stored in profile.friends using live data.
-        // We do this in the effect so the friend board always shows current stats.
-        if (livePlayers.length > 0 && profile && user?.uid) {
-          const liveMap = new Map(livePlayers.map((p: any) => [p.id, p]));
-          const currentFriends: any[] = Array.isArray(profile?.friends) ? profile.friends : [];
-          const refreshed = currentFriends.map((f: any) => {
-            const live = liveMap.get(f.id || f.uid);
-            if (!live) return f;
-            return {
-              ...f,
-              displayName: live.displayName ?? f.displayName,
-              xp: Number(live.xp ?? f.xp ?? 0),
-              level: Number(live.level ?? f.level ?? 1),
-              ecoPoints: Number(live.ecoPoints ?? f.ecoPoints ?? 0)
-            };
-          });
-          // Only write back if something actually changed to avoid unnecessary saves.
-          const changed = refreshed.some((r: any, i: number) =>
-            r.xp !== currentFriends[i]?.xp || r.level !== currentFriends[i]?.level
-          );
-          if (changed && typeof setProfile === "function") {
-            setProfile({ ...profile, friends: refreshed });
-          }
-        }
-
+        setPlayers(result.success ? result.data || [] : []);
         setLoading(false);
       }
     }
@@ -125,7 +107,35 @@ export default function FriendsPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // Refresh stale XP/level snapshots stored in profile.friends using live data.
+  // We only write back when values actually changed to avoid unnecessary saves.
+  useEffect(() => {
+    if (players.length === 0 || !profile || !user?.uid) return;
+
+    const currentFriends: any[] = Array.isArray(profile?.friends) ? profile.friends : [];
+    const liveMap = new Map(players.map((p: any) => [p.id, p]));
+    const refreshed = currentFriends.map((f: any) => {
+      const live = liveMap.get(f.id || f.uid);
+      if (!live) return f;
+      return {
+        ...f,
+        displayName: live.displayName ?? f.displayName,
+        xp: Number(live.xp ?? f.xp ?? 0),
+        level: Number(live.level ?? f.level ?? 1),
+        ecoPoints: Number(live.ecoPoints ?? f.ecoPoints ?? 0)
+      };
+    });
+
+    const changed = refreshed.some((r: any, i: number) =>
+      r.xp !== currentFriends[i]?.xp || r.level !== currentFriends[i]?.level
+    );
+    if (changed && typeof setProfileRef.current === "function") {
+      setProfileRef.current({ ...profile, friends: refreshed });
+    }
+  }, [players, profile, user?.uid]);
+
   const candidates = useMemo(() => {
+    const friendIds = new Set(friends.map(friendKey));
     const normalized = query.trim().toLowerCase();
     return players
       .filter((player) => player.id !== user?.uid)
@@ -136,7 +146,7 @@ export default function FriendsPage() {
           || String(player.id || "").toLowerCase().includes(normalized);
       })
       .slice(0, 8);
-  }, [players, query, user?.uid, friendIds]);
+  }, [players, query, user?.uid, friends]);
 
   const sendFriendRequest = async (player: any) => {
     if (!user?.uid || !profile || busyId) return;
@@ -305,6 +315,8 @@ export default function FriendsPage() {
     } catch (err) {
       console.error(err);
       toast.error("Could not remove friend.");
+    } finally {
+      setFriendToRemove(null);
     }
   };
 
@@ -318,7 +330,8 @@ export default function FriendsPage() {
   const cheersTodayDisplay = socialStats.lastCheerDate === todayKey() ? socialStats.cheersToday : 0;
 
   return (
-    <div className="flex flex-col gap-5 overflow-x-hidden">
+    <StaggerContainer className="flex flex-col gap-5 overflow-x-hidden" as="div">
+      <StaggerItem as="div">
       <PageHero eyebrow="Social garden" title="Friends" description="Add players, send cheers, and complete social quests that turn encouragement into progress." accent={heroAccents.friends}>
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Friends" value={friends.length} />
@@ -326,16 +339,20 @@ export default function FriendsPage() {
           <HeroMetric label="Cheers" value={socialStats.cheersGiven} />
         </div>
       </PageHero>
+      </StaggerItem>
 
+      <StaggerItem as="div">
       <StatGrid
         items={[
-          { label: "Your XP", value: myXp.toLocaleString(), accent: "#2f6b46" },
-          { label: "Your EcoPoints", value: myEcoPoints.toLocaleString(), accent: "#9a6b1f" },
-          { label: "Friends Added", value: friends.length, accent: "#2f5f86" },
-          { label: "Cheers Today", value: `${cheersTodayDisplay}/5`, accent: "#62508f" }
+          { label: "Your XP", value: myXp.toLocaleString(), accent: "var(--text-accent)" },
+          { label: "Your EcoPoints", value: myEcoPoints.toLocaleString(), accent: "var(--text-accent)" },
+          { label: "Friends Added", value: friends.length, accent: "var(--text-accent)" },
+          { label: "Cheers Today", value: `${cheersTodayDisplay}/5`, accent: "var(--text-accent)" }
         ]}
       />
+      </StaggerItem>
 
+      <StaggerItem as="section">
       <Panel eyebrow="Social quests" title="Friend Challenges">
         <div className="grid gap-3 lg:grid-cols-3">
           {SOCIAL_QUESTS.map((quest) => {
@@ -353,7 +370,7 @@ export default function FriendsPage() {
                   <Pill active={ready || claimed}>{claimed ? "Claimed" : `${progress}/${quest.target}`}</Pill>
                 </div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full" style={{ background: "var(--border-subtle)" }}>
-                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: ready ? "#9a6b1f" : "#2f6b46" }} />
+                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: ready ? "var(--text-accent)" : "var(--text-muted)" }} />
                 </div>
                 <button
                   type="button"
@@ -368,8 +385,10 @@ export default function FriendsPage() {
           })}
         </div>
       </Panel>
+      </StaggerItem>
 
       {friendRequests.length > 0 && (
+        <StaggerItem as="section">
         <Panel eyebrow="Pending connections" title="Friend Requests">
           <div className="grid gap-3 sm:grid-cols-2">
             {friendRequests.map((req: any) => (
@@ -400,23 +419,40 @@ export default function FriendsPage() {
                     disabled={busyId === (req.id || req.uid)}
                     className={secondaryButton}
                   >
-                    {busyId === (req.id || req.uid) ? "…" : "Decline"}
+                    {busyId === (req.id || req.uid) ? "Declining…" : "Decline"}
                   </button>
                 </div>
               </article>
             ))}
           </div>
         </Panel>
+        </StaggerItem>
       )}
 
+      <StaggerItem as="section">
       <Panel id="find-players" eyebrow="Add friends" title="Find Players">
         <div className="flex flex-col gap-3 sm:flex-row">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className={inputClass}
-            placeholder="Search by name or email"
-          />
+          <div className="relative flex-1">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className={`${inputClass} pr-10`}
+              placeholder="Search by name or email"
+              aria-label="Search by name or email"
+            />
+            {query.trim() && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-sm transition hover:opacity-70"
+                style={{ color: "var(--text-muted)" }}
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -473,7 +509,9 @@ export default function FriendsPage() {
           )}
         </div>
       </Panel>
+      </StaggerItem>
 
+      <StaggerItem as="section">
       <Panel eyebrow="Compare stats" title="Friend Board">
         {friends.length === 0 ? (
           <EmptyState
@@ -481,7 +519,7 @@ export default function FriendsPage() {
             icon="🌱"
             title="No friends yet"
             description="Add fellow players to compare stats, send cheers, and complete social quests together."
-            action={<a href="#find-players" className={primaryButton}>Find players to add</a>}
+            action={<Link href="/friends#find-players" className={primaryButton}>Find players to add</Link>}
           />
         ) : (
           <div className="flex flex-col divide-y overflow-hidden rounded-2xl border" style={{ borderColor: "var(--border-default)" }}>
@@ -510,12 +548,12 @@ export default function FriendsPage() {
                       type="button"
                       onClick={() => cheerFriend(friend)}
                       disabled={cheersTodayDisplay >= 5}
-                      className={primaryButton}
+                      className={cheersTodayDisplay >= 5 ? secondaryButton : primaryButton}
                       title={cheersTodayDisplay >= 5 ? "Daily cheer limit reached" : undefined}
                     >
-                      Cheer
+                      {cheersTodayDisplay >= 5 ? "Limit reached" : "Cheer"}
                     </button>
-                    <button type="button" onClick={() => removeFriend(friend)} className={secondaryButton}>
+                    <button type="button" onClick={() => setFriendToRemove(friend)} className={secondaryButton}>
                       Remove
                     </button>
                   </div>
@@ -524,6 +562,18 @@ export default function FriendsPage() {
           </div>
         )}
       </Panel>
-    </div>
+      </StaggerItem>
+
+      <ConfirmDialog
+        open={friendToRemove !== null}
+        title="Remove friend?"
+        message={`Are you sure you want to remove ${friendToRemove?.displayName || friendToRemove?.email || "this friend"} from your friends list?`}
+        confirmLabel="Remove"
+        cancelLabel="Keep"
+        danger
+        onConfirm={() => friendToRemove && removeFriend(friendToRemove)}
+        onClose={() => setFriendToRemove(null)}
+      />
+    </StaggerContainer>
   );
 }

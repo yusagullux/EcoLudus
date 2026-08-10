@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/useAuth";
 import { PublicProfileView, type PublicProfile } from "@/components/public-profile";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 export default function ProfilePage() {
   const { user, profile } = useAuth();
@@ -22,5 +23,11 @@ export default function ProfilePage() {
     plants: Array.isArray(profile?.plants) ? profile.plants : []
   };
 
-  return <PublicProfileView profile={publicProfile} isOwner={true} />;
+  return (
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
+        <PublicProfileView profile={publicProfile} isOwner={true} />
+      </StaggerItem>
+    </StaggerContainer>
+  );
 }

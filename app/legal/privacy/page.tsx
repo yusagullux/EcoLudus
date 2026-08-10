@@ -10,23 +10,23 @@ export default function PrivacyPage() {
   return (
     <MarketingShell>
       <section className="mx-auto max-w-3xl px-5 py-12 sm:px-8 lg:px-10">
-        <Link href="/landing" className="text-sm font-medium text-forest-700 hover:text-forest-900 mb-8 inline-block">
+        <Link href="/landing" className="mb-8 inline-block text-sm font-medium transition hover:opacity-80" style={{ color: "var(--text-accent)" }}>
           ← Back to home
         </Link>
-        
-        <h1 className="font-serif text-4xl font-semibold text-forest-950 mb-2">Privacy Policy</h1>
-        <p className="text-sm text-forest-900/60 mb-8">Last updated: June 2026</p>
 
-        <div className="prose prose-sm max-w-none text-forest-900/80 space-y-6">
+        <h1 className="mb-2 font-serif text-4xl font-semibold" style={{ color: "var(--text-primary)" }}>Privacy Policy</h1>
+        <p className="mb-8 text-sm" style={{ color: "var(--text-muted)" }}>Last updated: June 2026</p>
+
+        <div className="prose prose-sm max-w-none space-y-6" style={{ color: "var(--text-secondary)" }}>
           <section>
-            <h2 className="text-xl font-semibold text-forest-950 mb-3">1. Introduction</h2>
+            <h2 className="mb-3 text-xl font-semibold" style={{ color: "var(--text-primary)" }}>1. Introduction</h2>
             <p>
               EcoLudus ("we", "our", or "us") operates the EcoLudus website and application. This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our service and the choices you have associated with that data.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-forest-950 mb-3">2. Information Collection and Use</h2>
+            <h2 className="mb-3 text-xl font-semibold" style={{ color: "var(--text-primary)" }}>2. Information Collection and Use</h2>
             <p>We collect several different types of information for various purposes to provide and improve our service to you:</p>
             <ul className="list-disc list-inside space-y-2 mt-3">
               <li><strong>Account Information:</strong> Email address, username, profile information you choose to share</li>
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-forest-950 mb-3">3. Use of Data</h2>
+            <h2 className="mb-3 text-xl font-semibold" style={{ color: "var(--text-primary)" }}>3. Use of Data</h2>
             <p>EcoLudus uses the collected data for various purposes:</p>
             <ul className="list-disc list-inside space-y-2 mt-3">
               <li>To provide and maintain our service</li>
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-forest-950 mb-3">4. Third-Party Services</h2>
+            <h2 className="mb-3 text-xl font-semibold" style={{ color: "var(--text-primary)" }}>4. Third-Party Services</h2>
             <p>We use the following third-party services that may collect information:</p>
             <ul className="list-disc list-inside space-y-2 mt-3">
               <li><strong>Climatiq:</strong> Carbon calculation API - see their privacy policy</li>
@@ -61,14 +61,14 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-forest-950 mb-3">5. Data Security</h2>
+            <h2 className="mb-3 text-xl font-semibold" style={{ color: "var(--text-primary)" }}>5. Data Security</h2>
             <p>
               The security of your data is important to us but remember that no method of transmission over the Internet or method of electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your personal data, we cannot guarantee its absolute security.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-forest-950 mb-3">6. Your Rights</h2>
+            <h2 className="mb-3 text-xl font-semibold" style={{ color: "var(--text-primary)" }}>6. Your Rights</h2>
             <p>You have the right to:</p>
             <ul className="list-disc list-inside space-y-2 mt-3">
               <li>Access your personal data</li>
@@ -80,10 +80,10 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-forest-950 mb-3">7. Contact Us</h2>
+            <h2 className="mb-3 text-xl font-semibold" style={{ color: "var(--text-primary)" }}>7. Contact Us</h2>
             <p>
               If you have any questions about this Privacy Policy, please contact us at{" "}
-              <a href="mailto:hello@ecoludus.com" className="text-forest-700 hover:underline font-medium">
+              <a href="mailto:hello@ecoludus.com" className="font-medium underline transition hover:opacity-80" style={{ color: "var(--text-accent)" }}>
                 hello@ecoludus.com
               </a>
             </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { motion, useReducedMotion } from "motion/react";
 
 /**
  * Accessible modal dialog.
@@ -43,6 +44,9 @@ const SIZE_MAX: Record<NonNullable<DialogProps["size"]>, string> = {
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+const MotionBackdrop = motion.div;
+const MotionPanel = motion.div;
+
 export function Dialog({
   open,
   onClose,
@@ -60,6 +64,7 @@ export function Dialog({
   const autoId = useId();
   const titleId = labelledby ?? (title ? `dialog-title-${autoId}` : undefined);
   const descId = description ? `dialog-desc-${autoId}` : undefined;
+  const prefersReducedMotion = useReducedMotion();
 
   // Focus trap, escape, scroll lock, focus restore.
   useEffect(() => {
@@ -122,19 +127,25 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm fade-in"
+    <MotionBackdrop
+      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
       onClick={disableBackdropClose ? undefined : onClose}
       role="presentation"
     >
-      <div
+      <MotionPanel
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
         tabIndex={-1}
-        className={`relative flex max-h-[90vh] w-full ${SIZE_MAX[size]} flex-col overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)] animate-modal-in outline-none ${className}`}
+        initial={prefersReducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 28 }}
+        className={`relative flex max-h-[90vh] w-full ${SIZE_MAX[size]} flex-col overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)] outline-none ${className}`}
         style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -153,6 +164,7 @@ export function Dialog({
 
         {!hideCloseButton && (
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close dialog"
             className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
@@ -176,7 +188,7 @@ export function Dialog({
         {footer && (
           <div className="mt-5 shrink-0 flex flex-wrap gap-3">{footer}</div>
         )}
-      </div>
-    </div>
+      </MotionPanel>
+    </MotionBackdrop>
   );
 }

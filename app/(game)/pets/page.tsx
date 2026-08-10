@@ -2,12 +2,14 @@
 
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { computeVitals } from "@/lib/pet-vitals";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { PET_EMOJI } from "@/lib/ui-shared";
 import { EmptyState } from "@/components/ui/empty-state";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 function getPetImage(pet: any) {
   if (pet?.image) return pet.image;
@@ -100,12 +102,15 @@ export default function PetsPage() {
   const toast = useToast();
   // Prevents concurrent care-action submissions (double-click / button spam).
   const isProcessing = useRef(false);
-  const pets = Array.isArray(profile?.animals) ? profile.animals.map(normalizePet) : [];
-  const activePetId = profile?.activePet || pets.find((pet) => pet.active)?.id || pets[0]?.id || null;
+
+  const pets = useMemo(() => Array.isArray(profile?.animals) ? profile.animals.map(normalizePet) : [], [profile]);
 
   const selectedPet = useMemo(() => {
+    const activePetId = profile?.activePet || pets.find((pet) => pet.active)?.id || pets[0]?.id || null;
     return pets.find((pet) => pet.id === (selectedId || activePetId)) || pets[0] || null;
-  }, [pets, selectedId, activePetId]);
+  }, [pets, selectedId, profile?.activePet]);
+
+  const activePetId = profile?.activePet || pets.find((pet) => pet.active)?.id || pets[0]?.id || null;
 
   const selectActivePet = async (pet: any) => {
     if (!user?.uid || !profile) return;
@@ -229,7 +234,8 @@ export default function PetsPage() {
   const ecoCapReached = ecoActionsToday >= MAX_ECO_ACTIONS_PER_DAY;
 
   return (
-    <div className="flex flex-col gap-5">
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
       <PageHero eyebrow="Companion care" title="Pets" description="Train, feed, and bond with companions to earn small daily rewards and make them stronger travel partners." accent={heroAccents.pets}>
         <div className="flex flex-wrap gap-3">
           <HeroMetric label="Pets" value={totalPets} />
@@ -241,7 +247,9 @@ export default function PetsPage() {
           />
         </div>
       </PageHero>
+      </StaggerItem>
 
+      <StaggerItem as="div">
       {!selectedPet ? (
         <Panel>
           <EmptyState
@@ -249,7 +257,7 @@ export default function PetsPage() {
             icon="🥚"
             title="No companions yet"
             description="Hatch eggs from your collection to unlock pets, then train and feed them to grow your bond."
-            action={<a href="/collection" className={primaryButton}>Browse your eggs</a>}
+            action={<Link href="/collection" className={primaryButton}>Browse your eggs</Link>}
           />
         </Panel>
       ) : (
@@ -263,15 +271,15 @@ export default function PetsPage() {
                 className="relative flex aspect-square w-full max-w-[360px] items-center justify-center overflow-hidden rounded-[28px] border transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   borderColor: rarityBorder[selectedPet.rarity as Rarity] ?? "var(--border-default)",
-                  background: `radial-gradient(circle at 50% 35%, ${(rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "#2f6b46")}22, transparent 58%), var(--bg-panel-alt)`
+                  background: `radial-gradient(circle at 50% 35%, color-mix(in srgb, ${rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "var(--text-accent)"} 13%, transparent), transparent 58%), var(--bg-panel-alt)`
                 }}
               >
                 <PetImage pet={selectedPet} fit="contain" sizes="(max-width: 1024px) 90vw, 360px" />
                 {hearts.map((heart) => (
                   <span
                     key={heart.id}
-                    className="pointer-events-none absolute left-1/2 top-1/2 text-3xl text-rose-500 animate-heart-pop"
-                    style={{ "--dx": heart.dx, "--dy": heart.dy } as any}
+                    className="pointer-events-none absolute left-1/2 top-1/2 text-3xl animate-heart-pop"
+                    style={{ color: "var(--text-error)", "--dx": heart.dx, "--dy": heart.dy } as any}
                   >
                     &hearts;
                   </span>
@@ -283,9 +291,9 @@ export default function PetsPage() {
 
               <div className="flex w-full max-w-[360px] flex-col gap-2.5">
                 {[
-                  { label: "Happiness", value: selectedHappiness, color: rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "#2f6b46" },
-                  { label: "Energy", value: selectedEnergy, color: "#2f5f86" },
-                  { label: "Bond", value: selectedBond, color: "#9a6b1f" }
+                  { label: "Happiness", value: selectedHappiness, color: rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "var(--text-accent)" },
+                  { label: "Energy", value: selectedEnergy, color: "var(--text-accent)" },
+                  { label: "Bond", value: selectedBond, color: "var(--text-warning)" }
                 ].map((stat) => (
                   <div key={stat.label}>
                     <div className="mb-2 flex items-center justify-between text-xs font-bold" style={{ color: "var(--text-muted)" }}>
@@ -306,7 +314,7 @@ export default function PetsPage() {
                       type="button"
                       onClick={() => runCareAction(action)}
                       disabled={blocked}
-                      className={primaryButton}
+                      className={`${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
                       title={blocked ? `Daily eco limit reached (${MAX_ECO_ACTIONS_PER_DAY}/day)` : undefined}
                     >
                       {action.label}
@@ -325,7 +333,7 @@ export default function PetsPage() {
               )}
 
               <div className="flex flex-wrap justify-center gap-3">
-                <button type="button" onClick={() => selectActivePet(selectedPet)} disabled={selectedPet.active || activePetId === selectedPet.id} className={secondaryButton}>
+                <button type="button" onClick={() => selectActivePet(selectedPet)} disabled={selectedPet.active || activePetId === selectedPet.id} className={`${secondaryButton} disabled:opacity-60 disabled:cursor-not-allowed`}>
                   {selectedPet.active || activePetId === selectedPet.id ? "Active Pet" : "Make Active"}
                 </button>
               </div>
@@ -363,7 +371,9 @@ export default function PetsPage() {
           </Panel>
         </div>
       )}
+      </StaggerItem>
 
+      <StaggerItem as="section">
       <Panel eyebrow="Inventory" title="Choose a Pet">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {pets.map((pet) => {
@@ -381,12 +391,12 @@ export default function PetsPage() {
                 style={{
                   borderColor: border,
                   background: "var(--bg-card)",
-                  ...(isSelected ? { boxShadow: `0 10px 28px ${accent}33` } : {})
+                  ...(isSelected ? { boxShadow: `0 10px 28px color-mix(in srgb, ${accent} 20%, transparent)` } : {})
                 }}
               >
-                <span className="relative block aspect-square overflow-hidden" style={{ background: `${accent}12` }}>
+                <span className="relative block aspect-square overflow-hidden" style={{ background: `color-mix(in srgb, ${accent} 12%, var(--bg-card))` }}>
                   <PetImage pet={pet} fit="cover" />
-                  {isActive && <span className="absolute left-2 top-2 z-10 rounded-full bg-[#fbf4df] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#76511a]">Active</span>}
+                  {isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
                   <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{pet.rarity}</span>
                 </span>
                 <span className="block p-3">
@@ -400,7 +410,8 @@ export default function PetsPage() {
           })}
         </div>
       </Panel>
+      </StaggerItem>
 
-    </div>
+    </StaggerContainer>
   );
 }

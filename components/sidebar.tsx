@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from "react";
 import { logOut } from "@/lib/auth-client";
 import { Avatar } from "@/components/avatar";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SidebarProps = { user: any; profile: any };
 
 type NavItem = { name: string; href: string; icon: React.ReactNode };
@@ -152,9 +151,7 @@ const bottomItems: NavItem[] = [
 function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
   pathname: string;
   onNavigate?: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   user: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   profile: any;
   onLogout: () => void;
 }) {
@@ -181,7 +178,7 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
       {profile && (
         <div className="mx-3 mb-4 shrink-0">
           <div className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: "var(--sidebar-active-bg)" }}>
-            <Avatar name={displayName} src={profileImage} size={28} className="ring-2 ring-white/10 shrink-0" />
+            <Avatar name={displayName} src={profileImage} size={28} className="shrink-0" style={{ boxShadow: "0 0 0 2px color-mix(in srgb, var(--text-sidebar) 10%, transparent)" }} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[11px] font-bold leading-tight" style={{ color: "var(--text-sidebar)" }} title={displayName}>{displayName}</p>
               <p className="mt-0.5 text-[9px]" style={{ color: "var(--text-sidebar-muted)" }}>Lv {level} · {xp.toLocaleString()} XP</p>
@@ -190,7 +187,7 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
         </div>
       )}
 
-      <div className="mx-4 mb-3 h-px shrink-0" style={{ background: "rgba(255,255,255,0.06)" }} />
+      <div className="mx-4 mb-3 h-px shrink-0" style={{ background: "color-mix(in srgb, var(--text-sidebar) 6%, transparent)" }} />
 
       {/* ── Main nav ── */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-2" aria-label="Main navigation">
@@ -223,7 +220,7 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
                           ? profile.friendRequests.length
                           : 0;
                         return requestsCount > 0 ? (
-                          <span className="rounded-full bg-emerald-500/80 px-1.5 py-0.5 text-[8.5px] font-black text-white leading-none shrink-0">
+                          <span className="rounded-full px-1.5 py-0.5 text-[8.5px] font-black leading-none shrink-0" style={{ background: "var(--text-accent)", color: "var(--text-inverse)" }}>
                             {requestsCount}
                           </span>
                         ) : null;
@@ -238,10 +235,10 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
       </nav>
 
       {/* ── Bottom section ── */}
-      <div className="shrink-0 px-3 pb-4 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="shrink-0 px-3 pb-4 pt-2" style={{ borderTop: "1px solid color-mix(in srgb, var(--text-sidebar) 6%, transparent)" }}>
         {/* EcoPoints quick stat */}
         {profile && (
-          <div className="mb-2 flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "rgba(255,255,255,0.04)" }}>
+          <div className="mb-2 flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "color-mix(in srgb, var(--text-sidebar) 4%, transparent)" }}>
             <span className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-sidebar-muted)" }}>EcoPoints</span>
             <span className="text-[12px] font-extrabold" style={{ color: "var(--text-sidebar)" }}>{ecoPoints.toLocaleString()}</span>
           </div>
@@ -264,9 +261,10 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
           );
         })}
         <button
+          type="button"
           onClick={onLogout}
           className="t-sidebar-link w-full text-left mt-0.5"
-          style={{ color: "rgba(239,68,68,0.65)" }}
+          style={{ color: "color-mix(in srgb, var(--text-error) 65%, transparent)" }}
         >
           <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -359,10 +357,10 @@ export function Sidebar({ user, profile }: SidebarProps) {
       {/* ── Mobile top bar ── */}
       <header
         className="md:hidden fixed left-0 right-0 top-0 z-40 flex items-center justify-between px-4 py-3 t-sidebar"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+        style={{ borderBottom: "1px solid color-mix(in srgb, var(--text-sidebar) 6%, transparent)" }}
       >
         <Link href="/dashboard" className="flex min-h-11 items-center gap-2.5">
-          <div className="relative h-8 w-8 overflow-hidden rounded-xl bg-white/10">
+          <div className="relative h-8 w-8 overflow-hidden rounded-xl" style={{ background: "color-mix(in srgb, var(--text-sidebar) 10%, transparent)" }}>
             <Image src="/images/logo.png" alt="EcoLudus" fill className="object-cover" sizes="32px" />
           </div>
           <div>
@@ -384,6 +382,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
             </div>
           )}
           <button
+            type="button"
             onClick={() => setMobileOpen(true)}
             className="flex h-11 w-11 items-center justify-center rounded-xl"
             style={{ background: "var(--sidebar-active-bg)", color: "var(--text-sidebar)" }}
@@ -415,6 +414,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
           >
             <div className="flex justify-end p-3">
               <button
+                type="button"
                 onClick={() => setMobileOpen(false)}
                 className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{ background: "var(--sidebar-active-bg)", color: "var(--text-sidebar)" }}

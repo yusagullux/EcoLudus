@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 
 /**
  * App-wide toast notifications. Replaces the ~10 per-page
@@ -100,9 +101,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-live="polite"
         aria-atomic="false"
       >
-        {toasts.map((t) => (
-          <ToastItem key={t.id} record={t} onDismiss={() => dismiss(t.id)} />
-        ))}
+        <AnimatePresence mode="popLayout">
+          {toasts.map((t) => (
+            <ToastItem key={t.id} record={t} onDismiss={() => dismiss(t.id)} />
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );
@@ -111,19 +114,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 function ToastItem({ record, onDismiss }: { record: ToastRecord; onDismiss: () => void }) {
   const isPlain = record.variant === "default";
   const icon = record.variant === "success" ? "✓" : record.variant === "error" ? "!" : null;
+  const prefersReducedMotion = useReducedMotion();
 
   const bg = isPlain
     ? "var(--bg-sidebar)"
     : record.variant === "success"
-    ? "#1f6b46"
-    : "#b91c1c";
-  const fg = isPlain ? "var(--text-sidebar)" : "#ffffff";
+    ? "var(--toast-success-bg)"
+    : "var(--toast-error-bg)";
+  const fg = isPlain
+    ? "var(--text-sidebar)"
+    : record.variant === "success"
+    ? "var(--toast-success-fg)"
+    : "var(--toast-error-fg)";
 
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onDismiss}
-      className="pointer-events-auto flex max-w-[min(92vw,28rem)] items-center gap-2.5 rounded-2xl px-5 py-3 text-sm font-semibold shadow-xl fade-in transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      layout
+      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 20, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.96 }}
+      transition={{ type: "spring", stiffness: 320, damping: 26 }}
+      className="pointer-events-auto flex max-w-[min(92vw,28rem)] items-center gap-2.5 rounded-2xl px-5 py-3 text-sm font-semibold shadow-xl transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       style={{ background: bg, color: fg, "--tw-ring-offset-color": "transparent" } as React.CSSProperties}
     >
       {icon && (
@@ -136,7 +149,7 @@ function ToastItem({ record, onDismiss }: { record: ToastRecord; onDismiss: () =
         </span>
       )}
       <span className="text-left">{record.message}</span>
-    </button>
+    </motion.button>
   );
 }
 

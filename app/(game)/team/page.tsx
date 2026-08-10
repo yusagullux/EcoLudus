@@ -3,12 +3,13 @@
 import { useAuth } from "@/lib/useAuth";
 import { useTeamTemplates } from "@/lib/useCatalog";
 import { useToast } from "@/lib/toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import type { TeamMissionTemplate } from "@/lib/catalog";
 import {
   PageHero,
+  HeroMetric,
   Panel,
   Pill,
   StatGrid,
@@ -19,10 +20,12 @@ import {
   heroAccents,
 } from "@/components/game-ui";
 import { Dialog } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 // Difficulty chips stay semantically colored (green/amber/red) but ride themed
 // surfaces via color-mix so they remain readable in dark/aurora/liquid instead
@@ -51,6 +54,7 @@ export default function TeamPage() {
   const [inputVal, setInputVal] = useState("");
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   // Mission templates (titles, icons, xp/eco/needed) are loaded from the
   // server's read API and are display-only — the /api/teams `assign` route
   // re-validates the template by id and ignores any client-supplied values,
@@ -67,15 +71,17 @@ export default function TeamPage() {
   const [submittingProof, setSubmittingProof] = useState(false);
   const [proofError, setProofError] = useState<string | null>(null);
 
-  const fetchTeamData = async () => {
+  const loadTeam = useCallback(async (signal?: AbortSignal) => {
     if (!user?.uid) {
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch("/api/teams", { credentials: "include" });
+      setLoading(true);
+      const response = await fetch("/api/teams", { credentials: "include", signal });
       const data = await response.json();
+      if (signal?.aborted) return;
 
       if (data.team) {
         setTeam(data.team);
@@ -87,16 +93,24 @@ export default function TeamPage() {
         setActiveMissions([]);
       }
     } catch (error) {
+      if ((error as Error).name === "AbortError") return;
       console.error("Failed to fetch team data:", error);
       setJoined(false);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchTeamData();
   }, [user?.uid]);
+
+  // Initial team fetch on mount. React Compiler flags setState-in-effect for
+  // client data fetching; the alternative is a Suspense/`use` rewrite, which is
+  // out of scope for this lint pass. Suppressing intentionally.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const controller = new AbortController();
+    loadTeam(controller.signal);
+    return () => { controller.abort(); };
+  }, [loadTeam]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const closeModals = () => {
     setShowCreateModal(false);
@@ -120,7 +134,7 @@ export default function TeamPage() {
       if (response.ok) {
         closeModals();
         toast.success(`Team "${teamName}" created! Code: ${data.code}`);
-        await fetchTeamData();
+        await loadTeam();
       } else {
         toast.error(data.error?.message || data.error?.code || "Failed to create team");
       }
@@ -145,7 +159,7 @@ export default function TeamPage() {
       if (response.ok) {
         closeModals();
         toast.success(`Joined team "${data.teamName}"!`);
-        await fetchTeamData();
+        await loadTeam();
       } else {
         toast.error(data.error?.code || "Failed to join team");
       }
@@ -164,6 +178,7 @@ export default function TeamPage() {
         setJoined(false);
         setTeam(null);
         setActiveMissions([]);
+        setShowLeaveConfirm(false);
         toast.success("Left the team");
       } else {
         toast.error("Failed to leave team");
@@ -204,7 +219,7 @@ export default function TeamPage() {
 
       if (response.ok) {
         toast.success(`"${t.title}" assigned to team!`);
-        await fetchTeamData();
+        await loadTeam();
       } else {
         toast.error(data.error?.message || data.error?.code || "Failed to assign mission");
       }
@@ -220,6 +235,7 @@ export default function TeamPage() {
     if (!user?.uid || !team?.id || !activeProofMission || submittingProof) return;
 
     setSubmittingProof(true);
+    setSubmittingId(activeProofMission.id);
     setProofError(null);
 
     let photoProof: string | null = null;
@@ -275,12 +291,13 @@ export default function TeamPage() {
       }
 
       setActiveProofMission(null);
-      await fetchTeamData();
+      await loadTeam();
     } catch (error: any) {
       console.error("Submit progress error:", error);
       setProofError(error.message || "Failed to submit progress.");
     } finally {
       setSubmittingProof(false);
+      setSubmittingId(null);
     }
   };
 
@@ -291,9 +308,10 @@ export default function TeamPage() {
   const memberCount = team?.stats?.members || 0;
 
   return (
-    <div className="flex flex-col gap-5">
+    <StaggerContainer className="flex flex-col gap-5" as="div">
 
       {/* ── Hero ── */}
+      <StaggerItem as="div">
       <PageHero
         eyebrow="Cooperative play"
         title="Team Hub"
@@ -302,65 +320,61 @@ export default function TeamPage() {
       >
         {joined ? (
           <div className="flex flex-wrap gap-3">
-            <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-center">
-              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-moss-300">Members</div>
-              <div className="mt-1 font-serif text-xl font-bold leading-none text-white">{memberCount}</div>
-            </div>
-            <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-center">
-              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-moss-300">Shared XP</div>
-              <div className="mt-1 font-serif text-xl font-bold leading-none text-white">{(team?.stats?.xp || 0).toLocaleString()}</div>
-            </div>
+            <HeroMetric label="Members" value={memberCount} />
+            <HeroMetric label="Shared XP" value={(team?.stats?.xp || 0).toLocaleString()} />
           </div>
         ) : (
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setShowCreateModal(true)} className={primaryButton}>
+            <button type="button" onClick={() => setShowCreateModal(true)} className={primaryButton}>
               Create Team
             </button>
-            <button
-              onClick={() => setShowJoinModal(true)}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/25 bg-white/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-cream-100 transition hover:bg-white/20 active:scale-[0.97]"
-            >
+            <button type="button" onClick={() => setShowJoinModal(true)} className={secondaryButton}>
               Join via Code
             </button>
           </div>
         )}
       </PageHero>
+      </StaggerItem>
 
       {/* ── Empty state ── */}
       {!joined ? (
+        <StaggerItem as="div">
         <EmptyState
           icon="👥"
           title="You're not part of a team yet"
           description="Create a cozy squad or join with a 6-character code."
           action={
             <div className="flex flex-wrap justify-center gap-3">
-              <button onClick={() => setShowCreateModal(true)} className={primaryButton}>
+              <button type="button" onClick={() => setShowCreateModal(true)} className={primaryButton}>
                 Start a Team
               </button>
-              <button onClick={() => setShowJoinModal(true)} className={secondaryButton}>
+              <button type="button" onClick={() => setShowJoinModal(true)} className={secondaryButton}>
                 Have a Code?
               </button>
             </div>
           }
         />
+        </StaggerItem>
       ) : (
         <>
           {/* ── Team Overview ── */}
+          <StaggerItem as="section">
           <Panel
             eyebrow="Your team"
             title={team?.name || "Team"}
             action={
               <div className="flex flex-wrap gap-2">
                 <button
+                  type="button"
                   onClick={() => { navigator.clipboard?.writeText(team?.code || ""); toast.show("Code copied!"); }}
                   className={secondaryButton}
                 >
                   Copy Code
                 </button>
                 <button
-                  onClick={handleLeaveTeam}
-                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-rose-300/60 bg-rose-500/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-rose-600 transition hover:bg-rose-500/20 active:scale-[0.97]"
-                  style={{ color: "rgb(224 36 36 / 0.85)" }}
+                  type="button"
+                  onClick={() => setShowLeaveConfirm(true)}
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-rose-400/40 bg-rose-500/10 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-rose-600 transition hover:bg-rose-500/20 active:scale-[0.97]"
                 >
                   Leave Team
                 </button>
@@ -369,21 +383,17 @@ export default function TeamPage() {
           >
             <div className="flex flex-wrap gap-2">
               <Pill>Code: {team?.code || "N/A"}</Pill>
-              <span
-                className="inline-flex items-center rounded-full bg-forest-950 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-cream-100"
-              >
-                {team?.role || "member"}
-              </span>
+              <Pill active>{team?.role || "member"}</Pill>
             </div>
 
             {/* Stats grid */}
             <StatGrid
               className="mt-5 grid-cols-2 gap-3 sm:grid-cols-4"
               items={[
-                { label: "XP Shared", value: (team?.stats?.xp || 0).toLocaleString(), accent: "#4CAF50" },
-                { label: "EcoPoints Shared", value: (team?.stats?.eco || 0).toLocaleString(), accent: "#06B6D4" },
-                { label: "Missions Cleared", value: team?.stats?.missions || 0, accent: "#F59E0B" },
-                { label: "Active Members", value: team?.stats?.members || 0, accent: "#8B5CF6" }
+                { label: "XP Shared", value: (team?.stats?.xp || 0).toLocaleString(), accent: "var(--text-accent)" },
+                { label: "EcoPoints Shared", value: (team?.stats?.eco || 0).toLocaleString(), accent: "var(--text-accent)" },
+                { label: "Missions Cleared", value: team?.stats?.missions || 0, accent: "var(--text-accent)" },
+                { label: "Active Members", value: team?.stats?.members || 0, accent: "var(--text-accent)" }
               ]}
             />
 
@@ -407,8 +417,10 @@ export default function TeamPage() {
               </div>
             </div>
           </Panel>
+          </StaggerItem>
 
           {/* ── Active Missions ── */}
+          <StaggerItem as="section">
           <Panel
             eyebrow="Active missions"
             title="Team Missions"
@@ -440,6 +452,7 @@ export default function TeamPage() {
                         <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>{m.done}/{m.needed}</span>
                       </div>
                       <button
+                        type="button"
                         onClick={() => {
                           setActiveProofMission(m);
                           setProofType("text");
@@ -449,7 +462,7 @@ export default function TeamPage() {
                           setProofError(null);
                         }}
                         disabled={isSubmitting}
-                        className={`mt-4 ${primaryButton}`}
+                        className={`mt-4 ${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {isSubmitting ? "Submitting…" : "Submit Progress"}
                       </button>
@@ -459,8 +472,10 @@ export default function TeamPage() {
               </div>
             )}
           </Panel>
+          </StaggerItem>
 
           {/* ── Mission Library ── */}
+          <StaggerItem as="section">
           <Panel eyebrow="Mission library" title="Assign New Mission">
             <div className="grid gap-3 sm:grid-cols-2">
               {templates.length === 0 ? (
@@ -488,9 +503,11 @@ export default function TeamPage() {
                       <span className="rounded-lg px-2.5 py-1 text-[10px] font-bold" style={{ background: "var(--bg-panel)", color: "var(--text-muted)" }}>{t.needed} teammates</span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleAssignMission(t)}
                       disabled={isAssigning || isAlreadyActive || activeMissions.length >= 3}
-                      className={`mt-auto ${primaryButton}`}
+                      aria-label={isAlreadyActive ? `"${t.title}" is already active` : activeMissions.length >= 3 ? "Maximum 3 active missions reached" : `Assign ${t.title}`}
+                      className={`mt-auto ${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {isAssigning ? "Assigning…" : isAlreadyActive ? "Already Active" : activeMissions.length >= 3 ? "Limit Reached" : "Assign"}
                     </button>
@@ -499,8 +516,10 @@ export default function TeamPage() {
               })}
             </div>
           </Panel>
+          </StaggerItem>
 
           {/* ── Team Leaderboard ── */}
+          <StaggerItem as="section">
           <Panel eyebrow="Ranking" title="Team Leaderboard" className="overflow-hidden">
             <div className="-mx-5 -my-5 divide-y sm:-mx-6 sm:-my-6" style={{ borderColor: "var(--border-subtle)" }}>
               {[...(team?.members || [])].sort((a: any, b: any) => (b.xp || 0) - (a.xp || 0)).map((m: any, i: number) => (
@@ -519,6 +538,7 @@ export default function TeamPage() {
               )}
             </div>
           </Panel>
+          </StaggerItem>
         </>
       )}
 
@@ -530,8 +550,9 @@ export default function TeamPage() {
         description={showCreateModal ? "Name your squad so friends can recognize it." : "Enter the 6-character invite code."}
         footer={
           <>
-            <button onClick={closeModals} className={secondaryButton}>Cancel</button>
+            <button type="button" onClick={closeModals} className={secondaryButton}>Cancel</button>
             <button
+              type="button"
               onClick={showCreateModal ? handleCreateTeam : handleJoinTeam}
               className={primaryButton}
             >
@@ -597,12 +618,12 @@ export default function TeamPage() {
               onChange={(e) => setTeamTextProof(e.target.value)}
               placeholder="e.g. I commuted to work by bicycle today instead of driving."
               rows={4}
-              className="w-full rounded-xl border px-4 py-3 text-sm outline-none resize-none transition focus:shadow-[0_0_0_3px_rgba(67,101,63,0.14)]"
+              className="w-full rounded-xl border px-4 py-3 text-sm outline-none resize-none transition focus:shadow-[0_0_0_3px_var(--focus-ring)]"
               style={{ borderColor: "var(--border-input)", background: "var(--bg-input)", color: "var(--text-primary)" }}
             />
             <p
               className="mt-1 text-right text-[10px] font-bold"
-              style={{ color: teamTextProof.trim().length >= 8 ? "var(--text-accent, #43653f)" : "#e0593a" }}
+              style={{ color: teamTextProof.trim().length >= 8 ? "var(--text-accent)" : "var(--text-error)" }}
             >
               {teamTextProof.trim().length}/8 min characters
             </p>
@@ -626,7 +647,7 @@ export default function TeamPage() {
               {teamPhotoFile && (
                 <button type="button" onClick={() => { setTeamPhotoFile(null); setTeamPhotoPreview(null); }}
                   className="rounded-xl border border-rose-300/60 bg-rose-500/10 px-4 py-3 text-xs font-bold transition"
-                  style={{ color: "rgb(220 60 50)" }}>
+                  style={{ color: "var(--text-error)" }}>
                   Clear
                 </button>
               )}
@@ -650,6 +671,16 @@ export default function TeamPage() {
           <ErrorBanner className="mt-4">{proofError}</ErrorBanner>
         )}
       </Dialog>
-    </div>
+
+      <ConfirmDialog
+        open={showLeaveConfirm}
+        onClose={() => setShowLeaveConfirm(false)}
+        title="Leave team?"
+        message="You’ll lose access to shared missions and team progress. This can’t be undone."
+        confirmLabel="Leave Team"
+        danger
+        onConfirm={handleLeaveTeam}
+      />
+    </StaggerContainer>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHero, Panel, Pill, heroAccents } from "@/components/game-ui";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
 const PREMIUM_FEATURES = [
   {
@@ -117,13 +118,17 @@ const PLANS = [
 
 export default function PremiumPage() {
   return (
-    <div className="flex flex-col gap-5">
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
       <PageHero
         eyebrow="Unlock more impact"
         title="Premium"
-        description="Supercharge your eco journey with advanced features. Coming soon — join the waitlist."
+        description="Supercharge your eco journey with advanced features. Premium tiers are coming soon."
         accent={heroAccents.premium}
       />
+      </StaggerItem>
+
+      <StaggerItem as="div">
 
       {/* Coming soon banner */}
       <div
@@ -140,19 +145,18 @@ export default function PremiumPage() {
           </div>
         </div>
       </div>
+      </StaggerItem>
 
       {/* Pricing plans */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <StaggerContainer className="grid gap-4 sm:grid-cols-3" as="div">
         {PLANS.map((plan) => (
+          <StaggerItem key={plan.name} as="div">
           <article
-            key={plan.name}
-            className="flex flex-col rounded-[22px] border p-6"
+            className="flex h-full flex-col rounded-[22px] border p-6"
             style={{
-              borderColor: plan.highlight ? "#e6d3a6" : "var(--border-default)",
+              borderColor: plan.highlight ? "var(--text-accent)" : "var(--border-default)",
               background: "var(--bg-panel)",
-              boxShadow: plan.highlight
-                ? "0 12px 32px rgba(154,107,31,0.12), 0 0 0 2px rgba(201,154,58,0.2)"
-                : "var(--shadow-card)"
+              boxShadow: plan.highlight ? "var(--shadow-lift)" : "var(--shadow-card)"
             }}
           >
             {plan.highlight && (
@@ -189,7 +193,7 @@ export default function PremiumPage() {
                 className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2.5 text-xs font-extrabold tracking-[0.02em]"
                 style={
                   plan.highlight
-                    ? { borderColor: "rgba(154,107,31,0.4)", background: "rgba(154,107,31,0.08)", color: "#9a6b1f" }
+                    ? { borderColor: "color-mix(in srgb, var(--text-accent) 40%, transparent)", background: "color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel-alt))", color: "var(--text-accent)" }
                     : { borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }
                 }
               >
@@ -197,16 +201,18 @@ export default function PremiumPage() {
               </span>
             )}
           </article>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerContainer>
 
       {/* Feature grid */}
+      <StaggerItem as="div">
       <Panel eyebrow="What's coming" title="Premium Features">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StaggerContainer className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" as="div">
           {PREMIUM_FEATURES.map(({ icon, title, desc, tag, color }) => (
+            <StaggerItem key={title} as="div">
             <div
-              key={title}
-              className="relative overflow-hidden rounded-2xl border p-4 opacity-80"
+              className="relative overflow-hidden rounded-2xl border p-4"
               style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}
             >
               <div className="absolute right-3 top-3">
@@ -228,11 +234,14 @@ export default function PremiumPage() {
                 <span className="h-px flex-1" style={{ background: "var(--border-default)" }} />
               </div>
             </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       </Panel>
+      </StaggerItem>
 
       {/* FAQ */}
+      <StaggerItem as="div">
       <Panel eyebrow="Questions" title="FAQ">
         <div className="flex flex-col divide-y" style={{ borderColor: "var(--border-subtle)" }}>
           {[
@@ -260,6 +269,7 @@ export default function PremiumPage() {
           ))}
         </div>
       </Panel>
-    </div>
+      </StaggerItem>
+    </StaggerContainer>
   );
 }

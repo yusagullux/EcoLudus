@@ -133,15 +133,10 @@ type FileStore = {
 };
 
 declare global {
-  // eslint-disable-next-line no-var
   var __ecoquestPool: Pool | undefined;
-  // eslint-disable-next-line no-var
   var __ecoquestDbMode: "postgres" | "file" | undefined;
-  // eslint-disable-next-line no-var
   var __ecoquestStore: FileStore | undefined;
-  // eslint-disable-next-line no-var
   var __ecoquestStoreWrite: Promise<void> | undefined;
-  // eslint-disable-next-line no-var
   var __ecoquestDetectModePromise: Promise<"postgres" | "file"> | undefined;
 }
 

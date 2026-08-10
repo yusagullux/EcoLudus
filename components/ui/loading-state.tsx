@@ -42,7 +42,10 @@ export function LoadingState({ label = "Loading…", variant = "full", className
 
   return (
     <div className={`flex min-h-[400px] flex-col items-center justify-center gap-4 ${className}`} aria-busy="true" role="status" aria-live="polite">
-      <div className="logo-breathe relative h-14 w-14 overflow-hidden rounded-2xl bg-white shadow-[0_18px_38px_rgba(16,33,20,0.16)] ring-1 ring-forest-900/10">
+      <div
+        className="logo-breathe relative h-14 w-14 overflow-hidden rounded-2xl shadow-[0_18px_38px_rgba(0,0,0,0.16)] ring-1 ring-[var(--border-default)]"
+        style={{ background: "var(--bg-panel)" }}
+      >
         <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="56px" className="object-cover" />
       </div>
       <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>{label}</p>

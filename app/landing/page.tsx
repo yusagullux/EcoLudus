@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { MarketingShell } from "@/components/marketing-shell";
 import { LiveStatsCard } from "@/components/live-stats-card";
 import { GardenPreview } from "@/components/garden-preview";
+import { FadeIn, StaggerContainer, StaggerItem } from "@/lib/animations";
 
 export const metadata: Metadata = {
   title: "EcoLudus | Sustainable Habits, Real Impact",
@@ -46,7 +47,7 @@ export default function LandingPage() {
       <section className="mx-auto flex w-full max-w-7xl flex-col gap-16 px-5 pb-20 pt-10 sm:px-8 lg:px-10 lg:pt-14">
         {/* ── Hero ── */}
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-12">
-          <div className="max-w-3xl">
+          <FadeIn as="div" className="max-w-3xl">
             <div className="mk-surface inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em]">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: "var(--text-accent)" }} />
@@ -76,9 +77,9 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="mk-c-muted mt-5 text-xs">Free to join · No credit card · Track your CO₂ savings</p>
-          </div>
+          </FadeIn>
 
-          <div className="relative">
+          <FadeIn as="div" className="relative" delay={0.15}>
             <Suspense fallback={
               <div className="mk-surface rounded-[2rem] p-5">
                 <div className="mk-hero rounded-[1.5rem] p-6 py-12 text-center shadow-inner">
@@ -88,19 +89,20 @@ export default function LandingPage() {
             }>
               <LiveStatsCard />
             </Suspense>
-          </div>
+          </FadeIn>
         </div>
 
         {/* App Previews Mockups */}
         <section className="py-2">
-          <div className="mb-12 max-w-2xl">
+          <FadeIn as="div" className="mb-12 max-w-2xl">
             <p className="mk-c-muted text-xs font-bold uppercase tracking-[0.2em]">A tour of the experience</p>
             <h2 className="mk-c-primary mt-3 font-serif text-4xl sm:text-5xl">A calmer way to save the planet.</h2>
             <p className="mk-c-secondary mt-4 text-lg font-medium">Track, complete, and grow with interfaces designed to make good habits stick.</p>
-          </div>
-          <div className="grid items-start gap-6 md:grid-cols-3">
+          </FadeIn>
+          <StaggerContainer as="div" className="grid items-start gap-6 md:grid-cols-3" staggerDelay={0.1} inView>
             {mockups.map((m, i) => (
-              <figure
+              <StaggerItem
+                as="figure"
                 key={m.src}
                 className={`mk-surface group overflow-hidden rounded-[2rem] transition-all duration-300 hover:-translate-y-1.5 ${i === 1 ? "md:translate-y-6" : ""}`}
               >
@@ -114,14 +116,14 @@ export default function LandingPage() {
                   </div>
                   <span className="mk-c-accent font-serif text-sm font-bold opacity-60">0{i + 1}</span>
                 </figcaption>
-              </figure>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* About + Features */}
         <section id="about" className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-8">
-          <div className="mk-surface rounded-[2rem] p-8 sm:p-10">
+          <FadeIn as="div" className="mk-surface rounded-[2rem] p-8 sm:p-10">
             <p className="mk-c-muted text-xs font-bold uppercase tracking-[0.22em]">About EcoLudus</p>
             <h2 className="mk-c-primary mt-4 font-serif text-4xl sm:text-[2.75rem] sm:leading-[1.05]">A gentler path to visible environmental action.</h2>
             <p className="mk-c-secondary mt-5 text-base leading-8 font-medium">
@@ -139,10 +141,11 @@ export default function LandingPage() {
                 <p className="mk-c-muted text-xs">Proof verification</p>
               </div>
             </div>
-          </div>
-          <div id="features" className="grid gap-5 sm:grid-cols-2">
+          </FadeIn>
+          <StaggerContainer as="div" id="features" className="grid gap-5 sm:grid-cols-2" staggerDelay={0.08} inView>
             {features.map((feature) => (
-              <article
+              <StaggerItem
+                as="article"
                 key={feature.title}
                 className="mk-surface group relative overflow-hidden rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1"
               >
@@ -150,20 +153,21 @@ export default function LandingPage() {
                 <h3 className="mk-c-primary mt-3 font-serif text-2xl">{feature.title}</h3>
                 <p className="mk-c-secondary mt-3 text-sm font-medium leading-7">{feature.text}</p>
                 <span className="absolute bottom-0 left-0 h-0.5 w-0 transition-all duration-300 group-hover:w-full" style={{ background: "var(--text-accent)" }} />
-              </article>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* Garden Preview */}
-        <section>
+        <FadeIn as="section">
           <GardenPreview />
-        </section>
+        </FadeIn>
 
         {/* Experience CTA */}
-        <section
+        <FadeIn
+          as="section"
           id="experience"
-          className="mk-hero relative overflow-hidden rounded-[2.5rem] px-6 py-12 shadow-[0_35px_90px_rgba(16,33,20,0.2)] sm:px-12 sm:py-14"
+          className="mk-hero relative overflow-hidden rounded-[2.5rem] px-6 py-12 shadow-[var(--shadow-lift)] sm:px-12 sm:py-14"
         >
           <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-2xl" />
           <div className="pointer-events-none absolute -bottom-20 -left-10 h-72 w-72 rounded-full opacity-10 blur-3xl" style={{ background: "var(--text-accent)" }} />
@@ -184,7 +188,7 @@ export default function LandingPage() {
               Explore the full version
             </Link>
           </div>
-        </section>
+        </FadeIn>
       </section>
     </MarketingShell>
   );

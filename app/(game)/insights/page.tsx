@@ -4,16 +4,17 @@ import { useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useQuests } from "@/lib/useQuests";
 import { PageHero, Panel, Pill, ProgressBar, StatGrid, heroAccents } from "@/components/game-ui";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 import { CategoryIcon } from "@/components/category-icon";
 
 const CATEGORIES_FALLBACK = [
-  { id: "recycling", name: "Recycling", image: "/images/forest.webp", color: "#2f6b46", done: 0, total: 1 },
-  { id: "energy_saving", name: "Energy Saving", image: "/images/background.webp", color: "#9a6b1f", done: 0, total: 1 },
-  { id: "transportation", name: "Transportation", image: "/images/mountains.webp", color: "#2f5f86", done: 0, total: 1 },
-  { id: "water_saving", name: "Water Saving", image: "/images/nature.webp", color: "#237482", done: 0, total: 1 },
-  { id: "cleanup_missions", name: "Clean-Up Missions", image: "/images/night.webp", color: "#62508f", done: 0, total: 1 },
-  { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b", done: 0, total: 1 },
-  { id: "sustainable_living", name: "Sustainable Living", image: "/images/plants/lotus.png", color: "#3e8c7c", done: 0, total: 1 }
+  { id: "recycling", name: "Recycling", image: "/images/forest.webp", color: "var(--text-accent)", done: 0, total: 1 },
+  { id: "energy_saving", name: "Energy Saving", image: "/images/background.webp", color: "var(--text-warning)", done: 0, total: 1 },
+  { id: "transportation", name: "Transportation", image: "/images/mountains.webp", color: "var(--text-accent)", done: 0, total: 1 },
+  { id: "water_saving", name: "Water Saving", image: "/images/nature.webp", color: "var(--text-accent)", done: 0, total: 1 },
+  { id: "cleanup_missions", name: "Clean-Up Missions", image: "/images/night.webp", color: "var(--text-accent)", done: 0, total: 1 },
+  { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "var(--text-accent)", done: 0, total: 1 },
+  { id: "sustainable_living", name: "Sustainable Living", image: "/images/plants/lotus.png", color: "var(--text-accent)", done: 0, total: 1 }
 ];
 
 const categoryImages: Record<string, string> = {
@@ -80,7 +81,7 @@ export default function InsightsPage() {
           id: c.id,
           name: c.name,
           image: categoryImages[c.id] || "/images/forest.webp",
-          color: c.color || "#4CAF50",
+          color: c.color ? `color-mix(in srgb, ${c.color} 80%, var(--text-accent))` : "var(--text-accent)",
           done,
           total
         };
@@ -92,27 +93,32 @@ export default function InsightsPage() {
   const overallPct = totalAll > 0 ? Math.round((totalDone / totalAll) * 100) : 0;
 
   const summaryCards = [
-    { label: "Today's quests", value: `${todayCount}/${dailyTotal}`, accent: "#2f6b46" },
-    { label: "Quests last 7 days", value: weeklyTotal, accent: "#2f5f86" },
-    { label: "Total missions cleared", value: missionsCompleted, accent: "#62508f" },
-    { label: "XP earned", value: xp.toLocaleString(), accent: "#9a6b1f" },
-    { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "#237482" },
-    { label: "Overall progress", value: `${overallPct}%`, accent: "#4c7a3b" }
+    { label: "Today's quests", value: `${todayCount}/${dailyTotal}`, accent: "var(--text-accent)" },
+    { label: "Quests last 7 days", value: weeklyTotal, accent: "var(--text-accent)" },
+    { label: "Total missions cleared", value: missionsCompleted, accent: "var(--text-accent)" },
+    { label: "XP earned", value: xp.toLocaleString(), accent: "var(--text-accent)" },
+    { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "var(--text-accent)" },
+    { label: "Overall progress", value: `${overallPct}%`, accent: "var(--text-accent)" }
   ];
 
   return (
-    <div className="flex flex-col gap-5">
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
       <PageHero eyebrow="Weekly analytics" title="Insights" description="A dynamic view of quest completion, category balance, and reward growth." accent={heroAccents.insights} />
+      </StaggerItem>
 
+      <StaggerItem as="div">
       <StatGrid className="grid-cols-2 gap-3 sm:grid-cols-3" items={summaryCards} />
+      </StaggerItem>
 
+      <StaggerItem as="div">
       <Panel eyebrow="Activity" title="Quest Completion Trend" action={<Pill>7 days</Pill>}>
-        <div className="flex h-44 items-end gap-1.5 sm:gap-2.5">
+        <StaggerContainer className="flex h-44 items-end gap-1.5 sm:gap-2.5" as="div">
           {questsPerDay.map((count, index) => {
             const height = (count / maxQPD) * 100;
             const isToday = index === questsPerDay.length - 1;
             return (
-              <div key={weekDays[index]} className="flex flex-1 flex-col items-center gap-1.5">
+              <StaggerItem key={weekDays[index]} as="div" className="flex flex-1 flex-col items-center gap-1.5">
                 <span className="text-[10px] font-extrabold" style={{ color: "var(--text-primary)" }}>{count}</span>
                 <div className="flex h-32 w-full items-end rounded-xl p-1" style={{ background: "var(--bg-panel-alt)" }}>
                   <div
@@ -120,24 +126,26 @@ export default function InsightsPage() {
                     style={{
                       height: `${Math.max(height, 4)}%`,
                       minHeight: "6px",
-                      background: isToday ? "var(--text-primary)" : "var(--text-accent, #43653f)",
+                      background: isToday ? "var(--text-primary)" : "var(--text-accent)",
                       opacity: isToday ? 1 : 0.55
                     }}
                   />
                 </div>
                 <span className="text-[10px] font-extrabold" style={{ color: isToday ? "var(--text-primary)" : "var(--text-muted)" }}>{weekDays[index]}</span>
-              </div>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       </Panel>
+      </StaggerItem>
 
+      <StaggerItem as="div">
       <Panel eyebrow="Breakdown" title="Category Distribution">
-        <div className="flex flex-col gap-3">
+        <StaggerContainer className="flex flex-col gap-3" as="div">
           {categoriesProgress.map(({ name, image, color, done, total }) => {
             const pct = Math.round((done / total) * 100);
             return (
-              <div key={name} className="flex flex-col gap-1.5 rounded-xl px-2 py-1.5 transition sm:grid sm:grid-cols-[minmax(120px,160px)_1fr_44px_44px] sm:items-center sm:gap-3" style={{ background: "transparent" }}>
+              <StaggerItem key={name} as="div" className="flex flex-col gap-1.5 rounded-xl px-2 py-1.5 transition sm:grid sm:grid-cols-[minmax(120px,160px)_1fr_44px_44px] sm:items-center sm:gap-3">
                 <div className="flex min-w-0 items-center justify-between gap-2 sm:contents">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: "var(--bg-panel-alt)" }}>
@@ -153,17 +161,19 @@ export default function InsightsPage() {
                 <ProgressBar value={pct} color={color} />
                 <span className="hidden text-right text-xs font-extrabold sm:block" style={{ color }}>{pct}%</span>
                 <span className="hidden text-right text-xs font-semibold sm:block" style={{ color: "var(--text-muted)" }}>{done}/{total}</span>
-              </div>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       </Panel>
+      </StaggerItem>
 
+      <StaggerItem as="div">
       <Panel eyebrow="Growth" title="XP & EcoPoints Overview">
         <div className="flex flex-col gap-5">
           {[
-            { label: "Total XP", value: xp, color: "#2f6b46", max: 10000 },
-            { label: "EcoPoints", value: ecoPoints, color: "#2f5f86", max: 5000 }
+            { label: "Total XP", value: xp, color: "var(--text-accent)", max: 10000 },
+            { label: "EcoPoints", value: ecoPoints, color: "var(--text-accent)", max: 5000 }
           ].map(({ label, value, color, max }) => {
             const pct = Math.min(100, Math.round((value / max) * 100));
             return (
@@ -179,6 +189,7 @@ export default function InsightsPage() {
           })}
         </div>
       </Panel>
-    </div>
+      </StaggerItem>
+    </StaggerContainer>
   );
 }

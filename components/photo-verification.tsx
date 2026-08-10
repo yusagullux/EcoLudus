@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
 import { Panel, primaryButton, secondaryButton, Pill } from "@/components/game-ui";
 
@@ -118,7 +119,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
   if (verified) {
     return (
       <Panel eyebrow="Proof submitted" title={`"${questTitle}" photo verified`} action={<Pill active>Verified</Pill>}>
-        <p className="text-sm text-forest-700">This quest has been verified with a photo proof upload and is ready for completion.</p>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>This quest has been verified with a photo proof upload and is ready for completion.</p>
       </Panel>
     );
   }
@@ -127,7 +128,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
     <Panel eyebrow="Quest verification" title={`Verify proof for: ${questTitle}`}>
       <div className="grid gap-4">
         <div className="grid gap-2">
-          <p className="text-sm font-semibold text-forest-900">Photo proof</p>
+          <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Photo proof</p>
           <div className="grid gap-2 sm:grid-cols-2">
             <button
               type="button"
@@ -162,27 +163,36 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
         </div>
 
         {selectedFile && (
-          <div className="rounded-2xl border border-[#e0e7db] bg-[#f4f7ef] px-4 py-3 text-sm text-forest-700">
+          <div className="rounded-2xl border px-4 py-3 text-sm" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-secondary)" }}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="min-w-[88px] rounded-2xl bg-white p-2 shadow-sm">
+              <div className="min-w-[88px] rounded-2xl p-2 shadow-sm" style={{ background: "var(--bg-panel)" }}>
                 {previewUrl ? (
-                  <img src={previewUrl} alt="Photo proof preview" className="h-20 w-full rounded-2xl object-cover" />
+                  <div className="relative h-20 w-20 rounded-2xl overflow-hidden">
+                    <Image
+                      src={previewUrl}
+                      alt="Photo proof preview"
+                      fill
+                      sizes="80px"
+                      unoptimized
+                      className="rounded-2xl object-cover"
+                    />
+                  </div>
                 ) : (
-                  <div className="h-20 w-full rounded-2xl bg-[#e7f1de]" />
+                  <div className="h-20 w-20 rounded-2xl" style={{ background: "var(--bg-panel-alt)" }} />
                 )}
               </div>
               <div>
-                <p className="font-semibold text-forest-900">{selectedFile.name}</p>
-                <p className="text-[13px] text-forest-700">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{selectedFile.name}</p>
+                <p className="text-[13px]" style={{ color: "var(--text-secondary)" }}>{(selectedFile.size / 1024).toFixed(1)} KB</p>
               </div>
             </div>
           </div>
         )}
 
-        {status && <p className="text-sm text-forest-700">{status}</p>}
-        {error && <p className="text-sm font-semibold text-rose-700">{error}</p>}
+        {status && <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{status}</p>}
+        {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
         {warnings.length > 0 && (
-          <div className="rounded-2xl border border-[#f2e5bb] bg-[#fff9e6] px-4 py-3 text-sm text-amber-900">
+          <div className="rounded-2xl border border-amber-300/60 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
             <p className="font-bold">Verification notes:</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
               {warnings.map((warning, index) => (
@@ -193,7 +203,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
         )}
 
         <div className="flex flex-wrap gap-3">
-          <button onClick={verifyPhoto} disabled={isSubmitting || !selectedFile} className={primaryButton}>
+          <button type="button" onClick={verifyPhoto} disabled={isSubmitting || !selectedFile} className={primaryButton}>
             {isSubmitting ? "Verifying..." : "Verify Photo"}
           </button>
           <button

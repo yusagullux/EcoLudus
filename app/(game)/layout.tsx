@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/useAuth";
 import { ThemeProvider } from "@/lib/useTheme";
 import { ToastProvider } from "@/lib/toast";
 import { Sidebar } from "@/components/sidebar";
+import { PageTransition } from "@/lib/animations";
 
 export default function GameLayout({
   children
@@ -45,7 +46,7 @@ export default function GameLayout({
         <main className="pt-[56px] pb-6 px-4 sm:px-5 md:ml-[240px] md:pt-7 md:pb-8 md:px-8">
           <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-5">
             {/* Hero skeleton */}
-            <div className="rounded-[22px] p-6 sm:p-8" style={{ background: "var(--bg-hero, linear-gradient(135deg,#2f6b46,#1c2e21))" }}>
+            <div className="rounded-[22px] p-6 sm:p-8" style={{ background: "var(--bg-hero)" }}>
               <div className="h-3 w-24 animate-pulse rounded-full bg-white/25" />
               <div className="mt-4 h-8 w-2/3 animate-pulse rounded-lg bg-white/25" />
               <div className="mt-4 h-4 w-full max-w-xl animate-pulse rounded bg-white/15" />
@@ -103,7 +104,7 @@ export default function GameLayout({
           >
             {/* Content width: fills available space with a comfortable max */}
             <div className="mx-auto w-full max-w-[1100px]">
-              {children}
+              <PageTransition>{children}</PageTransition>
             </div>
           </main>
         </div>

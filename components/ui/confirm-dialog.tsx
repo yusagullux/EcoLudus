@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import { Dialog } from "@/components/ui/dialog";
-import { primaryButton, secondaryButton } from "@/components/game-ui";
+import { dangerButton, primaryButton, secondaryButton } from "@/components/game-ui";
 
 /**
  * In-app confirmation dialog. Replaces native `confirm()`. Built on the shared
@@ -53,9 +53,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={handleConfirm}
-            className={danger
-              ? "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 focus-visible:ring-rose-400"
-              : primaryButton}
+            className={danger ? dangerButton : primaryButton}
           >
             {confirmLabel}
           </button>

@@ -25,7 +25,6 @@ export type PublicProfile = {
   longestStreak: number;
   lastLoginDate: string;
   completedQuests: string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   plants: any[];
 };
 
@@ -38,7 +37,6 @@ const categories = [
   { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b", maxCo2: 0.6, badge: "Green Thumb" }
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getPlantImage(plant: any) {
   return plant.image || PLANT_IMAGES[plant.name] || "/images/plants/sunflower.png";
 }
@@ -86,19 +84,19 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
   });
 
   const statCards = [
-    { label: "Level", value: level, accent: "#2f5f86" },
-    { label: "Missions Done", value: missionsCompleted, accent: "#62508f" },
-    { label: "CO₂ Reduced", value: `${carbonReduced.toFixed(1)} kg`, accent: "#237482", wide: true },
-    { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "#4c7a3b" },
-    { label: "Current Streak", value: `${currentStreak}d`, accent: "#9a6b1f" },
-    { label: "Best Streak", value: `${longestStreak}d`, accent: "#2f6b46" }
+    { label: "Level", value: level, accent: "var(--text-accent)" },
+    { label: "Missions Done", value: missionsCompleted, accent: "var(--text-accent)" },
+    { label: "CO₂ Reduced", value: `${carbonReduced.toFixed(1)} kg`, accent: "var(--text-accent)", wide: true },
+    { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "var(--text-accent)" },
+    { label: "Current Streak", value: `${currentStreak}d`, accent: "var(--text-accent)" },
+    { label: "Best Streak", value: `${longestStreak}d`, accent: "var(--text-accent)" }
   ];
 
   return (
     <div className="flex flex-col gap-5">
       <PageHero eyebrow={`Level ${level}`} title={<span className="break-words" title={displayName}>{displayName}</span>} description={isOwner ? "Your profile" : "Public profile"}>
         <div className="flex flex-wrap items-center gap-3">
-          <Avatar name={displayName} src={profile.profileImage} size={80} className="ring-2 ring-white/20" />
+          <Avatar name={displayName} src={profile.profileImage} size={80} className="ring-2 ring-[var(--border-subtle)]" />
           <HeroMetric label="XP" value={xp.toLocaleString()} />
           <HeroMetric label="Missions" value={missionsCompleted} />
           <HeroMetric label="Streak" value={`${currentStreak}d`} />
@@ -162,10 +160,9 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
       <Panel eyebrow="Rare finds" title="Collection Book" action={<Pill>{(() => { const n = profilePlants.reduce((sum: number, plant: { count?: number }) => sum + (plant.count ?? 1), 0); return `${n} plant${n === 1 ? "" : "s"}`; })()}</Pill>}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {profilePlants.length > 0 ? (
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             profilePlants.map((plant: any) => (
-              <article key={plant.id} className="reveal-card group flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition hover:-translate-y-1" style={{ borderColor: rarityBorder[plant.rarity as Rarity] ?? "#d9e2d2", background: "var(--bg-card)" }}>
-                <span className="relative flex aspect-square w-full max-w-32 items-center justify-center rounded-2xl p-4" style={{ background: `${rarityStyle[plant.rarity as Rarity]?.accent ?? "#2f6b46"}12` }}>
+              <article key={plant.id} className="reveal-card group flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition hover:-translate-y-1" style={{ borderColor: rarityBorder[plant.rarity as Rarity] ?? "var(--border-default)", background: "var(--bg-card)" }}>
+                <span className="relative flex aspect-square w-full max-w-32 items-center justify-center rounded-2xl p-4" style={{ background: `color-mix(in srgb, ${rarityStyle[plant.rarity as Rarity]?.accent ?? "var(--text-accent)"} 7%, var(--bg-card))` }}>
                   <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl shadow-sm overflow-hidden p-2" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)" }}>
                     <Image src={getPlantImage(plant)} alt={plant.name} fill sizes="96px" className="object-contain transition group-hover:scale-110" />
                   </div>
@@ -183,12 +180,12 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
             </article>
           )}
           {isOwner && (
-            <a href="/shop" className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-4 text-center transition hover:-translate-y-0.5" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}>
+            <Link href="/shop" className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-4 text-center transition hover:-translate-y-0.5" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}>
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: "var(--bg-panel)" }}>
                 <Image src="/images/plants/sunflower.png" alt="Plant shop" width={40} height={40} className="object-contain" />
               </span>
               <span className="text-xs font-extrabold uppercase tracking-[0.08em]">Visit Shop</span>
-            </a>
+            </Link>
           )}
         </div>
       </Panel>

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 // Shared avatar. Replaces the old level-badge image that used to double as the
 // user's avatar everywhere (sidebar, profile, leaderboard). Shows the user's
 // uploaded profile picture (a Supabase Storage public URL stored in
 // `payload.profileImage`) and falls back to an initials circle when there is no
-// picture (or the image fails to load). Uses a plain <img> — not next/image —
-// so remote Supabase URLs need no remote-pattern config.
+// picture (or the image fails to load). Uses next/image with `unoptimized` so
+// remote Supabase URLs need no remote-pattern config while still benefiting
+// from the Next.js image component (and silencing the no-img lint rule).
 
 const AVATAR_COLORS = [
   "#2f6b46", "#2f5f86", "#62508f", "#9a6b1f",
@@ -45,9 +47,12 @@ export function Avatar({ name, src, size = 40, className, style }: AvatarProps) 
 
   if (hasImage) {
     return (
-      <img
+      <Image
         src={src as string}
         alt={displayName}
+        width={size}
+        height={size}
+        unoptimized
         loading="lazy"
         onError={() => setErrored(true)}
         className={`shrink-0 overflow-hidden rounded-full object-cover ${className ?? ""}`}

@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useQuests } from "@/lib/useQuests";
+import { useToast } from "@/lib/toast";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, StatGrid, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 import PhotoVerification from "@/components/photo-verification";
 import { Dialog } from "@/components/ui/dialog";
+import { ErrorBanner } from "@/components/ui/error-banner";
 import { requiredXP } from "@/lib/level-system";
+import { StaggerContainer, StaggerItem, FadeIn } from "@/lib/animations";
 
 const CATEGORIES = [
   { name: "Recycling", image: "/images/forest.webp", color: "#2f6b46" },
@@ -61,6 +65,7 @@ function isAfterMidnightUTC(lastResetTime: string | null): boolean {
 
 export default function DashboardPage() {
   const { user, profile, loading, refreshProfile } = useAuth();
+  const toast = useToast();
 
   const { quests: questsData } = useQuests();
   const [quests, setQuests] = useState<any[]>([]);
@@ -77,7 +82,6 @@ export default function DashboardPage() {
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [completedPopup, setCompletedPopup] = useState<string | null>(null);
   const [pendingCompletion, setPendingCompletion] = useState(false);
-  const [toast, setToast] = useState("");
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [streakReward, setStreakReward] = useState<{ day: number; label: string } | null>(null);
   // Read-only "Impact this week" — the first visible surface for the spine.
@@ -110,6 +114,7 @@ export default function DashboardPage() {
   // safe fix is the wholesale Phase 4 rewrite of this quest-sync effect, which
   // is out of scope for a piecemeal lint pass. Leaving as-is intentionally.
   // Sync / Initialize daily quests based on profile and questsData
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
   useEffect(() => {
     if (!profile || !questsData || !user?.uid) return;
 
@@ -190,7 +195,9 @@ export default function DashboardPage() {
       setLoadingQuests(false);
     }
   }, [profile, questsData, user?.uid]);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!profile) {
       setVerifiedQuestIds([]);
@@ -211,14 +218,7 @@ export default function DashboardPage() {
 
     setVerifiedQuestIds(verifiedIds);
   }, [profile]);
-
-  useEffect(() => {
-    if (!activeTextVerifyQuest) return;
-
-    const requiresPhoto = questRequiresPhoto(questsData, activeTextVerifyQuest.id);
-    setProofType(requiresPhoto ? "photo" : "text");
-    setVerificationError(null);
-  }, [activeTextVerifyQuest, questsData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Live ticking reset timer (counts down to midnight UTC)
   useEffect(() => {
@@ -267,11 +267,6 @@ export default function DashboardPage() {
     const done = jsonCategory?.quests?.filter((q: any) => completedQuests.includes(q.id)).length || 0;
     return { ...cat, done, total };
   });
-
-  const showToast = (message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(""), 3000);
-  };
 
   const handleProofPhotoSelected = (file: File | null) => {
     setVerificationError(null);
@@ -326,7 +321,7 @@ export default function DashboardPage() {
         }
         // Trigger modal for verification first
         setActiveTextVerifyQuest(quest);
-        setProofType("text");
+        setProofType(questRequiresPhoto(questsData, quest.id) ? "photo" : "text");
         setTextProof("");
         setPhotoFile(null);
         setPhotoPreview(null);
@@ -393,7 +388,7 @@ export default function DashboardPage() {
       const confidence = data.confidence ? ` (${data.confidence}% confidence)` : "";
       setVerifiedQuestIds((current) => Array.from(new Set([...current, activeTextVerifyQuest.id])));
       setSelectedQuestIds((current) => Array.from(new Set([...current, activeTextVerifyQuest.id])));
-      showToast(`✓ Proof verified${confidence}. Quest checked!`);
+      toast.success(`✓ Proof verified${confidence}. Quest checked!`);
       setTextProof("");
       setPhotoFile(null);
       setPhotoPreview(null);
@@ -412,8 +407,14 @@ export default function DashboardPage() {
     // selection. Honor-system quests (requiresProof === false) skip this.
     const unverified = selectedQuests.filter((q) => q.requiresProof !== false && !verifiedQuestIds.includes(q.id));
     if (unverified.length > 0) {
-      showToast(`Please verify proof for "${unverified[0].title}" first.`);
-      setActiveTextVerifyQuest(unverified[0]);
+      const quest = unverified[0];
+      toast.show(`Please verify proof for "${quest.title}" first.`);
+      setActiveTextVerifyQuest(quest);
+      setProofType(questRequiresPhoto(questsData, quest.id) ? "photo" : "text");
+      setTextProof("");
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setVerificationError(null);
       return;
     }
 
@@ -445,7 +446,7 @@ export default function DashboardPage() {
         ? ` Daily clear bonus: ${result.bonusChest.name} added to your Collection.`
         : "";
       setCompletedPopup(`Mission complete! ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"} finished: ${completedTitles}.${companionLine}${bonusChestLine}`);
-      showToast(
+      toast.success(
         result.bonusChest?.name
           ? `Daily clear bonus: ${result.bonusChest.name} found!`
           : `Completed ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"}: +${result.totals.xp + (result.totals.companionXpBonus || 0)} XP, +${result.totals.ecoPoints} EcoPoints, ${Number(result.totals.carbonReduced || 0).toFixed(1)} kg CO2`
@@ -453,7 +454,7 @@ export default function DashboardPage() {
       setVerifiedQuestIds((ids) => ids.filter((id) => !completedIds.includes(id)));
     } catch (error) {
       console.error("Mission completion error:", error);
-      showToast(error instanceof Error ? error.message : "Unable to complete missions. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Unable to complete missions. Please try again.");
     } finally {
       setPendingCompletion(false);
     }
@@ -510,36 +511,41 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <PageHero
-        eyebrow="Today's quest hub"
-        title={<>Welcome back, <span className="break-words" title={displayName}>{displayName}</span></>}
-        description={`${completedToday} of ${quests.length} missions complete today. Keep the rhythm focused and visible.`}
-      >
-        <div className="flex flex-wrap gap-3">
-          <HeroMetric label="XP" value={xp.toLocaleString()} hint="Experience points — earned from every completed quest. Level is derived from your total XP." />
-          <HeroMetric label="EcoPoints" value={ecoPoints.toLocaleString()} hint="EcoPoints are the in-app currency earned from quests — spend them in the Plant Shop." />
-          <HeroMetric label="Level" value={level} />
-          <HeroMetric label="Streak" value={`${currentStreak}d`} hint="Consecutive days you've completed at least one quest. Keep the streak alive for bonus rewards." />
-          <HeroMetric
-            label="Impact this week"
-            value={weekImpact === null ? "—" : weekImpact.toLocaleString()}
-            hint="Total impact from quests completed this week. Complete quests to grow your weekly impact."
-          />
-          {activePet && <HeroMetric label="Pet" value={activePet.name} />}
-        </div>
-      </PageHero>
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
+        <PageHero
+          eyebrow="Today's quest hub"
+          title={<>Welcome back, <span className="break-words" title={displayName}>{displayName}</span></>}
+          description={`${completedToday} of ${quests.length} missions complete today. Keep the rhythm focused and visible.`}
+        >
+          <div className="flex flex-wrap gap-3">
+            <HeroMetric label="XP" value={xp} hint="Experience points — earned from every completed quest. Level is derived from your total XP." />
+            <HeroMetric label="EcoPoints" value={ecoPoints} hint="EcoPoints are the in-app currency earned from quests — spend them in the Plant Shop." />
+            <HeroMetric label="Level" value={level} />
+            <HeroMetric label="Streak" value={`${currentStreak}d`} hint="Consecutive days you've completed at least one quest. Keep the streak alive for bonus rewards." />
+            <HeroMetric
+              label="Impact this week"
+              value={weekImpact === null ? "—" : weekImpact.toLocaleString()}
+              hint="Total impact from quests completed this week. Complete quests to grow your weekly impact."
+            />
+            {activePet && <HeroMetric label="Pet" value={activePet.name} />}
+          </div>
+        </PageHero>
+      </StaggerItem>
 
-      <StatGrid
-        items={[
-          { label: "Current Level", value: `Level ${level}`, accent: "#2f6b46" },
-          { label: "Missions Done", value: missionsCompleted, accent: "#2f5f86" },
-          { label: "CO2 Reduced", value: `${(+carbonReduced || 0).toFixed(1)} kg`, accent: "#237482" },
-          { label: "Login Streak", value: `${currentStreak} day${currentStreak === 1 ? "" : "s"}`, accent: "#9a6b1f" }
-        ]}
-      />
+      <StaggerItem as="div">
+        <StatGrid
+          items={[
+            { label: "Current Level", value: `Level ${level}`, accent: "var(--text-accent)" },
+            { label: "Missions Done", value: missionsCompleted, accent: "var(--text-accent)" },
+            { label: "CO2 Reduced", value: `${(+carbonReduced || 0).toFixed(1)} kg`, accent: "var(--text-accent)" },
+            { label: "Login Streak", value: `${currentStreak} day${currentStreak === 1 ? "" : "s"}`, accent: "var(--text-accent)" }
+          ]}
+        />
+      </StaggerItem>
 
-      <Panel eyebrow="Daily rhythm" title="Active Streak" action={<Pill active>Best {longestStreak}d</Pill>}>
+      <StaggerItem as="section">
+        <Panel eyebrow="Daily rhythm" title="Active Streak" action={<Pill active>Best {longestStreak}d</Pill>}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
@@ -576,7 +582,7 @@ export default function DashboardPage() {
             const claimed = Number(profile?.lastStreakRewardDay ?? 0) >= day;
             return (
               <div key={day} className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs"
-                style={{ borderColor: reached ? color : "var(--border-default)", background: claimed ? `${color}18` : "var(--bg-panel-alt)", opacity: claimed ? 0.6 : 1 }}>
+                style={{ borderColor: reached ? color : "var(--border-default)", background: claimed ? `color-mix(in srgb, ${color} 8%, var(--bg-panel-alt))` : "var(--bg-panel-alt)" }}>
                 <span className="text-base">{icon}</span>
                 <div>
                   <p className="font-extrabold" style={{ color: reached ? color : "var(--text-muted)" }}>Day {day}</p>
@@ -587,6 +593,7 @@ export default function DashboardPage() {
           })}
         </div>
       </Panel>
+      </StaggerItem>
 
       {/* Streak reward popup */}
       {streakReward && (
@@ -594,7 +601,7 @@ export default function DashboardPage() {
           open
           onClose={() => setStreakReward(null)}
           size="sm"
-          footer={<button onClick={() => setStreakReward(null)} className={`w-full ${primaryButton}`}>Claim & Continue</button>}
+          footer={<button type="button" onClick={() => setStreakReward(null)} className={`w-full ${primaryButton}`}>Claim & Continue</button>}
         >
           <div className="flex flex-col items-center text-center">
             <div className="text-5xl mb-4">🎉</div>
@@ -604,61 +611,69 @@ export default function DashboardPage() {
         </Dialog>
       )}
 
-      <Panel
-        eyebrow="Level progress"
-        title={`Level ${level} to ${level + 1}`}
-        action={<Pill active>{pct}%</Pill>}
-      >
-        <ProgressBar value={pct} color="#2f6b46" />
+      <StaggerItem as="section">
+        <Panel
+          eyebrow="Level progress"
+          title={`Level ${level} to ${level + 1}`}
+          action={<Pill active>{pct}%</Pill>}
+        >
+        <ProgressBar value={pct} color="var(--text-accent)" />
         <div className="mt-3 flex justify-between text-xs font-bold" style={{ color: "var(--text-muted)" }}>
           <span>{(xp - curXP).toLocaleString()} XP earned this level</span>
           <span>{nextXP === Infinity ? "Max level" : `${(nextXP - curXP).toLocaleString()} XP total`}</span>
         </div>
       </Panel>
+      </StaggerItem>
 
       {activePet && (
-        <Panel eyebrow="Companion boost" title={`${activePet.name} is adventuring with you`} action={<Pill active>Bond {activePetBond}%</Pill>}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
-              Completing daily quests grows your active pet's bond. A cared-for companion can discover bonus XP during missions.
-            </p>
-            <div className="min-w-[180px]">
-              <ProgressBar value={activePetBond} color="#9a6b1f" />
+        <StaggerItem as="section">
+          <Panel eyebrow="Companion boost" title={`${activePet.name} is adventuring with you`} action={<Pill active>Bond {activePetBond}%</Pill>}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
+                Completing daily quests grows your active pet's bond. A cared-for companion can discover bonus XP during missions.
+              </p>
+              <div className="min-w-[180px]">
+                <ProgressBar value={activePetBond} color="var(--text-accent)" />
+              </div>
             </div>
-          </div>
-        </Panel>
+          </Panel>
+        </StaggerItem>
       )}
 
-      <Panel
-        eyebrow="Daily missions"
-        title="Today's Quests"
-        action={<Pill>Resets in {formatTime(timeLeft)}</Pill>}
-        className="overflow-hidden"
-      >
-        <div className="-mx-5 -mt-5 divide-y divide-[var(--border-subtle)] sm:-mx-6 sm:-mt-6">
+      <StaggerItem as="section">
+        <Panel
+          eyebrow="Daily missions"
+          title="Today's Quests"
+          action={<Pill>Resets in {formatTime(timeLeft)}</Pill>}
+          className="overflow-hidden"
+        >
+        <StaggerContainer className="-mx-5 -mt-5 divide-y divide-[var(--border-subtle)] sm:-mx-6 sm:-mt-6" as="div" staggerDelay={0.04}>
           {quests.map((quest) => {
             const isSelected = selectedQuestIds.includes(quest.id);
             const isVerified = verifiedQuestIds.includes(quest.id);
             return (
-              <label
+              <StaggerItem
                 key={quest.id}
-                className={`flex cursor-pointer items-start gap-4 px-5 py-4 transition sm:px-6 ${quest.done ? "opacity-55" : ""}`}
+                as="div"
+                className={`flex items-start gap-4 px-5 py-4 transition sm:px-6 ${quest.done ? "opacity-55" : ""}`}
                 style={{ background: isSelected && !quest.done ? "var(--sidebar-active-bg)" : "transparent" }}
               >
-                <input
-                  type="checkbox"
-                  checked={quest.done || isSelected}
-                  disabled={quest.done || pendingCompletion}
-                  onChange={() => toggleSelection(quest)}
-                  className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded accent-forest-800"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: quest.categoryColor }} />
-                    <span className="text-xs font-extrabold uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{quest.category}</span>
+                <label className="flex cursor-pointer items-start gap-4 min-w-0 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={quest.done || isSelected}
+                    disabled={quest.done || pendingCompletion}
+                    onChange={() => toggleSelection(quest)}
+                    className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded accent-[var(--text-accent)]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: quest.categoryColor }} />
+                      <span className="text-xs font-extrabold uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{quest.category}</span>
+                    </div>
+                    <p className={`mt-1 text-sm font-extrabold ${quest.done ? "line-through" : ""}`} style={{ color: "var(--text-primary)" }}>{quest.title}</p>
                   </div>
-                  <p className={`mt-1 text-sm font-extrabold ${quest.done ? "line-through" : ""}`} style={{ color: "var(--text-primary)" }}>{quest.title}</p>
-                </div>
+                </label>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <div className="flex items-center gap-1.5">
                     <Pill>+{quest.xp} XP</Pill>
@@ -667,9 +682,7 @@ export default function DashboardPage() {
                   {!quest.done && quest.requiresProof !== false && (
                     <button
                       type="button"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
+                      onClick={() => {
                         setActiveTextVerifyQuest(quest);
                         setProofType(questRequiresPhoto(questsData, quest.id) ? "photo" : "text");
                         setTextProof("");
@@ -680,7 +693,7 @@ export default function DashboardPage() {
                       className="mt-1 min-h-11 rounded-full px-3 py-2 text-[10px] font-extrabold tracking-[0.02em] transition"
                       style={isVerified
                         ? { background: "var(--sidebar-active-bg)", color: "var(--text-sidebar-muted)" }
-                        : { background: "#fef3c7", color: "#92400e" }}
+                        : { background: "color-mix(in srgb, var(--text-warning) 12%, var(--bg-panel-alt))", color: "var(--text-warning)" }}
                     >
                       {isVerified ? "Verified" : "Verify proof"}
                     </button>
@@ -691,19 +704,21 @@ export default function DashboardPage() {
                     </span>
                   )}
                 </div>
-              </label>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
 
         <button
+          type="button"
           onClick={completeSelectedMissions}
           disabled={selectedQuests.length === 0 || pendingCompletion}
-          className={`mt-5 w-full ${primaryButton}`}
+          className={`mt-5 w-full ${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {pendingCompletion ? "Completing..." : selectedQuests.length > 0 ? `Complete ${selectedQuests.length} Selected Mission${selectedQuests.length === 1 ? "" : "s"}` : "Select Missions to Complete"}
         </button>
       </Panel>
+      </StaggerItem>
 
       {/* ── Proof Verification Modal (Text + Photo) ── */}
       {activeTextVerifyQuest && (
@@ -720,17 +735,18 @@ export default function DashboardPage() {
           footer={
             <>
               <button
+                type="button"
                 onClick={handleVerifyProof}
                 disabled={
                   verifyingText ||
                   (proofType === "text" && textProof.trim().length < 8) ||
                   (proofType === "photo" && !photoFile)
                 }
-                className={`flex-1 ${primaryButton}`}
+                className={`flex-1 ${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {verifyingText ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-cream-100/40 border-t-cream-100" />
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[color-mix(in_srgb,var(--text-sidebar)_40%,transparent)] border-t-[var(--text-sidebar)]" />
                     Reviewing proof...
                   </span>
                 ) : (
@@ -738,6 +754,7 @@ export default function DashboardPage() {
                 )}
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setActiveTextVerifyQuest(null);
                   setTextProof("");
@@ -803,7 +820,7 @@ export default function DashboardPage() {
                   rows={4}
                   className={`${inputClass} resize-none`}
                 />
-                <p className={`mt-1 text-right text-[10px] font-bold ${textProof.trim().length >= 8 ? "" : "text-rose-500"}`} style={textProof.trim().length >= 8 ? { color: "var(--text-accent, #43653f)" } : undefined}>
+                <p className="mt-1 text-right text-[10px] font-bold" style={{ color: textProof.trim().length >= 8 ? "var(--text-accent)" : "var(--text-error)" }}>
                   {textProof.trim().length}/8 min characters
                 </p>
               </div>
@@ -833,7 +850,7 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
-                      className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 hover:border-rose-300 transition-all"
+                      className="rounded-xl border border-rose-300/60 bg-rose-500/10 px-4 py-3 text-xs font-bold text-rose-600 transition-all hover:bg-rose-500/20"
                     >
                       Clear
                     </button>
@@ -863,18 +880,21 @@ export default function DashboardPage() {
                   className="sr-only"
                 />
                 {photoPreview && (
-                  <div className="overflow-hidden rounded-xl border border-forest-100 bg-forest-50 p-2 text-center">
-                    <img src={photoPreview} alt="Preview" className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover" />
+                  <div className="overflow-hidden rounded-xl border p-2 text-center" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
+                    <Image
+                      src={photoPreview}
+                      alt="Preview"
+                      unoptimized
+                      width={320}
+                      height={160}
+                      className="mx-auto h-40 w-full max-w-xs rounded-lg object-cover"
+                    />
                   </div>
                 )}
               </div>
             )}
 
-            {verificationError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
-                {verificationError}
-              </div>
-            )}
+            {verificationError && <ErrorBanner>{verificationError}</ErrorBanner>}
           </div>
         </Dialog>
       )}
@@ -884,10 +904,10 @@ export default function DashboardPage() {
           open
           onClose={() => setCompletedPopup(null)}
           size="lg"
-          footer={<button onClick={() => setCompletedPopup(null)} className={secondaryButton}>Close</button>}
+          footer={<button type="button" onClick={() => setCompletedPopup(null)} className={secondaryButton}>Close</button>}
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-forest-950 text-2xl font-extrabold text-cream-100">✓</div>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--bg-sidebar)] text-2xl font-extrabold text-[var(--text-sidebar)]">✓</div>
             <div>
               <h3 className="text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>Mission complete!</h3>
               <p className="mt-1 text-sm leading-6" style={{ color: "var(--text-muted)" }}>{completedPopup}</p>
@@ -897,37 +917,34 @@ export default function DashboardPage() {
       )}
 
 
-      <Panel eyebrow="Quest progress" title="Category Progress">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {categoryProgress.map(({ name, image, color, done, total }) => {
-            const progress = Math.round((done / total) * 100);
-            return (
-              <article key={name} className="reveal-card rounded-2xl border p-4 transition hover:-translate-y-0.5" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl" style={{ background: "var(--bg-panel)" }}>
-                      <CategoryIcon name={name} color={color} className="h-6 w-6" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</p>
-                      <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{done}/{total} quests</p>
+      <StaggerItem as="section">
+        <Panel eyebrow="Quest progress" title="Category Progress">
+          <StaggerContainer className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" as="div" staggerDelay={0.05}>
+            {categoryProgress.map(({ name, image, color, done, total }) => {
+              const progress = Math.round((done / total) * 100);
+              return (
+                <StaggerItem key={name} as="article" className="rounded-2xl border p-4 transition hover:-translate-y-0.5" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl" style={{ background: "var(--bg-panel)" }}>
+                        <CategoryIcon name={name} color={color} className="h-6 w-6" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</p>
+                        <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{done}/{total} quests</p>
+                      </div>
                     </div>
+                    {done === total && <Pill active>Done</Pill>}
                   </div>
-                  {done === total && <Pill active>Done</Pill>}
-                </div>
-                <ProgressBar value={progress} color={color} />
-                <p className="mt-2 text-right text-xs font-extrabold" style={{ color }}>{progress}%</p>
-              </article>
-            );
-          })}
-        </div>
-      </Panel>
+                  <ProgressBar value={progress} color={color} />
+                  <p className="mt-2 text-right text-xs font-extrabold" style={{ color }}>{progress}%</p>
+                </StaggerItem>
+              );
+            })}
+          </StaggerContainer>
+        </Panel>
+      </StaggerItem>
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-extrabold shadow-xl" style={{ background: "var(--bg-sidebar)", color: "var(--text-sidebar)" }}>
-          {toast}
-        </div>
-      )}
-    </div>
+    </StaggerContainer>
   );
 }
