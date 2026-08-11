@@ -33,6 +33,7 @@ build/
 .cache/
 .next/
 ecoquest/.next/
+tsconfig.tsbuildinfo
 
 # Temporary files
 *.tmp
@@ -45,5 +46,7 @@ data/
 
 # One-off scripts / scratch
 scratch/
+scripts/test-exp.js
+scripts/exp-out/
 
 .vercel
