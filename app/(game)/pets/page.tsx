@@ -36,7 +36,7 @@ function PetImage({
 
   const fitClass =
     fit === "contain"
-      ? "object-contain p-3 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]"
+      ? "object-contain p-0 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]"
       : "object-cover";
 
   return (

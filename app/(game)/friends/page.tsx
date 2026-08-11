@@ -137,15 +137,24 @@ export default function FriendsPage() {
   const candidates = useMemo(() => {
     const friendIds = new Set(friends.map(friendKey));
     const normalized = query.trim().toLowerCase();
-    return players
+    const filtered = players
       .filter((player) => player.id !== user?.uid)
       .filter((player) => !friendIds.has(player.id))
       .filter((player) => {
         if (!normalized) return true;
         return String(player.displayName || "").toLowerCase().includes(normalized)
           || String(player.id || "").toLowerCase().includes(normalized);
-      })
-      .slice(0, 8);
+      });
+    // When the search box is empty, surface 3 "recommended" players — highest
+    // XP first — so the section reads as a suggestion list rather than a dump
+    // of everyone. When searching, keep up to 8 matches.
+    if (!normalized) {
+      return filtered
+        .slice()
+        .sort((a, b) => Number(b.xp || 0) - Number(a.xp || 0))
+        .slice(0, 3);
+    }
+    return filtered.slice(0, 8);
   }, [players, query, user?.uid, friends]);
 
   const sendFriendRequest = async (player: any) => {
@@ -430,7 +439,7 @@ export default function FriendsPage() {
       )}
 
       <StaggerItem as="section">
-      <Panel id="find-players" eyebrow="Add friends" title="Find Players">
+      <Panel id="find-players" eyebrow={query.trim() ? "Search results" : "Recommended"} title="Find Players">
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <input
@@ -505,7 +514,9 @@ export default function FriendsPage() {
               );
             })
           ) : (
-            <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>No matching players found.</p>
+            <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
+              {query.trim() ? "No matching players found." : "No other players to recommend yet — check back soon!"}
+            </p>
           )}
         </div>
       </Panel>
