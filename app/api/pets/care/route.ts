@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { grantImpact, type ImpactUser } from "@/lib/impact-service";
-import { computeVitals } from "@/lib/pet-vitals";
+import { computeVitals, getMood } from "@/lib/pet-vitals";
 
 // Server-validated pet care. The pets page used to mutate XP/eco/stat fields
 // straight through `updateUserProfile`, which was trivially forgeable (a client
@@ -94,6 +94,19 @@ export async function POST(request: Request) {
       const isNewCareDay = lastCareDate !== today;
       const careActionsToday = isNewCareDay ? 0 : Math.max(0, Number(pet.careActionsToday ?? 0));
 
+      // 1. Drift vitals and compute mood for rewards
+      const now = Date.now();
+      const drifted = computeVitals(pet, now);
+      const mood = getMood(drifted);
+
+      // 2. Enforce "Exhausted" state: cannot Train if energy is too low.
+      if (parsed.action === "train" && drifted.energy < 10) {
+        return NextResponse.json(
+          { error: { code: "pets/exhausted", message: `${pet.name} is too exhausted to train. Let them rest!` } },
+          { status: 400 }
+        );
+      }
+
       // Enforce the daily eco-reward cap server-side (the whole point of moving this here).
       if (action.eco > 0 && careActionsToday >= MAX_ECO_ACTIONS_PER_DAY) {
         return NextResponse.json(
@@ -107,7 +120,8 @@ export async function POST(request: Request) {
       const petXpEligible = parsed.action !== "pet" || petXpToday < MAX_PET_XP_PER_DAY;
       // XP only for the pet action when still under the daily cap; other actions
       // always grant their full XP.
-      const xpToGrant = parsed.action === "pet" ? (petXpEligible ? action.xp : 0) : action.xp;
+      const baseXp = parsed.action === "pet" ? (petXpEligible ? action.xp : 0) : action.xp;
+      const xpToGrant = Math.round(baseXp * mood.multiplier);
 
       // Validate the eco cost can be paid.
       const currentEco = Math.max(0, Number(profile.ecoPoints ?? 0) || 0);
@@ -120,7 +134,8 @@ export async function POST(request: Request) {
 
       const ecoGained = action.eco > 0 && careActionsToday < MAX_ECO_ACTIONS_PER_DAY ? action.eco : 0;
 
-      const now = Date.now();
+      // Reuse the `now` captured above (line 98) so the drift anchor for the
+      // vitals write matches the mood computation — no second Date.now() call.
       const nextAnimals = animals.map((entry) => {
         if (String(entry.id) !== parsed.petId) return entry;
         // Drift the stored vitals to "now" first (authoritative), then apply the
@@ -154,7 +169,7 @@ export async function POST(request: Request) {
         baseXp: xpToGrant,
         baseImpact: 0, // pet care feeds vitality (Phase 2), not the spine
         eco: ecoGained - action.cost, // net eco delta (reward minus cost)
-        meta: { action: parsed.action, petId: parsed.petId, petName: String(pet.name ?? "") },
+        meta: { action: parsed.action, petId: parsed.petId, petName: String(pet.name ?? ""), mood: mood.label },
         payloadPatch: { animals: nextAnimals },
         // Share the locked transaction so the cap checks + grant are atomic.
         tx: { query, user }
@@ -172,7 +187,8 @@ export async function POST(request: Request) {
         ecoCapReached: careActionsToday + 1 >= MAX_ECO_ACTIONS_PER_DAY && action.eco > 0,
         level: granted?.level ?? null,
         xp: granted?.xp ?? null,
-        ecoPoints: granted?.ecoPoints ?? currentEco - action.cost + ecoGained
+        ecoPoints: granted?.ecoPoints ?? currentEco - action.cost + ecoGained,
+        mood: mood
       });
     });
   } catch (error) {
