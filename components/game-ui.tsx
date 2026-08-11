@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { AnimatedNumber, AnimatedProgressBar } from "@/lib/animations";
 
 // ── Shared rarity styles ──────────────────────────────────────
@@ -209,19 +209,30 @@ export function ProgressBar({ value, color = "#2f6b46" }: { value: number; color
 }
 
 // ── Pill ──────────────────────────────────────────────────────
-export function Pill({ children, active = false }: { children: ReactNode; active?: boolean }) {
+export function Pill({
+  children,
+  active = false,
+  className,
+  style
+}: {
+  children: ReactNode;
+  active?: boolean;
+  className?: string;
+  style?: CSSProperties;
+}) {
   return (
     <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]"
-      style={
-        active
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${className ?? ""}`}
+      style={{
+        ...(active
           ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
           : {
               background: "var(--pill-bg)",
               border: "1px solid var(--pill-border)",
               color: "var(--pill-text)"
-            }
-      }
+            }),
+        ...style
+      }}
     >
       {children}
     </span>

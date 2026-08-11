@@ -402,14 +402,14 @@ export default function TeamPage() {
               <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Members</p>
               <div className="flex flex-col divide-y overflow-hidden rounded-xl border" style={{ borderColor: "var(--border-default)" }}>
                 {team?.members?.length > 0 ? team.members.map((m: any, i: number) => (
-                  <Link key={i} href={`/profile/${m.id}`} className="flex items-center justify-between px-4 py-3 transition hover:opacity-80" style={{ background: "var(--bg-panel)" }}>
+                  <Link key={i} href={`/profile/${m.id}`} className="flex flex-col gap-2 py-3 px-4 transition hover:opacity-80 sm:flex-row sm:items-center sm:justify-between" style={{ background: "var(--bg-panel)" }}>
                     <div className="flex items-center gap-3">
                       <Avatar name={m.name || "Member"} src={m.profileImage} size={32} />
                       <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                         {m.role === "leader" ? "👑 " : ""}{m.name}
                       </span>
                     </div>
-                    <span className="text-xs font-bold" style={{ color: "var(--text-secondary)" }}>{(m.xp || 0).toLocaleString()} XP</span>
+                    <Pill className="w-fit self-start sm:self-auto" style={{ color: "var(--text-secondary)" }}>{(m.xp || 0).toLocaleString()} XP</Pill>
                   </Link>
                 )) : (
                   <div className="px-4 py-4 text-sm text-center" style={{ color: "var(--text-muted)" }}>No members yet</div>
@@ -530,7 +530,7 @@ export default function TeamPage() {
                     <p className="truncate text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{m.name}</p>
                     <p className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>{m.role}</p>
                   </div>
-                  <span className="font-serif text-base font-bold" style={{ color: "var(--text-secondary)" }}>{(m.xp || 0).toLocaleString()} XP</span>
+                  <Pill className="whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>{(m.xp || 0).toLocaleString()} XP</Pill>
                 </Link>
               ))}
               {(!team?.members || team.members.length === 0) && (
