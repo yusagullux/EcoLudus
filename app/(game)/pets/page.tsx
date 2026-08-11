@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
-import { computeVitals } from "@/lib/pet-vitals";
+import { computeVitals, getBondTier, getMood } from "@/lib/pet-vitals";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { PET_EMOJI } from "@/lib/ui-shared";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -36,7 +36,7 @@ function PetImage({
 
   const fitClass =
     fit === "contain"
-      ? "object-contain p-0 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]"
+      ? "object-cover p-0 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]"
       : "object-cover";
 
   return (
@@ -226,6 +226,17 @@ export default function PetsPage() {
   const selectedBond = Number(selectedPet?.bond ?? 10);
   const selectedPetsGiven = Number(selectedPet?.petsGiven ?? 0);
   const selectedMood = getPetMood(selectedHappiness, selectedEnergy, selectedBond);
+  // `selectedPet` is already drifted by `normalizePet`, so build the PetVitals
+  // shape from the derived stats directly — re-running computeVitals would
+  // apply a second round of decay/regen from the same anchor (double drift).
+  const vitalsMood = getMood({
+    happiness: selectedHappiness,
+    energy: selectedEnergy,
+    bond: selectedBond,
+    daysMissed: 0,
+    hoursRested: 0
+  });
+  const bondTier = getBondTier(selectedBond);
   const selectedBondLevel = getBondLevel(selectedBond);
   const careActionsToday = Number(selectedPet?.careActionsToday ?? 0);
   // Whether the daily eco reward cap has been reached for the active pet.
@@ -262,7 +273,12 @@ export default function PetsPage() {
         </Panel>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-          <Panel eyebrow="Active companion" title={selectedPet.name} action={<Pill active>{selectedPet.rarity || "common"}</Pill>}>
+          <Panel eyebrow="Active companion" title={selectedPet.name} action={
+            <div className="flex gap-2">
+              <Pill active>{selectedPet.rarity || "common"}</Pill>
+              <Pill>{vitalsMood.emoji} {vitalsMood.label}</Pill>
+            </div>
+          }>
             <div className="flex flex-col items-center gap-4 text-center">
               <button
                 type="button"
@@ -346,6 +362,16 @@ export default function PetsPage() {
 
           <Panel eyebrow="Companion stats" title="Care Notes">
             <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{bondTier.emoji}</span>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Bond Status</p>
+                    <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{bondTier.label}</p>
+                  </div>
+                </div>
+                <Pill active>{selectedBond}%</Pill>
+              </div>
               <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Mood</p>
                 <p className="mt-1 font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>

@@ -33,6 +33,36 @@ export interface PetVitals {
   hoursRested: number;
 }
 
+export interface PetMood {
+  label: string;
+  emoji: string;
+  multiplier: number; // Reward multiplier (e.g. 1.2 for ecstatic)
+}
+
+export function getMood(vitals: PetVitals): PetMood {
+  const { happiness, energy } = vitals;
+
+  if (happiness < 30) {
+    return { label: "Sad", emoji: "😢", multiplier: 0.8 };
+  }
+  if (energy < 20) {
+    return { label: "Exhausted", emoji: "💤", multiplier: 0.9 };
+  }
+  if (happiness > 80 && energy > 50) {
+    return { label: "Ecstatic", emoji: "🌟", multiplier: 1.2 };
+  }
+  if (happiness > 60) {
+    return { label: "Happy", emoji: "😊", multiplier: 1.0 };
+  }
+  return { label: "Neutral", emoji: "😐", multiplier: 1.0 };
+}
+
+export function getBondTier(bond: number) {
+  if (bond >= 80) return { label: "Soulmate", emoji: "💖" };
+  if (bond >= 40) return { label: "Companion", emoji: "🤝" };
+  return { label: "Acquaintance", emoji: "🐣" };
+}
+
 function clampStat(value: unknown, fallback: number): number {
   const n = Number(value ?? fallback);
   return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : fallback;
