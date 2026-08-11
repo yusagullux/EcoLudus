@@ -392,7 +392,7 @@ export default function FriendsPage() {
         <Panel eyebrow="Pending connections" title="Friend Requests">
           <div className="grid gap-3 sm:grid-cols-2">
             {friendRequests.map((req: any) => (
-              <article key={req.id || req.uid} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+              <article key={req.id || req.uid} className="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                 <Link href={`/profile/${req.id || req.uid}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
                   <Avatar name={req.displayName || "Anonymous"} src={req.profileImage} size={44} />
                   <div className="min-w-0">
@@ -404,12 +404,12 @@ export default function FriendsPage() {
                     </div>
                   </div>
                 </Link>
-                <div className="flex gap-2 shrink-0">
+                <div className="grid grid-cols-2 gap-2 shrink-0 sm:flex sm:w-auto">
                   <button
                     type="button"
                     onClick={() => acceptFriendRequest(req)}
                     disabled={busyId === (req.id || req.uid)}
-                    className={primaryButton}
+                    className={`w-full sm:w-auto ${primaryButton}`}
                   >
                     {busyId === (req.id || req.uid) ? "Accepting…" : "Accept"}
                   </button>
@@ -417,7 +417,7 @@ export default function FriendsPage() {
                     type="button"
                     onClick={() => declineFriendRequest(req)}
                     disabled={busyId === (req.id || req.uid)}
-                    className={secondaryButton}
+                    className={`w-full sm:w-auto ${secondaryButton}`}
                   >
                     {busyId === (req.id || req.uid) ? "Declining…" : "Decline"}
                   </button>
@@ -464,7 +464,7 @@ export default function FriendsPage() {
               const isIncoming = friendRequestsSet.has(player.id);
 
               return (
-                <article key={player.id} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
+                <article key={player.id} className="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
                   <Link href={`/profile/${player.id}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
                     <Avatar name={player.displayName} src={player.profileImage} size={44} />
                     <div className="min-w-0">
@@ -476,9 +476,9 @@ export default function FriendsPage() {
                       </div>
                     </div>
                   </Link>
-                  <div className="shrink-0">
+                  <div className="shrink-0 sm:self-center">
                     {isSent ? (
-                      <button type="button" disabled className={secondaryButton}>
+                      <button type="button" disabled className={`w-full sm:w-auto ${secondaryButton}`}>
                         Sent
                       </button>
                     ) : isIncoming ? (
@@ -486,7 +486,7 @@ export default function FriendsPage() {
                         type="button"
                         onClick={() => acceptFriendRequest(player)}
                         disabled={busyId === player.id}
-                        className={primaryButton}
+                        className={`w-full sm:w-auto ${primaryButton}`}
                       >
                         {busyId === player.id ? "Accepting…" : "Accept"}
                       </button>
@@ -495,7 +495,7 @@ export default function FriendsPage() {
                         type="button"
                         onClick={() => sendFriendRequest(player)}
                         disabled={busyId === player.id}
-                        className={primaryButton}
+                        className={`w-full sm:w-auto ${primaryButton}`}
                       >
                         {busyId === player.id ? "Sending…" : "Add"}
                       </button>
@@ -536,24 +536,26 @@ export default function FriendsPage() {
                       <Avatar name={friend.displayName || friend.email || "Eco Explorer"} src={friend.profileImage} size={40} />
                       <div className="min-w-0">
                         <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }} title={friend.displayName || friend.email}>{friend.displayName || friend.email}</p>
-                        <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>
-                          Level {friend.level || 1} - {Number(friend.xp || 0).toLocaleString()} XP - {Number(friend.cheers || 0)} cheer{Number(friend.cheers || 0) === 1 ? "" : "s"} sent
-                        </p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          <Pill>Lv {friend.level || 1}</Pill>
+                          <Pill>{Number(friend.xp || 0).toLocaleString()} XP</Pill>
+                          <Pill>{Number(friend.cheers || 0)} cheer{Number(friend.cheers || 0) === 1 ? "" : "s"}</Pill>
+                          <Pill active={Number(friend.xp || 0) <= myXp}>{Number(friend.xp || 0) <= myXp ? "You lead" : "Ahead"}</Pill>
+                        </div>
                       </div>
                     </Link>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Pill active={Number(friend.xp || 0) <= myXp}>{Number(friend.xp || 0) <= myXp ? "You lead" : "Ahead"}</Pill>
+                  <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:justify-end">
                     <button
                       type="button"
                       onClick={() => cheerFriend(friend)}
                       disabled={cheersTodayDisplay >= 5}
-                      className={cheersTodayDisplay >= 5 ? secondaryButton : primaryButton}
+                      className={`flex-1 sm:flex-none ${cheersTodayDisplay >= 5 ? secondaryButton : primaryButton}`}
                       title={cheersTodayDisplay >= 5 ? "Daily cheer limit reached" : undefined}
                     >
                       {cheersTodayDisplay >= 5 ? "Limit reached" : "Cheer"}
                     </button>
-                    <button type="button" onClick={() => setFriendToRemove(friend)} className={secondaryButton}>
+                    <button type="button" onClick={() => setFriendToRemove(friend)} className={`flex-1 sm:flex-none ${secondaryButton}`}>
                       Remove
                     </button>
                   </div>

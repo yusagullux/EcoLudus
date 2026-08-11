@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Inter } from "next/font/google";
+import { Baloo_2, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -10,7 +10,7 @@ const headingFont = Baloo_2({
   display: "swap"
 });
 
-const bodyFont = Inter({
+const bodyFont = Open_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "600", "700"],

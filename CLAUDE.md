@@ -39,7 +39,7 @@ Next.js App Router. Two route layers:
 - **Root (marketing/unauth):** `app/page.tsx`, `app/landing`, `app/login`, `app/signup`, `app/legal/*`.
 - **`app/(game)/`** — authenticated app behind a shared `layout.tsx` that calls `useAuth()` and renders the `Sidebar` + `ThemeProvider`. Pages: `dashboard`, `habits`, `shop`, `collection`, `garden`, `pets`, `insights`, `impact`, `premium`, `profile`, `team`, `friends`, `leaderboard`, `settings`.
 
-`app/layout.tsx` is the root layout (fonts: Baloo_2 headings, Inter body; Vercel Analytics; JSON-LD; manifest).
+`app/layout.tsx` is the root layout (fonts: Baloo_2 headings, Open Sans body; Vercel Analytics; JSON-LD; manifest).
 
 ### Auth
 

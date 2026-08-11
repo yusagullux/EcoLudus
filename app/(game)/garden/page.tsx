@@ -447,7 +447,7 @@ export default function GardenPage() {
       <StaggerItem as="div">
       <div className="grid gap-3 md:grid-cols-3">
         <Panel eyebrow="Next action" title={harvestableCount > 0 ? "Harvest Ready" : "Garden Status"}>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                 {harvestableCount > 0
@@ -465,7 +465,7 @@ export default function GardenPage() {
               </p>
             </div>
             {harvestableCount > 0 && (
-              <button type="button" onClick={harvestAll} className={primaryButton}>
+              <button type="button" onClick={harvestAll} className={`w-full sm:w-auto ${primaryButton}`}>
                 Harvest All
               </button>
             )}

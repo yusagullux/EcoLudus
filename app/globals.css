@@ -3,8 +3,8 @@
 @theme {
   /* Baloo 2 for all display/heading text — used via `font-serif` class in JSX */
   --font-serif: var(--font-heading), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
-  /* Inter for all body/paragraph/UI text — used via `font-sans` class in JSX */
-  --font-sans: var(--font-body), "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Open Sans for all body/paragraph/UI text — used via `font-sans` class in JSX */
+  --font-sans: var(--font-body), "Open Sans", ui-sans-serif, system-ui, sans-serif;
   --color-forest-50: #f5f7f0;
   --color-forest-100: #e9efe0;
   --color-forest-200: #d4dfc8;
@@ -80,9 +80,9 @@
 /* Font wiring — these connect Next.js injected vars to our design tokens */
 :root {
   /* --font-heading is injected by Next.js Baloo_2({ variable: "--font-heading" }) */
-  /* --font-body    is injected by Next.js Inter({ variable: "--font-body" }) */
+  /* --font-body    is injected by Next.js Open_Sans({ variable: "--font-body" }) */
   --font-heading-font: var(--font-heading), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
-  --font-body-font:    var(--font-body), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body-font:    var(--font-body), "Open Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root,
@@ -406,7 +406,7 @@ html, body {
 body {
   background: var(--bg-page);
   color: var(--text-primary);
-  /* Inter for all body/paragraph text */
+  /* Open Sans for all body/paragraph text */
   font-family: var(--font-body-font);
   line-height: 1.6;
   /* Smooth theme transitions */
@@ -419,7 +419,7 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.15;
 }
 
-/* Labels, nav items, buttons — stay Inter */
+/* Labels, nav items, buttons — stay Open Sans */
 label, button, input, select, textarea, nav {
   font-family: var(--font-body-font);
 }
@@ -445,7 +445,7 @@ label, button, input, select, textarea, nav {
   outline-color: #c2822a;
 }
 
-/* Explicit paragraph styling — Inter, relaxed line-height */
+/* Explicit paragraph styling — Open Sans, relaxed line-height */
 p, li, td, th, blockquote, figcaption {
   font-family: var(--font-body-font);
   line-height: 1.65;
