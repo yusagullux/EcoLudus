@@ -323,7 +323,13 @@ export default function PetsPage() {
 
               <div className="grid w-full max-w-[360px] gap-3 sm:grid-cols-3">
                 {CARE_ACTIONS.map((action) => {
-                  const blocked = action.eco > 0 && ecoCapReached;
+                  // `train` is server-rejected when energy < 10 — disable it
+                  // upfront so the user isn't told via a toast after clicking.
+                  const exhausted = action.id === "train" && selectedEnergy < 10;
+                  const blocked = (action.eco > 0 && ecoCapReached) || exhausted;
+                  const blockTitle = exhausted
+                    ? "Too exhausted to train — rest to recover energy first"
+                    : `Daily eco limit reached (${MAX_ECO_ACTIONS_PER_DAY}/day)`;
                   return (
                     <button
                       key={action.id}
@@ -331,7 +337,7 @@ export default function PetsPage() {
                       onClick={() => runCareAction(action)}
                       disabled={blocked}
                       className={`${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
-                      title={blocked ? `Daily eco limit reached (${MAX_ECO_ACTIONS_PER_DAY}/day)` : undefined}
+                      title={blocked ? blockTitle : undefined}
                     >
                       {action.label}
                       <span className="ml-1 opacity-70" title={action.cost ? "EcoPoints" : "Experience points"}>

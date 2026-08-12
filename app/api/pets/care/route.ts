@@ -143,16 +143,28 @@ export async function POST(request: Request) {
         // computeVitals matches between interactions. Bond doesn't drift, so the
         // bond action reads from the clamped stored value.
         const drifted = computeVitals(entry, now);
-        const currentStatValue =
-          action.stat === "bond" ? clampStat(entry.bond, 10) : action.stat === "energy" ? drifted.energy : drifted.happiness;
+        // Build each stat once. The previous literal had two `happiness` keys
+        // when action.stat === "happiness" (the computed `[action.stat]` key and
+        // the explicit `happiness` key), and the second — a +0 "bonus" — won,
+        // so `play`/`pet` granted ZERO happiness. Intent: the primary stat gets
+        // +amount; non-happiness actions also give a small +4 happiness bump.
+        const nextHappiness =
+          action.stat === "happiness"
+            ? Math.min(100, drifted.happiness + action.amount)
+            : Math.min(100, drifted.happiness + 4);
+        const nextEnergy =
+          action.stat === "energy"
+            ? Math.min(100, drifted.energy + action.amount)
+            : drifted.energy;
         return {
           ...entry,
-          [action.stat]: Math.min(100, currentStatValue + action.amount),
-          happiness: Math.min(
-            100,
-            drifted.happiness + (action.stat === "happiness" ? 0 : 4)
-          ),
-          energy: action.stat === "energy" ? Math.min(100, drifted.energy + action.amount) : drifted.energy,
+          happiness: nextHappiness,
+          energy: nextEnergy,
+          // Bond doesn't drift — only write it when this is the bond action;
+          // otherwise leave the stored value untouched via `...entry`.
+          ...(action.stat === "bond"
+            ? { bond: Math.min(100, clampStat(entry.bond, 10) + action.amount) }
+            : {}),
           petsGiven: Number(entry.petsGiven ?? 0) + 1,
           careActionsToday: careActionsToday + 1,
           petXpToday: parsed.action === "pet" ? (petXpEligible ? petXpToday + 1 : Number(entry.petXpToday ?? 0)) : Number(entry.petXpToday ?? 0),
