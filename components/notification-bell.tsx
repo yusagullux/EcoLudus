@@ -78,7 +78,11 @@ export function NotificationBell() {
       </button>
 
       <MotionPresence
-        className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-xl shadow-xl"
+        // Mobile: bell is at the viewport's right edge → right-0 + the
+        // 100vw-capped width keeps the panel on-screen. Desktop: bell is at the
+        // right end of the 240px sidebar, so right-0 would push a 320px panel
+        // off-screen left; switch to left-0 so it opens rightward into content.
+        className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-xl shadow-xl md:left-0 md:right-auto"
       >
         {open ? (
           <div
