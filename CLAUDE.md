@@ -85,10 +85,6 @@ Three cron routes, all gated by `Authorization: Bearer <CRON_SECRET>` and export
 - `/api/cron/send-weekly-reports` — 08:00 UTC Mondays; SendGrid impact emails (`lib/email-templates/`).
 - `/api/cron/keep-alive` — 04:00 UTC daily.
 
-### Styling
-
-Tailwind v4 (`@tailwindcss/postcss` + `postcss.config.cjs`, `app/globals.css`). Theme toggle via `lib/useTheme.tsx` using CSS variables. `public/quests.json` is served as a static asset (1h cache).
-
 ## Conventions
 
 - **Always authenticate first** in API routes: `const session = await getSession(); if (!session) return 401`.

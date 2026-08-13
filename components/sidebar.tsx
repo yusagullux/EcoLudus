@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { logOut } from "@/lib/auth-client";
 import { Avatar } from "@/components/avatar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { NotificationBell } from "@/components/notification-bell";
 
 type SidebarProps = { user: any; profile: any };
 
@@ -164,15 +165,18 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* ── Logo ── */}
-      <div className="flex items-center gap-3 px-5 py-5 shrink-0">
-        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-xl bg-white/10">
-          <Image src="/images/logo.png" alt="EcoLudus" fill className="object-cover" priority sizes="32px" />
+      {/* ── Logo + notification bell ── */}
+      <div className="flex items-center justify-between px-5 py-5 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-xl bg-white/10">
+            <Image src="/images/logo.png" alt="EcoLudus" fill className="object-cover" priority sizes="32px" />
+          </div>
+          <div>
+            <div className="font-serif text-[15px] font-extrabold leading-none tracking-wide" style={{ color: "var(--text-sidebar)" }}>EcoLudus</div>
+            <div className="mt-0.5 text-[8px] font-black uppercase tracking-[0.28em]" style={{ color: "var(--text-sidebar-muted)" }}>Forest Edition</div>
+          </div>
         </div>
-        <div>
-          <div className="font-serif text-[15px] font-extrabold leading-none tracking-wide" style={{ color: "var(--text-sidebar)" }}>EcoLudus</div>
-          <div className="mt-0.5 text-[8px] font-black uppercase tracking-[0.28em]" style={{ color: "var(--text-sidebar-muted)" }}>Forest Edition</div>
-        </div>
+        <NotificationBell />
       </div>
 
       {/* ── User chip ── */}
@@ -376,6 +380,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
         </Link>
 
         <div className="flex items-center gap-2">
+          <NotificationBell />
           {profile && (
             <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5" style={{ background: "var(--sidebar-active-bg)" }}>
               <Avatar
