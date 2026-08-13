@@ -21,9 +21,9 @@
             "increment": 1,
             "unit": "trash items"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false,
+          "xp": 60,
+          "ecoCoins": 45,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -39,10 +39,10 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 35,
-          "ecoCoins": 25,
+          "xp": 55,
+          "ecoCoins": 40,
           "requiresPhoto": true,
-          "difficulty": "medium"
+          "difficulty": "easy"
         },
         {
           "id": "recycling_3",
@@ -57,10 +57,10 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 35,
-          "ecoCoins": 25,
+          "xp": 55,
+          "ecoCoins": 40,
           "requiresPhoto": true,
-          "difficulty": "medium"
+          "difficulty": "easy"
         },
         {
           "id": "recycling_4",
@@ -75,10 +75,10 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
+          "xp": 45,
+          "ecoCoins": 30,
           "requiresPhoto": true,
-          "difficulty": "medium"
+          "difficulty": "easy"
         },
         {
           "id": "recycling_5",
@@ -93,9 +93,9 @@
             "increment": 1,
             "unit": "meal"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -111,9 +111,9 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -129,15 +129,15 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 25,
-          "ecoCoins": 15,
-          "requiresPhoto": false,
+          "xp": 40,
+          "ecoCoins": 25,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "recycling_8",
-          "shortName": "Donate Old Clothes",
-          "description": "Donate or give away clothes you no longer wear instead of throwing them away, extending their life and reducing waste.",
+          "shortName": "Use a Reusable Produce Bag",
+          "description": "Bring a reusable produce bag for fruit or vegetables instead of using the thin plastic bags at the store. Snap a photo of your reusable bag in use.",
           "carbonFootprintReduction": 3,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -145,17 +145,17 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "session"
+            "unit": "shopping"
           },
-          "xp": 45,
-          "ecoCoins": 35,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 70,
+          "ecoCoins": 55,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "recycling_9",
-          "shortName": "Repair Instead of Replace",
-          "description": "Fix or repair a broken item instead of throwing it away and buying a new one, reducing waste and saving resources.",
+          "shortName": "Choose a Product with Less Packaging",
+          "description": "Pick one product with minimal or recyclable packaging over a heavily packaged alternative. Snap a photo of the lower-packaging item you chose.",
           "carbonFootprintReduction": 2.5,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -163,12 +163,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "item"
+            "unit": "product"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 60,
+          "ecoCoins": 45,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "recycling_10",
@@ -183,9 +183,9 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         }
       ]
@@ -200,8 +200,8 @@
       "quests": [
         {
           "id": "energy_1",
-          "shortName": "Turn Off Lights in Empty Rooms",
-          "description": "Save energy by turning off lights whenever you leave a room.",
+          "shortName": "Use Natural Light Instead of a Lamp",
+          "description": "Open the curtains and work or read by daylight instead of turning on an electric light. Snap a photo of your naturally lit space.",
           "carbonFootprintReduction": 1.2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -211,16 +211,15 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "energy_2",
-          "shortName": "Unplug Devices When Fully Charged",
-          "description": "Unplug your phone, laptop, or other devices once they reach 100% charge to prevent unnecessary energy consumption.",
+          "shortName": "Unplug One Appliance You're Not Using",
+          "description": "Unplug one appliance or device you aren't currently using to stop it drawing standby power. Snap a photo of the unplugged plug.",
           "carbonFootprintReduction": 0.8,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -228,18 +227,17 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "appliance"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "energy_3",
-          "shortName": "Charge Phone Only When Needed",
-          "description": "Unplug your phone charger when not in use and only charge when the battery is low.",
+          "shortName": "Match Pot Size to the Burner",
+          "description": "Use a pot or pan that matches the size of your stove burner so heat isn't wasted around the edges. Snap a photo of the pot on the burner.",
           "carbonFootprintReduction": 0.2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -247,18 +245,17 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "meal"
           },
-          "xp": 25,
-          "ecoCoins": 15,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 40,
+          "ecoCoins": 25,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "energy_4",
-          "shortName": "Turn Off Screen When Not Using",
-          "description": "Turn off your computer, TV, or tablet screen when not actively using it to save energy.",
+          "shortName": "Batch Cook and Store Portions",
+          "description": "Cook several portions at once and refrigerate or freeze the extras instead of cooking from scratch each time. Snap a photo of your batch-cooked portions.",
           "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -266,18 +263,17 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "session"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "energy_5",
-          "shortName": "Turn Off Electronics at Night",
-          "description": "Save energy by completely turning off your computer, TV, and other electronics when not in use, especially overnight.",
+          "shortName": "Boil Only the Water You Need",
+          "description": "Fill your kettle or pot with only the amount of water you'll actually use, so you don't waste energy heating extra. Snap a photo of the kettle with just enough water.",
           "carbonFootprintReduction": 0.8,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -285,13 +281,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "night"
+            "unit": "kettle"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "energy_6",
@@ -306,9 +301,9 @@
             "increment": 1,
             "unit": "meal"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -324,15 +319,15 @@
             "increment": 1,
             "unit": "load"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "energy_8",
-          "shortName": "Turn Off TV When Not Watching",
-          "description": "Turn off your TV completely when not actively watching instead of leaving it on in the background to save energy.",
+          "shortName": "Boil Water in a Kettle, Not on the Stove",
+          "description": "Use an electric kettle to boil water instead of a stovetop pot — kettles are more energy-efficient. Snap a photo of the kettle boiling the water.",
           "carbonFootprintReduction": 0.8,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -340,13 +335,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "kettle"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "energy_9",
@@ -361,11 +355,10 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 25,
-          "ecoCoins": 15,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 40,
+          "ecoCoins": 25,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "energy_10",
@@ -380,10 +373,10 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "energy_11",
@@ -398,9 +391,9 @@
             "increment": 1,
             "unit": "meal"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -416,11 +409,10 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         }
       ]
     },
@@ -434,8 +426,8 @@
       "quests": [
         {
           "id": "transportation_1",
-          "shortName": "Skip One Unnecessary Trip",
-          "description": "Avoid making one unnecessary trip by combining errands, using online services, or postponing non-urgent travel.",
+          "shortName": "Carry More in One Trip with a Bag or Basket",
+          "description": "Use a backpack, basket, or sturdy bag to carry more in a single trip so you do not need an extra one. Snap a photo of your loaded bag or basket.",
           "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -443,13 +435,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "trip"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "transportation_2",
@@ -464,9 +455,9 @@
             "increment": 1,
             "unit": "trip"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false,
+          "xp": 60,
+          "ecoCoins": 45,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -482,9 +473,9 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -500,9 +491,9 @@
             "increment": 1,
             "unit": "trip"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -518,10 +509,10 @@
             "increment": 1,
             "unit": "trip"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 60,
+          "ecoCoins": 45,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "transportation_6",
@@ -536,10 +527,10 @@
             "increment": 1,
             "unit": "trip"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "transportation_7",
@@ -554,9 +545,9 @@
             "increment": 1,
             "unit": "trip"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false,
+          "xp": 60,
+          "ecoCoins": 45,
+          "requiresPhoto": true,
           "difficulty": "easy"
         }
       ]
@@ -571,8 +562,8 @@
       "quests": [
         {
           "id": "water_1",
-          "shortName": "Turn Off Water While Brushing",
-          "description": "Turn off the tap while brushing your teeth to save gallons of water daily.",
+          "shortName": "Use a Cup of Water to Rinse While Brushing",
+          "description": "Fill a small cup with water to rinse your mouth while brushing instead of leaving the tap running. Snap a photo of the cup of water by your sink.",
           "carbonFootprintReduction": 0.1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -580,30 +571,29 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "brush"
           },
-          "xp": 25,
-          "ecoCoins": 15,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 40,
+          "ecoCoins": 25,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "water_2",
-          "shortName": "Reduce Shower Time by 2 Minutes",
-          "description": "Cut your shower time by at least 2 minutes to save water and energy.",
+          "shortName": "Use a Shower Timer",
+          "description": "Set a timer and finish your shower in 4 minutes or less to save water and the energy used to heat it. Snap a photo of your shower timer or clock.",
           "carbonFootprintReduction": 0.5,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
-            "type": "duration",
+            "type": "boolean",
             "current": 0,
-            "max": 2,
+            "max": 1,
             "increment": 1,
-            "unit": "minutes"
+            "unit": "shower"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -619,15 +609,15 @@
             "increment": 1,
             "unit": "meal"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "water_4",
-          "shortName": "Use Dishwasher Efficiently",
-          "description": "Run your dishwasher only when it's fully loaded and use the eco-mode setting to save water and energy.",
+          "shortName": "Wash Dishes in a Basin, Not Under Running Water",
+          "description": "Fill a basin or sink with soapy water to wash your dishes instead of rinsing them under a running tap. Snap a photo of the dishes soaking in the basin.",
           "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -637,10 +627,10 @@
             "increment": 1,
             "unit": "load"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "water_5",
@@ -655,9 +645,9 @@
             "increment": 1,
             "unit": "meal"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -673,9 +663,9 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         }
       ]
@@ -701,15 +691,15 @@
             "increment": 1,
             "unit": "trash items"
           },
-          "xp": 40,
-          "ecoCoins": 30,
+          "xp": 60,
+          "ecoCoins": 45,
           "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "cleanup_2",
-          "shortName": "Declutter and Donate Items",
-          "description": "Sort through your belongings and donate or recycle items you no longer need instead of throwing them away.",
+          "shortName": "Set Aside One Item to Donate",
+          "description": "Choose one item you no longer need and set it aside in a donation box or pile instead of throwing it away. Snap a photo of the item set aside for donation.",
           "carbonFootprintReduction": 2.5,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -717,12 +707,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "session"
+            "unit": "item"
           },
-          "xp": 40,
-          "ecoCoins": 30,
+          "xp": 60,
+          "ecoCoins": 45,
           "requiresPhoto": true,
-          "difficulty": "medium"
+          "difficulty": "easy"
         },
         {
           "id": "cleanup_3",
@@ -737,15 +727,15 @@
             "increment": 1,
             "unit": "workspace"
           },
-          "xp": 35,
-          "ecoCoins": 25,
+          "xp": 55,
+          "ecoCoins": 40,
           "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "cleanup_4",
-          "shortName": "Organize Digital Files",
-          "description": "Clean up and organize your digital files, delete unnecessary files, and unsubscribe from unwanted emails to reduce digital waste.",
+          "shortName": "Clean a Shared Hallway or Stairwell",
+          "description": "Tidy and clean a shared hallway, stairwell, or entrance in your building, disposing of any waste. Snap a photo of the cleaned area.",
           "carbonFootprintReduction": 0.5,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -755,9 +745,9 @@
             "increment": 1,
             "unit": "session"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -769,14 +759,14 @@
           "progressLogic": {
             "type": "count",
             "current": 0,
-            "max": 5,
+            "max": 2,
             "increment": 1,
             "unit": "trash items"
           },
-          "xp": 50,
-          "ecoCoins": 40,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 75,
+          "ecoCoins": 60,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "cleanup_6",
@@ -791,9 +781,9 @@
             "increment": 1,
             "unit": "session"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false,
+          "xp": 60,
+          "ecoCoins": 45,
+          "requiresPhoto": true,
           "difficulty": "easy"
         }
       ]
@@ -819,15 +809,15 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
+          "xp": 45,
+          "ecoCoins": 30,
           "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "gardening_2",
-          "shortName": "Use Natural Light During Day",
-          "description": "Open curtains and use natural sunlight instead of turning on lights during daytime hours.",
+          "shortName": "Water Your Plants",
+          "description": "Water a houseplant or garden plant today to keep it healthy. Snap a photo of you watering the plant.",
           "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -835,11 +825,11 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "session"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -855,15 +845,15 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
+          "xp": 45,
+          "ecoCoins": 30,
           "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "gardening_4",
-          "shortName": "Start Indoor Plant",
-          "description": "Start growing an indoor plant or herb garden to improve air quality and connect with nature.",
+          "shortName": "Move a Plant to a Sunnier Spot",
+          "description": "Move a plant closer to a window or into better sunlight so it grows well. Snap a photo of the plant in its sunnier spot.",
           "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -873,9 +863,9 @@
             "increment": 1,
             "unit": "plant"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -891,9 +881,9 @@
             "increment": 1,
             "unit": "shopping"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -909,9 +899,9 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         }
       ]
@@ -926,8 +916,8 @@
       "quests": [
         {
           "id": "sustainable_1",
-          "shortName": "Compost Food Scraps",
-          "description": "Start composting your food scraps instead of throwing them in the trash to reduce waste and create nutrient-rich soil.",
+          "shortName": "Save Food Scraps to Make Stock",
+          "description": "Collect vegetable scraps in a container to freeze for homemade stock instead of throwing them away. Snap a photo of your saved scraps.",
           "carbonFootprintReduction": 2,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -935,12 +925,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "session"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_2",
@@ -955,9 +945,9 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -973,15 +963,15 @@
             "increment": 1,
             "unit": "meal"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false,
+          "xp": 60,
+          "ecoCoins": 45,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "sustainable_4",
-          "shortName": "Unplug Unused Chargers",
-          "description": "Unplug phone chargers, laptop chargers, and other electronics when not in use to save energy.",
+          "shortName": "Drink Tap Water Instead of Bottled",
+          "description": "Pour yourself a glass of tap water instead of opening a single-use plastic bottle. Snap a photo of the glass of tap water.",
           "carbonFootprintReduction": 0.5,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -991,11 +981,10 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 25,
-          "ecoCoins": 15,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 40,
+          "ecoCoins": 25,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_5",
@@ -1010,10 +999,10 @@
             "increment": 1,
             "unit": "shopping"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_6",
@@ -1028,15 +1017,15 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "sustainable_7",
-          "shortName": "Buy Second-Hand Items",
-          "description": "Purchase at least one item second-hand or from a thrift store instead of buying new, reducing manufacturing waste.",
+          "shortName": "Eat Leftovers for One Meal",
+          "description": "Finish leftovers from a previous meal instead of making or buying something new, cutting food waste. Snap a photo of the leftover meal.",
           "carbonFootprintReduction": 2.5,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -1044,12 +1033,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "item"
+            "unit": "meal"
           },
-          "xp": 40,
-          "ecoCoins": 30,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 60,
+          "ecoCoins": 45,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_8",
@@ -1064,9 +1053,9 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -1082,15 +1071,15 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "sustainable_10",
-          "shortName": "Use Reusable Water Filter",
-          "description": "Use a reusable water filter or filter pitcher instead of buying bottled water to reduce plastic waste.",
+          "shortName": "Make a Drink at Home Instead of Buying It",
+          "description": "Make a coffee, tea, or other drink at home instead of buying one in a disposable cup. Snap a photo of the homemade drink.",
           "carbonFootprintReduction": 1,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -1098,12 +1087,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "day"
+            "unit": "drink"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_11",
@@ -1118,15 +1107,15 @@
             "increment": 1,
             "unit": "snack"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
           "id": "sustainable_12",
-          "shortName": "Share or Borrow an Item",
-          "description": "Borrow, lend, or share an item with someone instead of buying something new.",
+          "shortName": "Reuse Scrap Paper for Notes",
+          "description": "Write your notes or a list on the back of already-used paper instead of a fresh sheet. Snap a photo of the notes on scrap paper.",
           "carbonFootprintReduction": 1.5,
           "carbonFootprintUnit": "kg CO2",
           "progressLogic": {
@@ -1134,12 +1123,12 @@
             "current": 0,
             "max": 1,
             "increment": 1,
-            "unit": "item"
+            "unit": "note"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
-          "difficulty": "medium"
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "sustainable_13",
@@ -1154,9 +1143,9 @@
             "increment": 1,
             "unit": "load"
           },
-          "xp": 35,
-          "ecoCoins": 25,
-          "requiresPhoto": false,
+          "xp": 55,
+          "ecoCoins": 40,
+          "requiresPhoto": true,
           "difficulty": "easy"
         },
         {
@@ -1172,11 +1161,10 @@
             "increment": 1,
             "unit": "plan"
           },
-          "xp": 30,
-          "ecoCoins": 20,
-          "requiresPhoto": false,
-          "difficulty": "easy",
-          "requiresProof": false
+          "xp": 45,
+          "ecoCoins": 30,
+          "requiresPhoto": true,
+          "difficulty": "easy"
         },
         {
           "id": "gamified_pet_1",
@@ -1191,8 +1179,8 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 40,
-          "ecoCoins": 30,
+          "xp": 60,
+          "ecoCoins": 45,
           "requiresPhoto": false,
           "difficulty": "easy",
           "requiresProof": false
@@ -1210,8 +1198,8 @@
             "increment": 1,
             "unit": "day"
           },
-          "xp": 100,
-          "ecoCoins": 80,
+          "xp": 150,
+          "ecoCoins": 120,
           "requiresPhoto": false,
           "difficulty": "easy",
           "requiresProof": false
@@ -1220,8 +1208,8 @@
     }
   ],
   "metadata": {
-    "version": "2.7.0",
-    "lastUpdated": "2026-08-03",
+    "version": "1.0.0",
+    "lastUpdated": "2026-08-13",
     "totalCategories": 7,
     "totalQuests": 63,
     "difficultyLevels": {
