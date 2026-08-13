@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { motion } from "motion/react";
 import { useAuth } from "@/lib/useAuth";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
 import { HeroMetric, PageHero, Panel, Pill, primaryButton, secondaryButton, PillFilterBar, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
@@ -11,7 +12,7 @@ import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PET_EMOJI } from "@/lib/ui-shared";
-import { StaggerContainer, StaggerItem, TabPanel } from "@/lib/animations";
+import { StaggerContainer, StaggerItem, TabPanel, RewardGlow, AnimatedNumber } from "@/lib/animations";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
 // discoverable species (sourced from the catalog APIs), not just what the user
@@ -153,6 +154,17 @@ export default function CollectionPage() {
   const [chestState, setChestState] = useState<"closed" | "shaking" | "opened">("closed");
   const [chestParticles, setChestParticles] = useState<Array<{ id: number; dx: number; dy: number; color: string }>>([]);
   const [selectingPetId, setSelectingPetId] = useState<string | null>(null);
+
+  // "New discovery" detection — when a chest/hatch yields a species the user
+  // has never owned before, the reveal gets an extra "✨ NEW DISCOVERY ✨"
+  // banner + golden fanfare. Discovery is binary "owned = discovered", and the
+  // reward is minted server-side before the reveal animates, so we snapshot the
+  // pre-reward owned-name set at action start and compare after the roll lands.
+  // `preOwnedRef` holds that snapshot (seeds + eggs for chests, animals for
+  // hatches); the two booleans drive the banner in each reveal.
+  const preOwnedRef = useRef<Set<string>>(new Set());
+  const [hatchIsNew, setHatchIsNew] = useState(false);
+  const [chestIsNew, setChestIsNew] = useState(false);
 
   // Pending "hatch instantly" confirmation (replaces the native confirm() that
   // used to gate the EcoPoint spend). Holds the hatching + the cost quoted at
@@ -357,6 +369,9 @@ export default function CollectionPage() {
   const pendingAnimalRef = useRef<any>(null);
 
   const startHatchingReveal = async (hatching: any) => {
+    // Snapshot owned-animal names *before* the server mints the new pet, so the
+    // reveal can tell a first-time discovery from a duplicate.
+    preOwnedRef.current = new Set(profileAnimals.map((a: any) => a?.name).filter(Boolean));
     const res = await fetch("/api/eggs/incubate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -397,7 +412,9 @@ export default function CollectionPage() {
 
     if (nextTaps === 0) {
       // Reveal the animal the server already rolled and minted.
-      setRevealedAnimal(pendingAnimalRef.current);
+      const animal = pendingAnimalRef.current;
+      setRevealedAnimal(animal);
+      setHatchIsNew(!!animal?.name && !preOwnedRef.current.has(animal.name));
 
       // Mega burst sparks
       const explosionParticles = Array.from({ length: 45 }).map((_, idx) => ({
@@ -420,10 +437,18 @@ export default function CollectionPage() {
 
     toast.success(`${revealedAnimal.name} was added to your collection book!`);
     setActiveHatching(null);
+    setHatchIsNew(false);
     setMode("animals");
   };
 
   const openChest = async (chest: any) => {
+    // Snapshot owned seed + egg names *before* the server rolls/grants the
+    // reward, so the reveal can flag a first-time species discovery. (Points
+    // rewards are never "new discoveries".)
+    preOwnedRef.current = new Set([
+      ...profileSeeds.map((s: any) => s?.name).filter(Boolean),
+      ...profileEggs.map((e: any) => e?.name).filter(Boolean)
+    ]);
     setActiveChest(chest);
     setChestState("shaking");
     setChestReward(null);
@@ -457,7 +482,17 @@ export default function CollectionPage() {
         toast.error(data?.error?.message || "Failed to open chest. Please try again.");
         return;
       }
-      setChestReward(data.reward);
+      const reward = data.reward;
+      setChestReward(reward);
+      // First-time discovery iff the rolled seed/egg name isn't in the
+      // pre-open snapshot. Points rewards are never discoveries.
+      const isNew =
+        reward?.type === "seed"
+          ? !!reward.seedName && !preOwnedRef.current.has(reward.seedName)
+          : reward?.type === "egg"
+            ? !!reward.name && !preOwnedRef.current.has(reward.name)
+            : false;
+      setChestIsNew(isNew);
       setChestState("opened");
       await refreshProfile();
 
@@ -488,6 +523,7 @@ export default function CollectionPage() {
     setActiveChest(null);
     setChestReward(null);
     setChestState("closed");
+    setChestIsNew(false);
 
     if (chestReward.type === "egg") {
       setMode("eggs");
@@ -866,43 +902,60 @@ export default function CollectionPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-6 py-6 animate-bounce-in">
-                <div>
+              <StaggerContainer className="flex flex-col items-center gap-6 py-6" staggerDelay={0.09} initialDelay={0.04}>
+                {hatchIsNew && (
+                  <motion.div
+                    initial={{ scale: 0.4, opacity: 0, y: -6 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 320, damping: 12, delay: 0.05 }}
+                    className="rounded-full bg-[color-mix(in_srgb,var(--text-warning)_22%,transparent)] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-warning)] shadow-lg"
+                  >
+                    ✨ New Discovery ✨
+                  </motion.div>
+                )}
+
+                <StaggerItem>
                   <span className="rounded-full px-3.5 py-1 text-xs font-black uppercase tracking-widest bg-[var(--toast-success-bg)] text-[var(--toast-success-fg)]">
                     Hatched Successfully!
                   </span>
                   <h3 className="mt-4 font-serif text-3xl font-black text-[var(--text-primary)]">Meet {revealedAnimal.name}!</h3>
                   <p className="mt-1 text-xs text-[var(--text-muted)]">A rare eco companion was added to your collection.</p>
-                </div>
+                </StaggerItem>
 
-                <div
+                <motion.div
+                  initial={{ scale: 0.4, opacity: 0, rotateY: -70 }}
+                  animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                  transition={{ type: "spring", stiffness: 220, damping: 16, delay: 0.12 }}
                   className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-panel-alt)] shadow-2xl p-6 overflow-hidden"
-                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)" }}
+                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)", transformStyle: "preserve-3d" }}
                 >
+                  <RewardGlow rarity={revealedAnimal.rarity} />
                   <div
                     className="absolute inset-0 bg-gradient-to-tr to-transparent pointer-events-none"
                     style={{ background: "linear-gradient(to top right, color-mix(in srgb, var(--text-accent) 10%, transparent), transparent)" }}
                   />
                   <CardImage entry={revealedAnimal} discovered mode="animals" fit="contain" />
-                </div>
+                </motion.div>
 
-                <div className="flex flex-col items-center">
+                <StaggerItem className="flex flex-col items-center">
                   <span className={`rounded-full px-3.5 py-1 text-[10px] font-black uppercase tracking-widest ${rarityStyle[revealedAnimal.rarity as Rarity]?.chip}`}>
                     {revealedAnimal.rarity}
                   </span>
                   <p className="mt-3 text-xs leading-relaxed max-w-[280px] text-[var(--text-muted)]">
                     {revealedAnimal.name} is a {revealedAnimal.rarity} companion that will accompany you on your sustainable missions!
                   </p>
-                </div>
+                </StaggerItem>
 
-                <button
-                  type="button"
-                  onClick={claimAnimal}
-                  className={`w-full max-w-[280px] ${primaryButton}`}
-                >
-                  Claim Pet & Continue
-                </button>
-              </div>
+                <StaggerItem>
+                  <button
+                    type="button"
+                    onClick={claimAnimal}
+                    className={`w-full max-w-[280px] ${primaryButton}`}
+                  >
+                    Claim Pet & Continue
+                  </button>
+                </StaggerItem>
+              </StaggerContainer>
             )}
 
             {tapsLeft > 0 && (
@@ -969,14 +1022,25 @@ export default function CollectionPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-6 py-6 animate-bounce-in">
-                <div>
+              <StaggerContainer className="flex flex-col items-center gap-6 py-6" staggerDelay={0.09} initialDelay={0.04}>
+                {chestIsNew && (
+                  <motion.div
+                    initial={{ scale: 0.4, opacity: 0, y: -6 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 320, damping: 12, delay: 0.05 }}
+                    className="rounded-full bg-[color-mix(in_srgb,var(--text-warning)_22%,transparent)] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-warning)] shadow-lg"
+                  >
+                    ✨ New Discovery ✨
+                  </motion.div>
+                )}
+
+                <StaggerItem>
                   <span className="rounded-full bg-[color-mix(in_srgb,var(--text-warning)_20%,transparent)] px-3.5 py-1 text-xs font-black uppercase tracking-widest text-[var(--text-warning)]">
                     Chest Opened!
                   </span>
                   <h3 className="mt-4 font-serif text-3xl font-black text-[var(--text-primary)]">
                     {chestReward.type === "points"
-                      ? `+${chestReward.amount} EcoPoints!`
+                      ? <>+<AnimatedNumber value={chestReward.amount} duration={900} /> EcoPoints!</>
                       : chestReward.type === "seed"
                       ? `${chestReward.seedName}!`
                       : `Unlocked ${chestReward.name}!`}
@@ -986,12 +1050,16 @@ export default function CollectionPage() {
                       ? "Head to your Garden and plant it — it grows over 7 days! 🌱"
                       : "Your reward has been added to your profile."}
                   </p>
-                </div>
+                </StaggerItem>
 
-                <div
+                <motion.div
+                  initial={{ scale: 0.4, opacity: 0, rotateY: -70 }}
+                  animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                  transition={{ type: "spring", stiffness: 220, damping: 16, delay: 0.12 }}
                   className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-panel-alt)] shadow-2xl p-6 overflow-hidden"
-                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)" }}
+                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)", transformStyle: "preserve-3d" }}
                 >
+                  <RewardGlow rarity={chestReward.rarity} />
                   <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/10 to-transparent pointer-events-none" />
                   {chestReward.type === "points" ? (
                     <div className="text-6xl select-none drop-shadow-md">🪙</div>
@@ -1004,9 +1072,9 @@ export default function CollectionPage() {
                       className="object-contain"
                     />
                   )}
-                </div>
+                </motion.div>
 
-                <div className="flex flex-col items-center">
+                <StaggerItem className="flex flex-col items-center">
                   <span className={`rounded-full px-3.5 py-1 text-[10px] font-black uppercase tracking-widest ${rarityStyle[chestReward.rarity as Rarity]?.chip}`}>
                     {chestReward.rarity}
                   </span>
@@ -1017,16 +1085,18 @@ export default function CollectionPage() {
                       ? `A ${chestReward.rarity} seed. Plant it in your Virtual Garden and wait ~7 days for it to bloom into rewards.`
                       : `${chestReward.name} is a ${chestReward.rarity} item that has been added to your inventory.`}
                   </p>
-                </div>
+                </StaggerItem>
 
-                <button
-                  type="button"
-                  onClick={claimChestReward}
-                  className={`w-full max-w-[280px] ${primaryButton}`}
-                >
-                  Claim & Continue
-                </button>
-              </div>
+                <StaggerItem>
+                  <button
+                    type="button"
+                    onClick={claimChestReward}
+                    className={`w-full max-w-[280px] ${primaryButton}`}
+                  >
+                    Claim & Continue
+                  </button>
+                </StaggerItem>
+              </StaggerContainer>
             )}
 
             {chestState === "closed" && (

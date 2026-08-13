@@ -776,7 +776,7 @@ export default function DashboardPage() {
               <h3 className="mt-1 font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>Verify proof for: {activeTextVerifyQuest.title}</h3>
               <p className="mt-2 text-sm leading-6" style={{ color: "var(--text-muted)" }}>
                 {questRequiresPhoto(questsData, activeTextVerifyQuest.id)
-                  ? "This quest needs a photo proof upload."
+                  ? "A photo is the best proof — but if you can't take one, you can describe it in text."
                   : "You can verify with either text or a photo."}
               </p>
             </div>
@@ -787,7 +787,7 @@ export default function DashboardPage() {
               value={proofType}
               onChange={(v) => { setProofType(v as "text" | "photo"); setVerificationError(null); }}
               options={[
-                { value: "text", label: "✏️ Text Proof", disabled: questRequiresPhoto(questsData, activeTextVerifyQuest.id) },
+                { value: "text", label: "✏️ Text Proof" },
                 { value: "photo", label: "📷 Photo Proof" }
               ]}
             />

@@ -338,5 +338,53 @@ export function MotionPresence({ children, className = "" }: MotionPresenceProps
   );
 }
 
+// ── RewardGlow ──────────────────────────────────────────────────
+// Magical rotating rarity-colored light rays + a soft pulsing halo, placed
+// *behind* a reward card (chest / hatch / species-unlock reveal). Purely
+// decorative: pointer-events-none and aria-hidden so it never interferes with
+// content or screen readers. Honors reduced motion (static halo, no spin).
+//
+// Used by the collection page's chest-opening and egg-hatching reveals to give
+// the "you unlocked something" moment ambient, rarity-tinted light.
+const RARITY_GLOW: Record<string, string> = {
+  common: "#4ade80",
+  rare: "#60a5fa",
+  epic: "#c084fc",
+  legendary: "#fbbf24"
+};
+
+type RewardGlowProps = {
+  rarity?: string;
+  className?: string;
+};
+
+export function RewardGlow({ rarity, className = "" }: RewardGlowProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const color = RARITY_GLOW[rarity ?? ""] ?? "#fbbf24";
+
+  return (
+    <div aria-hidden className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
+      {/* Pulsing halo */}
+      <motion.div
+        className="absolute left-1/2 top-1/2 h-[150%] w-[150%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl"
+        style={{ background: `radial-gradient(circle, ${color}55 0%, transparent 60%)` }}
+        animate={prefersReducedMotion ? { opacity: 0.5 } : { opacity: [0.5, 0.22, 0.5], scale: [1, 1.08, 1] }}
+        transition={{ duration: 2.4, repeat: prefersReducedMotion ? 0 : Infinity, ease: "easeInOut" }}
+      />
+      {/* Rotating conic light rays, masked to a soft disc so the edges fade */}
+      <motion.div
+        className="absolute left-1/2 top-1/2 h-[130%] w-[130%] -translate-x-1/2 -translate-y-1/2 opacity-40"
+        style={{
+          background: `conic-gradient(from 0deg, transparent 0deg, ${color}66 25deg, transparent 50deg, transparent 90deg, ${color}66 115deg, transparent 140deg, transparent 180deg, ${color}66 205deg, transparent 230deg, transparent 270deg, ${color}66 295deg, transparent 320deg, transparent 360deg)`,
+          maskImage: "radial-gradient(circle, black 0%, transparent 68%)",
+          WebkitMaskImage: "radial-gradient(circle, black 0%, transparent 68%)"
+        }}
+        animate={prefersReducedMotion ? { rotate: 0 } : { rotate: 360 }}
+        transition={{ duration: 8, repeat: prefersReducedMotion ? 0 : Infinity, ease: "linear" }}
+      />
+    </div>
+  );
+}
+
 // ── Re-export useful hooks ──────────────────────────────────────
 export { useReducedMotion };

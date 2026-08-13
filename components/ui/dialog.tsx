@@ -66,7 +66,18 @@ export function Dialog({
   const descId = description ? `dialog-desc-${autoId}` : undefined;
   const prefersReducedMotion = useReducedMotion();
 
+  // Keep the latest onClose in a ref so the Escape handler always calls the
+  // current version without forcing the focus effect to re-bind (which would
+  // re-steal focus on every parent re-render — e.g. on each keystroke typed
+  // into a textarea inside the dialog, when onClose is an inline arrow).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Focus trap, escape, scroll lock, focus restore.
+  // Depends only on `open` so focus is set once when the dialog opens, not
+  // re-stolen on every render (callers commonly pass an inline onClose).
   useEffect(() => {
     if (!open) return;
 
@@ -87,7 +98,7 @@ export function Dialog({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -122,7 +133,8 @@ export function Dialog({
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
