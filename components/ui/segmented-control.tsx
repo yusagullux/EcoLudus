@@ -1,11 +1,25 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
+import { motion, useReducedMotion, type Transition } from "motion/react";
+
+// Snappy spring for the sliding selection pill — matches PillTabBar so the
+// two controls feel like one system. Keep in sync with pill-tab-bar.tsx.
+const snapSpring: Transition = {
+  type: "spring",
+  stiffness: 420,
+  damping: 34
+};
 
 /**
  * Accessible segmented tab control. Replaces the 5 hand-rolled pill-tab
  * implementations (Shop, Collection, Habits proof tabs, Team proof tabs,
  * Leaderboard individual/team). Theme-aware via the --pill-* CSS variables.
+ *
+ * The active option is marked by a Motion `layoutId` "pill" that slides
+ * between options (shared-layout animation) rather than a per-button
+ * background swap — so the toggle feels smooth and symmetric. Respects
+ * `prefers-reduced-motion` (no slide — the pill just appears).
  *
  * Keyboard: Arrow Left/Right move between tabs, Home/End jump to ends,
  * Tab moves focus out of the control. Roving tabindex per WAI-ARIA tabs
@@ -38,6 +52,7 @@ export function SegmentedControl({
   className = ""
 }: SegmentedControlProps) {
   const baseId = useId();
+  const prefersReducedMotion = useReducedMotion();
 
   const onKeyDown = (e: React.KeyboardEvent, index: number) => {
     const enabled = options.map((o, i) => ({ o, i })).filter(({ o }) => !o.disabled);
@@ -78,17 +93,22 @@ export function SegmentedControl({
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(opt.value)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40 ${fullWidth ? "flex-1" : ""}`}
-            style={
-              selected
-                ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
-                : { color: "var(--pill-text)" }
-            }
+            className={`relative inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40 ${fullWidth ? "flex-1" : ""}`}
+            style={{ color: selected ? "var(--pill-active-text)" : "var(--pill-text)" }}
           >
-            <span>{opt.label}</span>
+            {selected && (
+              <motion.span
+                aria-hidden="true"
+                layoutId={prefersReducedMotion ? undefined : `${baseId}-pill`}
+                className="absolute inset-0 rounded-full"
+                style={{ background: "var(--pill-active-bg)" }}
+                transition={snapSpring}
+              />
+            )}
+            <span className="relative">{opt.label}</span>
             {typeof opt.count === "number" && opt.count > 0 && (
               <span
-                className="rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none"
+                className="relative rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none"
                 style={
                   selected
                     ? { background: "color-mix(in srgb, var(--pill-active-text) 22%, transparent)", color: "inherit" }

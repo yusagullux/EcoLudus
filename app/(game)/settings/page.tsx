@@ -362,13 +362,22 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
           }}
         >
           <span
-            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors"
+            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200"
             style={{ background: weeklyReport ? "var(--text-accent, #43653f)" : "var(--border-default)" }}
             aria-hidden="true"
           >
+            {/* Knob: 16px in a 36px track with 2px padding either side → 16px
+                travel. Positioned with `transform` (not `left`) so
+                `transition-transform` actually animates the slide — the old
+                `left`-based version jumped because `transition-transform`
+                can't animate the `left` property. Symmetric 2px inset on
+                all sides. */}
             <span
-              className="absolute top-0.5 h-4 w-4 transform rounded-full shadow transition-transform"
-              style={{ background: "var(--text-inverse)", left: weeklyReport ? "18px" : "2px" }}
+              className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full shadow transition-transform duration-200 ease-out"
+              style={{
+                background: "var(--text-inverse)",
+                transform: weeklyReport ? "translateX(16px)" : "translateX(0)"
+              }}
             />
           </span>
           <span className="flex flex-col">

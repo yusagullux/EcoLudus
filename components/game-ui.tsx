@@ -239,46 +239,14 @@ export function Pill({
   );
 }
 
-// ── PillTabBar / PillFilterBar ─────────────────────────────────
+// ── PillFilterBar ─────────────────────────────────────────────
+// (PillTabBar moved to components/ui/pill-tab-bar.tsx — animated.)
 // Horizontal chip selectors shared by the Shop and Collection pages, which
-// used to inline these two bars byte-for-byte. PillTabBar is the segmented
-// "mode" switch (one option active, fills the track); PillFilterBar is the
-// rarity filter row (scrolls on mobile, wraps from sm: up). Both scroll
-// horizontally without a scrollbar on narrow viewports so the chips never
-// force page-level horizontal overflow.
-export function PillTabBar<T extends string>({
-  value,
-  options,
-  onChange
-}: {
-  value: T;
-  options: readonly T[];
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div
-      className="no-scrollbar inline-flex w-fit max-w-full overflow-x-auto rounded-full p-1"
-      style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-default)" }}
-    >
-      {options.map((opt) => (
-        <button
-          type="button"
-          key={opt}
-          onClick={() => onChange(opt)}
-          className="shrink-0 min-h-11 rounded-full px-4 py-2 text-sm font-extrabold capitalize transition"
-          style={
-            value === opt
-              ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
-              : { color: "var(--text-muted)" }
-          }
-        >
-          {opt}
-        </button>
-      ))}
-    </div>
-  );
-}
-
+// used to inline these bars byte-for-byte. The segmented "mode" switch now
+// lives in `components/ui/pill-tab-bar.tsx` (animated sliding pill, shared
+// styling with `SegmentedControl`); PillFilterBar is the rarity filter row
+// (scrolls on mobile, wraps from sm: up). It scrolls horizontally without a
+// scrollbar on narrow viewports so the chips never force page-level overflow.
 export function PillFilterBar<T extends string>({
   value,
   options,
