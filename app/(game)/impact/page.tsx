@@ -6,6 +6,7 @@ import { HeroMetric, PageHero, Panel, Pill, ProgressBar, StatGrid } from "@/comp
 import { ExplainerGrid } from "@/components/ui/explainer-grid";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { StaggerContainer, StaggerItem } from "@/lib/animations";
+import { useNotifications } from "@/lib/use-notifications";
 
 type CommunityStats = {
   totalUsers: number;
@@ -78,6 +79,7 @@ function MilestoneRow({
 
 export default function ImpactPage() {
   const { profile } = useAuth();
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
   const [community, setCommunity] = useState<CommunityStats | null>(null);
   const [loadingCommunity, setLoadingCommunity] = useState(true);
 
@@ -102,8 +104,6 @@ export default function ImpactPage() {
   const carbonReduced = Number(profile?.carbonReduced ?? 0);
   const missionsCompleted = Number(profile?.missionsCompleted ?? 0);
   const treesPlanted = Number(profile?.treesPlanted ?? 0);
-  const notifications: any[] = Array.isArray(profile?.notifications) ? (profile.notifications as any[]) : [];
-  const unreadNotifications = notifications.filter((n) => !n.read);
 
   const totalClaimed = TREE_MILESTONES.filter((m) =>
     Boolean(profile?.[`milestone_${m.type}_${m.value}`])
@@ -186,16 +186,30 @@ export default function ImpactPage() {
           eyebrow="Eco activity"
           title="Notifications"
           action={
-            unreadNotifications.length > 0 ? (
-              <Pill active>{unreadNotifications.length} new</Pill>
+            unreadCount > 0 ? (
+              <div className="flex items-center gap-2">
+                <Pill active>{unreadCount} new</Pill>
+                <button
+                  type="button"
+                  onClick={() => markAllRead()}
+                  className="text-[11px] font-bold transition-opacity hover:opacity-70"
+                  style={{ color: "var(--text-accent)" }}
+                >
+                  Mark all read
+                </button>
+              </div>
             ) : undefined
           }
         >
           <div className="-mx-5 -mt-5 divide-y sm:-mx-6 sm:-mt-6" style={{ borderColor: "var(--border-subtle)" }}>
-            {notifications.slice(0, 10).map((notification: any) => (
-              <div
+            {notifications.slice(0, 10).map((notification) => (
+              <button
                 key={notification.id}
-                className="flex items-start gap-3 px-5 py-4 sm:px-6"
+                type="button"
+                onClick={() => {
+                  if (!notification.read) markRead(notification.id);
+                }}
+                className="flex w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:brightness-95 sm:px-6"
                 style={!notification.read ? { background: "var(--bg-panel-alt)" } : undefined}
               >
                 <span className="mt-0.5 text-lg">{notification.type === "tree_planted" ? "🌳" : "🔔"}</span>
@@ -209,7 +223,7 @@ export default function ImpactPage() {
                 {!notification.read && (
                   <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--text-accent)] mt-2" />
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </Panel>
