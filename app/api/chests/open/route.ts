@@ -2,97 +2,28 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
-import { SEED_CATALOG, type SeedSpecies } from "@/lib/catalog";
+import { logError } from "@/lib/logger";
+import { rollChest, applyChestRewards, type ChestTier } from "@/lib/chest-rewards";
 
 // Server-side chest opening. The collection page used to roll the reward with
 // Math.random() in the browser and then write it through `updateUserProfile` —
 // a client could simply claim a Legendary Egg every time. This route owns the
-// RNG and the chest consumption.
+// RNG, the chest consumption, and the reward application.
 //
-// Chests are a SINK, not a source: they grant EcoPoints / seeds / eggs, never
-// Impact or XP (an open→Impact loop would make chests a farmable spine source).
-// So this route does a direct payload write — it does NOT call grantImpact.
+// Chests are a SINK, not a source: they grant EcoPoints / seeds / eggs /
+// boosters / cosmetics, never Impact (an open→Impact loop would make chests a
+// farmable spine source). So this route does a direct payload write — it does
+// NOT call grantImpact. Reward rolling lives in lib/chest-rewards.ts (pure,
+// unit-tested); this route is the thin transactional wrapper.
 
-type Rarity = "common" | "rare" | "epic" | "legendary";
+const openSchema = z.object({ chestId: z.union([z.number(), z.string()]) });
 
-// Per-tier seed pools are subsets of SEED_CATALOG (lib/catalog.ts), filtered by
-// name. Keeping the pools here as name lists (rather than inline objects)
-// means the chest drops and the collection-book Pokédex read from one source.
-function seedsFor(names: string[]): SeedSpecies[] {
-  return SEED_CATALOG.filter((seed) => names.includes(seed.name));
-}
-
-type ChestReward = {
-  type: "points" | "seed" | "egg";
-  name: string;
-  amount?: number;
-  rarity: Rarity;
-  image: string;
-  seedName: string;
+const TIER_BY_NAME: Record<string, ChestTier> = {
+  "wooden chest": "wooden",
+  "bronze chest": "bronze",
+  "silver chest": "silver",
+  "golden chest": "golden"
 };
-
-const OPEN_CHEST_REWARDS: Record<string, () => ChestReward> = {
-  "Wooden Chest": () => {
-    if (Math.random() < 0.55) {
-      const amount = Math.floor(Math.random() * 151) + 100;
-      return { type: "points", name: "EcoPoints", amount, rarity: "common", image: "/images/logo.png", seedName: "" };
-    }
-    const seedPool = seedsFor(["Mossy Fern Seed", "Golden Daisy Seed"]);
-    const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-    return { type: "seed", name: seed.name, seedName: seed.name, rarity: seed.rarity, image: seed.image };
-  },
-  "Bronze Chest": () => {
-    const rand = Math.random();
-    if (rand < 0.45) {
-      const amount = Math.floor(Math.random() * 301) + 200;
-      return { type: "points", name: "EcoPoints", amount, rarity: "rare", image: "/images/logo.png", seedName: "" };
-    }
-    if (rand < 0.8) {
-      const seedPool = seedsFor(["Mossy Fern Seed", "Golden Daisy Seed", "Blue Orchid Seed", "Spotted Aloe Seed"]);
-      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.name, seedName: seed.name, rarity: seed.rarity, image: seed.image };
-    }
-    return { type: "egg", name: "Common Egg", seedName: "", rarity: "common", image: "/images/eggs/common-egg.png" };
-  },
-  "Silver Chest": () => {
-    const rand = Math.random();
-    if (rand < 0.35) {
-      const amount = Math.floor(Math.random() * 501) + 500;
-      return { type: "points", name: "EcoPoints", amount, rarity: "epic", image: "/images/logo.png", seedName: "" };
-    }
-    if (rand < 0.75) {
-      const seedPool = seedsFor(["Blue Orchid Seed", "Spotted Aloe Seed", "Mystic Bamboo Seed", "Crystal Lotus Seed"]);
-      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.name, seedName: seed.name, rarity: seed.rarity, image: seed.image };
-    }
-    const eggPool = [
-      { name: "Rare Egg", rarity: "rare" as Rarity, image: "/images/eggs/rare-egg.png" },
-      { name: "Epic Egg", rarity: "epic" as Rarity, image: "/images/eggs/epic-egg.png" }
-    ];
-    const e = eggPool[Math.floor(Math.random() * eggPool.length)];
-    return { type: "egg", name: e.name, seedName: "", rarity: e.rarity, image: e.image };
-  },
-  "Golden Chest": () => {
-    const rand = Math.random();
-    if (rand < 0.25) {
-      const amount = Math.floor(Math.random() * 1501) + 1000;
-      return { type: "points", name: "EcoPoints", amount, rarity: "legendary", image: "/images/logo.png", seedName: "" };
-    }
-    if (rand < 0.65) {
-      const seedPool = seedsFor(["Mystic Bamboo Seed", "Crystal Lotus Seed", "Aurora Blossom Seed", "Ember Cactus Seed"]);
-      const seed = seedPool[Math.floor(Math.random() * seedPool.length)];
-      return { type: "seed", name: seed.name, seedName: seed.name, rarity: seed.rarity, image: seed.image };
-    }
-    const eggPool = [
-      { name: "Epic Egg", rarity: "epic" as Rarity, image: "/images/eggs/epic-egg.png" },
-      { name: "Legendary Egg", rarity: "legendary" as Rarity, image: "/images/eggs/legendary-egg.png" }
-    ];
-    const e = eggPool[Math.floor(Math.random() * eggPool.length)];
-    return { type: "egg", name: e.name, seedName: "", rarity: e.rarity, image: e.image };
-  }
-};
-
-const openSchema = z.object({ chestId: z.union([z.string(), z.number()]) });
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -112,9 +43,9 @@ export async function POST(request: Request) {
 
   try {
     // Read → roll → consume → write inside one transaction with a row lock on
-    // the user row, so a concurrent open cannot roll two rewards against one
-    // chest (lost-update / double-reward from the 2026-07-25 audit). Early
-    // 404 returns inside the callback still commit (empty tx) cleanly.
+    // the user row, so a concurrent open cannot roll two reward sets against
+    // one chest (lost-update / double-reward). Early 404 returns inside the
+    // callback still commit (empty tx) cleanly.
     return await transaction(async (query) => {
       const userResult = await selectUserForUpdate<{ email: string; payload: Record<string, unknown> }>(
         query,
@@ -135,44 +66,20 @@ export async function POST(request: Request) {
       }
 
       const chestName = String(chest.name ?? "Wooden Chest");
-      const generator = OPEN_CHEST_REWARDS[chestName] ?? OPEN_CHEST_REWARDS["Wooden Chest"];
-      const reward = generator();
+      const tier = TIER_BY_NAME[chestName.toLowerCase()] ?? "wooden";
 
-      // Consume one chest.
+      // Roll 2–5 rewards server-side (pure, deterministic given the rng).
+      const rewards = rollChest(tier, profile as any, Math.random);
+
+      // Consume one of this chest.
       const nextChests = chests
         .map((c) => (String(c.id) === String(parsed.chestId) ? { ...c, count: Number(c.count ?? 1) - 1 } : c))
         .filter((c) => Number(c.count ?? 1) > 0);
 
-      const nextProfile: Record<string, unknown> = { ...profile, chests: nextChests };
-
-      if (reward.type === "points") {
-        nextProfile.ecoPoints = Math.max(0, Number(profile.ecoPoints ?? 0) || 0) + Number(reward.amount ?? 0);
-      } else if (reward.type === "seed") {
-        const seeds = Array.isArray(profile.seeds) ? [...(profile.seeds as Array<Record<string, unknown>>)] : [];
-        const idx = seeds.findIndex((s) => s.name === reward.seedName);
-        if (idx >= 0) {
-          seeds[idx] = { ...seeds[idx], count: Number(seeds[idx].count ?? 1) + 1, obtainedAt: new Date().toISOString() };
-        } else {
-          seeds.push({
-            id: `seed-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-            name: reward.seedName,
-            rarity: reward.rarity,
-            image: reward.image,
-            count: 1,
-            obtainedAt: new Date().toISOString()
-          });
-        }
-        nextProfile.seeds = seeds;
-      } else {
-        const eggs = Array.isArray(profile.eggs) ? [...(profile.eggs as Array<Record<string, unknown>>)] : [];
-        const idx = eggs.findIndex((e) => e.name === reward.name);
-        if (idx >= 0) {
-          eggs[idx] = { ...eggs[idx], count: Number(eggs[idx].count ?? 1) + 1, purchasedAt: new Date().toISOString() };
-        } else {
-          eggs.push({ id: Date.now(), name: reward.name, rarity: reward.rarity, price: 0, image: reward.image, count: 1, purchasedAt: new Date().toISOString() });
-        }
-        nextProfile.eggs = eggs;
-      }
+      // Apply rewards to the profile (pure). Seeds/plants/eggs stack by count,
+      // boosters stack by charges, cosmetic dupes refund as EP shards.
+      const { profile: rewarded, summary } = applyChestRewards(profile as any, rewards);
+      const nextProfile: Record<string, unknown> = { ...rewarded, chests: nextChests };
 
       await query(
         `insert into users (id, email, password_hash, payload)
@@ -184,10 +91,10 @@ export async function POST(request: Request) {
         [session.userId, userResult.rows[0].email, JSON.stringify(nextProfile)]
       );
 
-      return NextResponse.json({ success: true, reward, chestName });
+      return NextResponse.json({ success: true, chestName, rewards, summary });
     });
   } catch (error) {
-    console.error("Chest open error:", error);
+    logError("Chest open error", error);
     return NextResponse.json({ error: { code: "internal-error" } }, { status: 500 });
   }
 }
