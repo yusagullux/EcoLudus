@@ -14,6 +14,8 @@
 // branches on (xp, level, trustScore, impact, streak counters, dates) are
 // strictly typed.
 
+import type { Rarity } from "@/components/game-ui";
+
 export type QuestProofMethod = "text" | "photo";
 
 export type VerifiedQuestProof = {
@@ -63,6 +65,35 @@ export type MilestoneFlags = Partial<{
   milestone_missions_50: boolean;
   milestone_missions_100: boolean;
 }>;
+
+// ── Boosters + cosmetics (chests / equip) ───────────────────────────────────
+/** Eco-Booster consumable. One per kind (xp/eco) applies per quest completion — no stacking. */
+export type Booster = {
+  id: string;          // matches BoosterDef.id
+  kind: "xp" | "eco";
+  multiplier: number;  // e.g. 2 = double
+  charges: number;      // remaining quest completions it applies to
+  name: string;
+  rarity: Rarity;
+  emoji: string;
+  obtainedAt: string;
+};
+
+/** CSS-based cosmetic — no image assets. Frame = ring/shadow; background = gradient. */
+export type Cosmetic = {
+  id: string;
+  slot: "frame" | "background";
+  name: string;
+  rarity: Rarity;
+  frame?: { ring: string; shadow?: string };
+  background?: { gradient: string };
+};
+
+export type CosmeticsState = {
+  owned: Cosmetic[];
+  equippedFrame: string | null;       // Cosmetic.id
+  equippedBackground: string | null;  // Cosmetic.id
+};
 
 /**
  * The full per-user game-state object stored in `users.payload` (jsonb).
@@ -120,6 +151,10 @@ export interface UserProfile {
   activePet: string | null;
   /** Seeds dropped by chests (`{ name, rarity, image, count }`). Collection-book Pokédex reads this. */
   seeds?: unknown[];
+  /** Eco-Booster consumables owned (`{ id, kind, multiplier, charges, ... }`). */
+  boosters?: Booster[];
+  /** Owned + equipped CSS cosmetics. Equip goes through /api/cosmetics/equip (owned-set game state, not client-writable). */
+  cosmetics?: CosmeticsState;
 
   // ── Streaks ───────────────────────────────────────────────────────────────
   currentStreak: number;

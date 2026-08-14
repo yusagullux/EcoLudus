@@ -348,6 +348,7 @@ export function MotionPresence({ children, className = "" }: MotionPresenceProps
 // the "you unlocked something" moment ambient, rarity-tinted light.
 const RARITY_GLOW: Record<string, string> = {
   common: "#4ade80",
+  uncommon: "#34d399",
   rare: "#60a5fa",
   epic: "#c084fc",
   legendary: "#fbbf24"
