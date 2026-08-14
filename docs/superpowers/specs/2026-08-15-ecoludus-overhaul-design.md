@@ -1,7 +1,7 @@
 # EcoLudus Overhaul — Design Spec
 
 **Date:** 2026-08-15
-**Scope:** Chest redesign, navigation/state fix, performance pass, notification repositioning, Impact removal, final QA.
+**Scope:** Chest redesign, daily rotating shop, navigation/state fix, performance pass, notification repositioning, Impact removal, final QA.
 
 ## Confirmed decisions
 
@@ -10,6 +10,7 @@
 - **Reward categories (user list → concrete types):** the user asked chests to contain "EcoPoints, XP, Eggs, Items, Cosmetics, Collectibles, Boosters." Mapping to the app's real inventories:
   - EcoPoints → `points` · XP → `xp` · Eggs → `egg` · Collectibles → `seed` + `plant` + `egg` + `cosmetic` · Items (usable) → `booster` · Cosmetics → `cosmetic` · Boosters → `booster`.
   - User chose **"Build Booster + Cosmetics"**, so the chest engine has **7 reward types**: `points | xp | egg | seed | plant | booster | cosmetic`. Items/Cosmetics/Boosters are no longer extension points — they're built now.
+- **Daily rotating shop:** the shop no longer shows all 16 items. Each user gets a **per-user daily rotation of 6 items** (seeded by `uid + dateKey`, deterministic — no re-roll on refresh). ~34% of days discount one slot 30–50%; ~15% of days a **featured flash deal** on a high-rarity item at a steep discount. The buy route recomputes the rotation server-side, so it's authoritative for both *availability* (only today's items are purchasable) and *price* (deal price applied server-side; a client can't forge a discount or buy a non-rotation item).
 
 ---
 
@@ -224,9 +225,66 @@ Example frames: Verdant Ring (uncommon, green double-ring), Sunfire Ring (rare, 
 - **Boosters:** a rolled booster adds charges to `profile.boosters`; completing a quest consumes one xp/eco charge and multiplies that completion's reward (verify the dashboard booster pill decrements; verify the completion toast shows "2× applied"); confirm a second xp-booster does NOT stack in a single completion (anti-exploit).
 - **Cosmetics:** a rolled cosmetic unlocks in the Collection → Cosmetics tab; equipping via that tab persists and renders on the profile hero (owner + public view) and the sidebar avatar frame; rolling an already-owned cosmetic refunds EP; unequip works.
 - **Nav:** Collection↔Shop↔Dashboard with browser back/forward — verify fresh profile/affordability, no stale state, no console errors, no full reloads.
+- **Daily shop:** shop shows 6 items (no mode tabs); only those 6 are buyable (a forged buy of a non-rotation item 404s `shop/not-available-today`); deal/featured badges + struck-through price show when present and the **server charges the deal price** (not the client-sent price); the countdown ticks to the next UTC midnight; revalidating on focus after a day rollover swaps the rotation. Confirm the rotation is stable across refreshes within the same day (deterministic — no re-roll).
 - **Toasts:** top-right desktop + top-center mobile, stacking + dismiss; confirm no overlap with the notification bell on mobile.
 - **Impact:** `/impact` 404s; nothing links to it (bell, robots, dashboard, sidebar).
 - **Mobile/perf:** survey mobile for overflow; confirm the collection reveal modal is code-split (not in initial bundle); confirm Link prefetch on nav cards.
+
+---
+
+## 7. Daily rotating shop & special deals
+
+The shop currently shows all 16 items (8 plants, 4 eggs, 4 chests) grouped by mode tabs + a rarity filter, all buyable anytime. Redesign: a **per-user daily rotation** of 6 items with occasional deals — a reason to check in daily. Server stays the source of truth for both availability and price.
+
+### New module: `lib/shop-rotation.ts` (server-only; pure, no React)
+Deterministic rotation from a seeded PRNG. **Server-only** (used by both `/api/shop/daily` and `/api/shop/buy` → same seed → same result; no client-side seed code).
+```ts
+export type DailyShopEntry = {
+  mode: ShopMode; itemId: number; name: string; rarity: Rarity; image: string;
+  price: number;            // normal catalog price (live DB price)
+  dealPrice?: number;       // present if this slot is on deal
+  dealPct?: number;         // 30–50 (discount) or 50–70 (featured)
+  featured?: boolean;       // flash-deal highlight
+  hatchTime?: string; description?: string;
+};
+export type DailyShop = {
+  dateKey: string;          // UTC date "YYYY-MM-DD" (matches the quest day-key)
+  entries: DailyShopEntry[]; // 6 slots, no dupes
+  hasDeal: boolean; hasFeatured: boolean;
+  refreshAt: string;        // ISO of next UTC midnight (for the countdown)
+};
+export function getDailyShop(uid: string, dateKey: string): DailyShop;
+```
+**Roll algorithm** (seed = hash(`${uid}:${dateKey}`) → mulberry32; no `Math.random`/`Date.now`):
+1. Build the pool from the **live catalog** (`getShopCatalog` from DB — so edited prices reflect). Flatten all 16 items with inverse-rarity weights (commons frequent, legendaries rare).
+2. Pick 6 without replacement (weighted). Post-pick guarantee variety: if no chest, swap the lowest-weight plant for a random chest; if no egg, swap one plant for a random egg. (Chests/eggs should appear most days since they're core sinks.)
+3. **Deals (≤1/day, mutually exclusive):** featured day = `rng() < 0.15` → mark one epic/legendary entry (if present in the 6; else skip to a plain deal) `featured:true` with `dealPct` 50–70 (steep flash). Else discount day = `rng() < 0.40` → one random entry `dealPct` 30–50. `dealPrice = round(price * (1 - pct/100))`. Otherwise no deal.
+4. `refreshAt` = next UTC midnight derived from `dateKey` (deterministic, no `Date.now`).
+
+### `GET /api/shop/daily` (auth)
+Returns the resolved `DailyShop` for the session user + today's `dateKey` (server computes from current UTC date). Client just displays it — the server is the single source of truth for selection + prices + deals. No new SQL (calls `getShopCatalog`, whose query already has a `fileSql` branch; `getSession` is cookie-only) → **no new fileSql branch**.
+
+### `POST /api/shop/buy` extension
+Currently looks up `getShopItem(mode, itemId)` and charges `item.price`. Change to:
+1. `const daily = getDailyShop(session.userId, todayKey)`.
+2. Find the entry matching `(mode, itemId)` in `daily.entries`. If absent → 404 `shop/not-available-today` ("Not in today's shop"). **This makes only today's rotation purchasable.**
+3. `price = entry.dealPrice ?? entry.price` — the deal price is recomputed server-side, so a client can't forge a discount or buy a non-rotation item at a deal.
+4. Validate balance against `price`, spend, mint (unchanged inventory logic + the existing locked upsert).
+5. Response adds `paid: price`, `dealApplied: boolean`.
+Reuses the existing `selectUserForUpdate` + upsert query strings → **no new fileSql branch**.
+
+### SWR hook: `useDailyShop` (lib/useCatalog.ts)
+SWR on `/api/shop/daily`, `{ revalidateOnMount: true, revalidateOnFocus: true, dedupingInterval: 30s }` — revalidates on every shop visit (per the nav fix) and on window focus (so it rolls over if the day changes while the tab is open). The shop page moves off `useShopCatalog` to this hook. (`GET /api/catalog/shop` stays — harmless; the collection page may still point at it.)
+
+### Shop page UI rewrite (`app/(game)/shop/page.tsx`)
+- Drop the plants/eggs/chests mode tabs + rarity filter (no longer "all items"). The collection page is the Pokédex for browsing all species; the shop is now purely today's rotation.
+- **Header:** "Today's Shop" + a live countdown "Refreshes in HH:MM:SS" (client computes from `refreshAt`) + the EcoPoints HeroMetric.
+- **Flat grid** of the 6 `DailyShopEntry` cards (mixed plants/eggs/chests). Each card: image, rarity chip, hatchTime/description, price — if `dealPrice`, show the normal price struck-through + `dealPrice` + a **DEAL** badge (or **⚡ FLASH DEAL** + a glow if `featured`). Buy button disabled when unaffordable ("Need more EP").
+- SWR loading skeleton; empty state (shouldn't happen, but guarded).
+- A small "No deals today — check back tomorrow" note when `!hasDeal && !hasFeatured`.
+
+### Economy note
+Restricting purchases to the daily rotation means a chest/plant is only buyable when it appears. This is intended (anticipation + daily check-in). Free chests still come from the daily-quest clear and from chest drops, so sinks aren't gated solely on the shop. No new payload field, no schema change.
 
 ---
 
@@ -236,3 +294,4 @@ Example frames: Verdant Ring (uncommon, green double-ring), Sunfire Ring (rare, 
 - The `grantImpact` internal spine/`carbonReduced` remain computed-but-undisplayed by design (user decision).
 - **More cosmetic slots** (e.g. avatar badges, profile banners) = add a `CosmeticSlot` + catalog entries + a render branch in `Avatar`/hero. The slot system is the extension point; frames/backgrounds are the first two.
 - **Booster variants beyond xp/eco** (e.g. a carbon-booster) = add a `BoosterKind` + a consume branch in the relevant route. xp/eco are the first two.
+- **"Deal available" notification** on day rollover: not built (the rotation is computed on-demand, not stored, so there's no rollover hook). A follow-up could write a one-time toast on dashboard load when `todayKey` has a featured deal and `profile.lastShopDealSeen !== todayKey`. Documented as a possible later addition.
