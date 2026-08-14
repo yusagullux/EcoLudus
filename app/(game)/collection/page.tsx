@@ -53,6 +53,7 @@ type SpeciesCatalog = {
 
 const HATCH_DURATIONS: Record<Rarity, number> = {
   common: 60 * 60 * 1000,      // 1 hour
+  uncommon: 2 * 60 * 60 * 1000, // 2 hours
   rare: 4 * 60 * 60 * 1000,     // 4 hours
   epic: 12 * 60 * 60 * 1000,    // 12 hours
   legendary: 24 * 60 * 60 * 1000 // 24 hours

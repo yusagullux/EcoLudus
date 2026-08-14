@@ -32,6 +32,7 @@ const TOTAL_TILES = GARDEN_MAX_TILES;
 
 const GROW_DURATION: Record<Rarity, number> = {
   common: 8 * 60 * 60 * 1000,
+  uncommon: 14 * 60 * 60 * 1000,
   rare: 24 * 60 * 60 * 1000,
   epic: 72 * 60 * 60 * 1000,
   legendary: 96 * 60 * 60 * 1000
@@ -41,6 +42,7 @@ const HARVEST_COOLDOWN_MS = 48 * 60 * 60 * 1000;
 
 const HARVEST_REWARDS: Record<Rarity, number> = {
   common: 8,
+  uncommon: 14,
   rare: 22,
   epic: 55,
   legendary: 120
@@ -48,6 +50,7 @@ const HARVEST_REWARDS: Record<Rarity, number> = {
 
 const HARVEST_XP: Record<Rarity, number> = {
   common: 12,
+  uncommon: 20,
   rare: 30,
   epic: 70,
   legendary: 150
@@ -173,7 +176,7 @@ function formatDuration(ms: number): string {
 }
 
 function sortByRarityThenName(a: PlantableItem, b: PlantableItem): number {
-  const order: Record<Rarity, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
+  const order: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
   return (order[b.rarity] - order[a.rarity]) || a.name.localeCompare(b.name);
 }
 

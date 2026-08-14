@@ -170,3 +170,48 @@ export const SEED_CATALOG: SeedSpecies[] = [
   { id: slug("Aurora Blossom Seed"), name: "Aurora Blossom Seed", rarity: "legendary", image: "/images/plants/cherry_blossom.png" },
   { id: slug("Ember Cactus Seed"), name: "Ember Cactus Seed", rarity: "legendary", image: "/images/plants/dragonfruit.png" }
 ];
+
+// ── Boosters + cosmetics: catalog constants ────────────────────────────────
+//
+// Like pets/seeds, boosters and cosmetics have no runtime-editable values
+// (no prices), so they live as TS constants — no DB seed, no fileSql branch.
+// The chest route rolls from these; the collection page renders them.
+
+export type BoosterDef = {
+  id: string;
+  kind: "xp" | "eco";
+  multiplier: number;
+  charges: number;
+  name: string;
+  rarity: Rarity;
+  emoji: string;
+};
+
+export const BOOSTER_CATALOG: BoosterDef[] = [
+  { id: "booster-xp-2", kind: "xp", multiplier: 2, charges: 3, name: "XP Sprout Booster", rarity: "rare", emoji: "🌱" },
+  { id: "booster-xp-3", kind: "xp", multiplier: 3, charges: 2, name: "XP Bloom Booster", rarity: "epic", emoji: "🌸" },
+  { id: "booster-eco-2", kind: "eco", multiplier: 2, charges: 3, name: "Eco Sprout Booster", rarity: "rare", emoji: "💧" },
+  { id: "booster-eco-3", kind: "eco", multiplier: 3, charges: 2, name: "Eco Bloom Booster", rarity: "epic", emoji: "✨" }
+];
+
+export type CosmeticDef = {
+  id: string;
+  slot: "frame" | "background";
+  name: string;
+  rarity: Rarity;
+  frame?: { ring: string; shadow?: string };
+  background?: { gradient: string };
+};
+
+export const COSMETIC_CATALOG: CosmeticDef[] = [
+  // Frames — ring + glow overlay on the avatar
+  { id: "frame-leaf", slot: "frame", name: "Leaf Frame", rarity: "uncommon", frame: { ring: "2px solid #4ade80", shadow: "0 0 8px #4ade80" } },
+  { id: "frame-silver", slot: "frame", name: "Silver Frame", rarity: "rare", frame: { ring: "2px solid #cbd5e1", shadow: "0 0 10px #cbd5e1" } },
+  { id: "frame-gold", slot: "frame", name: "Gold Frame", rarity: "epic", frame: { ring: "3px solid #fbbf24", shadow: "0 0 14px #fbbf24" } },
+  { id: "frame-prism", slot: "frame", name: "Prism Frame", rarity: "legendary", frame: { ring: "3px solid #c084fc", shadow: "0 0 18px #c084fc" } },
+  // Backgrounds — positioned gradient layer behind the avatar
+  { id: "bg-meadow", slot: "background", name: "Meadow Backdrop", rarity: "uncommon", background: { gradient: "linear-gradient(135deg, #86efac, #fde68a)" } },
+  { id: "bg-sunset", slot: "background", name: "Sunset Backdrop", rarity: "rare", background: { gradient: "linear-gradient(135deg, #fca5a5, #fcd34d)" } },
+  { id: "bg-aurora", slot: "background", name: "Aurora Backdrop", rarity: "epic", background: { gradient: "linear-gradient(135deg, #a5b4fc, #c4b5fd, #f0abfc)" } },
+  { id: "bg-cosmos", slot: "background", name: "Cosmos Backdrop", rarity: "legendary", background: { gradient: "linear-gradient(135deg, #1e1b4b, #6d28d9, #db2777)" } }
+];

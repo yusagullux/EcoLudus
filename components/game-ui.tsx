@@ -2,15 +2,16 @@ import type { CSSProperties, ReactNode } from "react";
 import { AnimatedNumber, AnimatedProgressBar } from "@/lib/animations";
 
 // ── Shared rarity styles ──────────────────────────────────────
-export type Rarity = "common" | "rare" | "epic" | "legendary";
+export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 export const rarityStyle: Record<Rarity, { chip: string; accent: string }> = {
   common:    { chip: "bg-[#eef2e8] text-[#344534]",  accent: "#7c8b74" },
+  uncommon:  { chip: "bg-[#eaf5ec] text-[#2a5e3f]",  accent: "#3fa876" },
   rare:      { chip: "bg-[#edf5f8] text-[#27556b]",  accent: "#2f5f86" },
   epic:      { chip: "bg-[#f2eff7] text-[#594174]",  accent: "#62508f" },
   legendary: { chip: "bg-[#fbf4df] text-[#76511a]",  accent: "#9a6b1f" }
 };
 export const rarityBorder: Record<Rarity, string> = {
-  common: "#d9e2d2", rare: "#bed0dd", epic: "#d2c9df", legendary: "#e6d3a6"
+  common: "#d9e2d2", uncommon: "#c9e0cf", rare: "#bed0dd", epic: "#d2c9df", legendary: "#e6d3a6"
 };
 
 // ── PageHero ──────────────────────────────────────────────────
