@@ -2,7 +2,6 @@ export type WeeklyReportData = {
   displayName: string;
   email: string;
   xp: number;
-  impactGainedThisWeek: number;
   level: number;
   carbonReduced: number;
   missionsCompleted: number;
@@ -16,7 +15,6 @@ export function buildWeeklyReportHtml(data: WeeklyReportData): string {
   const {
     displayName,
     xp,
-    impactGainedThisWeek,
     level,
     carbonReduced,
     missionsCompleted,
@@ -48,7 +46,7 @@ export function buildWeeklyReportHtml(data: WeeklyReportData): string {
           <tr>
             <td style="background:#102016;border-radius:20px 20px 0 0;padding:28px 32px;text-align:center;">
               <p style="margin:0;color:#8fbf7a;font-size:11px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;">EcoLudus</p>
-              <h1 style="margin:8px 0 4px;color:#ffffff;font-size:26px;font-weight:700;">Your Weekly Impact</h1>
+              <h1 style="margin:8px 0 4px;color:#ffffff;font-size:26px;font-weight:700;">Your Weekly Progress</h1>
               <p style="margin:0;color:#8fbf7a;font-size:13px;">Great work, ${displayName} — here's what you achieved this week.</p>
             </td>
           </tr>
@@ -56,8 +54,8 @@ export function buildWeeklyReportHtml(data: WeeklyReportData): string {
           <!-- XP highlight -->
           <tr>
             <td style="background:#1a3020;padding:20px 32px;text-align:center;">
-              <p style="margin:0;color:#8fbf7a;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;">Impact Gained This Week</p>
-              <p style="margin:6px 0 0;color:#ffffff;font-size:42px;font-weight:700;line-height:1;">+${impactGainedThisWeek.toLocaleString()}</p>
+              <p style="margin:0;color:#8fbf7a;font-size:11px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;">Weekly Missions Completed</p>
+              <p style="margin:6px 0 0;color:#ffffff;font-size:42px;font-weight:700;line-height:1;">${weeklyMissions}</p>
               <p style="margin:4px 0 0;color:#8fbf7a;font-size:12px;">${xp.toLocaleString()} total XP · Level ${level}</p>
             </td>
           </tr>
@@ -119,14 +117,13 @@ export function buildWeeklyReportHtml(data: WeeklyReportData): string {
 }
 
 export function buildWeeklyReportText(data: WeeklyReportData): string {
-  return `EcoLudus — Your Weekly Impact Report
+  return `EcoLudus — Your Weekly Progress Report
 
 Hi ${data.displayName},
 
 Here's your week in review:
 
-  +${data.impactGainedThisWeek.toLocaleString()} Impact this week (${data.xp.toLocaleString()} total XP · Level ${data.level})
-  ✅ ${data.weeklyMissions} missions completed
+  ✅ ${data.weeklyMissions} missions completed this week (${data.xp.toLocaleString()} total XP · Level ${data.level})
   🌿 ${data.carbonReduced.toFixed(1)} kg CO₂ reduced total
   🌳 ${data.treesPlanted} trees planted
   🏆 Rank: ${data.rank !== null ? `#${data.rank} of ${data.totalPlayers}` : "not ranked yet"}

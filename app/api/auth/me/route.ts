@@ -33,7 +33,8 @@ export async function GET() {
         uid: user.id,
         email: user.email,
         displayName: String(user.payload?.displayName ?? user.email.split("@")[0])
-      }
+      },
+      profile: user.payload ?? {}
     });
   } catch (error) {
     console.error("Session restore error:", error);

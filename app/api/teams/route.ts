@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { sql, transaction, selectTeamActiveMissionForUpdate, selectUserForUpdate } from "@/lib/db";
 import { verifyImageWithProvider, verifyTextProofWithGemini, parsePhotoProof, createImageHash, getExistingPhotoHash, savePhotoHash } from "@/lib/photo-verification";
-import { grantImpact } from "@/lib/impact-service";
+import { grantProgression } from "@/lib/progression";
 import { getTeamMissionTemplate } from "@/lib/catalog-server";
 
 // Join codes are generated with a CSPRNG (crypto.randomBytes) instead of
@@ -541,11 +541,10 @@ export async function POST(request: Request) {
 
             // Route through the spine so XP/level/Impact are server-validated and
             // every team completion feeds the same Impact number the hooks consume.
-            await grantImpact({
+            await grantProgression({
               userId: memberId,
               source: "team",
               baseXp: teamXp,
-              baseImpact: teamXp,
               eco: teamEco,
               meta: {
                 teamId,

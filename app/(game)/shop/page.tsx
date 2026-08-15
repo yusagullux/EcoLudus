@@ -1,186 +1,196 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { useShopCatalog } from "@/lib/useCatalog";
-import { HeroMetric, PageHero, Panel, Pill, PillFilterBar, primaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
-import { PillTabBar } from "@/components/ui/pill-tab-bar";
+import { HeroMetric, PageHero, primaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StaggerContainer, StaggerItem, TabPanel } from "@/lib/animations";
-import type { ShopItem, ShopMode } from "@/lib/catalog";
+import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
-type Mode = ShopMode;
-
-// Mirrors the collection page's CardImage so shop item photos fill the card
-// the same way (full-bleed object-cover, not letterboxed object-contain). Falls
-// back to an emoji if the asset is missing so the card never shows a broken image.
-const FALLBACK_EMOJI: Record<Mode, string> = { plants: "🌿", eggs: "🥚", chests: "🎁" };
-
-function ShopCardImage({ item, mode }: { item: ShopItem; mode: Mode }) {
+function ShopCardImage({ image, emoji, name }: { image?: string; emoji?: string; name: string }) {
   const [imgError, setImgError] = useState(false);
 
-  if (imgError) {
+  if (imgError || (!image && emoji)) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-5xl select-none transition duration-300 group-hover:scale-110">
-        {FALLBACK_EMOJI[mode]}
+      <div className="flex h-full w-full items-center justify-center text-7xl select-none transition duration-300 group-hover:scale-110 drop-shadow-md">
+        {emoji || "🎁"}
       </div>
     );
   }
 
-  return (
-    <Image
-      src={item.image}
-      alt={item.name}
-      fill
-      sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
-      onError={() => setImgError(true)}
-      className="object-cover transition duration-300 group-hover:scale-110"
-    />
-  );
+  if (image) {
+    return (
+      <Image
+        src={image}
+        alt={name}
+        fill
+        sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
+        onError={() => setImgError(true)}
+        className="object-contain p-4 transition duration-300 group-hover:scale-110 drop-shadow-md"
+      />
+    );
+  }
+  
+  return null;
 }
 
 export default function ShopPage() {
   const { user, profile, refreshProfile } = useAuth();
   const ecoPoints = Number(profile?.ecoPoints ?? 0);
-  const [mode, setMode] = useState<Mode>("plants");
-  const [filter, setFilter] = useState<"all" | Rarity>("all");
-  const [buyingId, setBuyingId] = useState<number | string | null>(null);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
   const toast = useToast();
-  // The catalog (incl. prices) is loaded from the server's read API and is
-  // display-only — the /api/shop/buy route re-validates the price by id, so a
-  // client cannot buy at a cheaper price even by tampering with this state.
-  // SWR caches the catalog across navigations (shop → collection shares it).
   const shopCatalog = useShopCatalog();
-  const catalog: Record<Mode, ShopItem[]> = {
-    plants: shopCatalog.plants as ShopItem[],
-    eggs: shopCatalog.eggs as ShopItem[],
-    chests: shopCatalog.chests as ShopItem[]
-  };
+  const dailyDeals = shopCatalog.dailyDeals as any[] || [];
   const loading = shopCatalog.isLoading;
+  const [timeLeft, setTimeLeft] = useState("");
 
-  const items = catalog[mode] ?? [];
-  const filtered = filter === "all" ? items : items.filter((item) => item.rarity === filter);
-  const tabs: ("all" | Rarity)[] = ["all", "common", "rare", "epic", "legendary"];
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+      const diff = tomorrow.getTime() - now.getTime();
+      
+      if (diff <= 0) return "00:00:00";
+      
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+      
+      return `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
+    };
 
-  const handleBuy = async (item: ShopItem) => {
+    setTimeLeft(calculateTimeLeft());
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleBuy = async (deal: any) => {
     if (!profile || !user) {
       toast.error("Please log in to purchase items.");
       return;
     }
     if (buyingId) return;
 
-    if (ecoPoints < item.price) {
-      toast.error(`Need ${item.price} EcoPoints; you have ${ecoPoints}.`);
+    if (ecoPoints < deal.dealPrice) {
+      toast.error(`Need ${deal.dealPrice} EcoPoints; you have ${ecoPoints}.`);
       return;
     }
 
-    setBuyingId(item.id);
+    setBuyingId(deal.dealId);
     try {
-      // The price, eco spend, and item mint are owned by the server so a client
-      // can't buy without paying or forge the item. The catalog on this page is
-      // display-only; the route is the source of truth for prices.
       const res = await fetch("/api/shop/buy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, itemId: item.id })
+        body: JSON.stringify({ mode: "daily", dealId: deal.dealId })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        toast.error(data?.error?.message || "Purchase failed. Please try again.");
+        if (data?.error?.code === "shop/already-owned") {
+          toast.error("You already own this cosmetic!");
+        } else {
+          toast.error(data?.error?.message || "Purchase failed. Please try again.");
+        }
         return;
       }
 
       await refreshProfile();
-      toast.success(`${item.name} added to collection!`);
+      toast.success(`${deal.name} added to collection!`);
     } finally {
       setBuyingId(null);
     }
   };
 
   return (
-    <StaggerContainer className="flex flex-col gap-5" as="div">
+    <StaggerContainer className="flex flex-col gap-6" as="div">
       <StaggerItem as="div">
-        <PageHero eyebrow="Nature store" title="Plant Shop" description="Spend EcoPoints on rare plants, mysterious eggs, and magical chests." accent={heroAccents.shop}>
-          <HeroMetric label="EcoPoints" value={ecoPoints} />
+        <PageHero eyebrow="Daily Deals" title="Market" description="Check back every day for new discounts on rare items!" accent={heroAccents.shop}>
+          <div className="flex flex-col items-end gap-2">
+            <HeroMetric label="EcoPoints" value={ecoPoints} />
+            <div className="text-xs font-black uppercase tracking-widest text-[var(--text-warning)] animate-pulse bg-[color-mix(in_srgb,var(--text-warning)_15%,transparent)] px-3 py-1.5 rounded-full backdrop-blur-md border border-[color-mix(in_srgb,var(--text-warning)_30%,transparent)]">
+              Resets in {timeLeft}
+            </div>
+          </div>
         </PageHero>
       </StaggerItem>
 
       <StaggerItem as="div">
-        <Panel>
-          <div className="flex flex-col gap-4">
-            <PillTabBar<Mode>
-              value={mode}
-              options={["plants", "eggs", "chests"] as const}
-              onChange={(v) => { setMode(v); setFilter("all"); }}
-            />
-            <PillFilterBar<"all" | Rarity>
-              value={filter}
-              options={tabs}
-              onChange={setFilter}
-            />
-          </div>
-        </Panel>
-      </StaggerItem>
+        {loading ? (
+          <CardGridSkeleton count={6} cols="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3" />
+        ) : dailyDeals.length === 0 ? (
+          <EmptyState
+            variant="plain"
+            icon="🏪"
+            title="Shop is closed"
+            description="The daily deals are currently unavailable."
+          />
+        ) : (
+          <StaggerContainer className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" as="div">
+            {dailyDeals.map((deal) => {
+              const style = rarityStyle[deal.rarity as Rarity] ?? rarityStyle.common;
+              const border = rarityBorder[deal.rarity as Rarity] ?? rarityBorder.common;
+              const canAfford = ecoPoints >= deal.dealPrice;
+              
+              return (
+                <StaggerItem
+                  key={deal.dealId}
+                  as="article"
+                  className="group flex flex-col overflow-hidden rounded-[24px] border transition-all duration-300 hover:-translate-y-1.5 shadow-sm hover:shadow-xl relative"
+                  style={{ borderColor: border, background: "var(--bg-card)" }}
+                >
+                  <div className="absolute top-3 left-3 z-20">
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${style.chip}`}>
+                      {deal.rarity} {deal.kind}
+                    </span>
+                  </div>
+                  
+                  <div className="absolute top-3 right-3 z-20">
+                    <span className="rounded-full bg-red-500 text-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm animate-pulse">
+                      -{deal.discountPct}%
+                    </span>
+                  </div>
 
-      <StaggerItem as="div">
-        <TabPanel activeKey={mode}>
-          {loading ? (
-            <CardGridSkeleton count={8} cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 col-span-full" />
-          ) : filtered.length === 0 ? (
-            <div className="col-span-full">
-              <EmptyState
-                variant="plain"
-                icon="🔍"
-                title="No items match this filter"
-                description="Try selecting a different rarity or switch to another shop tab."
-              />
-            </div>
-          ) : (
-            <StaggerContainer className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4" as="div">
-              {filtered.map((item) => {
-                const style = rarityStyle[item.rarity as Rarity] ?? rarityStyle.common;
-                const border = rarityBorder[item.rarity as Rarity] ?? rarityBorder.common;
-                const canAfford = ecoPoints >= item.price;
-                return (
-                  <StaggerItem
-                    key={item.id}
-                    as="article"
-                    className="group flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
-                    style={{ borderColor: border, background: "var(--bg-card)" }}
-                  >
-                    {/* Framed card image design - full bleed aspect ratio (matches Collection) */}
-                    <div className="relative flex aspect-square items-center justify-center overflow-hidden" style={{ background: `color-mix(in srgb, ${style.accent} 7%, var(--bg-card))` }}>
-                      <ShopCardImage item={item} mode={mode} />
-                      <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{item.rarity}</span>
+                  <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden" style={{ background: `radial-gradient(circle at center, color-mix(in srgb, ${style.accent} 20%, var(--bg-card)), var(--bg-panel))` }}>
+                    <div className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                    <ShopCardImage image={deal.image} emoji={deal.emoji} name={deal.name} />
+                  </div>
+                  
+                  <div className="flex flex-1 flex-col gap-3 p-4 bg-gradient-to-b from-[var(--bg-card)] to-[var(--bg-panel)] border-t border-[var(--border-subtle)]">
+                    <div>
+                      <p className="font-serif text-[17px] font-black leading-tight" style={{ color: "var(--text-primary)" }}>{deal.name}</p>
+                      {deal.description && <p className="mt-1 text-xs font-medium leading-relaxed line-clamp-2" style={{ color: "var(--text-muted)" }}>{deal.description}</p>}
                     </div>
-                    <div className="flex flex-1 flex-col gap-2 p-3">
-                      <p className="font-serif text-sm font-extrabold leading-tight truncate" style={{ color: "var(--text-primary)" }}>{item.name}</p>
-                      {item.hatchTime && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Hatches in {item.hatchTime}</p>}
-                      {item.description && <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{item.description}</p>}
-                      <p className="font-serif text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>
-                        {item.price} <span className="text-xs font-bold" title="EcoPoints" style={{ color: "var(--text-muted)" }}>EP</span>
-                      </p>
+                    
+                    <div className="mt-auto flex items-end justify-between pt-2">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-[var(--text-muted)] line-through opacity-70 mb-0.5">{deal.originalPrice} EP</span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-serif text-2xl font-black text-[var(--text-primary)]">{deal.dealPrice}</span>
+                          <span className="text-[10px] font-black uppercase text-[var(--text-warning)]">EP</span>
+                        </div>
+                      </div>
+                      
                       <button
                         type="button"
-                        onClick={() => handleBuy(item)}
-                        disabled={!canAfford || buyingId === item.id}
-                        className={`mt-auto w-full ${canAfford ? primaryButton : "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] cursor-not-allowed opacity-50"}`}
+                        onClick={() => handleBuy(deal)}
+                        disabled={!canAfford || buyingId === deal.dealId}
+                        className={`min-w-[100px] h-10 ${canAfford ? primaryButton : "inline-flex items-center justify-center rounded-full px-4 text-[11px] font-black uppercase tracking-[0.1em] cursor-not-allowed opacity-50 transition"}`}
                         style={!canAfford ? { background: "var(--bg-panel-alt)", color: "var(--text-muted)" } : undefined}
                       >
-                        {buyingId === item.id ? "Buying…" : canAfford ? "Buy" : "Need more EP"}
+                        {buyingId === deal.dealId ? "..." : canAfford ? "Buy Now" : "Locked"}
                       </button>
                     </div>
-                  </StaggerItem>
-                );
-              })}
-            </StaggerContainer>
-          )}
-        </TabPanel>
+                  </div>
+                </StaggerItem>
+              );
+            })}
+          </StaggerContainer>
+        )}
       </StaggerItem>
-
     </StaggerContainer>
   );
 }

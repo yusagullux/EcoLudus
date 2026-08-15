@@ -11,18 +11,8 @@ import {
 
 // Auth + profile bootstrap, backed by SWR.
 //
-// Performance (Phase 4a): the old hook did two sequential round-trips
-// (`/api/auth/me` then `/api/store` getDoc) on EVERY page mount with
-// `cache: "no-store"`, then re-fetched the whole profile after every mutation.
-// Navigating between game pages re-ran the full waterfall each time. SWR gives
-// a single shared cache keyed on the session + profile: simultaneous mounts
-// (layout + page) dedupe to one request, navigations reuse the cached data and
-// revalidate on focus instead of refetching, and mutations call `mutate()` to
-// refresh only the profile key.
-//
-// The return shape ({ user, profile, setProfile, refreshProfile, loading }) is
-// unchanged so the many page call sites don't need edits: `setProfile(v)` is an
-// optimistic cache write (no revalidate); `refreshProfile()` is a revalidation.
+// Performance (Phase 4b): single round-trip for user identity + full profile
+// by querying /api/auth/me instead of chaining a store getDoc call.
 
 type AuthUser = {
   uid: string;
@@ -31,52 +21,34 @@ type AuthUser = {
 };
 
 const SESSION_KEY = "/api/auth/me";
-const profileKey = (uid: string) => ["profile", uid] as const;
 
-async function fetchSession(): Promise<{ user: AuthUser | null }> {
+async function fetchSession(): Promise<{ user: AuthUser | null; profile: Record<string, unknown> | null }> {
   const res = await fetch(SESSION_KEY, { credentials: "include" });
-  if (!res.ok) return { user: null };
+  if (!res.ok) return { user: null, profile: null };
   const payload = await res.json().catch(() => ({}));
-  return { user: (payload as { user?: AuthUser | null }).user ?? null };
-}
-
-async function fetchProfile(uid: string): Promise<Record<string, unknown> | null> {
-  const res = await fetch("/api/store", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ op: "getDoc", path: ["users", uid] })
-  });
-  if (!res.ok) throw new Error("profile fetch failed");
-  const payload = await res.json().catch(() => ({}));
-  return ((payload as { data?: Record<string, unknown> }).data ?? null);
+  return { 
+    user: (payload as any).user ?? null,
+    profile: (payload as any).profile ?? null
+  };
 }
 
 export function useAuth() {
   const router = useRouter();
 
-  // Session — one shared SWR key across every mounted game page/layout. Dedupes
+  // Single shared SWR key across every mounted game page/layout. Dedupes
   // simultaneous mounts, caches across navigations, revalidates on focus.
-  const { data: session, isLoading: sessionLoading } = useSWR(SESSION_KEY, fetchSession, {
+  const { data, isLoading, mutate: mutateSession } = useSWR(SESSION_KEY, fetchSession, {
     revalidateOnFocus: true,
     dedupingInterval: 30_000
   });
-  const user = session?.user ?? null;
-
-  // Profile — dependent on the session uid. Null key while there's no user, so
-  // SWR won't fetch until the session resolves. Shares the same cache/dedupe.
-  const {
-    data: profile,
-    isLoading: profileLoading
-  } = useSWR(user ? profileKey(user.uid) : null, () => fetchProfile(user!.uid), {
-    revalidateOnFocus: true,
-    dedupingInterval: 15_000
-  });
+  
+  const user = data?.user ?? null;
+  const profile = data?.profile ?? null;
 
   // Redirect unauthenticated visitors away from game routes once the session
   // settles. Also persists/clears the "remember me" localStorage mirror.
   useEffect(() => {
-    if (sessionLoading) return;
+    if (isLoading) return;
     if (user) {
       if (getRememberedSession()) saveRememberedSession(user);
       return;
@@ -88,26 +60,20 @@ export function useAuth() {
         router.push("/login");
       }
     }
-  }, [user, sessionLoading, router]);
-
-  // "loading" is true only during the first bootstrap (session + profile). Later
-  // background revalidations don't flip it, so navigation feels instant.
-  const loading = sessionLoading || (user ? profileLoading && !profile : false);
+  }, [user, isLoading, router]);
 
   return {
     user,
-    profile: profile ?? null,
+    profile,
     setProfile: (next: Record<string, unknown> | null) => {
       if (user) {
-        // Optimistic cache update without triggering a revalidation — pages
-        // follow up with refreshProfile() to get the authoritative server state.
-        void mutate(profileKey(user.uid), next, { revalidate: false });
+        // Optimistic cache update without triggering a revalidation
+        void mutateSession({ user, profile: next }, false);
       }
     },
     refreshProfile: (): Promise<void> => {
-      if (!user) return Promise.resolve();
-      return mutate(profileKey(user.uid)) as Promise<void>;
+      return mutateSession().then(() => {});
     },
-    loading
+    loading: isLoading && !data
   };
 }
