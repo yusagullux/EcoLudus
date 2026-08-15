@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
-import { grantImpact, type ImpactUser } from "@/lib/impact-service";
+import { grantProgression, type ProgressionUser } from "@/lib/progression";
 
 // Server-validated social-quest claim. The friends page used to grant the
 // quest's XP + eco straight through `updateUserProfile` after a client-side
@@ -58,8 +58,9 @@ export async function POST(request: Request) {
     // both pass the guard and double-grant the quest's XP/eco (the lost-update
     // class fixed in the other reward routes — see the reward-routes-lost-update
     // note). grantImpact shares the lock via `tx` (no re-read, no nested tx).
+    // note). grantProgression shares the lock via `tx` (no re-read, no nested tx).
     return await transaction(async (query) => {
-      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      const userResult = await selectUserForUpdate<ProgressionUser>(query, session.userId!);
       if (userResult.rowCount === 0) {
         return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
       }
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
         : [];
       if (claimedSocialRewards.includes(quest.id)) {
         return NextResponse.json(
-          { error: { code: "social-quest/already-claimed", message: "You have already claimed this reward." } },
+          { error: { code: "social-quest/already-claimed", message: "You've already claimed this reward." } },
           { status: 409 }
         );
       }
@@ -96,11 +97,10 @@ export async function POST(request: Request) {
         );
       }
 
-      const granted = await grantImpact({
+      const granted = await grantProgression({
         userId: session.userId,
         source: "friend",
         baseXp: quest.xp,
-        baseImpact: quest.xp, // social-quest completion is real social activity — feeds the spine
         eco: quest.eco,
         meta: { questId: quest.id, metric: quest.metric, target: quest.target },
         payloadPatch: { claimedSocialRewards: [...claimedSocialRewards, quest.id] },

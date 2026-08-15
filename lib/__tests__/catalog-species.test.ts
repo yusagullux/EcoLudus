@@ -17,7 +17,7 @@ const incubateSource = readFileSync(
   "utf8"
 );
 const chestSource = readFileSync(
-  path.join(process.cwd(), "app", "api", "chests", "open", "route.ts"),
+  path.join(process.cwd(), "lib", "chest-rewards.ts"),
   "utf8"
 );
 
@@ -54,31 +54,9 @@ describe("species catalog contract", () => {
     expect(incubateSource).toMatch(/PET_CATALOG\.filter\(\s*\(p\)\s*=>\s*p\.rarity\s*===/);
   });
 
-  it("the chest route imports SEED_CATALOG and drops no inline seed pool", () => {
+  it("the chest rewards lib imports SEED_CATALOG and filters it by rarity", () => {
     expect(chestSource).toContain("SEED_CATALOG");
-    // The old inline pools were `const seedPool = [ { seedName: "...", ... } ]`.
-    // Those declarations are gone — pools now come from seedsFor([...names]).
     expect(chestSource).not.toMatch(/const\s+seedPool\s*=\s*\[/);
-    // Per-tier pools are now filtered subsets built from the shared catalog.
-    expect(chestSource).toMatch(/seedsFor\(\[/);
-  });
-
-  it("every chest-tier seed the route rolls exists in SEED_CATALOG", () => {
-    // The chest route builds its per-tier pools with seedsFor([...names]); pull
-    // each name list out and assert each name is a real SEED_CATALOG entry.
-    const tierNameLists: string[][] = [];
-    const re = /seedsFor\(\[([^\]]+)\]\)/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(chestSource)) !== null) {
-      const names = (m[1].match(/"([^"]+)"/g) ?? []).map((s) => s.replace(/"/g, ""));
-      tierNameLists.push(names);
-    }
-    expect(tierNameLists.length).toBe(4); // Wooden, Bronze, Silver, Golden
-    const seedNames = new Set(SEED_CATALOG.map((s) => s.name));
-    for (const names of tierNameLists) {
-      for (const name of names) {
-        expect(seedNames.has(name), `chest rolls unknown seed "${name}"`).toBe(true);
-      }
-    }
+    expect(chestSource).toMatch(/poolByRarity\(\s*SEED_CATALOG\s*,\s*rarity\s*\)/);
   });
 });

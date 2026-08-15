@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: ["/", "/login", "/signup", "/legal/"],
         disallow: ["/api/", "/dashboard", "/settings", "/profile", "/team",
                    "/shop", "/collection", "/habits", "/insights", "/leaderboard",
-                   "/impact", "/premium", "/garden", "/pets", "/friends"]
+                   "/premium", "/garden", "/pets", "/friends"]
       }
     ],
     sitemap: "https://ecoludus.com/sitemap.xml"

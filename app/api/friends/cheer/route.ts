@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
-import { grantImpact, type ImpactUser, type GrantImpactResult } from "@/lib/impact-service";
+import { grantProgression, type ProgressionUser, type GrantProgressionResult } from "@/lib/progression";
 
 // Server-validated friend cheer. The friends page used to enforce the 5/day
 // cap and grant XP/eco client-side through `updateUserProfile`, which a client
@@ -63,12 +63,12 @@ export async function POST(request: Request) {
   // cheerer.
   type CheerOutcome =
     | { early: NextResponse }
-    | { grant: GrantImpactResult | null; cheersAfter: number; cheererName: string };
+    | { grant: GrantProgressionResult | null; cheersAfter: number; cheererName: string };
 
   let outcome: CheerOutcome;
   try {
     outcome = await transaction<CheerOutcome>(async (query) => {
-      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      const userResult = await selectUserForUpdate<ProgressionUser>(query, session.userId!);
       if (userResult.rowCount === 0) {
         return { early: NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 }) };
       }
@@ -116,13 +116,12 @@ export async function POST(request: Request) {
       const cheererName = String(profile.displayName ?? profile.name ?? "A friend");
       const cheersAfter = cheersToday + 1;
 
-      // Grant to the cheerer (XP + eco + Impact), patching friend list + social
+      // Grant to the cheerer (XP + eco), patching friend list + social
       // stats atomically inside the locked transaction.
-      const grant = await grantImpact({
+      const grant = await grantProgression({
         userId: session.userId,
         source: "friend",
         baseXp: CHEER_XP,
-        baseImpact: CHEERER_IMPACT,
         eco: CHEER_ECO,
         meta: { friendId: parsed.friendId, friendName: String(friendEntry.displayName ?? "") },
         payloadPatch: { friends: nextFriends, socialStats: nextSocialStats },
@@ -142,14 +141,8 @@ export async function POST(request: Request) {
 
   const { grant: cheererGrant, cheersAfter, cheererName } = outcome;
 
-  // Grant a small Impact to the friend too, plus a notification. Best-effort,
+  // Grant to the friend too, plus a notification. Best-effort,
   // AFTER the cheerer's locked transaction committed — never fail the cheerer.
-  // The friend is a SEPARATE user row, so this opens its own transaction and
-  // locks the friend's row with SELECT … FOR UPDATE before computing the
-  // notification list and granting. Without the lock, the unlocked read → write
-  // here could race a concurrent reward grant on the friend (e.g. the friend
-  // completing a quest at the same moment) and clobber one side's payload — a
-  // lost-update that could drop the notification OR the friend's quest reward.
   let friendNotified = false;
   try {
     friendNotified = await transaction(async (query) => {
@@ -178,12 +171,10 @@ export async function POST(request: Request) {
       };
       const nextNotifications = [notification, ...existingNotifications].slice(0, 20);
 
-      // Run the grant INSIDE this locked transaction via `tx` so the
-      // notification patch + Impact grant are atomic with the friend lock.
-      await grantImpact({
+      await grantProgression({
         userId: parsed.friendId,
         source: "friend",
-        baseImpact: FRIEND_IMPACT,
+        baseXp: 5,
         meta: { cheeredBy: session.userId, cheeredByName: cheererName },
         payloadPatch: { notifications: nextNotifications },
         tx: { query, user: friendUser }
@@ -191,7 +182,6 @@ export async function POST(request: Request) {
       return true;
     });
   } catch (friendError) {
-    // The friend grant is best-effort — never fail the cheerer's reward.
     console.error("Friend cheer notification error:", friendError);
   }
 
@@ -199,7 +189,6 @@ export async function POST(request: Request) {
     success: true,
     xpAwarded: CHEER_XP,
     ecoAwarded: CHEER_ECO,
-    impactAwarded: CHEERER_IMPACT,
     cheersToday: cheersAfter,
     cheersCap: MAX_CHEERS_PER_DAY,
     friendNotified,

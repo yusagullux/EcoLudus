@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
-import { grantImpact, type ImpactUser } from "@/lib/impact-service";
+import { grantProgression, type ProgressionUser } from "@/lib/progression";
 import { computeVitals, getMood } from "@/lib/pet-vitals";
 
 // Server-validated pet care. The pets page used to mutate XP/eco/stat fields
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     // via `tx` (no second read, no nested transaction). Early 400/404/429
     // returns inside the callback commit (empty tx) cleanly.
     return await transaction(async (query) => {
-      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      const userResult = await selectUserForUpdate<ProgressionUser>(query, session.userId!);
       if (userResult.rowCount === 0) {
         return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
       }
@@ -140,14 +140,6 @@ export async function POST(request: Request) {
         if (String(entry.id) !== parsed.petId) return entry;
         // Drift the stored vitals to "now" first (authoritative), then apply the
         // action delta on top, then re-anchor `vitalsAt` so the client's own
-        // computeVitals matches between interactions. Bond doesn't drift, so the
-        // bond action reads from the clamped stored value.
-        const drifted = computeVitals(entry, now);
-        // Build each stat once. The previous literal had two `happiness` keys
-        // when action.stat === "happiness" (the computed `[action.stat]` key and
-        // the explicit `happiness` key), and the second — a +0 "bonus" — won,
-        // so `play`/`pet` granted ZERO happiness. Intent: the primary stat gets
-        // +amount; non-happiness actions also give a small +4 happiness bump.
         const nextHappiness =
           action.stat === "happiness"
             ? Math.min(100, drifted.happiness + action.amount)
@@ -160,8 +152,6 @@ export async function POST(request: Request) {
           ...entry,
           happiness: nextHappiness,
           energy: nextEnergy,
-          // Bond doesn't drift — only write it when this is the bond action;
-          // otherwise leave the stored value untouched via `...entry`.
           ...(action.stat === "bond"
             ? { bond: Math.min(100, clampStat(entry.bond, 10) + action.amount) }
             : {}),
@@ -175,15 +165,13 @@ export async function POST(request: Request) {
         };
       });
 
-      const granted = await grantImpact({
+      const granted = await grantProgression({
         userId: session.userId,
         source: "petCare",
         baseXp: xpToGrant,
-        baseImpact: 0, // pet care feeds vitality (Phase 2), not the spine
         eco: ecoGained - action.cost, // net eco delta (reward minus cost)
         meta: { action: parsed.action, petId: parsed.petId, petName: String(pet.name ?? ""), mood: mood.label },
         payloadPatch: { animals: nextAnimals },
-        // Share the locked transaction so the cap checks + grant are atomic.
         tx: { query, user }
       });
 

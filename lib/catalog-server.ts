@@ -85,6 +85,13 @@ export async function getShopCatalog(): Promise<Record<ShopMode, ShopItem[]>> {
   return grouped;
 }
 
+import { getDailyShopItems, type DailyDealItem } from "@/lib/catalog";
+
+export function getDailyDeals(): DailyDealItem[] {
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD in UTC
+  return getDailyShopItems(today);
+}
+
 // Single-item lookup used by /api/shop/buy — the server is the source of truth
 // for the price; the client only sends `{ mode, itemId }`.
 export async function getShopItem(

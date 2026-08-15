@@ -131,10 +131,7 @@ export interface UserProfile {
   allQuestsCompletedCount: number;
   allQuestsCompletedDate: string | null;
 
-  // ── Impact / carbon (unified gamification spine) ───────────────────────────
-  /** Lifetime Impact — running total, ledgered in impact_events. */
-  impact?: number;
-  impactBySource?: Record<string, number>;
+  // ── Carbon / Trees ───────────────────────────────────────────────────────
   carbonReduced?: number;
   treesPlanted?: number;
 

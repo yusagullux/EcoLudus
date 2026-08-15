@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { transaction, selectUserForUpdate, type DbQuery } from "@/lib/db";
-import { grantImpact, type ImpactUser } from "@/lib/impact-service";
+import { transaction, selectUserForUpdate } from "@/lib/db";
+import { grantProgression, type ProgressionUser } from "@/lib/progression";
 import { PET_CATALOG, type PetSpecies } from "@/lib/catalog";
 
 // Server-owned egg lifecycle. The collection page used to mutate eggs /
@@ -62,7 +62,7 @@ const incubateSchema = z.object({
   hatchingId: z.string().min(1).optional()
 });
 
-function writePayload(query: DbQuery, userId: string, email: string, payload: Record<string, unknown>) {
+function writePayload(query: any, userId: string, email: string, payload: Record<string, unknown>) {
   return query(
     `insert into users (id, email, password_hash, payload)
      values ($1, $2, coalesce((select password_hash from users where id = $1), ''), $3::jsonb)
@@ -96,14 +96,14 @@ export async function POST(request: Request) {
   // double-grants HATCH_XP/Impact and doesn't consume the hatching atomically
   // — the lost-update class from the 2026-07-25 audit). Wrap the whole body in
   // one transaction with a FOR UPDATE row lock; the hatch branch passes the
-  // locked client + row to grantImpact's `tx` so the Impact grant shares the
+  // locked client + row to grantProgression's `tx` so the grant shares the
   // same lock (no second read, no nested transaction). No external I/O happens
   // inside the locked section (PET_CATALOG is in-memory), so holding the lock
   // for the whole body is cheap. Early 400/404/425 returns inside the callback
   // commit (empty tx) cleanly.
   try {
     return await transaction(async (query) => {
-      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      const userResult = await selectUserForUpdate<ProgressionUser>(query, session.userId!);
       if (userResult.rowCount === 0) {
         return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
       }
@@ -260,17 +260,12 @@ export async function POST(request: Request) {
         });
       }
 
-      const granted = await grantImpact({
+      const granted = await grantProgression({
         userId: session.userId,
         source: "egg",
         baseXp: HATCH_XP[rarity],
-        baseImpact: HATCH_IMPACT[rarity],
         meta: { hatchingId: parsed.hatchingId, animal: reward.name, rarity },
         payloadPatch: { hatchings: nextHatchings, animals },
-        // Share the locked transaction: grantImpact runs its user upsert +
-        // impact_events insert on the same client-bound `query` and reuses the
-        // already-locked `user` row (no re-read, no nested transaction), so the
-        // hatching-consumption + reward grant are one atomic unit.
         tx: { query, user }
       });
 
@@ -280,7 +275,6 @@ export async function POST(request: Request) {
         animal: reward,
         level: granted?.level ?? null,
         xp: granted?.xp ?? null,
-        impact: granted?.impact ?? null,
         ecoPoints: granted?.ecoPoints ?? null
       });
     });

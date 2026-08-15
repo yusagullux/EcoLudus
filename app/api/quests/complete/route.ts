@@ -5,8 +5,8 @@ import { getSession } from "@/lib/auth";
 import { getQuestCarbonReduction, getQuestDefinition } from "@/lib/carbon-calc";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { getMissingVerifiedQuestProofIds, removeVerifiedQuestProofs } from "@/lib/quest-proof";
-import { checkAndProcessMilestones } from "@/lib/rewards-sync";
-import { grantImpact, type ImpactUser } from "@/lib/impact-service";
+import { grantProgression, type ProgressionUser } from "@/lib/progression";
+import { consumeBoostersForQuest } from "@/lib/boosters";
 import { computeVitals } from "@/lib/pet-vitals";
 
 const completeQuestSchema = z.object({
@@ -196,7 +196,7 @@ export async function POST(request: Request) {
     // Early 400/404/422 returns inside the callback commit (empty tx) cleanly.
     let questSucceeded = false;
     const result = await transaction(async (query) => {
-      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      const userResult = await selectUserForUpdate<ProgressionUser>(query, session.userId!);
 
       const user = userResult.rows[0];
       if (!user) {
@@ -280,6 +280,16 @@ export async function POST(request: Request) {
       const xpReward = completionRecords.reduce((sum, quest) => sum + quest.xp, 0);
       const ecoReward = completionRecords.reduce((sum, quest) => sum + quest.ecoPoints, 0);
       const carbonReward = completionRecords.reduce((sum, quest) => sum + quest.carbonReduced, 0);
+
+      // Consume boosters (at most one xp + one eco, highest multiplier with
+      // charges) and apply their multipliers to the quest rewards. baseImpact
+      // stays UNBOOSTED so the spine measures real eco activity, not the
+      // booster perk stacked on top of it. The companion bonus is computed from
+      // the base quest XP (xpReward) and added after boosting.
+      const boosterResult = consumeBoostersForQuest(profile);
+      const boostedXp = Math.round(xpReward * boosterResult.xpMul);
+      const boostedEco = Math.round(ecoReward * boosterResult.ecoMul);
+
       const companionProgress = applyCompanionProgress(profile, completionRecords.length, xpReward);
       const nextDailyCompletions = Array.from(new Set([...dailyQuestsCompleted, ...questIds]));
       const nextCompletedQuests = Array.from(new Set([...completedQuests, ...questIds]));
@@ -314,9 +324,10 @@ export async function POST(request: Request) {
       };
 
       // Route the reward write through the spine. XP includes the companion bonus
-      // (a perk for the active pet); Impact is the base quest XP only, so the spine
-      // measures the actual eco activity, not the companion perk on top of it.
-      const baseXp = xpReward + companionProgress.companionXpBonus;
+      // (a perk for the active pet) on top of the boosted XP; Impact is the base
+      // quest XP only (unboosted), so the spine measures the actual eco activity,
+      // not the booster perk or companion perk on top of it.
+      const baseXp = boostedXp + companionProgress.companionXpBonus;
       const patch: Record<string, unknown> = {
         animals: companionProgress.animals,
         missionsCompleted: Number(profile.missionsCompleted || 0) + completionRecords.length,
@@ -326,15 +337,15 @@ export async function POST(request: Request) {
         dailyClearChestRewards,
         verifiedQuestProofs: removeVerifiedQuestProofs(profile, questIds).verifiedQuestProofs,
         ...(bonusChest ? { chests: addChest(profile.chests, bonusChest) } : {}),
+        ...(boosterResult.consumed.length > 0 ? { boosters: boosterResult.boosters } : {}),
         lastQuestCompletionTime: completedAt.toISOString()
       };
 
-      const granted = await grantImpact({
+      const granted = await grantProgression({
         userId: session.userId,
         source: "quests",
         baseXp,
-        baseImpact: xpReward,
-        eco: ecoReward,
+        eco: boostedEco,
         carbon: carbonReward,
         meta: {
           questIds,
@@ -354,8 +365,7 @@ export async function POST(request: Request) {
             xp: granted.xp,
             level: granted.level,
             ecoPoints: granted.ecoPoints,
-            carbonReduced: granted.carbonReduced,
-            impact: granted.impact
+            carbonReduced: granted.carbonReduced
           }
         : { ...removeVerifiedQuestProofs(profile, questIds), ...patch };
 
@@ -376,24 +386,25 @@ export async function POST(request: Request) {
         profile: nextProfile,
         completed: completionRecords,
         totals: {
-          xp: xpReward,
+          xp: boostedXp,
           companionXpBonus: companionProgress.companionXpBonus,
-          ecoPoints: ecoReward,
+          ecoPoints: boostedEco,
           carbonReduced: Math.round(carbonReward * 100) / 100
         },
         bonusChest,
-        companion: companionProgress.companion
+        companion: companionProgress.companion,
+        booster: {
+          xpMul: boosterResult.xpMul,
+          ecoMul: boosterResult.ecoMul,
+          consumed: boosterResult.consumed
+        }
       });
     });
 
     // Check milestones async (tree planting) — fire-and-forget, OUTSIDE the
     // transaction so its network calls (Ecologi) don't hold the user row lock.
     // Only fire on a successful completion, not on the early 400/404/422 paths.
-    if (questSucceeded) {
-      checkAndProcessMilestones(session.userId).catch((err) =>
-        console.error("Milestone check after quest completion failed:", err)
-      );
-    }
+    // (Milestone checks removed since impact mechanics were stripped)
 
     return result;
   } catch (error) {

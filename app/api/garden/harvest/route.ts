@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
-import { grantImpact, type ImpactUser } from "@/lib/impact-service";
+import { grantProgression, type ProgressionUser } from "@/lib/progression";
 
 // Server-validated garden harvest. The garden page used to compute XP/eco from
 // a tile's rarity and write it through `updateUserProfile`, which a client could
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     // in the other reward routes — see the reward-routes-lost-update note).
     // grantImpact shares the lock via `tx` (no re-read, no nested transaction).
     return await transaction(async (query) => {
-      const userResult = await selectUserForUpdate<ImpactUser>(query, session.userId!);
+      const userResult = await selectUserForUpdate<ProgressionUser>(query, session.userId!);
       if (userResult.rowCount === 0) {
         return NextResponse.json({ error: { code: "auth/user-not-found" } }, { status: 404 });
       }
@@ -111,16 +111,13 @@ export async function POST(request: Request) {
         });
       }
 
-      const granted = await grantImpact({
+      const granted = await grantProgression({
         userId: session.userId,
         source: "garden",
         baseXp: totalXp,
-        baseImpact: totalXp,
         eco: totalEco,
         meta: { harvested, tileIds: candidateIds },
         payloadPatch: { garden: nextGarden },
-        // Share the locked transaction so the per-tile cooldown stamps + reward
-        // grant are one atomic unit.
         tx: { query, user }
       });
 

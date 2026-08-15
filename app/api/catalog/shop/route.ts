@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getShopCatalog } from "@/lib/catalog-server";
+import { getShopCatalog, getDailyDeals } from "@/lib/catalog-server";
 import { cachedJson } from "@/lib/api-cache";
 import { logError } from "@/lib/logger";
 
@@ -15,9 +15,14 @@ const CACHE_CONTROL = "public, max-age=300, s-maxage=300, stale-while-revalidate
 
 export async function GET() {
   try {
-    const catalog = await cachedJson("catalog:shop", CACHE_TTL_MS, () => getShopCatalog());
+    const today = new Date().toISOString().split("T")[0];
+    const data = await cachedJson(`catalog:shop:${today}`, CACHE_TTL_MS, async () => {
+      const catalog = await getShopCatalog();
+      const dailyDeals = getDailyDeals();
+      return { catalog, dailyDeals };
+    });
     return NextResponse.json(
-      { catalog },
+      data,
       { headers: { "Cache-Control": CACHE_CONTROL } }
     );
   } catch (error) {

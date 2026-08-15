@@ -386,30 +386,13 @@ export async function submitPrivateMission(
         );
       }
 
-      // Spine: bump Impact in lockstep with the verified XP so private missions feed
-      // the same number the hooks consume. 1:1 with finalXp (post trust/verification).
-      // Derived from the LOCKED user row so a concurrent reward grant can't be
-      // clobbered by this full-payload write (lost-update class, audit H5).
-      const previousImpact = Math.max(0, Math.floor(Number(lockedUser.payload?.impact ?? 0) || 0));
-      const prevImpactBySource =
-        (lockedUser.payload?.impactBySource && typeof lockedUser.payload.impactBySource === "object"
-          ? lockedUser.payload.impactBySource
-          : {}) as Record<string, number>;
-      const nextImpact = previousImpact + finalXp;
-      const nextImpactBySource = {
-        ...prevImpactBySource,
-        private: Math.max(0, Math.floor(Number(prevImpactBySource.private ?? 0))) + finalXp
-      };
-
       const nextPayload = {
         ...lockedUser.payload,
         xp: lockedNextXp,
         level: lockedNextLevel,
         trustScore: trustUpdate.nextScore,
         missionsCompleted: Number(lockedUser.payload?.missionsCompleted ?? 0) + (finalXp > 0 ? 1 : 0),
-        lastPrivateMissionAt: submittedAt.toISOString(),
-        impact: nextImpact,
-        impactBySource: nextImpactBySource
+        lastPrivateMissionAt: submittedAt.toISOString()
       };
 
       await query(
@@ -422,25 +405,6 @@ export async function submitPrivateMission(
          where id = $5`,
         [lockedNextXp, lockedNextLevel, trustUpdate.nextScore, JSON.stringify(nextPayload), body.userId]
       );
-
-      if (finalXp > 0) {
-        await query(
-          `insert into impact_events (id, user_id, source, amount, meta)
-           values ($1, $2, $3, $4, $5::jsonb)`,
-          [
-            impactEventId,
-            body.userId,
-            "private",
-            finalXp,
-            JSON.stringify({
-              submissionId,
-              missionId: body.missionId,
-              verification: verification.status,
-              trustMultiplier: getTrustMultiplier(trustUpdate.nextScore)
-            })
-          ]
-        );
-      }
 
       return { nextXp: lockedNextXp, levelRewards: lockedLevelRewards };
     });

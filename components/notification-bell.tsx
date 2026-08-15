@@ -158,16 +158,20 @@ export function NotificationBell() {
               </div>
             )}
 
-            {/* Footer */}
-            <Link
-              href="/impact"
-              onClick={() => setOpen(false)}
-              className="block px-4 py-3 text-center text-[11px] font-bold transition-colors hover:opacity-70"
-              style={{ color: "var(--text-accent)", borderTop: "1px solid var(--border-subtle)" }}
-              role="menuitem"
-            >
-              View all
-            </Link>
+            {notifications.length > 0 && unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  void markAllRead();
+                  setOpen(false);
+                }}
+                className="block w-full px-4 py-2.5 text-center text-[11px] font-bold transition-colors hover:opacity-70"
+                style={{ color: "var(--text-accent)", borderTop: "1px solid var(--border-subtle)" }}
+                role="menuitem"
+              >
+                Mark all as read
+              </button>
+            )}
           </div>
         ) : null}
       </MotionPresence>

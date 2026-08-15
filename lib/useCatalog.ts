@@ -24,6 +24,7 @@ const CATALOG_OPTS = {
 
 type ShopCatalogEnvelope = {
   catalog?: { plants?: unknown[]; eggs?: unknown[]; chests?: unknown[] };
+  dailyDeals?: unknown[];
 };
 type SpeciesEnvelope = { pets?: unknown[]; seeds?: unknown[] };
 type TeamTemplatesEnvelope = { templates?: unknown[] };
@@ -40,6 +41,7 @@ export function useShopCatalog() {
     plants: Array.isArray(cat?.plants) ? cat.plants : [],
     eggs: Array.isArray(cat?.eggs) ? cat.eggs : [],
     chests: Array.isArray(cat?.chests) ? cat.chests : [],
+    dailyDeals: Array.isArray(data?.dailyDeals) ? data.dailyDeals : [],
     isLoading: isLoading && !data,
     error
   };

@@ -34,6 +34,8 @@ export type RolledReward = {
   amount?: number;
   rarity: Rarity;
   image?: string;
+  emoji?: string;
+  description?: string;
   seedName?: string;
   boosterId?: string;
   cosmeticId?: string;
@@ -183,13 +185,13 @@ function rollOne(
     case "booster": {
       const pool = poolByRarity(BOOSTER_CATALOG, rarity);
       const b = pool[Math.floor(rng() * pool.length)] ?? BOOSTER_CATALOG[0];
-      return { kind: "booster", name: b.name, rarity: b.rarity, boosterId: b.id };
+      return { kind: "booster", name: b.name, rarity: b.rarity, boosterId: b.id, emoji: b.emoji, description: `${b.multiplier}x ${b.kind.toUpperCase()} (${b.charges} charges)` };
     }
     case "cosmetic": {
       const pool = poolByRarity(COSMETIC_CATALOG, rarity);
       const c = pool[Math.floor(rng() * pool.length)] ?? COSMETIC_CATALOG[0];
       const isNew = !ownedCosmeticIds(profile).has(c.id);
-      return { kind: "cosmetic", name: c.name, rarity: c.rarity, cosmeticId: c.id, isNew };
+      return { kind: "cosmetic", name: c.name, rarity: c.rarity, cosmeticId: c.id, emoji: c.slot === "frame" ? "🖼️" : "🎨", isNew };
     }
   }
 }

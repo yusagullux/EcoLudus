@@ -32,10 +32,17 @@ function buildInitialProfile(email: string, displayName?: string) {
     lastQuestCompletionTime: null,
     plants: [],
     eggs: [],
+    seeds: [],
     chests: [],
     hatchings: [],
     animals: [],
     activePet: null,
+    boosters: [],
+    cosmetics: {
+      owned: [],
+      equippedFrame: null,
+      equippedBackground: null
+    },
     currentStreak: 1,
     longestStreak: 1,
     lastLoginDate: today,

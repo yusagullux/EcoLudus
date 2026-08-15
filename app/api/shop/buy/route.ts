@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
-import { getShopItem } from "@/lib/catalog-server";
+import { getShopItem, getDailyDeals } from "@/lib/catalog-server";
 import { logError } from "@/lib/logger";
 
 // Server-validated shop purchase. The shop page used to spend EcoPoints and
@@ -17,11 +17,12 @@ import { logError } from "@/lib/logger";
 // The catalog is loaded from `catalog_items` via lib/catalog-server — a
 // client only sends `{ mode, itemId }` and the server looks up the price, so
 // a client cannot send a cheaper price. Prices can be updated in the DB
-// without a code deploy.
+// without a code deploy. Daily deals are validated against the current UTC date.
 
 const buySchema = z.object({
-  mode: z.enum(["plants", "eggs", "chests"]),
-  itemId: z.number().int().min(1)
+  mode: z.enum(["plants", "eggs", "chests", "daily"]),
+  itemId: z.union([z.number(), z.string()]).optional(),
+  dealId: z.string().optional()
 });
 
 export async function POST(request: Request) {
@@ -41,7 +42,30 @@ export async function POST(request: Request) {
   }
 
   try {
-    const item = await getShopItem(parsed.mode, parsed.itemId);
+    let item: { id: string | number; name: string; price: number; kind: string; image?: string } | null = null;
+    
+    if (parsed.mode === "daily" && parsed.dealId) {
+      const deals = getDailyDeals();
+      const deal = deals.find(d => d.dealId === parsed.dealId);
+      if (deal) {
+        item = {
+          id: deal.itemId,
+          name: deal.name,
+          price: deal.dealPrice,
+          kind: deal.kind,
+          image: deal.image
+        };
+      }
+    } else if (parsed.mode !== "daily" && parsed.itemId) {
+      const shopItem = await getShopItem(parsed.mode as any, Number(parsed.itemId));
+      if (shopItem) {
+        item = {
+          ...shopItem,
+          kind: parsed.mode === "plants" ? "plant" : parsed.mode === "chests" ? "chest" : "egg"
+        };
+      }
+    }
+
     if (!item) {
       return NextResponse.json({ error: { code: "shop/not-found" } }, { status: 404 });
     }
@@ -61,34 +85,49 @@ export async function POST(request: Request) {
 
       const profile = userResult.rows[0].payload ?? {};
       const currentEco = Math.max(0, Number(profile.ecoPoints ?? 0) || 0);
-      if (currentEco < item.price) {
+      if (currentEco < item!.price) {
         return NextResponse.json(
-          { error: { code: "shop/insufficient-eco", message: `Need ${item.price} EcoPoints; you have ${currentEco}.` } },
+          { error: { code: "shop/insufficient-eco", message: `Need ${item!.price} EcoPoints; you have ${currentEco}.` } },
           { status: 400 }
         );
       }
 
       const purchasedAt = new Date().toISOString();
-      const inventoryKey = parsed.mode === "plants" ? "plants" : parsed.mode === "eggs" ? "eggs" : "chests";
-      const inventory = Array.isArray(profile[inventoryKey])
-        ? [...(profile[inventoryKey] as Array<Record<string, unknown>>)]
-        : [];
+      let inventoryKey = item!.kind + "s";
+      if (item!.kind === "chest") inventoryKey = "chests";
+      
+      let nextProfile: Record<string, unknown> = { ...profile, ecoPoints: currentEco - item!.price };
 
-      const idx = inventory.findIndex((entry) => {
-        const entryId = entry.id ?? entry.name;
-        return String(entryId) === String(item.id) || entry.name === item.name;
-      });
-      if (idx >= 0) {
-        inventory[idx] = { ...inventory[idx], count: Number(inventory[idx].count ?? 1) + 1, purchasedAt };
+      if (item!.kind === "cosmetic") {
+        const cosmetics = (profile.cosmetics as any) || { equipped: {}, owned: [] };
+        if (!cosmetics.owned.some((c: any) => c.id === item!.id)) {
+          cosmetics.owned.push({ id: item!.id, unlockedAt: purchasedAt });
+          nextProfile.cosmetics = cosmetics;
+        } else {
+          return NextResponse.json({ error: { code: "shop/already-owned", message: "You already own this cosmetic." } }, { status: 400 });
+        }
+      } else if (item!.kind === "booster") {
+        const boosters = Array.isArray(profile.boosters) ? [...profile.boosters] : [];
+        const idx = boosters.findIndex((b: any) => b.id === item!.id);
+        if (idx >= 0) {
+          boosters[idx] = { ...boosters[idx], count: (boosters[idx].count || 1) + 1 };
+        } else {
+          boosters.push({ id: item!.id, count: 1 });
+        }
+        nextProfile.boosters = boosters;
       } else {
-        inventory.push({ ...item, count: 1, purchasedAt });
+        const inventory = Array.isArray(profile[inventoryKey]) ? [...(profile[inventoryKey] as Array<any>)] : [];
+        const idx = inventory.findIndex((entry) => {
+          const entryId = entry.id ?? entry.name;
+          return String(entryId) === String(item!.id) || entry.name === item!.name;
+        });
+        if (idx >= 0) {
+          inventory[idx] = { ...inventory[idx], count: Number(inventory[idx].count ?? 1) + 1, purchasedAt };
+        } else {
+          inventory.push({ ...item, count: 1, purchasedAt });
+        }
+        nextProfile[inventoryKey] = inventory;
       }
-
-      const nextProfile: Record<string, unknown> = {
-        ...profile,
-        ecoPoints: currentEco - item.price,
-        [inventoryKey]: inventory
-      };
 
       await query(
         `insert into users (id, email, password_hash, payload)

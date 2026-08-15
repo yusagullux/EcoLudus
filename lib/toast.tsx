@@ -96,7 +96,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {/* Single live region — AT announce new toasts; existing ones update in place. */}
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-6 z-[60] flex flex-col items-center gap-2 px-4"
+        className="pointer-events-none fixed top-6 right-6 z-[60] flex flex-col items-end gap-2 px-4 max-w-full"
         role="status"
         aria-live="polite"
         aria-atomic="false"
@@ -128,16 +128,14 @@ function ToastItem({ record, onDismiss }: { record: ToastRecord; onDismiss: () =
     : "var(--toast-error-fg)";
 
   return (
-    <motion.button
-      type="button"
-      onClick={onDismiss}
+    <motion.div
       layout
-      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 20, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.96 }}
+      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, x: 20, scale: 0.96 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
-      className="pointer-events-auto flex max-w-[min(92vw,28rem)] items-center gap-2.5 rounded-2xl px-5 py-3 text-sm font-semibold shadow-xl transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-      style={{ background: bg, color: fg, "--tw-ring-offset-color": "transparent" } as React.CSSProperties}
+      className="pointer-events-auto flex w-auto max-w-md items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold shadow-xl"
+      style={{ background: bg, color: fg } as React.CSSProperties}
     >
       {icon && (
         <span
@@ -148,8 +146,15 @@ function ToastItem({ record, onDismiss }: { record: ToastRecord; onDismiss: () =
           {icon}
         </span>
       )}
-      <span className="text-left">{record.message}</span>
-    </motion.button>
+      <span className="text-left flex-1 break-words leading-snug">{record.message}</span>
+      <button 
+        onClick={onDismiss} 
+        className="ml-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+        aria-label="Dismiss"
+      >
+        <span className="text-xs">✕</span>
+      </button>
+    </motion.div>
   );
 }
 

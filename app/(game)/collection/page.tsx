@@ -151,7 +151,8 @@ export default function CollectionPage() {
 
   // Fullscreen Chest Reveal State
   const [activeChest, setActiveChest] = useState<any>(null);
-  const [chestReward, setChestReward] = useState<any>(null);
+  const [chestRewards, setChestRewards] = useState<any[]>([]);
+  const [chestSummary, setChestSummary] = useState<any>(null);
   const [chestState, setChestState] = useState<"closed" | "shaking" | "opened">("closed");
   const [chestParticles, setChestParticles] = useState<Array<{ id: number; dx: number; dy: number; color: string }>>([]);
   const [selectingPetId, setSelectingPetId] = useState<string | null>(null);
@@ -444,15 +445,17 @@ export default function CollectionPage() {
 
   const openChest = async (chest: any) => {
     // Snapshot owned seed + egg names *before* the server rolls/grants the
-    // reward, so the reveal can flag a first-time species discovery. (Points
-    // rewards are never "new discoveries".)
+    // reward, so the reveal can flag a first-time species discovery.
     preOwnedRef.current = new Set([
       ...profileSeeds.map((s: any) => s?.name).filter(Boolean),
-      ...profileEggs.map((e: any) => e?.name).filter(Boolean)
+      ...profileEggs.map((e: any) => e?.name).filter(Boolean),
+      ...((profile as any)?.cosmetics?.owned ?? []).map((c: any) => String(c.id))
     ]);
     setActiveChest(chest);
     setChestState("shaking");
-    setChestReward(null);
+    setChestRewards([]);
+    setChestSummary(null);
+    setChestIsNew(false);
     setChestParticles([]);
 
     // Shake particles
@@ -466,8 +469,7 @@ export default function CollectionPage() {
       setChestParticles((prev) => [...prev, ...p]);
     }, 200);
 
-    // Roll + consume the chest on the server immediately, so the reward can't be
-    // forged from the client. The reveal just surfaces what the server rolled.
+    // Roll + consume the chest on the server immediately
     const resultPromise = fetch("/api/chests/open", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -477,23 +479,26 @@ export default function CollectionPage() {
     setTimeout(async () => {
       clearInterval(shakeInterval);
       const { ok, data } = await resultPromise;
-      if (!ok || !data?.success) {
+      if (!ok || !data?.success || !data?.rewards) {
         setChestState("closed");
         setActiveChest(null);
         toast.error(data?.error?.message || "Failed to open chest. Please try again.");
         return;
       }
-      const reward = data.reward;
-      setChestReward(reward);
-      // First-time discovery iff the rolled seed/egg name isn't in the
-      // pre-open snapshot. Points rewards are never discoveries.
-      const isNew =
-        reward?.type === "seed"
-          ? !!reward.seedName && !preOwnedRef.current.has(reward.seedName)
-          : reward?.type === "egg"
-            ? !!reward.name && !preOwnedRef.current.has(reward.name)
-            : false;
-      setChestIsNew(isNew);
+      
+      const rewards = data.rewards;
+      setChestRewards(rewards);
+      setChestSummary(data.summary);
+      
+      // Mark as new if ANY reward is a new discovery
+      const hasNew = rewards.some((reward: any) => {
+        if (reward.isNew) return true;
+        if (reward.kind === "seed") return !!reward.seedName && !preOwnedRef.current.has(reward.seedName);
+        if (reward.kind === "egg") return !!reward.name && !preOwnedRef.current.has(reward.name);
+        if (reward.kind === "plant") return !!reward.name && !preOwnedRef.current.has(reward.name);
+        return false;
+      });
+      setChestIsNew(hasNew);
       setChestState("opened");
       await refreshProfile();
 
@@ -508,25 +513,20 @@ export default function CollectionPage() {
     }, 1200);
   };
 
-  // The chest and its reward were already consumed/granted server-side on open.
+  // The chest and its rewards were already consumed/granted server-side on open.
   // This just dismisses the reveal and surfaces a toast.
   const claimChestReward = async () => {
-    if (!chestReward) return;
+    if (chestRewards.length === 0) return;
 
-    if (chestReward.type === "points") {
-      toast.success(`Claimed ${chestReward.amount} EcoPoints!`);
-    } else if (chestReward.type === "seed") {
-      toast.success(`Got a ${chestReward.seedName}! 🌱 Plant it in your Garden.`);
-    } else {
-      toast.success(`Got a ${chestReward.name}! Check your eggs.`);
-    }
+    toast.success(`Claimed ${chestRewards.length} rewards from the chest!`);
 
     setActiveChest(null);
-    setChestReward(null);
+    setChestRewards([]);
+    setChestSummary(null);
     setChestState("closed");
     setChestIsNew(false);
 
-    if (chestReward.type === "egg") {
+    if (chestRewards.some(r => r.kind === "egg")) {
       setMode("eggs");
     }
   };
@@ -1040,61 +1040,81 @@ export default function CollectionPage() {
                     Chest Opened!
                   </span>
                   <h3 className="mt-4 font-serif text-3xl font-black text-[var(--text-primary)]">
-                    {chestReward.type === "points"
-                      ? <>+<AnimatedNumber value={chestReward.amount} duration={900} /> EcoPoints!</>
-                      : chestReward.type === "seed"
-                      ? `${chestReward.seedName}!`
-                      : `Unlocked ${chestReward.name}!`}
+                    {chestRewards.length} Rewards Found
                   </h3>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    {chestReward.type === "seed"
-                      ? "Head to your Garden and plant it — it grows over 7 days! 🌱"
-                      : "Your reward has been added to your profile."}
-                  </p>
                 </StaggerItem>
 
-                <motion.div
-                  initial={{ scale: 0.4, opacity: 0, rotateY: -70 }}
-                  animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-                  transition={{ type: "spring", stiffness: 220, damping: 16, delay: 0.12 }}
-                  className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-panel-alt)] shadow-2xl p-6 overflow-hidden"
-                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)", transformStyle: "preserve-3d" }}
-                >
-                  <RewardGlow rarity={chestReward.rarity} />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/10 to-transparent pointer-events-none" />
-                  {chestReward.type === "points" ? (
-                    <div className="text-6xl select-none drop-shadow-md">🪙</div>
-                  ) : (
-                    <Image
-                      src={chestReward.image}
-                      alt={chestReward.name}
-                      width={128}
-                      height={128}
-                      className="object-contain"
-                    />
-                  )}
-                </motion.div>
+                <div className="grid grid-cols-2 gap-3 w-full max-w-[320px] sm:max-w-none sm:grid-cols-3">
+                  {chestRewards.map((reward, i) => (
+                    <StaggerItem key={i}>
+                      <motion.div
+                        initial={{ scale: 0.4, opacity: 0, rotateY: -70 }}
+                        animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                        transition={{ type: "spring", stiffness: 220, damping: 16 }}
+                        className="relative flex flex-col h-32 w-full items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel-alt)] shadow-lg p-3 overflow-hidden text-center group"
+                        style={{ transformStyle: "preserve-3d" }}
+                      >
+                        <RewardGlow rarity={reward.rarity} />
+                        <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/5 to-transparent pointer-events-none" />
+                        
+                        {reward.isNew && (
+                          <div className="absolute top-1.5 right-1.5 text-[10px] font-black text-[var(--text-warning)] animate-pulse">
+                            NEW
+                          </div>
+                        )}
 
-                <StaggerItem className="flex flex-col items-center">
-                  <span className={`rounded-full px-3.5 py-1 text-[10px] font-black uppercase tracking-widest ${rarityStyle[chestReward.rarity as Rarity]?.chip}`}>
-                    {chestReward.rarity}
-                  </span>
-                  <p className="mt-3 text-xs leading-relaxed max-w-[280px] text-[var(--text-muted)]">
-                    {chestReward.type === "points"
-                      ? "Spend these EcoPoints in the Plant Shop to buy more eggs and chests!"
-                      : chestReward.type === "seed"
-                      ? `A ${chestReward.rarity} seed. Plant it in your Virtual Garden and wait ~7 days for it to bloom into rewards.`
-                      : `${chestReward.name} is a ${chestReward.rarity} item that has been added to your inventory.`}
-                  </p>
-                </StaggerItem>
+                        <div className="flex-1 flex items-center justify-center relative z-10 transition-transform duration-300 group-hover:scale-110">
+                          {reward.image ? (
+                            <Image
+                              src={reward.image}
+                              alt={reward.name}
+                              width={48}
+                              height={48}
+                              className="object-contain drop-shadow-md"
+                            />
+                          ) : (
+                            <div className="text-4xl select-none drop-shadow-md">
+                              {reward.emoji || (reward.kind === "points" ? "🪙" : reward.kind === "xp" ? "✨" : "🎁")}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="relative z-10 w-full">
+                          <p className="text-[11px] font-bold text-[var(--text-primary)] truncate" title={reward.name}>
+                            {reward.amount ? `+${reward.amount} ` : ""}{reward.name}
+                          </p>
+                          <span className={`inline-block mt-0.5 rounded px-1.5 py-[2px] text-[8px] font-black uppercase tracking-widest ${rarityStyle[reward.rarity as Rarity]?.chip}`}>
+                            {reward.rarity}
+                          </span>
+                        </div>
+                      </motion.div>
+                    </StaggerItem>
+                  ))}
+                </div>
 
-                <StaggerItem>
+                {chestSummary && (
+                  <StaggerItem className="w-full">
+                    <div className="flex items-center justify-center gap-4 text-xs font-bold text-[var(--text-muted)] p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+                      <span>{chestSummary.points} EP</span>
+                      <span className="w-1 h-1 rounded-full bg-[var(--border-subtle)]" />
+                      <span>{chestSummary.xp} XP</span>
+                      {chestSummary.shards > 0 && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-[var(--border-subtle)]" />
+                          <span className="text-[var(--text-warning)]">+{chestSummary.shards} Shards</span>
+                        </>
+                      )}
+                    </div>
+                  </StaggerItem>
+                )}
+
+                <StaggerItem className="w-full">
                   <button
                     type="button"
                     onClick={claimChestReward}
-                    className={`w-full max-w-[280px] ${primaryButton}`}
+                    className={`w-full max-w-[280px] mx-auto ${primaryButton}`}
                   >
-                    Claim & Continue
+                    Claim All & Continue
                   </button>
                 </StaggerItem>
               </StaggerContainer>

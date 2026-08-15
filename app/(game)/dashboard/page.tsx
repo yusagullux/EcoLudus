@@ -85,26 +85,6 @@ export default function DashboardPage() {
   const [pendingCompletion, setPendingCompletion] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [streakReward, setStreakReward] = useState<{ day: number; label: string } | null>(null);
-  // Read-only "Impact this week" — the first visible surface for the spine.
-  const [weekImpact, setWeekImpact] = useState<number | null>(null);
-
-  // Load weekly Impact (the spine's first visible surface) on mount.
-  useEffect(() => {
-    async function loadImpact() {
-      try {
-        const res = await fetch("/api/stats/impact");
-        if (res.ok) {
-          const data = await res.json();
-          if (typeof data?.weekImpact === "number") {
-            setWeekImpact(data.weekImpact);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading weekly impact:", err);
-      }
-    }
-    loadImpact();
-  }, []);
 
 
   // ── NOTE: the set-state-in-effect / exhaustive-deps warnings in the effects
@@ -524,11 +504,7 @@ export default function DashboardPage() {
             <HeroMetric label="EcoPoints" value={ecoPoints} hint="EcoPoints are the in-app currency earned from quests — spend them in the Plant Shop." />
             <HeroMetric label="Level" value={level} />
             <HeroMetric label="Streak" value={`${currentStreak}d`} hint="Consecutive days you've completed at least one quest. Keep the streak alive for bonus rewards." />
-            <HeroMetric
-              label="Impact this week"
-              value={weekImpact === null ? "—" : weekImpact.toLocaleString()}
-              hint="Total impact from quests completed this week. Complete quests to grow your weekly impact."
-            />
+            <HeroMetric label="Quests Today" value={`${completedToday}/${quests.length}`} hint="Missions completed today." />
             {activePet && <HeroMetric label="Pet" value={activePet.name} />}
           </div>
         </PageHero>

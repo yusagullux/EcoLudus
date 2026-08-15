@@ -215,3 +215,110 @@ export const COSMETIC_CATALOG: CosmeticDef[] = [
   { id: "bg-aurora", slot: "background", name: "Aurora Backdrop", rarity: "epic", background: { gradient: "linear-gradient(135deg, #a5b4fc, #c4b5fd, #f0abfc)" } },
   { id: "bg-cosmos", slot: "background", name: "Cosmos Backdrop", rarity: "legendary", background: { gradient: "linear-gradient(135deg, #1e1b4b, #6d28d9, #db2777)" } }
 ];
+
+export type DailyDealItem = {
+  dealId: string;
+  kind: "plant" | "egg" | "chest" | "booster" | "seed" | "cosmetic";
+  itemId: string | number;
+  name: string;
+  rarity: Rarity;
+  image?: string;
+  emoji?: string;
+  originalPrice: number;
+  dealPrice: number;
+  discountPct: number;
+  description?: string;
+  hatchTime?: string;
+};
+
+// Deterministic PRNG based on string seed
+function mulberry32(a: number) {
+  return function() {
+    var t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
+function stringToSeed(str: string): number {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = h << 13 | h >>> 19;
+  }
+  return (function() {
+    h = Math.imul(h ^ h >>> 16, 2246822507);
+    h = Math.imul(h ^ h >>> 13, 3266489909);
+    return (h ^= h >>> 16) >>> 0;
+  })();
+}
+
+export function getDailyShopItems(dateKey: string): DailyDealItem[] {
+  const seed = stringToSeed(dateKey);
+  const random = mulberry32(seed);
+
+  const shuffle = <T>(array: T[]) => {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  // Pools
+  const plants = SHOP_CATALOG.plants.map(p => ({ ...p, kind: "plant" as const }));
+  const eggs = SHOP_CATALOG.eggs.map(e => ({ ...e, kind: "egg" as const }));
+  const chests = SHOP_CATALOG.chests.map(c => ({ ...c, kind: "chest" as const }));
+  
+  // Base prices for non-shop items
+  const basePrices: Record<string, Record<Rarity, number>> = {
+    booster: { common: 0, uncommon: 0, rare: 150, epic: 350, legendary: 0 },
+    seed: { common: 20, uncommon: 0, rare: 60, epic: 150, legendary: 400 },
+    cosmetic: { common: 0, uncommon: 100, rare: 250, epic: 600, legendary: 1500 }
+  };
+
+  const boosters = BOOSTER_CATALOG.map(b => ({
+    id: b.id, name: b.name, rarity: b.rarity, emoji: b.emoji, price: basePrices.booster[b.rarity] || 100, kind: "booster" as const
+  }));
+  const seeds = SEED_CATALOG.map(s => ({
+    id: s.id, name: s.name, rarity: s.rarity, image: s.image, price: basePrices.seed[s.rarity] || 50, kind: "seed" as const
+  }));
+  const cosmetics = COSMETIC_CATALOG.map(c => ({
+    id: c.id, name: c.name, rarity: c.rarity, emoji: c.slot === "frame" ? "🖼️" : "🌌", price: basePrices.cosmetic[c.rarity] || 200, kind: "cosmetic" as const
+  }));
+
+  // Select 6 items: 2 plants, 1 egg, 1 chest, 1 booster, 1 random (seed or cosmetic)
+  const selectedPlants = shuffle(plants).slice(0, 2);
+  const selectedEgg = shuffle(eggs).slice(0, 1);
+  const selectedChest = shuffle(chests).slice(0, 1);
+  const selectedBooster = shuffle(boosters).slice(0, 1);
+  
+  const allOthers = shuffle([...seeds, ...cosmetics]);
+  const selectedRandom = allOthers.slice(0, 1);
+
+  const dealsRaw = [...selectedPlants, ...selectedEgg, ...selectedChest, ...selectedBooster, ...selectedRandom];
+  const deals = shuffle(dealsRaw);
+
+  return deals.map((item, idx) => {
+    // Discount between 10% and 50%
+    const discountPct = 10 + Math.floor(random() * 9) * 5; // 10, 15, 20... 50
+    const dealPrice = Math.max(1, Math.floor(item.price * (1 - discountPct / 100)));
+
+    return {
+      dealId: `${dateKey}-${idx}-${item.id}`,
+      kind: item.kind,
+      itemId: item.id,
+      name: item.name,
+      rarity: item.rarity,
+      image: (item as any).image,
+      emoji: (item as any).emoji,
+      originalPrice: item.price,
+      dealPrice,
+      discountPct,
+      description: (item as any).description,
+      hatchTime: (item as any).hatchTime
+    };
+  });
+}
