@@ -296,21 +296,28 @@ export default function LeaderboardPage() {
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [teamsFetched, setTeamsFetched] = useState(false);
 
+  // Guard against unauthenticated mounts: useAuth() redirects unauth visitors
+  // to /login, but this effect would otherwise fire /api/users first and log a
+  // 401. Skipping while there's no uid also keeps the skeleton up until auth
+  // resolves, so we never flash an empty list before the redirect.
   useEffect(() => {
+    let cancelled = false;
     async function fetchUsers() {
+      if (!user?.uid) return;
       try {
         const response = await fetch("/api/users");
         const data = await response.json();
-        setUsers(data.users || []);
+        if (!cancelled) setUsers(data.users || []);
       } catch (error) {
         console.error("Failed to fetch users:", error);
-        setUsers([]);
+        if (!cancelled) setUsers([]);
       } finally {
-        setLoadingUsers(false);
+        if (!cancelled) setLoadingUsers(false);
       }
     }
     fetchUsers();
-  }, []);
+    return () => { cancelled = true; };
+  }, [user?.uid]);
 
   useEffect(() => {
     if (tab !== "team" || teamsFetched) return;

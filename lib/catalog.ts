@@ -267,44 +267,36 @@ export function getDailyShopItems(dateKey: string): DailyDealItem[] {
     return arr;
   };
 
-  // Pools
-  const plants = SHOP_CATALOG.plants.map(p => ({ ...p, kind: "plant" as const }));
-  const eggs = SHOP_CATALOG.eggs.map(e => ({ ...e, kind: "egg" as const }));
-  const chests = SHOP_CATALOG.chests.map(c => ({ ...c, kind: "chest" as const }));
-  
-  // Base prices for non-shop items
-  const basePrices: Record<string, Record<Rarity, number>> = {
-    booster: { common: 0, uncommon: 0, rare: 150, epic: 350, legendary: 0 },
-    seed: { common: 20, uncommon: 0, rare: 60, epic: 150, legendary: 400 },
-    cosmetic: { common: 0, uncommon: 100, rare: 250, epic: 600, legendary: 1500 }
-  };
+  // Shop pool: plants, eggs, and chests only. Boosters, cosmetics, and seeds
+  // are earned through chests (and quests), not sold here — so the shop stays
+  // focused on three clean, distinct purchasable types whose artwork never
+  // overlaps (a seed and its plant share the same PNG, which read as duplicates
+  // side-by-side). All three come from SHOP_CATALOG, so prices are the live,
+  // server-validated catalog prices.
+  const kindEmoji = { plant: "🌱", egg: "🥚", chest: "🎁" } as const;
+  const pool = [
+    ...SHOP_CATALOG.plants.map(p => ({ ...p, kind: "plant" as const })),
+    ...SHOP_CATALOG.eggs.map(e => ({ ...e, kind: "egg" as const })),
+    ...SHOP_CATALOG.chests.map(c => ({ ...c, kind: "chest" as const }))
+  ];
 
-  const boosters = BOOSTER_CATALOG.map(b => ({
-    id: b.id, name: b.name, rarity: b.rarity, emoji: b.emoji, price: basePrices.booster[b.rarity] || 100, kind: "booster" as const
-  }));
-  const seeds = SEED_CATALOG.map(s => ({
-    id: s.id, name: s.name, rarity: s.rarity, image: s.image, price: basePrices.seed[s.rarity] || 50, kind: "seed" as const
-  }));
-  const cosmetics = COSMETIC_CATALOG.map(c => ({
-    id: c.id, name: c.name, rarity: c.rarity, emoji: c.slot === "frame" ? "🖼️" : "🌌", price: basePrices.cosmetic[c.rarity] || 200, kind: "cosmetic" as const
-  }));
+  // Six items per day, no duplicates, deterministic from the date seed.
+  const selected = shuffle(pool).slice(0, 6);
 
-  // Select 6 items: 2 plants, 1 egg, 1 chest, 1 booster, 1 random (seed or cosmetic)
-  const selectedPlants = shuffle(plants).slice(0, 2);
-  const selectedEgg = shuffle(eggs).slice(0, 1);
-  const selectedChest = shuffle(chests).slice(0, 1);
-  const selectedBooster = shuffle(boosters).slice(0, 1);
-  
-  const allOthers = shuffle([...seeds, ...cosmetics]);
-  const selectedRandom = allOthers.slice(0, 1);
+  // Discounts should feel intentional, not permanent: 1–2 of the six items go
+  // on sale each day, the rest show their normal price. Which slots are
+  // discounted is drawn from the same seed, so the catalog route (display) and
+  // the buy route (charges dealPrice) always agree.
+  const discountCount = 1 + Math.floor(random() * 2); // 1 or 2
+  const discountedSlots = new Set(shuffle(selected.map((_, i) => i)).slice(0, discountCount));
 
-  const dealsRaw = [...selectedPlants, ...selectedEgg, ...selectedChest, ...selectedBooster, ...selectedRandom];
-  const deals = shuffle(dealsRaw);
-
-  return deals.map((item, idx) => {
-    // Discount between 10% and 50%
-    const discountPct = 10 + Math.floor(random() * 9) * 5; // 10, 15, 20... 50
-    const dealPrice = Math.max(1, Math.floor(item.price * (1 - discountPct / 100)));
+  return selected.map((item, idx) => {
+    const isDeal = discountedSlots.has(idx);
+    // 10–50 % in 5 % steps, only on the discounted slots.
+    const discountPct = isDeal ? 10 + Math.floor(random() * 9) * 5 : 0;
+    const dealPrice = isDeal
+      ? Math.max(1, Math.floor(item.price * (1 - discountPct / 100)))
+      : item.price;
 
     return {
       dealId: `${dateKey}-${idx}-${item.id}`,
@@ -312,8 +304,8 @@ export function getDailyShopItems(dateKey: string): DailyDealItem[] {
       itemId: item.id,
       name: item.name,
       rarity: item.rarity,
-      image: (item as any).image,
-      emoji: (item as any).emoji,
+      image: item.image,
+      emoji: kindEmoji[item.kind],
       originalPrice: item.price,
       dealPrice,
       discountPct,

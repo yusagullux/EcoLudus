@@ -8,43 +8,13 @@ import { StaggerContainer, StaggerItem } from "@/lib/animations";
 import { Avatar } from "@/components/avatar";
 import { useToast } from "@/lib/toast";
 
-const THEMES: { value: Theme; label: string; desc: string; preview: string }[] = [
-  {
-    value: "light",
-    label: "Light",
-    desc: "Calm forest greens on warm cream",
-    preview: "linear-gradient(135deg,#e8eee0,#faf8f0,#e2ebda)"
-  },
-  {
-    value: "dark",
-    label: "Dark",
-    desc: "Deep forest night mode",
-    preview: "linear-gradient(135deg,#0c1a0e,#111c12,#0e1810)"
-  },
-  {
-    value: "liquid",
-    label: "Liquid",
-    desc: "Ocean-depth glassmorphism",
-    preview: "linear-gradient(160deg,#0f2b4a,#1a3d5c,#0d3d3a,#0f2b1e)"
-  },
-  {
-    value: "dawn",
-    label: "Dawn",
-    desc: "Warm amber & terracotta on cream",
-    preview: "linear-gradient(135deg,#fbeed8,#fff6ec,#f7e4cd)"
-  },
-  {
-    value: "bloom",
-    label: "Bloom",
-    desc: "Floral magenta & rose on blush",
-    preview: "linear-gradient(135deg,#fdeaf3,#fff5f8,#f8dce9)"
-  },
-  {
-    value: "aurora",
-    label: "Aurora",
-    desc: "Indigo night with teal aurora glow",
-    preview: "linear-gradient(135deg,#0a0f2e,#10183a,#0c1230)"
-  }
+const THEMES: { value: Theme; label: string; desc: string }[] = [
+  { value: "light", label: "Light", desc: "Forest greens on warm cream" },
+  { value: "dark", label: "Dark", desc: "Deep forest night" },
+  { value: "liquid", label: "Liquid", desc: "Ocean glassmorphism" },
+  { value: "dawn", label: "Dawn", desc: "Amber & terracotta on cream" },
+  { value: "bloom", label: "Bloom", desc: "Magenta & rose on blush" },
+  { value: "aurora", label: "Aurora", desc: "Indigo night, teal aurora" }
 ];
 
 // Downscale an image file to a square of `max` px on a canvas, returned as a
@@ -272,7 +242,7 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
             <p className="text-xs font-extrabold uppercase tracking-[0.12em]" style={{ color: "var(--text-muted)" }}>
               Email
             </p>
-            <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{user?.email ?? "—"}</p>
+            <p className="max-w-[60%] truncate text-sm font-bold" style={{ color: "var(--text-primary)" }}>{user?.email ?? "—"}</p>
           </div>
 
           <button
@@ -290,41 +260,72 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
       {/* ── Theme ── */}
       <StaggerItem as="div">
       <Panel eyebrow="Appearance" title="Theme">
-        <StaggerContainer className="grid grid-cols-1 gap-3 sm:grid-cols-3" as="div">
+        <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3" as="div">
           {THEMES.map((t) => {
             const active = theme === t.value;
             return (
-              <StaggerItem key={t.value} as="div">
+              <StaggerItem key={t.value} as="div" className="h-full">
               <button
                 type="button"
                 onClick={() => setTheme(t.value)}
-                className="group flex flex-col overflow-hidden rounded-2xl border-2 text-left transition hover:-translate-y-0.5"
+                className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border-2 text-left transition hover:-translate-y-0.5"
                 style={{
                   borderColor: active ? "var(--text-accent, #43653f)" : "var(--border-default)",
-                  background: "var(--bg-panel)"
+                  background: "var(--bg-panel)",
+                  boxShadow: active
+                    ? "0 10px 26px color-mix(in srgb, var(--text-accent, #43653f) 28%, transparent)"
+                    : "var(--shadow-card)"
                 }}
                 aria-pressed={active}
               >
-                {/* Preview swatch */}
+                {active && (
+                  <span
+                    className="absolute right-2.5 top-2.5 z-10 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black shadow-sm"
+                    style={{ background: "var(--text-accent, #43653f)", color: "var(--text-inverse)" }}
+                    aria-hidden="true"
+                  >
+                    ✓
+                  </span>
+                )}
+
+                {/*
+                  Truthful preview: scope this subtree to the theme being shown
+                  so it renders the theme's REAL page gradient, hero, panel,
+                  accent, and text — not an arbitrary stand-in gradient.
+                */}
                 <div
-                  className="h-16 w-full"
-                  style={{ background: t.preview }}
-                />
-                <div className="p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
-                      {t.label}
-                    </p>
-                    {active && (
-                      <span
-                        className="flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-black"
-                        style={{ background: "var(--text-accent, #43653f)", color: "var(--text-inverse)" }}
-                      >
-                        ✓
-                      </span>
-                    )}
+                  data-theme={t.value}
+                  className="relative h-24 w-full shrink-0 overflow-hidden"
+                  style={{ background: "var(--bg-page)" }}
+                >
+                  {/* mini hero strip */}
+                  <div className="absolute inset-x-0 top-0 h-8" style={{ background: "var(--bg-hero)" }} />
+                  {/* mini panel card */}
+                  <div
+                    className="absolute inset-x-2.5 bottom-2.5 rounded-lg border p-2"
+                    style={{ background: "var(--bg-panel)", borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-card)" }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full" style={{ background: "var(--text-accent)" }} />
+                      <span className="h-1.5 w-12 rounded-full" style={{ background: "var(--text-secondary)" }} />
+                    </div>
+                    <div className="mt-1.5 flex flex-col gap-1">
+                      <span className="h-1 w-full rounded-full" style={{ background: "var(--text-muted)" }} />
+                      <span className="h-1 w-2/3 rounded-full" style={{ background: "var(--text-muted)" }} />
+                    </div>
                   </div>
-                  <p className="mt-0.5 text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>
+                </div>
+
+                <div className="flex flex-1 flex-col p-3">
+                  <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
+                    {t.label}
+                  </p>
+                  {/* Reserve exactly two lines so short and long descriptions
+                      occupy the same space → every card is the same height. */}
+                  <p
+                    className="mt-0.5 line-clamp-2 min-h-[2rem] text-[11px] font-semibold leading-snug"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     {t.desc}
                   </p>
                 </div>

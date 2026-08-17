@@ -64,7 +64,21 @@ const HATCH_DURATIONS: Record<Rarity, number> = {
 // to an emoji rather than a broken-image icon. The emoji map itself is shared
 // with the pets page via `PET_EMOJI` in lib/ui-shared so the two can't drift.
 
-function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; discovered: boolean; mode: CollMode; fit?: "cover" | "contain" }) {
+function CardImage({
+  entry,
+  discovered,
+  mode,
+  fit,
+  priority = false,
+  eager = false
+}: {
+  entry: MasterEntry;
+  discovered: boolean;
+  mode: CollMode;
+  fit?: "cover" | "contain";
+  priority?: boolean;
+  eager?: boolean;
+}) {
   const [imgError, setImgError] = useState(false);
 
   // All species tiles (plants, eggs, seeds, chests AND animals) now use
@@ -86,6 +100,8 @@ function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; disco
         alt="Locked species — not yet discovered"
         fill
         sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
+        priority={priority}
+        loading={priority || eager ? "eager" : undefined}
         onError={() => setImgError(true)}
         className={`${fitClass} transition duration-300`}
         style={{ filter: "grayscale(1) brightness(0.7)", opacity: 0.75 }}
@@ -108,6 +124,8 @@ function CardImage({ entry, discovered, mode, fit }: { entry: MasterEntry; disco
       alt={entry.name}
       fill
       sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
+      priority={priority}
+      loading={priority || eager ? "eager" : undefined}
       onError={() => setImgError(true)}
       className={`${fitClass} transition duration-300 group-hover:scale-110`}
     />
@@ -652,7 +670,7 @@ export default function CollectionPage() {
                           alt={hatching.name}
                           fill
                           sizes="80px"
-                          className={`object-contain ${!isReady ? "animate-bounce" : "animate-egg-shake"}`}
+                          className={`object-cover ${!isReady ? "animate-bounce" : "animate-egg-shake"}`}
                           style={{ animationDuration: !isReady ? "2.5s" : "0.8s" }}
                         />
                       </div>
@@ -729,7 +747,9 @@ export default function CollectionPage() {
       ) : filtered.length === 0 ? (
         <Panel>
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 text-center">
-            <Image src="/images/plants/sunflower.png" alt="No matching species illustration" width={80} height={80} className="object-contain opacity-60" />
+            <div className="relative h-20 w-20 opacity-60">
+              <Image src="/images/plants/sunflower.png" alt="No matching species illustration" fill sizes="80px" className="object-contain" />
+            </div>
             <div>
               <p className="font-serif text-xl font-extrabold" style={{ color: "var(--text-primary)" }}>Nothing matches that filter</p>
               <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>Try a different rarity, or the “all” filter.</p>
@@ -738,7 +758,7 @@ export default function CollectionPage() {
         </Panel>
       ) : (
         <StaggerContainer className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" as="div" staggerDelay={0.04}>
-          {filtered.map((entry) => {
+          {filtered.map((entry, index) => {
             const owned = ownedByName.get(entry.name);
             const discovered = !!owned;
             const style = rarityStyle[entry.rarity] ?? rarityStyle.common;
@@ -768,7 +788,7 @@ export default function CollectionPage() {
                     background: discovered ? `color-mix(in srgb, ${style.accent} 7%, var(--bg-card))` : "linear-gradient(160deg, var(--bg-panel-alt), color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel-alt)))"
                   }}
                 >
-                  <CardImage entry={entry} discovered={discovered} mode={mode} />
+                  <CardImage entry={entry} discovered={discovered} mode={mode} priority={index === 0} eager={index < 8} />
                   {/* Hover affordance for locked cards — tells the user this is
                       discoverable content, not a broken/empty tile. */}
                   {!discovered && (
@@ -867,7 +887,7 @@ export default function CollectionPage() {
                       alt={activeHatching.name}
                       fill
                       sizes="176px"
-                      className="object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
+                      className="object-cover drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
                     />
 
                     {/* SVG crack overlay depending on taps left */}
@@ -1012,7 +1032,7 @@ export default function CollectionPage() {
                       alt={activeChest.name}
                       fill
                       sizes="176px"
-                      className="object-contain drop-shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
+                      className="object-cover drop-shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
                     />
                     <div className="pointer-events-none absolute inset-x-6 top-8 h-10 rounded-full bg-yellow-300/25 blur-xl" />
                   </div>

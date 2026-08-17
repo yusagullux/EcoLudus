@@ -95,6 +95,10 @@ export default function FriendsPage() {
     let cancelled = false;
 
     async function loadPlayers() {
+      if (!user?.uid) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
       setLoading(true);
       const result = await getAllUsers();
       if (!cancelled) {
@@ -105,7 +109,7 @@ export default function FriendsPage() {
 
     loadPlayers();
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.uid]);
 
   // Refresh stale XP/level snapshots stored in profile.friends using live data.
   // We only write back when values actually changed to avoid unnecessary saves.
