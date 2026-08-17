@@ -886,6 +886,124 @@ html {
   color: var(--text-primary) !important;
 }
 
+/* ── SEMANTIC STATUS TEXT: brighten for dark themes ──────────────
+   The rose/emerald/amber/red *-600/700/800 shades read fine on
+   light-theme panels and translucent *-500/10 tints, but on
+   dark/liquid/aurora themes they are too dark to read against a
+   faint tint or the panel bg (the "dark text in dark mode" bug).
+   Brighten them to the *-300 shade.
+
+   Scoped with :where() → 0 specificity for the attribute, so the
+   combined rule is (0,0,1,0) — the .bg-*-50 chip rules above
+   ([data-theme="x"] .bg-*-50 = 0,0,2,0, which force dark text on
+   the light chips) keep winning. Net effect: ONLY the standalone
+   and translucent-bg usages brighten; the light status chips and
+   the danger button (bg-rose-50 text-rose-700) keep their dark
+   text on a light chip in every theme. ──────────────────────── */
+:where([data-theme="dark"]) .text-rose-600,
+:where([data-theme="dark"]) .text-rose-700,
+:where([data-theme="liquid"]) .text-rose-600,
+:where([data-theme="liquid"]) .text-rose-700,
+:where([data-theme="aurora"]) .text-rose-600,
+:where([data-theme="aurora"]) .text-rose-700 {
+  color: #fda4af !important; /* rose-300 */
+}
+:where([data-theme="dark"]) .text-emerald-600,
+:where([data-theme="dark"]) .text-emerald-700,
+:where([data-theme="liquid"]) .text-emerald-600,
+:where([data-theme="liquid"]) .text-emerald-700,
+:where([data-theme="aurora"]) .text-emerald-600,
+:where([data-theme="aurora"]) .text-emerald-700 {
+  color: #6ee7b7 !important; /* emerald-300 */
+}
+:where([data-theme="dark"]) .text-amber-700,
+:where([data-theme="dark"]) .text-amber-800,
+:where([data-theme="liquid"]) .text-amber-700,
+:where([data-theme="liquid"]) .text-amber-800,
+:where([data-theme="aurora"]) .text-amber-700,
+:where([data-theme="aurora"]) .text-amber-800 {
+  color: #fcd34d !important; /* amber-300 */
+}
+:where([data-theme="dark"]) .text-red-700,
+:where([data-theme="dark"]) .text-red-800,
+:where([data-theme="liquid"]) .text-red-700,
+:where([data-theme="liquid"]) .text-red-800,
+:where([data-theme="aurora"]) .text-red-700,
+:where([data-theme="aurora"]) .text-red-800 {
+  color: #fca5a5 !important; /* red-300 */
+}
+
+/* ── CATEGORY / DIFFICULTY ACCENT TEXT: brighten in dark themes ──
+   The shared category palette (recycling→gardening) and the team
+   difficulty chips declare saturated mid/dark hexes and reuse them
+   both as fills (dots, tiles, progress bars — always fine) AND as
+   accent TEXT (Premium eyebrow labels + ✓, public-profile % labels,
+   team difficulty/eco chips). On dark/liquid/aurora the dark hexes
+   are unreadable against the panel — the "dark text in dark mode" bug.
+
+   Attribute-substring match on `color: #hex` hits ONLY the text-color
+   declarations (React serialises `style={{color:"#hex"}}` to
+   `color: #hex`); `background:` / `background-color:` fills never
+   contain that exact substring, and the `color` property we set never
+   changes a background anyway — so every coloured dot/tile/bar keeps
+   its original saturated fill, only the accent TEXT lifts to the
+   matching *-300 shade. ─────────────────────────────────────── */
+
+/* green family → emerald-300 */
+[data-theme="dark"] [style*="color: #2f6b46"], [data-theme="dark"] [style*="color:#2f6b46"],
+[data-theme="dark"] [style*="color: #4c7a3b"], [data-theme="dark"] [style*="color:#4c7a3b"],
+[data-theme="dark"] [style*="color: #2f9e54"], [data-theme="dark"] [style*="color:#2f9e54"],
+[data-theme="liquid"] [style*="color: #2f6b46"], [data-theme="liquid"] [style*="color:#2f6b46"],
+[data-theme="liquid"] [style*="color: #4c7a3b"], [data-theme="liquid"] [style*="color:#4c7a3b"],
+[data-theme="liquid"] [style*="color: #2f9e54"], [data-theme="liquid"] [style*="color:#2f9e54"],
+[data-theme="aurora"] [style*="color: #2f6b46"], [data-theme="aurora"] [style*="color:#2f6b46"],
+[data-theme="aurora"] [style*="color: #4c7a3b"], [data-theme="aurora"] [style*="color:#4c7a3b"],
+[data-theme="aurora"] [style*="color: #2f9e54"], [data-theme="aurora"] [style*="color:#2f9e54"] {
+  color: #6ee7b7 !important; /* emerald-300 */
+}
+/* gold family → amber-300 */
+[data-theme="dark"] [style*="color: #9a6b1f"], [data-theme="dark"] [style*="color:#9a6b1f"],
+[data-theme="dark"] [style*="color: #c98a0e"], [data-theme="dark"] [style*="color:#c98a0e"],
+[data-theme="liquid"] [style*="color: #9a6b1f"], [data-theme="liquid"] [style*="color:#9a6b1f"],
+[data-theme="liquid"] [style*="color: #c98a0e"], [data-theme="liquid"] [style*="color:#c98a0e"],
+[data-theme="aurora"] [style*="color: #9a6b1f"], [data-theme="aurora"] [style*="color:#9a6b1f"],
+[data-theme="aurora"] [style*="color: #c98a0e"], [data-theme="aurora"] [style*="color:#c98a0e"] {
+  color: #fcd34d !important; /* amber-300 */
+}
+/* blue → sky-300 */
+[data-theme="dark"] [style*="color: #2f5f86"], [data-theme="dark"] [style*="color:#2f5f86"],
+[data-theme="liquid"] [style*="color: #2f5f86"], [data-theme="liquid"] [style*="color:#2f5f86"],
+[data-theme="aurora"] [style*="color: #2f5f86"], [data-theme="aurora"] [style*="color:#2f5f86"] {
+  color: #7dd3fc !important; /* sky-300 */
+}
+/* teal family → teal-300 */
+[data-theme="dark"] [style*="color: #237482"], [data-theme="dark"] [style*="color:#237482"],
+[data-theme="dark"] [style*="color: #3e8c7c"], [data-theme="dark"] [style*="color:#3e8c7c"],
+[data-theme="liquid"] [style*="color: #237482"], [data-theme="liquid"] [style*="color:#237482"],
+[data-theme="liquid"] [style*="color: #3e8c7c"], [data-theme="liquid"] [style*="color:#3e8c7c"],
+[data-theme="aurora"] [style*="color: #237482"], [data-theme="aurora"] [style*="color:#237482"],
+[data-theme="aurora"] [style*="color: #3e8c7c"], [data-theme="aurora"] [style*="color:#3e8c7c"] {
+  color: #5eead4 !important; /* teal-300 */
+}
+/* purple → violet-300 */
+[data-theme="dark"] [style*="color: #62508f"], [data-theme="dark"] [style*="color:#62508f"],
+[data-theme="liquid"] [style*="color: #62508f"], [data-theme="liquid"] [style*="color:#62508f"],
+[data-theme="aurora"] [style*="color: #62508f"], [data-theme="aurora"] [style*="color:#62508f"] {
+  color: #c4b5fd !important; /* violet-300 */
+}
+/* slate → slate-300 */
+[data-theme="dark"] [style*="color: #5d6f7a"], [data-theme="dark"] [style*="color:#5d6f7a"],
+[data-theme="liquid"] [style*="color: #5d6f7a"], [data-theme="liquid"] [style*="color:#5d6f7a"],
+[data-theme="aurora"] [style*="color: #5d6f7a"], [data-theme="aurora"] [style*="color:#5d6f7a"] {
+  color: #cbd5e1 !important; /* slate-300 */
+}
+/* orange → orange-300 */
+[data-theme="dark"] [style*="color: #db5a36"], [data-theme="dark"] [style*="color:#db5a36"],
+[data-theme="liquid"] [style*="color: #db5a36"], [data-theme="liquid"] [style*="color:#db5a36"],
+[data-theme="aurora"] [style*="color: #db5a36"], [data-theme="aurora"] [style*="color:#db5a36"] {
+  color: #fdba74 !important; /* orange-300 */
+}
+
 /* ── CUSTOM GAMIFIED ANIMATIONS ─────────────────────────── */
 
 @keyframes egg-shake {

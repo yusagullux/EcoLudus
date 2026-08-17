@@ -128,22 +128,29 @@ export default function HabitsPage() {
 
   const toast = useToast();
 
+  // Guard against unauthenticated mounts: useAuth() redirects unauth visitors
+  // to /login, but this effect would otherwise fire /api/private-missions first
+  // and log a 401. Skipping while there's no uid also keeps the skeleton up
+  // until auth resolves, so we never flash an empty list before the redirect.
   useEffect(() => {
+    let cancelled = false;
     async function loadMissions() {
+      if (!user?.uid) return;
       try {
         const res = await fetch("/api/private-missions", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
-          setMissions(data.missions ?? []);
+          if (!cancelled) setMissions(data.missions ?? []);
         }
       } catch (err) {
         console.error("Error loading habits:", err);
       } finally {
-        setLoadingMissions(false);
+        if (!cancelled) setLoadingMissions(false);
       }
     }
     loadMissions();
-  }, []);
+    return () => { cancelled = true; };
+  }, [user?.uid]);
 
   function openMission(mission: Mission) {
     setActiveMission(mission);

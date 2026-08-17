@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useNotifications } from "@/lib/use-notifications";
 import { MotionPresence, useReducedMotion } from "@/lib/animations";
@@ -22,11 +22,57 @@ function iconFor(type: string) {
   return ICON_BY_TYPE[type] ?? "🔔";
 }
 
+// Panel geometry. The panel is rendered `position: fixed` (measured from the
+// bell button's rect) rather than `absolute` so it escapes the sidebar's
+// `overflow-hidden` ancestor — which otherwise clips it to the 240px sidebar
+// on desktop, making it unreadable. On mobile the bell is *not* at the
+// viewport's right edge (the avatar chip + hamburger sit to its right), so
+// `absolute right-0` pushed a 320px panel off the left side of the screen.
+// Fixed + viewport-clamped coordinates fix both.
+const PANEL_WIDTH = 320; // 20rem
+const GAP = 8;            // gap between bell and panel (was mt-2)
+const EDGE_MARGIN = 12;  // keep this much clear of the viewport edges
+
 export function NotificationBell() {
   const { unreadCount, recent, notifications, markRead, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
   const prefersReducedMotion = useReducedMotion();
+
+  // Compute the panel's fixed position from the bell button's viewport rect.
+  // Adaptive horizontal placement: open rightward from the bell's left edge
+  // when there's room (desktop sidebar); otherwise right-align with the bell
+  // (tablet/mobile); otherwise clamp inside the viewport (narrow phones).
+  const placePanel = useCallback(() => {
+    const btn = buttonRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const width = Math.min(PANEL_WIDTH, vw - EDGE_MARGIN * 2);
+    let left: number;
+    if (rect.left + width <= vw - EDGE_MARGIN) {
+      left = rect.left; // room to open rightward from the bell
+    } else if (rect.right - width >= EDGE_MARGIN) {
+      left = rect.right - width; // right-align with the bell
+    } else {
+      left = Math.max(EDGE_MARGIN, Math.min(rect.right - width, vw - EDGE_MARGIN - width));
+    }
+    setPanelStyle({ position: "fixed", top: rect.bottom + GAP, left, width, zIndex: 50 });
+  }, []);
+
+  // Place on open, and re-place on resize/orientation change while open.
+  useEffect(() => {
+    if (!open) return;
+    placePanel();
+    window.addEventListener("resize", placePanel);
+    window.addEventListener("orientationchange", placePanel);
+    return () => {
+      window.removeEventListener("resize", placePanel);
+      window.removeEventListener("orientationchange", placePanel);
+    };
+  }, [open, placePanel]);
 
   // Close on outside click + Escape.
   useEffect(() => {
@@ -50,8 +96,12 @@ export function NotificationBell() {
   return (
     <div ref={wrapperRef} className="relative shrink-0">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!open) placePanel();
+          setOpen((v) => !v);
+        }}
         className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors"
         style={{ color: "var(--text-sidebar-muted)" }}
         onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-sidebar)")}
@@ -78,11 +128,11 @@ export function NotificationBell() {
       </button>
 
       <MotionPresence
-        // Mobile: bell is at the viewport's right edge → right-0 + the
-        // 100vw-capped width keeps the panel on-screen. Desktop: bell is at the
-        // right end of the 240px sidebar, so right-0 would push a 320px panel
-        // off-screen left; switch to left-0 so it opens rightward into content.
-        className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-xl shadow-xl md:left-0 md:right-auto"
+        // `position: fixed` + viewport-clamped coords (see placePanel) so the
+        // panel is never clipped by the sidebar's overflow-hidden or pushed
+        // off-screen by the mobile bell's non-right-edge position.
+        className="overflow-hidden rounded-xl shadow-xl"
+        style={panelStyle}
       >
         {open ? (
           <div
@@ -123,7 +173,10 @@ export function NotificationBell() {
                 </p>
               </div>
             ) : (
-              <div className="max-h-80 overflow-y-auto divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+              <div
+                className="max-h-[min(20rem,calc(100vh-16rem))] overflow-y-auto divide-y"
+                style={{ borderColor: "var(--border-subtle)" }}
+              >
                 {recent.map((n) => (
                   <button
                     key={n.id}

@@ -317,15 +317,19 @@ export function TabPanel({ children, activeKey, className = "" }: TabPanelProps)
 type MotionPresenceProps = {
   children: ReactNode;
   className?: string;
+  /** Optional inline style for the animated wrapper (e.g. fixed positioning
+   *  for dropdowns that must escape an `overflow-hidden` ancestor). */
+  style?: CSSProperties;
 };
 
-export function MotionPresence({ children, className = "" }: MotionPresenceProps) {
+export function MotionPresence({ children, className = "", style }: MotionPresenceProps) {
   const prefersReducedMotion = useReducedMotion();
   return (
     <AnimatePresence>
       {children && (
         <motion.div
           className={className}
+          style={style}
           initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: 8 }}

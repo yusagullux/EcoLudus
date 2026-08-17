@@ -226,8 +226,10 @@ export default function DashboardPage() {
   const carbonReduced = Number(profile?.carbonReduced ?? 0);
   const missionsCompleted = Number(profile?.missionsCompleted ?? 0);
   const completedQuests = (profile?.completedQuests || []) as string[];
+  // Streak is shown as a compact 🔥 + count badge in the hero (not a full card).
+  // The streak still advances server-side via /api/streak/apply on dashboard load,
+  // and milestone rewards surface through the Streak Reward popup below.
   const currentStreak = Number(profile?.currentStreak ?? 0);
-  const longestStreak = Number(profile?.longestStreak ?? 0);
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
   const activePetId = profile?.activePet || profileAnimals.find((pet: any) => pet.active)?.id;
   const activePet = profileAnimals.find((pet: any) => pet.id === activePetId) || null;
@@ -499,80 +501,45 @@ export default function DashboardPage() {
           title={<>Welcome back, <span className="break-words" title={displayName}>{displayName}</span></>}
           description={`${completedToday} of ${quests.length} missions complete today. Keep the rhythm focused and visible.`}
         >
-          <div className="flex flex-wrap gap-3">
-            <HeroMetric label="XP" value={xp} hint="Experience points — earned from every completed quest. Level is derived from your total XP." />
-            <HeroMetric label="EcoPoints" value={ecoPoints} hint="EcoPoints are the in-app currency earned from quests — spend them in the Plant Shop." />
-            <HeroMetric label="Level" value={level} />
-            <HeroMetric label="Streak" value={`${currentStreak}d`} hint="Consecutive days you've completed at least one quest. Keep the streak alive for bonus rewards." />
-            <HeroMetric label="Quests Today" value={`${completedToday}/${quests.length}`} hint="Missions completed today." />
-            {activePet && <HeroMetric label="Pet" value={activePet.name} />}
+          <div className="flex flex-col items-end gap-2">
+            {/* Compact streak indicator — fire + day count, not a full card.
+                The streak still advances server-side via /api/streak/apply, and
+                milestone rewards pop up below; this is just a glanceable badge. */}
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--text-warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--text-warning)_15%,transparent)] px-3 py-1.5"
+              title="Consecutive days you've logged in. Keep it alive for milestone rewards."
+            >
+              <span className="text-sm leading-none" aria-hidden="true">🔥</span>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-warning)" }}>
+                {currentStreak}-day streak
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <HeroMetric label="XP" value={xp} hint="Experience points — earned from every completed quest. Level is derived from your total XP." />
+              <HeroMetric label="EcoPoints" value={ecoPoints} hint="EcoPoints are the in-app currency earned from quests — spend them in the Plant Shop." />
+              <HeroMetric label="Level" value={level} />
+              <HeroMetric label="Quests Today" value={`${completedToday}/${quests.length}`} hint="Missions completed today." />
+              {activePet && <HeroMetric label="Pet" value={activePet.name} />}
+            </div>
           </div>
         </PageHero>
       </StaggerItem>
 
       <StaggerItem as="div">
         <StatGrid
+          className="grid-cols-2 gap-3 sm:grid-cols-3"
           items={[
             { label: "Current Level", value: `Level ${level}`, accent: "var(--text-accent)" },
             { label: "Missions Done", value: missionsCompleted, accent: "var(--text-accent)" },
-            { label: "CO2 Reduced", value: `${(+carbonReduced || 0).toFixed(1)} kg`, accent: "var(--text-accent)" },
-            { label: "Login Streak", value: `${currentStreak} day${currentStreak === 1 ? "" : "s"}`, accent: "var(--text-accent)" }
+            { label: "CO2 Reduced", value: `${(+carbonReduced || 0).toFixed(1)} kg`, accent: "var(--text-accent)" }
           ]}
         />
       </StaggerItem>
 
-      <StaggerItem as="section">
-        <Panel eyebrow="Daily rhythm" title="Active Streak" action={<Pill active>Best {longestStreak}d</Pill>}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-              {currentStreak > 0 ? `${currentStreak} day streak` : "Start your first streak"}
-            </p>
-            <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-              Log in each day to keep your eco momentum alive.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {Array.from({ length: 7 }).map((_, index) => (
-              <span
-                key={index}
-                className="h-7 w-7 rounded-full border sm:h-8 sm:w-8"
-                style={{
-                  borderColor: "var(--border-default)",
-                  background: index < Math.min(currentStreak, 7) ? "var(--pill-active-bg)" : "var(--bg-panel-alt)"
-                }}
-                aria-label={index < currentStreak ? "Streak day active" : "Future streak day"}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Upcoming streak milestones */}
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {[
-            { day: 3,  icon: "✨", label: "+20 Eco",        color: "#9a6b1f" },
-            { day: 7,  icon: "🥚", label: "Common Egg",     color: "#2f5f86" },
-            { day: 14, icon: "🥚", label: "Rare Egg",       color: "#62508f" },
-            { day: 30, icon: "🐉", label: "Legendary Egg",  color: "#c97c20" }
-          ].map(({ day, icon, label, color }) => {
-            const reached = currentStreak >= day;
-            const claimed = Number(profile?.lastStreakRewardDay ?? 0) >= day;
-            return (
-              <div key={day} className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs"
-                style={{ borderColor: reached ? color : "var(--border-default)", background: claimed ? `color-mix(in srgb, ${color} 8%, var(--bg-panel-alt))` : "var(--bg-panel-alt)" }}>
-                <span className="text-base">{icon}</span>
-                <div>
-                  <p className="font-extrabold" style={{ color: reached ? color : "var(--text-muted)" }}>Day {day}</p>
-                  <p className="font-semibold" style={{ color: "var(--text-muted)" }}>{claimed ? "Claimed" : label}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Panel>
-      </StaggerItem>
-
-      {/* Streak reward popup */}
+      {/* Streak reward popup — fires on login when /api/streak/apply grants a
+          milestone. The streak progress panel itself lives on the Insights page
+          (see app/(game)/insights/page.tsx); this popup is just the "you earned
+          a streak reward" notification, so it stays on the landing page. */}
       {streakReward && (
         <Dialog
           open
