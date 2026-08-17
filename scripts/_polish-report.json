@@ -1,0 +1,906 @@
+{
+  "total": 60,
+  "withIssues": 45,
+  "results": [
+    {
+      "page": "landing",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/",
+      "finalUrl": "http://localhost:3000/",
+      "title": "EcoLudus | Sustainable Habits, Real Impact",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "landing",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/",
+      "finalUrl": "http://localhost:3000/",
+      "title": "EcoLudus | Sustainable Habits, Real Impact",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "landing",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/",
+      "finalUrl": "http://localhost:3000/",
+      "title": "EcoLudus | Sustainable Habits, Real Impact",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "login",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/login",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "login",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/login",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "login",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/login",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "signup",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/signup",
+      "finalUrl": "http://localhost:3000/signup",
+      "title": "Create your profile | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "signup",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/signup",
+      "finalUrl": "http://localhost:3000/signup",
+      "title": "Create your profile | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "signup",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/signup",
+      "finalUrl": "http://localhost:3000/signup",
+      "title": "Create your profile | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "privacy",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/legal/privacy",
+      "finalUrl": "http://localhost:3000/legal/privacy",
+      "title": "Privacy Policy - EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "privacy",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/legal/privacy",
+      "finalUrl": "http://localhost:3000/legal/privacy",
+      "title": "Privacy Policy - EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "privacy",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/legal/privacy",
+      "finalUrl": "http://localhost:3000/legal/privacy",
+      "title": "Privacy Policy - EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "terms",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/legal/terms",
+      "finalUrl": "http://localhost:3000/legal/terms",
+      "title": "Terms of Service - EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "terms",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/legal/terms",
+      "finalUrl": "http://localhost:3000/legal/terms",
+      "title": "Terms of Service - EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "terms",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/legal/terms",
+      "finalUrl": "http://localhost:3000/legal/terms",
+      "title": "Terms of Service - EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "dashboard",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/dashboard",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "dashboard",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/dashboard",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "dashboard",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/dashboard",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "habits",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/habits",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "habits",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/habits",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "habits",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/habits",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "shop",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/shop",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "Image with src \"/images/plants/sunflower.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading",
+        "Image with src \"/images/eggs/common-egg.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading"
+      ],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "shop",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/shop",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "Image with src \"/images/eggs/common-egg.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading",
+        "Image with src \"/images/eggs/epic-egg.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading"
+      ],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "shop",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/shop",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "Image with src \"/images/eggs/common-egg.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading"
+      ],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "collection",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/collection",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "Image with src \"/images/plants/sunflower.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading",
+        "Image with src \"/images/plants/basil.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading",
+        "Image with src \"/images/plants/orchid.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading",
+        "Image with src \"/images/plants/mint.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading"
+      ],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "collection",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/collection",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "collection",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/collection",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "Image with src \"/images/plants/mint.png\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading"
+      ],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "garden",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/garden",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "garden",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/garden",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "garden",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/garden",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "pets",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/pets",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "pets",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/pets",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "pets",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/pets",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "insights",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/insights",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "insights",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/insights",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "insights",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/insights",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "impact",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/impact",
+      "finalUrl": "http://localhost:3000/impact",
+      "title": "Page not found | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "impact",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/impact",
+      "finalUrl": "http://localhost:3000/impact",
+      "title": "Page not found | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "impact",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/impact",
+      "finalUrl": "http://localhost:3000/impact",
+      "title": "Page not found | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "premium",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/premium",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "premium",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/premium",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "premium",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/premium",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "profile",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/profile",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "profile",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/profile",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "profile",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/profile",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "team",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/team",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "team",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/team",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "team",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/team",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "friends",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/friends",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Get all users error: Error: auth/unauthenticated\n    at readJson (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:532:23)\n    at async getAllUsers (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:603:25)\n    at async loadPlayers (http://localhost:3000/_next/static/chunks/_0-qaqd.._.js:508:32)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Get all users error: Error: auth/unauthenticated\n    at readJson (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:532:23)\n    at async getAllUsers (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:603:25)\n    at async loadPlayers (http://localhost:3000/_next/static/chunks/_0-qaqd.._.js:508:32)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "friends",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/friends",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Get all users error: Error: auth/unauthenticated\n    at readJson (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:532:23)\n    at async getAllUsers (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:603:25)\n    at async loadPlayers (http://localhost:3000/_next/static/chunks/_0-qaqd.._.js:508:32)",
+        "Get all users error: Error: auth/unauthenticated\n    at readJson (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:532:23)\n    at async getAllUsers (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:603:25)\n    at async loadPlayers (http://localhost:3000/_next/static/chunks/_0-qaqd.._.js:508:32)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "friends",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/friends",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Get all users error: Error: auth/unauthenticated\n    at readJson (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:532:23)\n    at async getAllUsers (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:603:25)\n    at async loadPlayers (http://localhost:3000/_next/static/chunks/_0-qaqd.._.js:508:32)",
+        "Get all users error: Error: auth/unauthenticated\n    at readJson (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:532:23)\n    at async getAllUsers (http://localhost:3000/_next/static/chunks/_02xmcj_._.js:603:25)\n    at async loadPlayers (http://localhost:3000/_next/static/chunks/_0-qaqd.._.js:508:32)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "leaderboard",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/leaderboard",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "leaderboard",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/leaderboard",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "leaderboard",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/leaderboard",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "settings",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/settings",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "settings",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/settings",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "settings",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/settings",
+      "finalUrl": "http://localhost:3000/login",
+      "title": "Log in | EcoLudus",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "notfound",
+      "viewport": "desktop",
+      "url": "http://localhost:3000/not-a-page",
+      "finalUrl": "http://localhost:3000/not-a-page",
+      "title": "Page not found | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 1280,
+        "winWidth": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "notfound",
+      "viewport": "tablet",
+      "url": "http://localhost:3000/not-a-page",
+      "finalUrl": "http://localhost:3000/not-a-page",
+      "title": "Page not found | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 768,
+        "winWidth": 768,
+        "overflowX": false
+      }
+    },
+    {
+      "page": "notfound",
+      "viewport": "mobile",
+      "url": "http://localhost:3000/not-a-page",
+      "finalUrl": "http://localhost:3000/not-a-page",
+      "title": "Page not found | EcoLudus",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "consoleWarnings": [],
+      "docOverflow": {
+        "docWidth": 390,
+        "winWidth": 390,
+        "overflowX": false
+      }
+    }
+  ]
+}
