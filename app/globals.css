@@ -361,6 +361,19 @@
   --text-warning: #fbbf24;
 }
 
+/* Streak badge text — brighter than --text-warning so it stays legible on the
+   15%-warning-tinted badge background. The base token is tuned for neutral
+   backgrounds and reads as a muddy dark brown when dropped onto a same-hue
+   tint, so the streak badge uses these dedicated per-theme values instead. */
+.streak-badge-text {
+  color: #d97706; /* amber-600 — vivid golden-orange, lifts off the pale tint */
+}
+[data-theme="dark"] .streak-badge-text,
+[data-theme="liquid"] .streak-badge-text,
+[data-theme="aurora"] .streak-badge-text {
+  color: #fcd34d; /* amber-300 — brighter pop on the dark tinted badge */
+}
+
 :root {
   /* Focus glow for custom inputs/textareas — blends the theme accent at low
      opacity so it works on both light and dark input backgrounds. */

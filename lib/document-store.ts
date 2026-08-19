@@ -423,39 +423,21 @@ export async function setDocument(
     return;
   }
 
-  if (ref.collection === "activeMissions") {
-    const team = await readTeam(ref.parentId);
-    if (!team || !canAccessTeamPayload(team, session)) {
-      throw new Error("permission-denied");
-    }
-
-    await sql(
-      `insert into team_active_missions (id, team_id, mission_id, payload)
-       values ($1, $2, $3, $4::jsonb)
-       on conflict (id) do update
-       set mission_id = excluded.mission_id,
-           payload = excluded.payload,
-           updated_at = now()`,
-      [ref.id, ref.parentId, String(data.missionId ?? ""), JSON.stringify(data)]
-    );
-    return;
-  }
-
-  if (ref.collection === "teamMissionLogs") {
-    const team = await readTeam(ref.parentId);
-    if (!team || !canAccessTeamPayload(team, session)) {
-      throw new Error("permission-denied");
-    }
-
-    await sql(
-      `insert into team_mission_logs (id, team_id, mission_id, payload)
-       values ($1, $2, $3, $4::jsonb)
-       on conflict (id) do update
-       set mission_id = excluded.mission_id,
-           payload = excluded.payload`,
-      [ref.id, ref.parentId, String(data.missionId ?? ""), JSON.stringify(data)]
-    );
-    return;
+  if (ref.collection === "activeMissions" || ref.collection === "teamMissionLogs") {
+    // Team active missions and mission logs are server-authoritative — they are
+    // created ONLY by the locked /api/teams route (assign writes the row with
+    // xp/eco/needed taken from getTeamMissionTemplate, ignoring any client
+    // values; submit_progress grants rewards straight from the stored row
+    // payload). Letting a team member write these rows through the /api/store
+    // RPC would bypass that template lookup: a member could setDoc on
+    // ["teams", teamId, "activeMissions", forgedId] with {xp:100000,
+    // eco:100000, needed:1} and then submit_progress to mint unbounded XP/eco
+    // for the whole team. No client or server path writes team missions via this
+    // RPC (the team page reads via /api/teams; /api/teams writes via direct SQL;
+    // the only /api/store client is auth-client, which touches `users` alone),
+    // so closing writes here breaks nothing legitimate. Reads
+    // (getDocument/listDocuments) remain member-gated below.
+    throw new Error("permission-denied");
   }
 
   await sql(

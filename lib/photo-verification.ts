@@ -246,7 +246,7 @@ export async function verifyImageWithProvider(
       const text = await response.text();
       logger.error("Gemini photo verification HTTP error", {
         status: response.status,
-        keyPrefix: geminiApiKey.slice(0, 8),
+        hasKey: Boolean(geminiApiKey),
         url: url.split("?")[0],
         body: text.slice(0, 500)
       });

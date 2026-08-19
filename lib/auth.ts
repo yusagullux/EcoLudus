@@ -75,7 +75,14 @@ export async function getSession() {
   }
 
   try {
-    const { payload } = await jwtVerify(token, getSessionSecret());
+    // Pin the accepted algorithm to HS256. The signing key is a symmetric
+    // secret, so RS*/ES* alg-confusion isn't exploitable today, but locking the
+    // verifier to the one algorithm we actually sign with is cheap
+    // defense-in-depth: it guarantees a token claiming any other alg (now or
+    // after a jose upgrade that loosens defaults) is rejected outright.
+    const { payload } = await jwtVerify(token, getSessionSecret(), {
+      algorithms: ["HS256"]
+    });
 
     if (!payload.sub || typeof payload.email !== "string") {
       return null;

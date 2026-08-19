@@ -75,7 +75,6 @@ type Player = {
 type Team = {
   id: string;
   name: string;
-  joinCode: string;
   totalXP: number;
   totalEco: number;
   memberCount: number;

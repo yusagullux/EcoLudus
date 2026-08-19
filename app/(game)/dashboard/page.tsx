@@ -510,7 +510,7 @@ export default function DashboardPage() {
               title="Consecutive days you've logged in. Keep it alive for milestone rewards."
             >
               <span className="text-sm leading-none" aria-hidden="true">🔥</span>
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-warning)" }}>
+              <span className="streak-badge-text text-xs font-bold uppercase tracking-wider">
                 {currentStreak}-day streak
               </span>
             </div>

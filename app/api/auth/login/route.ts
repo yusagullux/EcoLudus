@@ -8,6 +8,18 @@ const loginSchema = z.object({
   password: z.string().min(6).max(128)
 });
 
+// Fixed invalid bcrypt hash used so the "user not found" path runs a bcrypt
+// compare of the same cost as the "wrong password" path. Without this, the
+// missing-user branch returns before any bcrypt work, creating a measurable
+// timing oracle (bcrypt cost 12 takes tens of ms) that lets an attacker tell
+// whether an email is registered. Comparing the supplied password against
+// this dummy hash always fails in ~the same time a real verify takes, so both
+// failure paths are indistinguishable in timing AND in response code. The hash
+// is a real cost-12 bcrypt hash of a throwaway string — it never authenticates
+// anyone because no row carries it.
+const DUMMY_PASSWORD_HASH =
+  "$2b$12$VWeo7gCKZE7AYbicxtSFXuegYWiTBggSQukEPPBhvbr7qcqZvsC9.";
+
 export async function POST(request: Request) {
   try {
     const payload = loginSchema.parse(await request.json());
@@ -25,17 +37,18 @@ export async function POST(request: Request) {
 
     const user = result.rows[0];
 
-    if (!user) {
-      return NextResponse.json(
-        { error: { code: "auth/user-not-found" } },
-        { status: 401 }
-      );
-    }
+    // Anti-enumeration: whether or not the account exists, run a bcrypt compare
+    // against a hash so the response time is dominated by the same bcrypt work,
+    // and return a single generic credential error. Previously this returned
+    // distinct codes (`auth/user-not-found` vs `auth/wrong-password`) and skipped
+    // bcrypt entirely for missing users — two independent oracles an attacker
+    // could use to map the registered-user set for credential stuffing.
+    const hashToVerify = user?.password_hash ?? DUMMY_PASSWORD_HASH;
+    const isValidPassword = await verifyPassword(payload.password, hashToVerify);
 
-    const isValidPassword = await verifyPassword(payload.password, user.password_hash);
-    if (!isValidPassword) {
+    if (!user || !isValidPassword) {
       return NextResponse.json(
-        { error: { code: "auth/wrong-password" } },
+        { error: { code: "auth/invalid-credentials", message: "Invalid email or password." } },
         { status: 401 }
       );
     }
@@ -64,7 +77,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    
+
     if (error instanceof SyntaxError) {
       return NextResponse.json(
         { error: { code: "auth/invalid-json", message: "Invalid JSON payload" } },

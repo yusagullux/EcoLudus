@@ -1188,12 +1188,14 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
 
   if (
     normalized ===
-    "select t.id, t.join_code, t.payload, coalesce(sum((u.payload->>'xp')::numeric), 0) as total_xp, coalesce(sum((u.payload->>'ecopoints')::numeric), 0) as total_eco, count(u.id) as member_count, (select count(*) from team_mission_logs tml where tml.team_id = t.id) as missions_completed from teams t left join team_active_missions tam on tam.team_id = t.id left join users u on u.id::text = tam.payload->>'user_id' group by t.id order by t.created_at desc limit $1"
+    "select t.id, t.payload, coalesce(sum((u.payload->>'xp')::numeric), 0) as total_xp, coalesce(sum((u.payload->>'ecopoints')::numeric), 0) as total_eco, count(u.id) as member_count, (select count(*) from team_mission_logs tml where tml.team_id = t.id) as missions_completed from teams t left join team_active_missions tam on tam.team_id = t.id left join users u on u.id::text = tam.payload->>'user_id' group by t.id order by t.created_at desc limit $1"
   ) {
     // File-store mirror of the /api/stats/team-aggregate single-query form:
     // per-team sum of member XP/eco (over team_active_missions × users), the
     // count of joined rows that resolve to a user, and the team's mission-log
     // count. Teams are ordered by created_at desc and capped at the limit.
+    // NOTE: join_code is deliberately NOT mirrored here — it is a private
+    // secret and must not appear on the public team leaderboard.
     const limitValue = Math.max(0, Number(params[0] ?? 50) || 50);
     const rows = [...store.teams]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -1218,7 +1220,6 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         ).length;
         return {
           id: team.id,
-          join_code: team.join_code,
           payload: clone(team.payload),
           total_xp: totalXp,
           total_eco: totalEco,
