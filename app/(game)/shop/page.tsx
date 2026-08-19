@@ -10,10 +10,15 @@ import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StaggerContainer, StaggerItem } from "@/lib/animations";
 
-// Consistent product imagery: every card gets the same fixed-aspect image
-// well with equal inner padding, so artwork never crops, stretches, or
-// overflows — only `object-contain` (letterboxed) is used. Falls back to a
-// kind emoji if the asset 404s so the card never shows a broken image.
+const KIND_LABEL: Record<string, string> = {
+  plant: "Plant",
+  egg: "Egg",
+  chest: "Chest"
+};
+
+// Product cards use a wider 4:3 well with letterboxed plants so tall artwork
+// is never cropped. Egg and chest PNGs ship with large transparent padding, so
+// those use object-cover to match the visual weight of plants in the grid.
 function ShopCardImage({
   image,
   emoji,
@@ -36,9 +41,6 @@ function ShopCardImage({
   }
 
   if (image) {
-    // Egg and chest assets have large transparent padding baked in. Crop them
-    // to fill the card well so they read at the same visual weight as plants;
-    // other artwork stays letterboxed via object-contain to avoid clipping.
     const isPaddedAsset = /\/(eggs|chests)\//i.test(image);
     return (
       <Image
@@ -130,9 +132,16 @@ export default function ShopPage() {
     <StaggerContainer className="flex flex-col gap-6" as="div">
       <StaggerItem as="div">
         <PageHero eyebrow="Market" title="Shop" description="A rotating selection of plants, eggs, and chests — refreshed daily, with a few deals mixed in." accent={heroAccents.shop}>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
             <HeroMetric label="EcoPoints" value={ecoPoints} />
-            <div className="text-xs font-bold uppercase tracking-widest text-[var(--text-warning)] bg-[color-mix(in_srgb,var(--text-warning)_15%,transparent)] px-3 py-1.5 rounded-full border border-[color-mix(in_srgb,var(--text-warning)_30%,transparent)]">
+            <div
+              className="self-start rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-widest sm:self-end"
+              style={{
+                color: "var(--text-warning)",
+                background: "color-mix(in srgb, var(--text-warning) 15%, transparent)",
+                borderColor: "color-mix(in srgb, var(--text-warning) 30%, transparent)"
+              }}
+            >
               Resets in {timeLeft}
             </div>
           </div>
@@ -155,7 +164,10 @@ export default function ShopPage() {
               const style = rarityStyle[deal.rarity as Rarity] ?? rarityStyle.common;
               const border = rarityBorder[deal.rarity as Rarity] ?? rarityBorder.common;
               const canAfford = ecoPoints >= deal.dealPrice;
+              const shortfall = Math.max(0, deal.dealPrice - ecoPoints);
               const isDeal = Number(deal.discountPct) > 0;
+              const isBuying = buyingId === deal.dealId;
+              const kindLabel = KIND_LABEL[deal.kind] ?? deal.kind;
 
               return (
                 <StaggerItem
@@ -164,25 +176,26 @@ export default function ShopPage() {
                   className="group flex flex-col overflow-hidden rounded-[22px] border transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-xl"
                   style={{ borderColor: border, background: "var(--bg-card)" }}
                 >
-                  {/* Image well — one fixed aspect for every card, letterboxed
-                      via object-contain so artwork is never cropped or stretched. */}
                   <div
                     className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden"
                     style={{ background: `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${style.accent} 18%, var(--bg-card)), var(--bg-panel))` }}
                   >
-                    <div className="absolute left-3 top-3 z-20">
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${style.chip}`}>
-                        {deal.rarity} {deal.kind}
-                      </span>
-                    </div>
+                    <span className={`absolute right-3 top-3 z-20 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${style.chip}`}>
+                      {deal.rarity}
+                    </span>
 
                     {isDeal && (
-                      <div className="absolute right-3 top-3 z-20">
-                        <span className="rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-950 shadow-sm">
-                          −{deal.discountPct}%
-                        </span>
-                      </div>
+                      <span className="absolute left-3 top-3 z-20 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-950 shadow-sm">
+                        −{deal.discountPct}%
+                      </span>
                     )}
+
+                    <span
+                      className="absolute bottom-3 left-3 z-20 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm"
+                      style={{ background: "color-mix(in srgb, var(--bg-card) 82%, transparent)", color: "var(--text-muted)" }}
+                    >
+                      {deal.emoji} {kindLabel}
+                    </span>
 
                     <ShopCardImage image={deal.image} emoji={deal.emoji} name={deal.name} priority={index === 0} />
                   </div>
@@ -193,8 +206,8 @@ export default function ShopPage() {
                       {deal.description && <p className="mt-1 text-xs font-medium leading-relaxed line-clamp-2" style={{ color: "var(--text-muted)" }}>{deal.description}</p>}
                     </div>
 
-                    <div className="mt-auto flex items-end justify-between pt-1">
-                      <div className="flex flex-col">
+                    <div className="mt-auto flex items-end justify-between gap-3 pt-1">
+                      <div className="min-w-0 flex flex-col">
                         {isDeal && (
                           <span className="text-[11px] font-bold line-through" style={{ color: "var(--text-muted)" }}>{deal.originalPrice} EP</span>
                         )}
@@ -212,11 +225,19 @@ export default function ShopPage() {
                       <button
                         type="button"
                         onClick={() => handleBuy(deal)}
-                        disabled={!canAfford || buyingId === deal.dealId}
-                        className={`min-w-[96px] ${canAfford ? primaryButton : "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold tracking-[0.02em] cursor-not-allowed opacity-50 transition"}`}
+                        disabled={isBuying}
+                        aria-busy={isBuying}
+                        aria-label={
+                          isBuying
+                            ? `Buying ${deal.name}`
+                            : canAfford
+                              ? `Buy ${deal.name} for ${deal.dealPrice} EcoPoints`
+                              : `Need ${shortfall} more EcoPoints to buy ${deal.name}`
+                        }
+                        className={`shrink-0 ${canAfford ? primaryButton : "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold tracking-[0.02em] transition hover:opacity-90"}`}
                         style={!canAfford ? { background: "var(--bg-panel-alt)", color: "var(--text-muted)" } : undefined}
                       >
-                        {buyingId === deal.dealId ? "…" : canAfford ? "Buy" : "Locked"}
+                        {isBuying ? "Buying…" : canAfford ? "Buy" : `+${shortfall} EP`}
                       </button>
                     </div>
                   </div>
