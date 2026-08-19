@@ -89,10 +89,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const message = error instanceof Error ? error.message : "internal-error";
-    const status =
-      message === "auth/unauthenticated" ? 401 : message === "permission-denied" ? 403 : 500;
+    // Map only the known, app-thrown error strings to stable codes + statuses.
+    // Anything else (including a raw `pg` error message bubbling up from sql())
+    // falls back to a generic internal-error so we never surface Postgres
+    // internals (table/column/constraint names) to the client.
+    const appMessage = error instanceof Error ? error.message : "";
+    const known: Record<string, { status: number; code: string }> = {
+      "auth/unauthenticated": { status: 401, code: "auth/unauthenticated" },
+      "permission-denied": { status: 403, code: "permission-denied" },
+      "not-found": { status: 404, code: "not-found" }
+    };
+    const mapped = known[appMessage];
+    const status = mapped?.status ?? 500;
+    const code = mapped?.code ?? "internal-error";
 
-    return NextResponse.json({ error: { code: message } }, { status });
+    return NextResponse.json({ error: { code } }, { status });
   }
 }

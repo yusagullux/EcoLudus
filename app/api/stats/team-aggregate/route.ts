@@ -21,14 +21,13 @@ export async function GET() {
     // teams = 100 round-trips) with one round-trip.
     const teamsResult = await sql<{
       id: string;
-      join_code: string;
       payload: Record<string, unknown>;
       total_xp: string | number;
       total_eco: string | number;
       member_count: string | number;
       missions_completed: string | number;
     }>(
-      `select t.id, t.join_code, t.payload,
+      `select t.id, t.payload,
               coalesce(sum((u.payload->>'xp')::numeric), 0) as total_xp,
               coalesce(sum((u.payload->>'ecoPoints')::numeric), 0) as total_eco,
               count(u.id) as member_count,
@@ -44,10 +43,15 @@ export async function GET() {
 
     const teamStats = teamsResult.rows.map((row) => {
       const teamPayload = row.payload as Record<string, unknown>;
+      // NOTE: the team's private join_code is deliberately NOT selected or
+      // returned. Join codes are crypto.randomBytes secrets used to gate team
+      // membership; broadcasting them on a public leaderboard would let any
+      // authenticated user join any private team. The /api/teams GET route is
+      // the only place a join code is returned, and only for the caller's own
+      // team. The name fallback uses the team id, never the join code.
       return {
         id: row.id,
-        name: String(teamPayload?.name ?? `Team ${row.join_code}`),
-        joinCode: row.join_code,
+        name: String(teamPayload?.name ?? "Unnamed team"),
         totalXP: Math.round(Number(row.total_xp ?? 0)),
         totalEco: Math.round(Number(row.total_eco ?? 0)),
         memberCount: Number(row.member_count ?? 0),

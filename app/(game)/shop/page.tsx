@@ -16,9 +16,11 @@ const KIND_LABEL: Record<string, string> = {
   chest: "Chest"
 };
 
-// Product cards use a wider 4:3 well with letterboxed plants so tall artwork
-// is never cropped. Egg and chest PNGs ship with large transparent padding, so
-// those use object-cover to match the visual weight of plants in the grid.
+// Product cards share the collection page's square image well. Every asset is
+// shown with object-contain so the whole image always fits inside the square
+// — nothing is cropped, regardless of aspect ratio (tall portrait plants,
+// landscape plants, or the square padded egg/chest PNGs). Inner padding keeps
+// art off the card edges; the radial-gradient backdrop fills the letterbox.
 function ShopCardImage({
   image,
   emoji,
@@ -34,26 +36,23 @@ function ShopCardImage({
 
   if (imgError || (!image && emoji)) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-6xl select-none transition-transform duration-300 group-hover:scale-110 drop-shadow-md">
+      <div className="flex h-full w-full items-center justify-center p-4 text-6xl select-none transition-transform duration-300 group-hover:scale-110 drop-shadow-md">
         {emoji || "🎁"}
       </div>
     );
   }
 
   if (image) {
-    const isPaddedAsset = /\/(eggs|chests)\//i.test(image);
     return (
       <Image
         src={image}
         alt={name}
         fill
-        sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
+        sizes="(max-width: 640px) 92vw, (max-width: 1024px) 48vw, 33vw"
         priority={priority}
         loading={priority ? "eager" : undefined}
         onError={() => setImgError(true)}
-        className={`transition-transform duration-300 group-hover:scale-105 drop-shadow-md ${
-          isPaddedAsset ? "object-cover" : "object-contain p-5"
-        }`}
+        className="transition-transform duration-300 group-hover:scale-105 drop-shadow-md object-contain p-4"
       />
     );
   }
@@ -177,7 +176,7 @@ export default function ShopPage() {
                   style={{ borderColor: border, background: "var(--bg-card)" }}
                 >
                   <div
-                    className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden"
+                    className="relative flex aspect-square w-full items-center justify-center overflow-hidden"
                     style={{ background: `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${style.accent} 18%, var(--bg-card)), var(--bg-panel))` }}
                   >
                     <span className={`absolute right-3 top-3 z-20 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${style.chip}`}>
