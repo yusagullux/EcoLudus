@@ -81,13 +81,13 @@ function CardImage({
 }) {
   const [imgError, setImgError] = useState(false);
 
-  // All species tiles (plants, eggs, seeds, chests AND animals) now use
-  // object-cover for a uniform, full-bleed Pokédex grid that matches the shop.
+  // All species tiles (plants, eggs, seeds, chests AND animals) use
+  // object-contain so mixed-aspect artwork stays fully visible in each square.
   // Pass fit="contain" for showcase surfaces (e.g. the hatching reveal) where
   // the whole creature must stay visible — animal art has wildly varying
   // aspect ratios (cobra 687×1031 portrait, cat 1742×1161 landscape) and
   // cropping the head/tail/wings on a big reveal would look wrong.
-  const fitClass = fit === "contain" ? "object-contain p-1.5" : "object-cover";
+  const fitClass = "object-contain p-2";
 
   // Locked entries render as a pure silhouette: brightness(0) kills color,
   // opacity(0.55) softens it into a dark shape over the panel. The alt text is
@@ -670,7 +670,7 @@ export default function CollectionPage() {
                           alt={hatching.name}
                           fill
                           sizes="80px"
-                          className={`object-cover ${!isReady ? "animate-bounce" : "animate-egg-shake"}`}
+                          className={`object-contain p-1 ${!isReady ? "animate-bounce" : "animate-egg-shake"}`}
                           style={{ animationDuration: !isReady ? "2.5s" : "0.8s" }}
                         />
                       </div>
@@ -887,7 +887,7 @@ export default function CollectionPage() {
                       alt={activeHatching.name}
                       fill
                       sizes="176px"
-                      className="object-cover drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
+                      className="object-contain p-2 drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)]"
                     />
 
                     {/* SVG crack overlay depending on taps left */}
@@ -1032,7 +1032,7 @@ export default function CollectionPage() {
                       alt={activeChest.name}
                       fill
                       sizes="176px"
-                      className="object-cover drop-shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
+                      className="object-contain p-2 drop-shadow-[0_18px_36px_rgba(0,0,0,0.45)]"
                     />
                     <div className="pointer-events-none absolute inset-x-6 top-8 h-10 rounded-full bg-yellow-300/25 blur-xl" />
                   </div>

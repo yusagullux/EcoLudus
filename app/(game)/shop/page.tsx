@@ -18,7 +18,7 @@ const KIND_LABEL: Record<string, string> = {
 
 // Product cards share the collection page's square image well. Every asset is
 // shown with object-contain so the whole image always fits inside the square
-// — nothing is cropped, regardless of aspect ratio (tall portrait plants,
+// â€” nothing is cropped, regardless of aspect ratio (tall portrait plants,
 // landscape plants, or the square padded egg/chest PNGs). Inner padding keeps
 // art off the card edges; the radial-gradient backdrop fills the letterbox.
 function ShopCardImage({
@@ -37,7 +37,7 @@ function ShopCardImage({
   if (imgError || (!image && emoji)) {
     return (
       <div className="flex h-full w-full items-center justify-center p-4 text-6xl select-none transition-transform duration-300 group-hover:scale-110 drop-shadow-md">
-        {emoji || "🎁"}
+        {emoji || "ðŸŽ"}
       </div>
     );
   }
@@ -52,7 +52,7 @@ function ShopCardImage({
         priority={priority}
         loading={priority ? "eager" : undefined}
         onError={() => setImgError(true)}
-        className="transition-transform duration-300 group-hover:scale-105 drop-shadow-md object-contain p-4"
+        className="object-contain p-4 sm:p-5 transition-transform duration-300 group-hover:scale-105 drop-shadow-md"
       />
     );
   }
@@ -130,7 +130,7 @@ export default function ShopPage() {
   return (
     <StaggerContainer className="flex flex-col gap-6" as="div">
       <StaggerItem as="div">
-        <PageHero eyebrow="Market" title="Shop" description="A rotating selection of plants, eggs, and chests — refreshed daily, with a few deals mixed in." accent={heroAccents.shop}>
+        <PageHero eyebrow="Market" title="Shop" description="A rotating selection of plants, eggs, and chests â€” refreshed daily, with a few deals mixed in." accent={heroAccents.shop}>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
             <HeroMetric label="EcoPoints" value={ecoPoints} />
             <div
@@ -153,12 +153,12 @@ export default function ShopPage() {
         ) : dailyDeals.length === 0 ? (
           <EmptyState
             variant="plain"
-            icon="🏪"
+            icon="ðŸª"
             title="Shop is closed"
             description="The daily deals are currently unavailable."
           />
         ) : (
-          <StaggerContainer className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" as="div">
+          <StaggerContainer className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3" as="div">
             {dailyDeals.map((deal, index) => {
               const style = rarityStyle[deal.rarity as Rarity] ?? rarityStyle.common;
               const border = rarityBorder[deal.rarity as Rarity] ?? rarityBorder.common;
@@ -185,7 +185,7 @@ export default function ShopPage() {
 
                     {isDeal && (
                       <span className="absolute left-3 top-3 z-20 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-950 shadow-sm">
-                        −{deal.discountPct}%
+                        âˆ’{deal.discountPct}%
                       </span>
                     )}
 
@@ -199,7 +199,7 @@ export default function ShopPage() {
                     <ShopCardImage image={deal.image} emoji={deal.emoji} name={deal.name} priority={index === 0} />
                   </div>
 
-                  <div className="flex flex-1 flex-col gap-3 border-t p-4" style={{ borderColor: "var(--border-subtle)" }}>
+                  <div className="flex flex-1 flex-col gap-3 border-t p-4 sm:p-5" style={{ borderColor: "var(--border-subtle)" }}>
                     <div>
                       <p className="font-serif text-[17px] font-bold leading-tight" style={{ color: "var(--text-primary)" }}>{deal.name}</p>
                       {deal.description && <p className="mt-1 text-xs font-medium leading-relaxed line-clamp-2" style={{ color: "var(--text-muted)" }}>{deal.description}</p>}
@@ -236,7 +236,7 @@ export default function ShopPage() {
                         className={`shrink-0 ${canAfford ? primaryButton : "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold tracking-[0.02em] transition hover:opacity-90"}`}
                         style={!canAfford ? { background: "var(--bg-panel-alt)", color: "var(--text-muted)" } : undefined}
                       >
-                        {isBuying ? "Buying…" : canAfford ? "Buy" : `+${shortfall} EP`}
+                        {isBuying ? "Buyingâ€¦" : canAfford ? "Buy" : `+${shortfall} EP`}
                       </button>
                     </div>
                   </div>

@@ -34,10 +34,7 @@ function PetImage({
     );
   }
 
-  const fitClass =
-    fit === "contain"
-      ? "object-cover p-0 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]"
-      : "object-cover";
+  const fitClass = "object-contain p-3 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]";
 
   return (
     <Image
@@ -427,7 +424,7 @@ export default function PetsPage() {
                 }}
               >
                 <span className="relative block aspect-square overflow-hidden" style={{ background: `color-mix(in srgb, ${accent} 12%, var(--bg-card))` }}>
-                  <PetImage pet={pet} fit="cover" />
+                  <PetImage pet={pet} fit="contain" />
                   {isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
                   <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{pet.rarity}</span>
                 </span>
