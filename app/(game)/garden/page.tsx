@@ -576,7 +576,7 @@ export default function GardenPage() {
               >
                 {tile ? (
                   <div className="relative h-full w-full">
-                    {/* Full-bleed square-crop — object-cover fills the whole tile
+                    {/* Full-bleed square-crop — contain keeps the full plant visible inside the tile
                         (matches the Shop and Collection Pokédex grids) instead of
                         letterboxing the plant on the rarity accent color. The
                         rarity still reads via the tile border + top-right chip. */}
@@ -590,7 +590,7 @@ export default function GardenPage() {
                         fill
                         sizes="(max-width: 640px) 45vw, 120px"
                         className={[
-                          "object-cover transition duration-300",
+                          "object-contain p-2 transition duration-300",
                           isAnimating ? "scale-150" : ""
                         ].join(" ")}
                         style={{
@@ -677,7 +677,7 @@ export default function GardenPage() {
                   type="button"
                   disabled={!canPlantHere}
                   onClick={() => canPlantHere && placePlant(item)}
-                  className="group flex min-h-[172px] flex-col items-center gap-2 rounded-2xl border p-3 text-center transition hover:-translate-y-0.5"
+                  className="group flex min-h-[172px] flex-col items-center gap-2 rounded-2xl border p-3 text-center transition hover:-translate-y-0.5 sm:min-h-[184px]"
                   style={{
                     borderColor: canPlantHere ? rStyle.accent : rBorder,
                     background: canPlantHere ? `color-mix(in srgb, ${rStyle.accent} 18%, var(--bg-card))` : "var(--bg-card)",
@@ -694,7 +694,7 @@ export default function GardenPage() {
                       alt={item.itemName}
                       fill
                       sizes="64px"
-                      className="object-cover transition group-hover:scale-110"
+                      className="object-contain p-2 transition group-hover:scale-110"
                     />
                   </div>
                   <p className="text-xs font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>
