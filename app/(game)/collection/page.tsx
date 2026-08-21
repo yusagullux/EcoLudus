@@ -11,7 +11,7 @@ import { useToast } from "@/lib/toast";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PET_EMOJI } from "@/lib/ui-shared";
+import { CollectionCardImage, CollectionCardLockedHint, CollectionCountBadge, CollectionRarityBadge } from "@/components/collection-card";
 import { StaggerContainer, StaggerItem, TabPanel, RewardGlow, AnimatedNumber } from "@/lib/animations";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
@@ -58,79 +58,6 @@ const HATCH_DURATIONS: Record<Rarity, number> = {
   epic: 12 * 60 * 60 * 1000,    // 12 hours
   legendary: 24 * 60 * 60 * 1000 // 24 hours
 };
-
-// Image-error fallback for pets only (the catalog image path is the source of
-// truth for every other species). Kept small — a missing pet asset falls back
-// to an emoji rather than a broken-image icon. The emoji map itself is shared
-// with the pets page via `PET_EMOJI` in lib/ui-shared so the two can't drift.
-
-function CardImage({
-  entry,
-  discovered,
-  mode,
-  fit,
-  priority = false,
-  eager = false
-}: {
-  entry: MasterEntry;
-  discovered: boolean;
-  mode: CollMode;
-  fit?: "cover" | "contain";
-  priority?: boolean;
-  eager?: boolean;
-}) {
-  const [imgError, setImgError] = useState(false);
-
-  // All species tiles (plants, eggs, seeds, chests AND animals) use
-  // object-contain so mixed-aspect artwork stays fully visible in each square.
-  // Pass fit="contain" for showcase surfaces (e.g. the hatching reveal) where
-  // the whole creature must stay visible — animal art has wildly varying
-  // aspect ratios (cobra 687×1031 portrait, cat 1742×1161 landscape) and
-  // cropping the head/tail/wings on a big reveal would look wrong.
-  const fitClass = "object-contain p-2";
-
-  // Locked entries render as a pure silhouette: brightness(0) kills color,
-  // opacity(0.55) softens it into a dark shape over the panel. The alt text is
-  // descriptive but non-spoilering — it tells assistive-tech users a discoverable
-  // species card is here without revealing the name shown as "???".
-  if (!discovered) {
-    return (
-      <Image
-        src={entry.image}
-        alt="Locked species — not yet discovered"
-        fill
-        sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
-        priority={priority}
-        loading={priority || eager ? "eager" : undefined}
-        onError={() => setImgError(true)}
-        className={`${fitClass} transition duration-300`}
-        style={{ filter: "grayscale(1) brightness(0.7)", opacity: 0.75 }}
-      />
-    );
-  }
-
-  if (mode === "animals" && imgError) {
-    const emoji = PET_EMOJI[entry.name] || "🐾";
-    return (
-      <div className="flex h-full w-full items-center justify-center text-5xl select-none transition duration-300 group-hover:scale-120 drop-shadow-sm">
-        {emoji}
-      </div>
-    );
-  }
-
-  return (
-    <Image
-      src={entry.image}
-      alt={entry.name}
-      fill
-      sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
-      priority={priority}
-      loading={priority || eager ? "eager" : undefined}
-      onError={() => setImgError(true)}
-      className={`${fitClass} transition duration-300 group-hover:scale-110`}
-    />
-  );
-}
 
 export default function CollectionPage() {
   const { user, profile, setProfile, refreshProfile } = useAuth();
@@ -788,16 +715,10 @@ export default function CollectionPage() {
                     background: discovered ? `color-mix(in srgb, ${style.accent} 7%, var(--bg-card))` : "linear-gradient(160deg, var(--bg-panel-alt), color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel-alt)))"
                   }}
                 >
-                  <CardImage entry={entry} discovered={discovered} mode={mode} priority={index === 0} eager={index < 8} />
-                  {/* Hover affordance for locked cards — tells the user this is
-                      discoverable content, not a broken/empty tile. */}
-                  {!discovered && (
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 translate-y-full px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wide opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100" style={{ background: "color-mix(in srgb, var(--text-primary) 70%, transparent)", color: "var(--text-inverse)" }}>
-                      Complete quests to unlock
-                    </div>
-                  )}
-                  {discovered && <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{entry.rarity}</span>}
-                  {discovered && count > 1 && <span className="absolute bottom-2 right-2 z-10"><Pill active>×{count}</Pill></span>}
+                  <CollectionCardImage entry={entry} discovered={discovered} mode={mode} priority={index === 0} eager={index < 8} />
+                  {!discovered && <CollectionCardLockedHint />}
+                  {discovered && <span className="absolute right-2 top-2 z-10"><CollectionRarityBadge rarity={entry.rarity} className={style.chip} /></span>}
+                  {discovered && <CollectionCountBadge count={count} />}
                 </div>
 
                 <div className="flex flex-1 flex-col gap-2 p-3">
@@ -955,7 +876,7 @@ export default function CollectionPage() {
                     className="absolute inset-0 bg-gradient-to-tr to-transparent pointer-events-none"
                     style={{ background: "linear-gradient(to top right, color-mix(in srgb, var(--text-accent) 10%, transparent), transparent)" }}
                   />
-                  <CardImage entry={revealedAnimal} discovered mode="animals" fit="contain" />
+                  <CollectionCardImage entry={revealedAnimal} discovered mode="animals" />
                 </motion.div>
 
                 <StaggerItem className="flex flex-col items-center">

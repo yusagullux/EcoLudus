@@ -1,63 +1,31 @@
-"use client";
+import type { Metadata } from "next";
+import { PublicProfileClient } from "./public-profile-client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import { useAuth } from "@/lib/useAuth";
-import { PageHero, Panel } from "@/components/game-ui";
-import { PageSkeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
-import { PublicProfileView, type PublicProfile } from "@/components/public-profile";
+// Server-side metadata for the public profile, including the dynamic OG image.
+// The page itself is still client-rendered because it uses the authenticated
+// /api/users/[id] endpoint; the metadata is generated independently so link
+// previews can resolve without running client JS.
 
-export default function PublicProfilePage() {
-  const params = useParams();
-  const id = String(params?.id ?? "");
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
+type Params = { id: string };
 
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch(`/api/users/${id}`, { credentials: "include" });
-        const data = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        if (!res.ok || !data?.profile) {
-          setStatus("error");
-          return;
-        }
-        setProfile(data.profile as PublicProfile);
-        setStatus("ok");
-      } catch {
-        if (!cancelled) setStatus("error");
-      }
+export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
+  const { id } = await params;
+  return {
+    title: "EcoLudus Profile",
+    openGraph: {
+      title: "EcoLudus Profile",
+      description: "View an Eco Explorer's sustainable journey on EcoLudus.",
+      images: [`/profile/${encodeURIComponent(id)}/opengraph-image`]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "EcoLudus Profile",
+      description: "View an Eco Explorer's sustainable journey on EcoLudus.",
+      images: [`/profile/${encodeURIComponent(id)}/opengraph-image`]
     }
-    load();
-    return () => { cancelled = true; };
-  }, [id]);
+  };
+}
 
-  if (status === "loading") {
-    return <PageSkeleton metricCount={6} panels={[{ rows: 2 }, { rows: 6 }, { rows: 4 }]} heroChips={3} />;
-  }
-
-  if (status === "error" || !profile) {
-    return (
-      <div className="flex flex-col gap-5">
-        <PageHero eyebrow="Profile" title="Profile not found" description="This explorer may not exist or is unavailable." />
-        <Panel>
-          <EmptyState
-            variant="plain"
-            icon="🌿"
-            title="We couldn't load this profile."
-            action={<Link href="/leaderboard" className="font-bold underline">Back to leaderboard</Link>}
-          />
-        </Panel>
-      </div>
-    );
-  }
-
-  const isOwner = Boolean(user?.uid) && user?.uid === id;
-  return <PublicProfileView profile={profile} isOwner={isOwner} />;
+export default function PublicProfilePage({ params }: { params: Promise<Params> }) {
+  return <PublicProfileClient params={params} />;
 }
