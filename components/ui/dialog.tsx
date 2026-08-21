@@ -133,7 +133,6 @@ export function Dialog({
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus({ preventScroll: true });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   if (!open) return null;
