@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { HeroMetric, PageHero, Panel, Pill, ProgressBar, StatGrid, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 import { CategoryIcon } from "@/components/category-icon";
 import { Avatar } from "@/components/avatar";
-import { PLANT_IMAGES } from "@/lib/ui-shared";
+import { PillTabBar } from "@/components/ui/pill-tab-bar";
+import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
+import { PET_EMOJI, PLANT_IMAGES } from "@/lib/ui-shared";
 
 // Shared profile view rendered for both the owner's own profile and other
 // users' public profiles. The `profile` prop is a normalized public shape —
@@ -25,7 +28,12 @@ export type PublicProfile = {
   longestStreak: number;
   lastLoginDate: string;
   completedQuests: string[];
+  // Public collection data — exposed for the full Pokédex-style book below.
   plants: any[];
+  eggs: any[];
+  animals: any[];
+  seeds: any[];
+  chests: any[];
 };
 
 const categories = [
@@ -60,6 +68,60 @@ const CATEGORY_TOTALS: Record<string, number> = {
   gardening: 10
 };
 
+type CollMode = "plants" | "eggs" | "animals" | "seeds" | "chests";
+
+type MasterEntry = {
+  id: string | number;
+  name: string;
+  rarity: Rarity;
+  image: string;
+};
+
+function CollectionCardImage({
+  entry,
+  discovered,
+  mode
+}: {
+  entry: MasterEntry;
+  discovered: boolean;
+  mode: CollMode;
+}) {
+  const [imgError, setImgError] = useState(false);
+
+  if (!discovered) {
+    return (
+      <Image
+        src={entry.image}
+        alt="Locked species — not yet discovered"
+        fill
+        sizes="(max-width: 640px) 48vw, 220px"
+        onError={() => setImgError(true)}
+        className="object-contain p-2 transition duration-300"
+        style={{ filter: "grayscale(1) brightness(0.7)", opacity: 0.75 }}
+      />
+    );
+  }
+
+  if (mode === "animals" && imgError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-5xl select-none transition duration-300 group-hover:scale-110 drop-shadow-sm">
+        {PET_EMOJI[entry.name] || "🐾"}
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={entry.image}
+      alt={entry.name}
+      fill
+      sizes="(max-width: 640px) 48vw, 220px"
+      onError={() => setImgError(true)}
+      className="object-contain p-2 transition duration-300 group-hover:scale-110"
+    />
+  );
+}
+
 export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile; isOwner: boolean }) {
   const displayName = profile.displayName || "Eco Explorer";
   const xp = Number(profile.xp ?? 0);
@@ -69,9 +131,58 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
   const carbonReduced = Number(profile.carbonReduced ?? 0);
   const completedQuests: string[] = Array.isArray(profile.completedQuests) ? profile.completedQuests : [];
   const profilePlants = Array.isArray(profile.plants) ? profile.plants : [];
+  const profileEggs = Array.isArray(profile.eggs) ? profile.eggs : [];
+  const profileAnimals = Array.isArray(profile.animals) ? profile.animals : [];
+  const profileSeeds = Array.isArray(profile.seeds) ? profile.seeds : [];
+  const profileChests = Array.isArray(profile.chests) ? profile.chests : [];
   const currentStreak = Number(profile.currentStreak ?? 0);
   const longestStreak = Number(profile.longestStreak ?? 0);
   const lastLoginDate = profile.lastLoginDate || "Not tracked yet";
+
+  const [mode, setMode] = useState<CollMode>("plants");
+
+  const shopCat = useShopCatalog();
+  const speciesCat = useSpeciesCatalog();
+  const catalogLoading = shopCat.isLoading || speciesCat.isLoading;
+
+  const shopCatalog = {
+    plants: shopCat.plants as MasterEntry[],
+    eggs: shopCat.eggs as MasterEntry[],
+    chests: shopCat.chests as MasterEntry[]
+  };
+  const speciesCatalog = {
+    pets: speciesCat.pets as MasterEntry[],
+    seeds: speciesCat.seeds as MasterEntry[]
+  };
+
+  const masterList: MasterEntry[] =
+    mode === "plants" ? (shopCatalog.plants ?? [])
+    : mode === "eggs" ? (shopCatalog.eggs ?? [])
+    : mode === "chests" ? (shopCatalog.chests ?? [])
+    : mode === "animals" ? (speciesCatalog.pets ?? [])
+    : (speciesCatalog.seeds ?? []);
+
+  const ownedRecords: any[] =
+    mode === "plants" ? profilePlants
+    : mode === "eggs" ? profileEggs
+    : mode === "chests" ? profileChests
+    : mode === "animals" ? profileAnimals
+    : profileSeeds;
+
+  const ownedByName = new Map<string, any>();
+  for (const rec of ownedRecords) {
+    if (rec && typeof rec.name === "string") ownedByName.set(rec.name, rec);
+  }
+
+  const discoveredCount = masterList.filter((entry) => ownedByName.has(entry.name)).length;
+  const totalCount = masterList.length;
+  const collectionStats = {
+    plants: { found: (shopCatalog.plants ?? []).filter((p) => profilePlants.some((o: any) => o.name === p.name)).length, total: shopCatalog.plants?.length ?? 0 },
+    eggs: { found: (shopCatalog.eggs ?? []).filter((p) => profileEggs.some((o: any) => o.name === p.name)).length, total: shopCatalog.eggs?.length ?? 0 },
+    animals: { found: (speciesCatalog.pets ?? []).filter((p) => profileAnimals.some((o: any) => o.name === p.name)).length, total: speciesCatalog.pets?.length ?? 0 },
+    seeds: { found: (speciesCatalog.seeds ?? []).filter((p) => profileSeeds.some((o: any) => o.name === p.name)).length, total: speciesCatalog.seeds?.length ?? 0 },
+    chests: { found: (shopCatalog.chests ?? []).filter((p) => profileChests.some((o: any) => o.name === p.name)).length, total: shopCatalog.chests?.length ?? 0 }
+  };
 
   const categoryProgress = categories.map(category => {
     const prefixes = CATEGORY_QUEST_PREFIXES[category.id] ?? [`${category.id}_`];
@@ -91,6 +202,13 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
     { label: "Current Streak", value: `${currentStreak}d`, accent: "var(--text-accent)" },
     { label: "Best Streak", value: `${longestStreak}d`, accent: "var(--text-accent)" }
   ];
+
+  const modeOptions: CollMode[] = ["plants", "eggs", "animals", "seeds", "chests"];
+  const totalCollectedItems = profilePlants.reduce((sum, p) => sum + (p.count ?? 1), 0)
+    + profileEggs.reduce((sum, p) => sum + (p.count ?? 1), 0)
+    + profileAnimals.reduce((sum, p) => sum + (p.count ?? 1), 0)
+    + profileSeeds.reduce((sum, p) => sum + (p.count ?? 1), 0)
+    + profileChests.reduce((sum, p) => sum + (p.count ?? 1), 0);
 
   return (
     <div className="flex flex-col gap-5">
@@ -129,7 +247,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
 
       <Panel eyebrow="Achievement tracking" title="Quest Category Progress">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {categoryProgress.map(({ name, image, color, done, total, co2, maxCo2, badge: categoryBadge }) => {
+          {categoryProgress.map(({ name, color, done, total, maxCo2, badge: categoryBadge }) => {
             const pct = Math.round((done / total) * 100);
             const completed = done === total;
             return (
@@ -149,7 +267,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
                 <ProgressBar value={pct} color={color} />
                 <div className="mt-2 flex justify-between text-xs">
                   <span className="font-extrabold" style={{ color }}>{pct}%</span>
-                  <span className="font-semibold" style={{ color: "var(--text-muted)" }}>{co2.toFixed(1)}/{maxCo2.toFixed(1)} kg CO₂</span>
+                  <span className="font-semibold" style={{ color: "var(--text-muted)" }}>{(done / total * maxCo2).toFixed(1)}/{maxCo2.toFixed(1)} kg CO₂</span>
                 </div>
               </article>
             );
@@ -157,33 +275,93 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
         </div>
       </Panel>
 
-      <Panel eyebrow="Rare finds" title="Collection Book" action={<Pill>{(() => { const n = profilePlants.reduce((sum: number, plant: { count?: number }) => sum + (plant.count ?? 1), 0); return `${n} plant${n === 1 ? "" : "s"}`; })()}</Pill>}>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {profilePlants.length > 0 ? (
-            profilePlants.map((plant: any) => (
-              <article key={plant.id} className="reveal-card group flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition hover:-translate-y-1" style={{ borderColor: rarityBorder[plant.rarity as Rarity] ?? "var(--border-default)", background: "var(--bg-card)" }}>
-                <span className="relative flex aspect-square w-full max-w-32 items-center justify-center rounded-2xl p-4" style={{ background: `color-mix(in srgb, ${rarityStyle[plant.rarity as Rarity]?.accent ?? "var(--text-accent)"} 7%, var(--bg-card))` }}>
-                  <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl p-1 shadow-sm" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)" }}>
-                    <Image src={getPlantImage(plant)} alt={plant.name} fill sizes="96px" className="h-full w-full object-contain transition duration-200 group-hover:scale-105" style={{ objectFit: "contain" }} />
-                  </div>
-                </span>
-                <p className="text-sm font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>{plant.name}</p>
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${rarityStyle[plant.rarity as Rarity]?.chip ?? rarityStyle.common.chip}`}>{plant.rarity}</span>
-                {plant.count > 1 && <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>×{plant.count}</span>}
-              </article>
-            ))
-          ) : (
-            <article className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}>
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ background: "var(--bg-panel)" }} aria-hidden="true">📚</span>
-              <p className="text-sm font-bold">Collection is empty</p>
-              <p className="text-xs">{isOwner ? "Buy plants in the Shop." : "No plants collected yet."}</p>
-            </article>
+      <Panel
+        eyebrow="Rare finds"
+        title="Collection Book"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill>{collectionStats.plants.found}/{collectionStats.plants.total} plants</Pill>
+            <Pill>{collectionStats.eggs.found}/{collectionStats.eggs.total} eggs</Pill>
+            <Pill>{collectionStats.animals.found}/{collectionStats.animals.total} pets</Pill>
+            <Pill>{collectionStats.seeds.found}/{collectionStats.seeds.total} seeds</Pill>
+            <Pill>{collectionStats.chests.found}/{collectionStats.chests.total} chests</Pill>
+            <Pill active>{totalCollectedItems} items</Pill>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <PillTabBar<CollMode>
+            value={mode}
+            options={modeOptions}
+            onChange={(v) => setMode(v)}
+          />
+
+          {!catalogLoading && totalCount > 0 && (
+            <p className="px-1 text-sm font-extrabold" style={{ color: "var(--text-muted)" }}>
+              Discovered {discoveredCount}/{totalCount} {mode}
+            </p>
           )}
-          {isOwner && (
-            <Link href="/shop" className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-4 text-center transition hover:-translate-y-0.5" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}>
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ background: "var(--bg-panel)" }} aria-hidden="true">🛒</span>
-              <span className="text-xs font-extrabold uppercase tracking-[0.08em]">Visit Shop</span>
-            </Link>
+
+          {catalogLoading ? (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="aspect-square animate-pulse rounded-[20px]" style={{ background: "var(--bg-panel-alt)" }} />
+              ))}
+            </div>
+          ) : masterList.length === 0 ? (
+            <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}>
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ background: "var(--bg-panel)" }} aria-hidden="true">📚</span>
+              <p className="text-sm font-bold">No species data available</p>
+              <p className="text-xs">The catalog could not be loaded.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {masterList.map((entry) => {
+                const owned = ownedByName.get(entry.name);
+                const discovered = !!owned;
+                const style = rarityStyle[entry.rarity] ?? rarityStyle.common;
+                const border = discovered ? (rarityBorder[entry.rarity] ?? rarityBorder.common) : "var(--border-default)";
+                const count = Number(owned?.count ?? 1);
+                return (
+                  <article
+                    key={`${mode}-${entry.id}-${entry.name}`}
+                    className="group relative flex flex-col overflow-hidden rounded-[20px] border transition hover:-translate-y-1"
+                    style={{
+                      borderColor: border,
+                      background: "var(--bg-card)",
+                      borderStyle: discovered ? "solid" : "dashed"
+                    }}
+                    title={discovered ? undefined : "Complete quests to unlock"}
+                    aria-label={discovered ? undefined : "Locked species — complete quests to unlock"}
+                  >
+                    {!discovered && <span className="absolute left-2 top-2 z-10 text-base">🔒</span>}
+
+                    <div
+                      className="relative flex aspect-square items-center justify-center overflow-hidden"
+                      style={{
+                        background: discovered ? `color-mix(in srgb, ${style.accent} 7%, var(--bg-card))` : "linear-gradient(160deg, var(--bg-panel-alt), color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel-alt)))"
+                      }}
+                    >
+                      <CollectionCardImage entry={entry} discovered={discovered} mode={mode} />
+                      {discovered && <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{entry.rarity}</span>}
+                      {discovered && count > 1 && <span className="absolute bottom-2 right-2 z-10"><Pill active>×{count}</Pill></span>}
+                    </div>
+
+                    <div className="flex flex-1 flex-col gap-1 p-3 text-center">
+                      <p className="font-serif text-sm font-extrabold leading-tight truncate" style={{ color: "var(--text-primary)" }}>
+                        {discovered ? entry.name : "???"}
+                      </p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          {!isOwner && !catalogLoading && (
+            <p className="text-center text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+              This is what {displayName} has chosen to share publicly.
+            </p>
           )}
         </div>
       </Panel>
