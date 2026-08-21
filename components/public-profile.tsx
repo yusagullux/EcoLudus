@@ -8,7 +8,9 @@ import { CategoryIcon } from "@/components/category-icon";
 import { Avatar } from "@/components/avatar";
 import { PillTabBar } from "@/components/ui/pill-tab-bar";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
-import { PET_EMOJI, PLANT_IMAGES } from "@/lib/ui-shared";
+import { PLANT_IMAGES } from "@/lib/ui-shared";
+import { CollectionCardImage, CollectionCardLockedHint, CollectionCountBadge, CollectionRarityBadge } from "@/components/collection-card";
+import { secondaryButton } from "@/components/game-ui";
 
 // Shared profile view rendered for both the owner's own profile and other
 // users' public profiles. The `profile` prop is a normalized public shape —
@@ -49,6 +51,11 @@ function getPlantImage(plant: any) {
   return plant.image || PLANT_IMAGES[plant.name] || "/images/plants/sunflower.png";
 }
 
+function usePublicProfileUrl(profileId: string) {
+  if (typeof window === "undefined") return "";
+  return `${window.location.origin}/profile/${encodeURIComponent(profileId)}`;
+}
+
 // Quest id prefixes that map to each category id in quests.json.
 const CATEGORY_QUEST_PREFIXES: Record<string, string[]> = {
   recycling: ["recycling_"],
@@ -77,51 +84,6 @@ type MasterEntry = {
   image: string;
 };
 
-function CollectionCardImage({
-  entry,
-  discovered,
-  mode
-}: {
-  entry: MasterEntry;
-  discovered: boolean;
-  mode: CollMode;
-}) {
-  const [imgError, setImgError] = useState(false);
-
-  if (!discovered) {
-    return (
-      <Image
-        src={entry.image}
-        alt="Locked species — not yet discovered"
-        fill
-        sizes="(max-width: 640px) 48vw, 220px"
-        onError={() => setImgError(true)}
-        className="object-contain p-2 transition duration-300"
-        style={{ filter: "grayscale(1) brightness(0.7)", opacity: 0.75 }}
-      />
-    );
-  }
-
-  if (mode === "animals" && imgError) {
-    return (
-      <div className="flex h-full w-full items-center justify-center text-5xl select-none transition duration-300 group-hover:scale-110 drop-shadow-sm">
-        {PET_EMOJI[entry.name] || "🐾"}
-      </div>
-    );
-  }
-
-  return (
-    <Image
-      src={entry.image}
-      alt={entry.name}
-      fill
-      sizes="(max-width: 640px) 48vw, 220px"
-      onError={() => setImgError(true)}
-      className="object-contain p-2 transition duration-300 group-hover:scale-110"
-    />
-  );
-}
-
 export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile; isOwner: boolean }) {
   const displayName = profile.displayName || "Eco Explorer";
   const xp = Number(profile.xp ?? 0);
@@ -140,6 +102,19 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
   const lastLoginDate = profile.lastLoginDate || "Not tracked yet";
 
   const [mode, setMode] = useState<CollMode>("plants");
+  const [copied, setCopied] = useState(false);
+  const profileUrl = usePublicProfileUrl(profile.id);
+
+  const copyProfileLink = async () => {
+    if (!profileUrl) return;
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Ignore clipboard failures (e.g. permission denied).
+    }
+  };
 
   const shopCat = useShopCatalog();
   const speciesCat = useSpeciesCatalog();
@@ -226,6 +201,16 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
             >
               Edit profile
             </Link>
+          )}
+          {isOwner && profileUrl && (
+            <button
+              type="button"
+              onClick={copyProfileLink}
+              className={secondaryButton}
+              aria-label="Copy public profile link"
+            >
+              {copied ? "Copied!" : "Share profile"}
+            </button>
           )}
         </div>
       </PageHero>
@@ -343,8 +328,9 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
                       }}
                     >
                       <CollectionCardImage entry={entry} discovered={discovered} mode={mode} />
-                      {discovered && <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{entry.rarity}</span>}
-                      {discovered && count > 1 && <span className="absolute bottom-2 right-2 z-10"><Pill active>×{count}</Pill></span>}
+                      {!discovered && <CollectionCardLockedHint />}
+                      {discovered && <span className="absolute right-2 top-2 z-10"><CollectionRarityBadge rarity={entry.rarity} className={style.chip} /></span>}
+                      {discovered && <CollectionCountBadge count={count} />}
                     </div>
 
                     <div className="flex flex-1 flex-col gap-1 p-3 text-center">
