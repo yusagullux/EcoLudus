@@ -1,64 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { useShopCatalog } from "@/lib/useCatalog";
 import { HeroMetric, PageHero, primaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CollectionCardImage, type CollectionMode } from "@/components/collection-card";
 import { StaggerContainer, StaggerItem } from "@/lib/animations";
+
+const KIND_TO_MODE: Record<string, CollectionMode> = {
+  plant: "plants",
+  egg: "eggs",
+  chest: "chests"
+};
 
 const KIND_LABEL: Record<string, string> = {
   plant: "Plant",
   egg: "Egg",
   chest: "Chest"
 };
-
-// Product cards share the collection page's square image well. Every asset is
-// shown with object-contain so the whole image always fits inside the square
-// â€” nothing is cropped, regardless of aspect ratio (tall portrait plants,
-// landscape plants, or the square padded egg/chest PNGs). Inner padding keeps
-// art off the card edges; the radial-gradient backdrop fills the letterbox.
-function ShopCardImage({
-  image,
-  emoji,
-  name,
-  priority = false
-}: {
-  image?: string;
-  emoji?: string;
-  name: string;
-  priority?: boolean;
-}) {
-  const [imgError, setImgError] = useState(false);
-
-  if (imgError || (!image && emoji)) {
-    return (
-      <div className="flex h-full w-full items-center justify-center p-4 text-6xl select-none transition-transform duration-300 group-hover:scale-110 drop-shadow-md">
-        {emoji || "ðŸŽ"}
-      </div>
-    );
-  }
-
-  if (image) {
-    return (
-      <Image
-        src={image}
-        alt={name}
-        fill
-        sizes="(max-width: 640px) 92vw, (max-width: 1024px) 48vw, 33vw"
-        priority={priority}
-        loading={priority ? "eager" : undefined}
-        onError={() => setImgError(true)}
-        className="object-contain p-4 sm:p-5 transition-transform duration-300 group-hover:scale-105 drop-shadow-md"
-      />
-    );
-  }
-
-  return null;
-}
 
 function calculateTimeLeft(): string {
   const now = new Date();
@@ -130,7 +92,7 @@ export default function ShopPage() {
   return (
     <StaggerContainer className="flex flex-col gap-6" as="div">
       <StaggerItem as="div">
-        <PageHero eyebrow="Market" title="Shop" description="A rotating selection of plants, eggs, and chests â€” refreshed daily, with a few deals mixed in." accent={heroAccents.shop}>
+        <PageHero eyebrow="Market" title="Shop" description="A rotating selection of plants, eggs, and chests — refreshed daily, with a few deals mixed in." accent={heroAccents.shop}>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
             <HeroMetric label="EcoPoints" value={ecoPoints} />
             <div
@@ -153,7 +115,7 @@ export default function ShopPage() {
         ) : dailyDeals.length === 0 ? (
           <EmptyState
             variant="plain"
-            icon="ðŸª"
+            icon="🏪"
             title="Shop is closed"
             description="The daily deals are currently unavailable."
           />
@@ -176,7 +138,7 @@ export default function ShopPage() {
                   style={{ borderColor: border, background: "var(--bg-card)" }}
                 >
                   <div
-                    className="relative flex aspect-square w-full items-center justify-center overflow-hidden"
+                    className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden"
                     style={{ background: `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${style.accent} 18%, var(--bg-card)), var(--bg-panel))` }}
                   >
                     <span className={`absolute right-3 top-3 z-20 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${style.chip}`}>
@@ -185,7 +147,7 @@ export default function ShopPage() {
 
                     {isDeal && (
                       <span className="absolute left-3 top-3 z-20 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-950 shadow-sm">
-                        âˆ’{deal.discountPct}%
+                        −{deal.discountPct}%
                       </span>
                     )}
 
@@ -196,7 +158,12 @@ export default function ShopPage() {
                       {deal.emoji} {kindLabel}
                     </span>
 
-                    <ShopCardImage image={deal.image} emoji={deal.emoji} name={deal.name} priority={index === 0} />
+                    <CollectionCardImage
+                      entry={{ id: deal.itemId, name: deal.name, rarity: deal.rarity, image: deal.image }}
+                      discovered={true}
+                      mode={KIND_TO_MODE[deal.kind] ?? "plants"}
+                      priority={index === 0}
+                    />
                   </div>
 
                   <div className="flex flex-1 flex-col gap-3 border-t p-4 sm:p-5" style={{ borderColor: "var(--border-subtle)" }}>
@@ -236,7 +203,7 @@ export default function ShopPage() {
                         className={`shrink-0 ${canAfford ? primaryButton : "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold tracking-[0.02em] transition hover:opacity-90"}`}
                         style={!canAfford ? { background: "var(--bg-panel-alt)", color: "var(--text-muted)" } : undefined}
                       >
-                        {isBuying ? "Buyingâ€¦" : canAfford ? "Buy" : `+${shortfall} EP`}
+                        {isBuying ? "Buying…" : canAfford ? "Buy" : `+${shortfall} EP`}
                       </button>
                     </div>
                   </div>
