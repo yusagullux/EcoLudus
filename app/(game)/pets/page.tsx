@@ -34,7 +34,9 @@ function PetImage({
     );
   }
 
-  const fitClass = "object-contain p-3 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)]";
+  const fitClass = fit === "cover"
+    ? "object-cover transition duration-300 group-hover:scale-110"
+    : "object-contain p-3 drop-shadow-[0_18px_28px_rgba(0,0,0,0.18)] transition duration-300 group-hover:scale-110";
 
   return (
     <Image
@@ -43,7 +45,7 @@ function PetImage({
       fill
       sizes={sizes}
       onError={() => setImgError(true)}
-      className={`${fitClass} transition duration-300 group-hover:scale-110`}
+      className={fitClass}
     />
   );
 }

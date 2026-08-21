@@ -138,7 +138,7 @@ export default function ShopPage() {
                   style={{ borderColor: border, background: "var(--bg-card)" }}
                 >
                   <div
-                    className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden"
+                    className="relative flex aspect-square w-full items-center justify-center overflow-hidden"
                     style={{ background: `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${style.accent} 18%, var(--bg-card)), var(--bg-panel))` }}
                   >
                     <span className={`absolute right-3 top-3 z-20 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${style.chip}`}>
