@@ -27,7 +27,11 @@ export default function ProfilePage() {
     longestStreak: Number(profile?.longestStreak ?? 0),
     lastLoginDate: String(profile?.lastLoginDate ?? "Not tracked yet"),
     completedQuests: Array.isArray(profile?.completedQuests) ? (profile.completedQuests as string[]) : [],
-    plants: Array.isArray(profile?.plants) ? profile.plants : []
+    plants: Array.isArray(profile?.plants) ? profile.plants : [],
+    eggs: Array.isArray(profile?.eggs) ? profile.eggs : [],
+    animals: Array.isArray(profile?.animals) ? profile.animals : [],
+    seeds: Array.isArray(profile?.seeds) ? profile.seeds : [],
+    chests: Array.isArray(profile?.chests) ? profile.chests : []
   };
 
   return (

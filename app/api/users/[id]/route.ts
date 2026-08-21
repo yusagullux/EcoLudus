@@ -43,7 +43,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       longestStreak: Number(p.longestStreak ?? 0),
       lastLoginDate: String(p.lastLoginDate ?? "Not tracked yet"),
       completedQuests: Array.isArray(p.completedQuests) ? (p.completedQuests as string[]) : [],
-      plants: Array.isArray(p.plants) ? p.plants : []
+      // Public collection data (same fields exposed by the owner's /collection page).
+      plants: Array.isArray(p.plants) ? p.plants : [],
+      eggs: Array.isArray(p.eggs) ? p.eggs : [],
+      animals: Array.isArray(p.animals) ? p.animals : [],
+      seeds: Array.isArray(p.seeds) ? p.seeds : [],
+      chests: Array.isArray(p.chests) ? p.chests : []
     };
 
     return NextResponse.json({ profile });
