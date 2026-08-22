@@ -283,13 +283,13 @@ export default function PetsPage() {
                 type="button"
                 onClick={petTheAnimal}
                 aria-label={`Pet ${selectedPet.name}`}
-                className="relative flex aspect-square w-full max-w-[360px] items-center justify-center overflow-hidden rounded-[28px] border transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                className="relative flex aspect-square w-full max-w-[280px] items-center justify-center overflow-hidden rounded-[24px] border transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   borderColor: rarityBorder[selectedPet.rarity as Rarity] ?? "var(--border-default)",
                   background: `radial-gradient(circle at 50% 35%, color-mix(in srgb, ${rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "var(--text-accent)"} 13%, transparent), transparent 58%), var(--bg-panel-alt)`
                 }}
               >
-                <PetImage pet={selectedPet} fit="contain" sizes="(max-width: 1024px) 90vw, 360px" />
+                <PetImage pet={selectedPet} fit="contain" sizes="(max-width: 640px) 80vw, 280px" />
                 {hearts.map((heart) => (
                   <span
                     key={heart.id}
@@ -426,7 +426,7 @@ export default function PetsPage() {
                 }}
               >
                 <span className="relative block aspect-square overflow-hidden" style={{ background: `color-mix(in srgb, ${accent} 12%, var(--bg-card))` }}>
-                  <PetImage pet={pet} fit="cover" />
+                  <PetImage pet={pet} fit="contain" />
                   {isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
                   <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{pet.rarity}</span>
                 </span>

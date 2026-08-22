@@ -590,7 +590,7 @@ export default function GardenPage() {
                         fill
                         sizes="(max-width: 640px) 45vw, 120px"
                         className={[
-                          "object-cover transition duration-300",
+                          "object-contain p-2 transition duration-300",
                           isAnimating ? "scale-150" : ""
                         ].join(" ")}
                         style={{
