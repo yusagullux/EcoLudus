@@ -103,6 +103,8 @@ function loadQuestCatalog(): Promise<Map<string, QuestDefinition>> {
             eco: Number(quest.ecoCoins ?? 25),
             catalogCarbonKg: Number(quest.carbonFootprintReduction ?? 0),
             difficulty,
+            // Proof remains required for catalog quests unless a quest
+            // explicitly opts out.
             requiresProof: quest.requiresProof !== false
           });
         }

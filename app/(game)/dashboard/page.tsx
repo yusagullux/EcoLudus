@@ -115,12 +115,9 @@ export default function DashboardPage() {
           xp: quest.xp || 35,
           eco: quest.ecoCoins || 25,
           carbon: quest.carbonFootprintReduction || 0.5,
-          // Honor-system quests (requiresProof === false in quests.json) are
-          // trivial "invisible action" quests (turn off lights, unplug
-          // chargers…) with no checkable artifact — they complete on trust,
-          // one tap, no AI proof modal.
           requiresProof: quest.requiresProof !== false,
-          requiresPhoto: Boolean(quest.requiresPhoto)
+          requiresPhoto: Boolean(quest.requiresPhoto),
+          description: quest.description || "Complete this small eco-friendly action."
         });
       });
     });
@@ -230,6 +227,11 @@ export default function DashboardPage() {
   // The streak still advances server-side via /api/streak/apply on dashboard load,
   // and milestone rewards surface through the Streak Reward popup below.
   const currentStreak = Number(profile?.currentStreak ?? 0);
+  const longestStreak = Number(profile?.longestStreak ?? currentStreak);
+  const streakMilestones = [3, 7, 14, 30];
+  const nextStreakMilestone = streakMilestones.find((day) => day > currentStreak) ?? currentStreak + 7;
+  const previousStreakMilestone = streakMilestones.filter((day) => day <= currentStreak).slice(-1)[0] ?? 0;
+  const streakProgress = Math.min(100, Math.max(0, Math.round(((currentStreak - previousStreakMilestone) / Math.max(1, nextStreakMilestone - previousStreakMilestone)) * 100)));
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
   const activePetId = profile?.activePet || profileAnimals.find((pet: any) => pet.active)?.id;
   const activePet = profileAnimals.find((pet: any) => pet.id === activePetId) || null;
@@ -295,22 +297,16 @@ export default function DashboardPage() {
   const toggleSelection = (quest: any) => {
     if (quest.done || pendingCompletion) return;
 
-    if (!verifiedQuestIds.includes(quest.id)) {
-      if (!selectedQuestIds.includes(quest.id)) {
-        // Honor-system quest: select directly, no proof modal needed.
-        if (quest.requiresProof === false) {
-          setSelectedQuestIds((current) => [...current, quest.id]);
-          return;
-        }
-        // Trigger modal for verification first
-        setActiveTextVerifyQuest(quest);
-        setProofType(questRequiresPhoto(questsData, quest.id) ? "photo" : "text");
-        setTextProof("");
-        setPhotoFile(null);
-        setPhotoPreview(null);
-        setVerificationError(null);
-        return;
-      }
+    if (!verifiedQuestIds.includes(quest.id) && !selectedQuestIds.includes(quest.id) && quest.requiresProof !== false) {
+      setActiveTextVerifyQuest(quest);
+      // Photo is the primary proof method; text remains available as an
+      // accessible fallback when taking a photo is not practical.
+      setProofType(questRequiresPhoto(questsData, quest.id) ? "photo" : "text");
+      setTextProof("");
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setVerificationError(null);
+      return;
     }
 
     setSelectedQuestIds((current) =>
@@ -506,13 +502,23 @@ export default function DashboardPage() {
                 The streak still advances server-side via /api/streak/apply, and
                 milestone rewards pop up below; this is just a glanceable badge. */}
             <div
-              className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--text-warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--text-warning)_15%,transparent)] px-3 py-1.5"
+              className="w-full max-w-[260px] rounded-2xl border p-3 text-left"
+              style={{ borderColor: "color-mix(in srgb, var(--text-warning) 32%, transparent)", background: "linear-gradient(135deg, color-mix(in srgb, var(--text-warning) 20%, transparent), color-mix(in srgb, var(--bg-panel-alt) 18%, transparent))" }}
               title="Consecutive days you've logged in. Keep it alive for milestone rewards."
             >
-              <span className="text-sm leading-none" aria-hidden="true">🔥</span>
+              <span className="text-sm leading-none font-black" aria-hidden="true">✦</span>
               <span className="streak-badge-text text-xs font-bold uppercase tracking-wider">
                 {currentStreak}-day streak
               </span>
+              <div className="mt-3 flex gap-1.5" aria-hidden="true">
+                {Array.from({ length: 7 }, (_, index) => (
+                  <span key={index} className="h-2 flex-1 rounded-full" style={{ background: index < Math.min(currentStreak, 7) ? "var(--text-warning)" : "rgba(255,255,255,0.22)" }} />
+                ))}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-white/75">
+                <span>{nextStreakMilestone - currentStreak} days to next reward</span>
+                <span>{streakProgress}%</span>
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <HeroMetric label="XP" value={xp} hint="Experience points — earned from every completed quest. Level is derived from your total XP." />
@@ -599,7 +605,7 @@ export default function DashboardPage() {
               <StaggerItem
                 key={quest.id}
                 as="div"
-                className={`flex items-start gap-4 px-5 py-4 transition sm:px-6 ${quest.done ? "opacity-55" : ""}`}
+                className={`flex items-start gap-4 px-5 py-5 transition hover:bg-[var(--bg-panel-alt)] sm:px-6 ${quest.done ? "opacity-55" : ""}`}
                 style={{ background: isSelected && !quest.done ? "var(--sidebar-active-bg)" : "transparent" }}
               >
                 <label className="flex cursor-pointer items-start gap-4 min-w-0 flex-1">
@@ -608,14 +614,16 @@ export default function DashboardPage() {
                     checked={quest.done || isSelected}
                     disabled={quest.done || pendingCompletion}
                     onChange={() => toggleSelection(quest)}
-                    className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded accent-[var(--text-accent)]"
+                    aria-label={`${quest.done ? "Completed" : "Mark complete"}: ${quest.title}`}
+                    className="mt-1 h-5 w-5 shrink-0 cursor-pointer rounded accent-[var(--text-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--text-accent)]"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: quest.categoryColor }} />
                       <span className="text-xs font-extrabold uppercase tracking-[0.08em]" style={{ color: "var(--text-muted)" }}>{quest.category}</span>
                     </div>
-                    <p className={`mt-1 text-sm font-extrabold ${quest.done ? "line-through" : ""}`} style={{ color: "var(--text-primary)" }}>{quest.title}</p>
+                    <p className={`mt-1 text-base font-extrabold leading-snug ${quest.done ? "line-through" : ""}`} style={{ color: "var(--text-primary)" }}>{quest.title}</p>
+                    <p className="mt-1.5 max-w-2xl text-sm leading-5" style={{ color: "var(--text-muted)" }}>{quest.description}</p>
                   </div>
                 </label>
                 <div className="flex shrink-0 flex-col items-end gap-1">
@@ -634,17 +642,17 @@ export default function DashboardPage() {
                         setPhotoPreview(null);
                         setVerificationError(null);
                       }}
-                      className="mt-1 min-h-11 rounded-full px-3 py-2 text-[10px] font-extrabold tracking-[0.02em] transition"
+                      className="mt-1 min-h-11 rounded-full px-3 py-2 text-[10px] font-extrabold tracking-[0.02em] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--text-accent)]"
                       style={isVerified
                         ? { background: "var(--sidebar-active-bg)", color: "var(--text-sidebar-muted)" }
                         : { background: "color-mix(in srgb, var(--text-warning) 12%, var(--bg-panel-alt))", color: "var(--text-warning)" }}
                     >
-                      {isVerified ? "Verified" : "Verify proof"}
+                      {isVerified ? "Proof verified" : "Add proof"}
                     </button>
                   )}
                   {!quest.done && quest.requiresProof === false && isSelected && (
                     <span className="mt-1 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                      Ready
+                      Ready to complete
                     </span>
                   )}
                 </div>
@@ -738,7 +746,7 @@ export default function DashboardPage() {
             {proofType === "text" ? (
               <div>
                 <label htmlFor="quest-text-proof" className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
-                  Describe what you did to complete this quest
+                  Briefly describe what you did
                 </label>
                 <textarea
                   id="quest-text-proof"

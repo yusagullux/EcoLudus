@@ -43,6 +43,12 @@ export default function InsightsPage() {
   const xp = Number(profile?.xp ?? 0);
   const ecoPoints = Number(profile?.ecoPoints ?? 0);
   const missionsCompleted = Number(profile?.missionsCompleted ?? 0);
+  const currentStreak = Number(profile?.currentStreak ?? 0);
+  const longestStreak = Number(profile?.longestStreak ?? currentStreak);
+  const streakMilestones = [3, 7, 14, 30];
+  const nextStreakMilestone = streakMilestones.find((day) => day > currentStreak) ?? currentStreak + 7;
+  const previousStreakMilestone = streakMilestones.filter((day) => day <= currentStreak).slice(-1)[0] ?? 0;
+  const streakProgress = Math.min(100, Math.max(0, Math.round(((currentStreak - previousStreakMilestone) / Math.max(1, nextStreakMilestone - previousStreakMilestone)) * 100)));
 
   // Profile collection fields are jsonb-derived; narrow them to typed locals so
   // the chart math below type-checks. The element types are loose (`unknown`)
@@ -109,6 +115,33 @@ export default function InsightsPage() {
 
       <StaggerItem as="div">
       <StatGrid className="grid-cols-2 gap-3 sm:grid-cols-3" items={summaryCards} />
+      </StaggerItem>
+
+      <StaggerItem as="div">
+      <Panel eyebrow="Keep the rhythm" title="Daily streak" action={<Pill active>{currentStreak} day{currentStreak === 1 ? "" : "s"}</Pill>}>
+        <div className="grid gap-5 sm:grid-cols-[auto_1fr] sm:items-center">
+          <div className="flex items-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border text-3xl font-black" style={{ borderColor: "color-mix(in srgb, var(--text-warning) 42%, transparent)", background: "color-mix(in srgb, var(--text-warning) 18%, var(--bg-panel-alt))", color: "var(--text-warning)" }} aria-hidden="true">✦</div>
+            <div>
+              <p className="font-serif text-3xl font-black" style={{ color: "var(--text-primary)" }}>{currentStreak}<span className="ml-1 text-sm font-bold" style={{ color: "var(--text-muted)" }}>days</span></p>
+              <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Best streak: {longestStreak} days</p>
+            </div>
+          </div>
+          <div>
+            <div className="mb-2 flex items-center justify-between text-xs font-extrabold">
+              <span style={{ color: "var(--text-primary)" }}>Next reward at {nextStreakMilestone} days</span>
+              <span style={{ color: "var(--text-warning)" }}>{streakProgress}%</span>
+            </div>
+            <ProgressBar value={streakProgress} color="var(--text-warning)" />
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Streak reward milestones">
+              {streakMilestones.map((milestone) => {
+                const reached = currentStreak >= milestone;
+                return <div key={milestone} className="rounded-xl border px-2 py-2 text-center" style={{ borderColor: reached ? "color-mix(in srgb, var(--text-warning) 45%, transparent)" : "var(--border-subtle)", background: reached ? "color-mix(in srgb, var(--text-warning) 12%, var(--bg-panel-alt))" : "var(--bg-panel-alt)" }}><span className="block text-xs font-black" style={{ color: reached ? "var(--text-warning)" : "var(--text-muted)" }}>{milestone}</span><span className="text-[9px] font-bold" style={{ color: "var(--text-muted)" }}>days</span></div>;
+              })}
+            </div>
+          </div>
+        </div>
+      </Panel>
       </StaggerItem>
 
       <StaggerItem as="div">
