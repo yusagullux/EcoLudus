@@ -70,6 +70,7 @@ export default function FriendsPage() {
   const [query, setQuery] = useState("");
   // Tracks which friend is currently being cheered to prevent concurrent submissions.
   const cheeringRef = useRef<string | null>(null);
+  const [cheeringId, setCheeringId] = useState<string | null>(null);
   // Tracks which player id has an in-flight add/accept/decline so we can show a
   // loading state on just that button (and block double-submits).
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -180,8 +181,8 @@ export default function FriendsPage() {
 
       // The API may auto-accept if the target already sent us a request
       if (data.message === "Friend request accepted") {
-        await refreshProfile();
         toast.success(`You and ${player.displayName || "player"} are now friends!`);
+        void refreshProfile();
       } else {
         const nextSent = [...sentRequests, player.id];
         if (typeof setProfile === "function") {
@@ -216,8 +217,8 @@ export default function FriendsPage() {
       }
 
       // Refresh the full profile from server to get clean state
-      await refreshProfile();
       toast.success(`Accepted friend request from ${request.displayName || "player"}.`);
+      void refreshProfile();
     } catch (err) {
       console.error(err);
       toast.error("Could not accept friend request.");
@@ -265,6 +266,7 @@ export default function FriendsPage() {
     // In-flight guard — prevents spamming before the async round-trip completes.
     if (cheeringRef.current !== null) return;
     cheeringRef.current = key;
+    setCheeringId(key);
 
     try {
       // The cap, the friend-relationship check, the XP/eco grant, and the
@@ -279,10 +281,11 @@ export default function FriendsPage() {
         toast.error(data?.error?.message || "Could not send cheer. Please try again.");
         return;
       }
-      await refreshProfile();
       toast.success(`Cheered ${friend.displayName || "friend"}: +${data.xpAwarded} XP, +${data.ecoAwarded} Eco.`);
+      void refreshProfile();
     } finally {
       cheeringRef.current = null;
+      setCheeringId(null);
     }
   };
 
@@ -302,8 +305,8 @@ export default function FriendsPage() {
       toast.error(data?.error?.message || "Could not claim reward. Please try again.");
       return;
     }
-    await refreshProfile();
     toast.success(`${quest.title} claimed: +${data.xpAwarded} XP, +${data.ecoAwarded} Eco.`);
+    void refreshProfile();
   };
 
   const removeFriend = async (friend: any) => {
@@ -323,8 +326,8 @@ export default function FriendsPage() {
       }
 
       // Refresh full profile for clean state (server also cleans stale request artifacts)
-      await refreshProfile();
       toast.show("Friend removed.");
+      void refreshProfile();
     } catch (err) {
       console.error(err);
       toast.error("Could not remove friend.");
@@ -564,11 +567,11 @@ export default function FriendsPage() {
                     <button
                       type="button"
                       onClick={() => cheerFriend(friend)}
-                      disabled={cheersTodayDisplay >= 5}
+                      disabled={cheersTodayDisplay >= 5 || cheeringId !== null}
                       className={`flex-1 sm:flex-none ${cheersTodayDisplay >= 5 ? secondaryButton : primaryButton}`}
                       title={cheersTodayDisplay >= 5 ? "Daily cheer limit reached" : undefined}
                     >
-                      {cheersTodayDisplay >= 5 ? "Limit reached" : "Cheer"}
+                      {cheersTodayDisplay >= 5 ? "Limit reached" : cheeringId === friendKey(friend) ? "Sending…" : "Cheer"}
                     </button>
                     <button type="button" onClick={() => setFriendToRemove(friend)} className={`flex-1 sm:flex-none ${secondaryButton}`}>
                       Remove

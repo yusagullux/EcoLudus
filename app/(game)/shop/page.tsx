@@ -95,8 +95,8 @@ export default function ShopPage() {
         return;
       }
 
-      await refreshProfile();
       toast.success(`${deal.name} added to collection!`);
+      void refreshProfile();
     } finally {
       setBuyingId(null);
     }
