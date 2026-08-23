@@ -45,7 +45,7 @@ export function CollectionCardImage({
         priority={priority}
         loading={priority || eager ? "eager" : undefined}
         onError={() => setImgError(true)}
-        className="object-contain p-2 transition duration-300"
+        className="object-cover transition duration-300"
         style={{ filter: "grayscale(1) brightness(0.7)", opacity: 0.75 }}
       />
     );
@@ -68,7 +68,7 @@ export function CollectionCardImage({
       priority={priority}
       loading={priority || eager ? "eager" : undefined}
       onError={() => setImgError(true)}
-      className="object-contain p-2 transition duration-300 group-hover:scale-110"
+      className="object-cover transition duration-300 group-hover:scale-110"
     />
   );
 }

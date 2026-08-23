@@ -533,7 +533,7 @@ export default function DashboardPage() {
 
       <StaggerItem as="div">
         <StatGrid
-          className="grid-cols-2 gap-3 sm:grid-cols-3"
+          className="grid-cols-2 gap-3 sm:grid-cols-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1"
           items={[
             { label: "Current Level", value: `Level ${level}`, accent: "var(--text-accent)" },
             { label: "Missions Done", value: missionsCompleted, accent: "var(--text-accent)" },
