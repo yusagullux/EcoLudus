@@ -693,7 +693,7 @@ export default function GardenPage() {
                       alt={item.itemName}
                       fill
                       sizes="64px"
-                      className="object-contain p-2 transition group-hover:scale-110"
+                      className="object-cover transition group-hover:scale-110"
                     />
                   </div>
                   <p className="text-xs font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>
@@ -751,7 +751,7 @@ export default function GardenPage() {
                         alt={tileName(tile)}
                         fill
                         sizes="56px"
-                        className="object-contain p-1"
+                        className="object-cover"
                         style={{ opacity: STAGE_OPACITY[stage] }}
                       />
                     </div>
