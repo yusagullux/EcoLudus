@@ -9,6 +9,7 @@ import {
   savePhotoHash,
   verifyImageWithProvider
 } from "@/lib/photo-verification";
+import { rateLimit } from "@/lib/rate-limit";
 
 const VALID_TYPES = new Set([...GEMINI_SUPPORTED_IMAGE_MIME_TYPES, "image/jpg"]);
 
@@ -19,6 +20,14 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: { code: "auth/unauthenticated", message: "You must be signed in to verify photos." } },
       { status: 401 }
+    );
+  }
+
+  const limit = rateLimit(request, `photo-verification:${session.userId}`, 12, 10 * 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: { code: "verification/too-many-attempts", message: "Too many photo verification attempts. Try again later." } },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
 

@@ -9,6 +9,7 @@ import {
   setDocument,
   updateDocument
 } from "@/lib/document-store";
+import { rateLimit } from "@/lib/rate-limit";
 
 const filterSchema = z.object({
   field: z.string(),
@@ -49,6 +50,14 @@ const requestSchema = z.discriminatedUnion("op", [
 ]);
 
 export async function POST(request: Request) {
+  const limit = rateLimit(request, "store-rpc", 120, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: { code: "rate-limit/exceeded", message: "Too many requests. Try again shortly." } },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
   const session = await getSession();
 
   try {

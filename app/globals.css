@@ -351,27 +351,42 @@
 [data-theme="dawn"],
 [data-theme="bloom"] {
   --text-error:   #be123c;
-  --text-warning: #b45309;
+  --text-warning: #9a5a0a;
 }
 
-[data-theme="dark"],
-[data-theme="liquid"],
-[data-theme="aurora"] {
+[data-theme="dawn"] {
+  --text-warning: #92501c;
+}
+
+[data-theme="bloom"] {
+  --text-warning: #a33d68;
+}
+
+[data-theme="dark"] {
   --text-error:   #fb7185;
-  --text-warning: #fbbf24;
+  --text-warning: #f6c453;
+}
+
+[data-theme="liquid"] {
+  --text-error:   #ff9fb2;
+  --text-warning: #78d9e8;
+}
+
+[data-theme="aurora"] {
+  --text-error:   #ff9fb2;
+  --text-warning: #73e0c2;
 }
 
 /* Streak badge text — brighter than --text-warning so it stays legible on the
-   15%-warning-tinted badge background. The base token is tuned for neutral
-   backgrounds and reads as a muddy dark brown when dropped onto a same-hue
-   tint, so the streak badge uses these dedicated per-theme values instead. */
+   15%-warning-tinted badge background, without forcing every theme to use
+   the same orange accent. */
 .streak-badge-text {
-  color: #d97706; /* amber-600 — vivid golden-orange, lifts off the pale tint */
+  color: var(--text-warning);
 }
 [data-theme="dark"] .streak-badge-text,
 [data-theme="liquid"] .streak-badge-text,
 [data-theme="aurora"] .streak-badge-text {
-  color: #fcd34d; /* amber-300 — brighter pop on the dark tinted badge */
+  color: var(--text-warning);
 }
 
 :root {
@@ -936,7 +951,7 @@ html {
 :where([data-theme="liquid"]) .text-amber-800,
 :where([data-theme="aurora"]) .text-amber-700,
 :where([data-theme="aurora"]) .text-amber-800 {
-  color: #fcd34d !important; /* amber-300 */
+  color: var(--text-warning) !important;
 }
 :where([data-theme="dark"]) .text-red-700,
 :where([data-theme="dark"]) .text-red-800,
@@ -982,7 +997,7 @@ html {
 [data-theme="liquid"] [style*="color: #c98a0e"], [data-theme="liquid"] [style*="color:#c98a0e"],
 [data-theme="aurora"] [style*="color: #9a6b1f"], [data-theme="aurora"] [style*="color:#9a6b1f"],
 [data-theme="aurora"] [style*="color: #c98a0e"], [data-theme="aurora"] [style*="color:#c98a0e"] {
-  color: #fcd34d !important; /* amber-300 */
+  color: var(--text-warning) !important;
 }
 /* blue → sky-300 */
 [data-theme="dark"] [style*="color: #2f5f86"], [data-theme="dark"] [style*="color:#2f5f86"],
@@ -1015,7 +1030,7 @@ html {
 [data-theme="dark"] [style*="color: #db5a36"], [data-theme="dark"] [style*="color:#db5a36"],
 [data-theme="liquid"] [style*="color: #db5a36"], [data-theme="liquid"] [style*="color:#db5a36"],
 [data-theme="aurora"] [style*="color: #db5a36"], [data-theme="aurora"] [style*="color:#db5a36"] {
-  color: #fdba74 !important; /* orange-300 */
+  color: var(--text-warning) !important;
 }
 
 /* ── CUSTOM GAMIFIED ANIMATIONS ─────────────────────────── */

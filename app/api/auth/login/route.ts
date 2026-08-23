@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { setSessionCookie, verifyPassword } from "@/lib/auth";
 import { isDatabaseSetupError, sql } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
+import { verifyHCaptcha } from "@/lib/hcaptcha";
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6).max(128)
+  password: z.string().min(6).max(128),
+  captchaToken: z.string().max(4096).optional()
 });
 
 // Fixed invalid bcrypt hash used so the "user not found" path runs a bcrypt
@@ -21,8 +24,22 @@ const DUMMY_PASSWORD_HASH =
   "$2b$12$VWeo7gCKZE7AYbicxtSFXuegYWiTBggSQukEPPBhvbr7qcqZvsC9.";
 
 export async function POST(request: Request) {
+  const limit = rateLimit(request, "auth-login", 10, 5 * 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: { code: "auth/too-many-attempts", message: "Too many sign-in attempts. Try again later." } },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
   try {
     const payload = loginSchema.parse(await request.json());
+    if (!(await verifyHCaptcha(payload.captchaToken, request))) {
+      return NextResponse.json(
+        { error: { code: "auth/captcha-failed", message: "Please complete the security check and try again." } },
+        { status: 403 }
+      );
+    }
     const email = payload.email.trim().toLowerCase();
 
     const result = await sql<{

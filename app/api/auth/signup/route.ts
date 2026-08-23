@@ -3,11 +3,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { isDatabaseSetupError, sql } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
+import { verifyHCaptcha } from "@/lib/hcaptcha";
 
 const signUpSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6).max(128),
-  displayName: z.string().trim().min(1).max(50).nullable().optional()
+  displayName: z.string().trim().min(1).max(50).nullable().optional(),
+  captchaToken: z.string().max(4096).optional()
 });
 
 function buildInitialProfile(email: string, displayName?: string) {
@@ -75,8 +78,22 @@ function buildInitialProfile(email: string, displayName?: string) {
 }
 
 export async function POST(request: Request) {
+  const limit = rateLimit(request, "auth-signup", 5, 60 * 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: { code: "auth/too-many-signups", message: "Too many account creation attempts. Try again later." } },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
   try {
     const payload = signUpSchema.parse(await request.json());
+    if (!(await verifyHCaptcha(payload.captchaToken, request))) {
+      return NextResponse.json(
+        { error: { code: "auth/captcha-failed", message: "Please complete the security check and try again." } },
+        { status: 403 }
+      );
+    }
     const email = payload.email.trim().toLowerCase();
 
     const existing = await sql("select id from users where email = $1 limit 1", [email]);

@@ -12,15 +12,18 @@ const csp = [
   "default-src 'self'",
   // Next.js injects inline runtime/hydration scripts; JSON-LD is inline. Using
   // 'unsafe-inline' until a per-request nonce strategy is added.
-  `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com https://hcaptcha.com https://*.hcaptcha.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co",
   "font-src 'self' data:",
-  "connect-src 'self' https://va.vercel-scripts.com",
+  "connect-src 'self' https://va.vercel-scripts.com https://hcaptcha.com https://*.hcaptcha.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "frame-ancestors 'none'"
+  "frame-ancestors 'none'",
+  "frame-src https://hcaptcha.com https://*.hcaptcha.com",
+  "manifest-src 'self'",
+  ...(isDev ? [] : ["upgrade-insecure-requests"])
 ].join("; ");
 
 const securityHeaders = [
@@ -28,7 +31,10 @@ const securityHeaders = [
   // X-Frame-Options is redundant with frame-ancestors 'none' but kept for legacy browsers.
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
   // No client-side device APIs are used; all denied.
   {
     key: "Permissions-Policy",

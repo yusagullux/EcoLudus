@@ -223,8 +223,7 @@ export default function DashboardPage() {
   const carbonReduced = Number(profile?.carbonReduced ?? 0);
   const missionsCompleted = Number(profile?.missionsCompleted ?? 0);
   const completedQuests = (profile?.completedQuests || []) as string[];
-  // Streak is shown as a compact 🔥 + count badge in the hero (not a full card).
-  // The streak still advances server-side via /api/streak/apply on dashboard load,
+  // The streak advances server-side via /api/streak/apply on dashboard load,
   // and milestone rewards surface through the Streak Reward popup below.
   const currentStreak = Number(profile?.currentStreak ?? 0);
   const longestStreak = Number(profile?.longestStreak ?? currentStreak);
@@ -502,7 +501,7 @@ export default function DashboardPage() {
                 The streak still advances server-side via /api/streak/apply, and
                 milestone rewards pop up below; this is just a glanceable badge. */}
             <div
-              className="w-full max-w-[260px] rounded-2xl border p-3 text-left"
+              className="hidden"
               style={{ borderColor: "color-mix(in srgb, var(--text-warning) 32%, transparent)", background: "linear-gradient(135deg, color-mix(in srgb, var(--text-warning) 20%, transparent), color-mix(in srgb, var(--bg-panel-alt) 18%, transparent))" }}
               title="Consecutive days you've logged in. Keep it alive for milestone rewards."
             >
@@ -540,6 +539,45 @@ export default function DashboardPage() {
             { label: "CO2 Reduced", value: `${(+carbonReduced || 0).toFixed(1)} kg`, accent: "var(--text-accent)" }
           ]}
         />
+      </StaggerItem>
+
+      <StaggerItem as="section">
+        <Panel eyebrow="Consistency" title="Keep your rhythm" action={<Pill active>{currentStreak} days</Pill>}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+            <div className="flex items-start gap-3">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl"
+                style={{ background: "color-mix(in srgb, var(--text-warning) 16%, var(--bg-panel-alt))" }}
+                aria-hidden="true"
+              >
+                🔥
+              </span>
+              <div>
+                <p className="font-serif text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                  {currentStreak}-day streak
+                </p>
+                <p className="mt-0.5 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                  {nextStreakMilestone - currentStreak} days to your next reward
+                </p>
+              </div>
+            </div>
+            <div className="w-full sm:max-w-[380px]">
+              <div className="flex gap-1.5" aria-hidden="true">
+                {Array.from({ length: 7 }, (_, index) => (
+                  <span
+                    key={index}
+                    className="h-2 flex-1 rounded-full"
+                    style={{ background: index < Math.min(currentStreak, 7) ? "var(--text-warning)" : "var(--border-subtle)" }}
+                  />
+                ))}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
+                <span>Progress to milestone</span>
+                <span>{streakProgress}%</span>
+              </div>
+            </div>
+          </div>
+        </Panel>
       </StaggerItem>
 
       {/* Streak reward popup — fires on login when /api/streak/apply grants a

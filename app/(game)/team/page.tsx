@@ -32,8 +32,8 @@ import { StaggerContainer, StaggerItem } from "@/lib/animations";
 // of the old bg-emerald-50/amber-50/rose-50 which washed out on dark themes.
 const difficultyChip: Record<string, { background: string; color: string }> = {
   Easy:   { background: "color-mix(in srgb, #2f9e54 16%, var(--bg-panel))", color: "#2f9e54" },
-  Medium: { background: "color-mix(in srgb, #c98a0e 18%, var(--bg-panel))", color: "#c98a0e" },
-  Hard:   { background: "color-mix(in srgb, #db5a36 18%, var(--bg-panel))", color: "#db5a36" },
+  Medium: { background: "color-mix(in srgb, var(--text-warning) 18%, var(--bg-panel))", color: "var(--text-warning)" },
+  Hard:   { background: "color-mix(in srgb, var(--text-error) 18%, var(--bg-panel))", color: "var(--text-error)" },
 };
 
 // Eco reward chip — green-tinted, themed. XP rewards use the neutral Pill.
