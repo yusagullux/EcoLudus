@@ -498,7 +498,10 @@ export default function CollectionPage() {
     toast.success(`${animal.name} is now your active companion.`);
   };
 
-  const catalogLoading = !shopCatalog || !speciesCatalog;
+  // The derived catalog objects are always present (they intentionally fall
+  // back to empty arrays), so use the hooks' loading state here. Otherwise a
+  // new account briefly renders the empty state before the catalog arrives.
+  const catalogLoading = shopCat.isLoading || speciesCat.isLoading;
 
   return (
     <StaggerContainer className="flex flex-col gap-5" as="div">

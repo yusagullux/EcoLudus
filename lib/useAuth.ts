@@ -23,7 +23,10 @@ type AuthUser = {
 const SESSION_KEY = "/api/auth/me";
 
 async function fetchSession(): Promise<{ user: AuthUser | null; profile: Record<string, unknown> | null }> {
-  const res = await fetch(SESSION_KEY, { credentials: "include" });
+  // Profile data changes after purchases, quest rewards, care actions, and
+  // garden actions. Keep the session read out of the browser/Next fetch cache
+  // so a navigation never restores a stale empty inventory.
+  const res = await fetch(SESSION_KEY, { credentials: "include", cache: "no-store" });
   if (!res.ok) return { user: null, profile: null };
   const payload = await res.json().catch(() => ({}));
   return { 

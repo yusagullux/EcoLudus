@@ -404,44 +404,46 @@ export default function PetsPage() {
       )}
       </StaggerItem>
 
-      <StaggerItem as="section">
-      <Panel eyebrow="Inventory" title="Choose a Pet">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {pets.map((pet) => {
-            const isSelected = selectedPet?.id === pet.id;
-            const isActive = pet.active || activePetId === pet.id;
-            const style = rarityStyle[pet.rarity as Rarity] ?? rarityStyle.common;
-            const accent = style.accent;
-            const border = isSelected ? accent : (rarityBorder[pet.rarity as Rarity] ?? rarityBorder.common);
-            return (
-              <button
-                key={pet.id}
-                type="button"
-                onClick={() => setSelectedId(pet.id)}
-                className="reveal-card group overflow-hidden rounded-[20px] border text-left transition duration-300 hover:-translate-y-1"
-                style={{
-                  borderColor: border,
-                  background: "var(--bg-card)",
-                  ...(isSelected ? { boxShadow: `0 10px 28px color-mix(in srgb, ${accent} 20%, transparent)` } : {})
-                }}
-              >
-                <span className="relative block aspect-square overflow-hidden" style={{ background: `color-mix(in srgb, ${accent} 12%, var(--bg-card))` }}>
-                  <PetImage pet={pet} fit="contain" />
-                  {isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
-                  <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{pet.rarity}</span>
-                </span>
-                <span className="block p-3">
-                  <span className="block truncate font-serif text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{pet.name}</span>
-                  <span className="mt-2 block">
-                    <ProgressBar value={Number(pet.happiness ?? 50)} color={accent} />
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </Panel>
-      </StaggerItem>
+      {pets.length > 0 && (
+        <StaggerItem as="section">
+          <Panel eyebrow="Inventory" title="Choose a Pet">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              {pets.map((pet) => {
+                const isSelected = selectedPet?.id === pet.id;
+                const isActive = pet.active || activePetId === pet.id;
+                const style = rarityStyle[pet.rarity as Rarity] ?? rarityStyle.common;
+                const accent = style.accent;
+                const border = isSelected ? accent : (rarityBorder[pet.rarity as Rarity] ?? rarityBorder.common);
+                return (
+                  <button
+                    key={pet.id}
+                    type="button"
+                    onClick={() => setSelectedId(pet.id)}
+                    className="reveal-card group overflow-hidden rounded-[20px] border text-left transition duration-300 hover:-translate-y-1"
+                    style={{
+                      borderColor: border,
+                      background: "var(--bg-card)",
+                      ...(isSelected ? { boxShadow: `0 10px 28px color-mix(in srgb, ${accent} 20%, transparent)` } : {})
+                    }}
+                  >
+                    <span className="relative block aspect-square overflow-hidden" style={{ background: `color-mix(in srgb, ${accent} 12%, var(--bg-card))` }}>
+                      <PetImage pet={pet} fit="cover" />
+                      {isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
+                      <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{pet.rarity}</span>
+                    </span>
+                    <span className="block p-3">
+                      <span className="block truncate font-serif text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{pet.name}</span>
+                      <span className="mt-2 block">
+                        <ProgressBar value={Number(pet.happiness ?? 50)} color={accent} />
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </Panel>
+        </StaggerItem>
+      )}
 
     </StaggerContainer>
   );

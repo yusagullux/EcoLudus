@@ -97,13 +97,13 @@ export default function GameLayout({
           <main
             className={[
               /* Mobile: offset below top bar only (no bottom nav) */
-              "pt-[56px] pb-6 px-4 sm:px-5",
+              "min-w-0 pt-[56px] pb-6 px-4 sm:px-5",
               /* Desktop: offset for 240px sidebar, full available width */
               "md:ml-[240px] md:pt-7 md:pb-8 md:px-8",
             ].join(" ")}
           >
             {/* Content width: fills available space with a comfortable max */}
-            <div className="mx-auto w-full max-w-[1100px]">
+            <div className="mx-auto min-w-0 w-full max-w-[1100px]">
               <PageTransition>{children}</PageTransition>
             </div>
           </main>
