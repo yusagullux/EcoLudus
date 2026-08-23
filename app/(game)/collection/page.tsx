@@ -231,8 +231,8 @@ export default function CollectionPage() {
       return;
     }
 
-    await refreshProfile();
     toast.success(`${egg.name} is now incubating in the Hatching Chamber!`);
+    void refreshProfile();
   };
 
   const warmEgg = async (hatching: any) => {
@@ -257,8 +257,8 @@ export default function CollectionPage() {
       return;
     }
 
-    await refreshProfile();
     toast.success("Warmed the egg! 15 minutes shaved off hatching time.");
+    void refreshProfile();
   };
 
   const hatchInstantly = (hatching: any) => {
@@ -304,8 +304,8 @@ export default function CollectionPage() {
       return;
     }
 
-    await refreshProfile();
     toast.success("Egg incubated! Ready to hatch.");
+    void refreshProfile();
   };
 
   // The hatching reveal is purely cosmetic — the actual hatch (timing check,
@@ -380,9 +380,8 @@ export default function CollectionPage() {
     // The pet was already minted server-side when the reveal started. Just
     // sync local state, dismiss, and surface the toast.
     pendingAnimalRef.current = null;
-    await refreshProfile();
-
     toast.success(`${revealedAnimal.name} was added to your collection book!`);
+    void refreshProfile();
     setActiveHatching(null);
     setHatchIsNew(false);
     setMode("animals");

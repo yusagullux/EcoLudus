@@ -101,8 +101,8 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Save failed");
-      await refreshProfile();
       toast.success("Settings saved!");
+      void refreshProfile();
     } catch (err: unknown) {
       toast.error((err as Error).message || "Could not save settings.");
     } finally {
@@ -130,8 +130,8 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
       if (!res.ok || !data?.success) {
         throw new Error(data?.error?.message || "Upload failed.");
       }
-      await refreshProfile();
       toast.success("Profile picture updated!");
+      void refreshProfile();
     } catch (err: unknown) {
       toast.error((err as Error).message || "Could not upload picture.");
     } finally {
@@ -151,8 +151,8 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error?.message || "Remove failed.");
-      await refreshProfile();
       toast.success("Profile picture removed.");
+      void refreshProfile();
     } catch (err: unknown) {
       toast.error((err as Error).message || "Could not remove picture.");
     } finally {

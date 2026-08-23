@@ -311,8 +311,8 @@ export default function GardenPage() {
           (tile.source ?? (tile.seedId || tile.seedName ? "seed" : "plant")) === "seed" ? "seeds" : "plants";
         setProfile({ ...profile, garden: data.garden, [key]: data[key] });
       }
-      await refreshProfile();
       toast.success("Plant returned to your inventory.");
+      void refreshProfile();
     } finally {
       setIsProcessing(false);
     }
@@ -352,8 +352,8 @@ export default function GardenPage() {
           garden: { ...garden, [tileId]: { ...tile, lastHarvestAt: Date.now() } }
         });
       }
-      await refreshProfile();
       toast.success(`Harvested ${tileName(tile)}. +${data.eco} EcoPoints, +${data.xp} XP.`);
+      void refreshProfile();
     } finally {
       setIsProcessing(false);
     }
@@ -387,8 +387,8 @@ export default function GardenPage() {
           garden: nextGarden
         });
       }
-      await refreshProfile();
       toast.success(`Harvested ${data.harvested} plant${data.harvested === 1 ? "" : "s"}. +${data.eco} EcoPoints, +${data.xp} XP.`);
+      void refreshProfile();
     } finally {
       setIsProcessing(false);
     }
@@ -421,8 +421,8 @@ export default function GardenPage() {
       if (typeof setProfile === "function" && profile) {
         setProfile({ ...profile, ecoPoints: data.ecoPoints, gardenTiles: data.gardenTiles });
       }
-      await refreshProfile();
       toast.success(`Tile unlocked! −${nextCost} EcoPoints.`);
+      void refreshProfile();
     } finally {
       setIsProcessing(false);
     }
