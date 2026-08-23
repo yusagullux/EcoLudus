@@ -22,6 +22,14 @@ const KIND_LABEL: Record<string, string> = {
   chest: "Chest"
 };
 
+const RARITY_ORDER: Record<string, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  epic: 3,
+  legendary: 4
+};
+
 function calculateTimeLeft(): string {
   const now = new Date();
   const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
@@ -43,6 +51,11 @@ export default function ShopPage() {
   const toast = useToast();
   const shopCatalog = useShopCatalog();
   const dailyDeals = shopCatalog.dailyDeals as any[] || [];
+  const sortedDailyDeals = [...dailyDeals].sort((a, b) => {
+    const rarityDifference = (RARITY_ORDER[a.rarity] ?? Number.MAX_SAFE_INTEGER) - (RARITY_ORDER[b.rarity] ?? Number.MAX_SAFE_INTEGER);
+    if (rarityDifference !== 0) return rarityDifference;
+    return String(a.name ?? "").localeCompare(String(b.name ?? ""));
+  });
   const loading = shopCatalog.isLoading;
   const [timeLeft, setTimeLeft] = useState(() => calculateTimeLeft());
 
@@ -112,7 +125,7 @@ export default function ShopPage() {
       <StaggerItem as="div">
         {loading ? (
           <CardGridSkeleton count={6} cols="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3" />
-        ) : dailyDeals.length === 0 ? (
+        ) : sortedDailyDeals.length === 0 ? (
           <EmptyState
             variant="plain"
             icon="🏪"
@@ -121,7 +134,7 @@ export default function ShopPage() {
           />
         ) : (
           <StaggerContainer className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3" as="div">
-            {dailyDeals.map((deal, index) => {
+            {sortedDailyDeals.map((deal, index) => {
               const style = rarityStyle[deal.rarity as Rarity] ?? rarityStyle.common;
               const border = rarityBorder[deal.rarity as Rarity] ?? rarityBorder.common;
               const canAfford = ecoPoints >= deal.dealPrice;

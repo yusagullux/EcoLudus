@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { inputClass, primaryButton } from "@/components/game-ui";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { HCaptchaWidget } from "@/components/hcaptcha-widget";
 import {
   clearRememberedSession,
   getRememberedSession,
@@ -46,6 +47,7 @@ function formatClientError(message: string) {
     "auth/wrong-password": "Incorrect password. Please try again.",
     "auth/invalid-input": "Please check your details and try again.",
     "auth/database-not-configured": "EcoLudus needs its production database configured before login will work.",
+    "auth/captcha-failed": "Please complete the security check and try again.",
     "auth/internal-error": "Something went wrong on the server. Please try again.",
     "auth/network-request-failed": "We could not reach EcoLudus. Check your connection and try again."
   };
@@ -60,6 +62,7 @@ export function AuthCard({ mode }: AuthCardProps) {
   const [rememberMe, setRememberMe] = useState(mode === "login");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
   // Tracks fields the user has interacted with, so inline validation only
   // appears after they've had a chance to type — not on the initial empty form.
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -133,7 +136,8 @@ export function AuthCard({ mode }: AuthCardProps) {
           email: email.trim().toLowerCase(),
           password,
           // Only forward a display name on signup — the login route ignores it.
-          ...(mode === "signup" && displayName.trim() ? { displayName: displayName.trim() } : {})
+          ...(mode === "signup" && displayName.trim() ? { displayName: displayName.trim() } : {}),
+          captchaToken
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -286,6 +290,8 @@ export function AuthCard({ mode }: AuthCardProps) {
             )}
 
             {error && <ErrorBanner>{error}</ErrorBanner>}
+
+            <HCaptchaWidget onToken={setCaptchaToken} onExpired={() => setCaptchaToken("")} />
 
             <button type="submit" disabled={pending} className={`mt-1 w-full ${primaryButton}`}>
               {pending ? content.pending : content.submit}
