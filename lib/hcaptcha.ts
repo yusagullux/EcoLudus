@@ -9,11 +9,14 @@ export function isHCaptchaConfigured() {
 
 export async function verifyHCaptcha(token: string | undefined, request: Request) {
   const secret = process.env.HCAPTCHA_SECRET_KEY?.trim();
+  const siteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY?.trim();
 
-  // Keep local development usable before the deployment secrets are configured.
-  // Production fails closed so captcha cannot be bypassed by omitting the token.
-  if (!secret) {
-    return process.env.NODE_ENV !== "production";
+  // CAPTCHA is enabled only when both sides of the integration are configured.
+  // A public site key is compiled into the client bundle, so a deployment with
+  // only HCAPTCHA_SECRET_KEY set renders no widget but would otherwise reject
+  // every login and signup request with captcha-failed.
+  if (!secret || !siteKey) {
+    return true;
   }
 
   if (!token?.trim()) {
@@ -26,9 +29,7 @@ export async function verifyHCaptcha(token: string | undefined, request: Request
     secret,
     response: token.trim(),
     ...(remoteIp ? { remoteip: remoteIp } : {}),
-    ...(process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY
-      ? { sitekey: process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY.trim() }
-      : {})
+    sitekey: siteKey
   });
 
   try {
