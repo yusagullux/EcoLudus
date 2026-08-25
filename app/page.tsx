@@ -56,9 +56,9 @@ const features = [
 ];
 
 const mockups = [
-  { src: "/mockup-virtual-garden.png", alt: "Virtual garden screen showing collected plants growing in EcoLudus", label: "Virtual garden", caption: "Grow a living collection" },
-  { src: "/mockup-daily-missions.png", alt: "Daily eco missions screen with quest list and rewards in EcoLudus", label: "Daily missions", caption: "Verified, rewarded habits" },
-  { src: "/mockup-carbon-tracker.png", alt: "Carbon impact tracker screen showing CO₂ savings in EcoLudus", label: "Impact tracker", caption: "See your CO₂ savings" }
+  { src: "/screenshot-virtual-garden.png", alt: "Real screenshot of the EcoLudus virtual garden with planted sunflowers and unlockable tiles", label: "Virtual garden", caption: "Grow a living collection" },
+  { src: "/screenshot-daily-missions.png", alt: "Real screenshot of the EcoLudus dashboard showing today's eco quests and progress stats", label: "Daily missions", caption: "Verified, rewarded habits" },
+  { src: "/screenshot-carbon-tracker.png", alt: "Real screenshot of the EcoLudus impact tracker showing CO₂ savings and category breakdown", label: "Impact tracker", caption: "See your CO₂ savings" }
 ];
 
 export default function HomePage() {

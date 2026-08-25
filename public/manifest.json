@@ -24,14 +24,14 @@
   "categories": ["games", "lifestyle", "education"],
   "screenshots": [
     {
-      "src": "/mockup-daily-missions.png",
-      "sizes": "1280x720",
+      "src": "/screenshot-daily-missions.png",
+      "sizes": "1200x1600",
       "type": "image/png",
       "label": "Daily missions dashboard"
     },
     {
-      "src": "/mockup-virtual-garden.png",
-      "sizes": "1280x720",
+      "src": "/screenshot-virtual-garden.png",
+      "sizes": "1200x1600",
       "type": "image/png",
       "label": "Virtual garden"
     }
