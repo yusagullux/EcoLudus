@@ -69,7 +69,7 @@ export type StreakRewardResult = {
   granted: StreakReward | null;
 };
 
-const STREAK_MILESTONES = [
+export const STREAK_MILESTONES = [
   { day: 3, type: "eco", amount: 20, label: "3-day streak: +20 EcoPoints" },
   { day: 7, type: "egg", rarity: "common", label: "7-day streak: Common Egg!" },
   { day: 14, type: "egg", rarity: "rare", label: "14-day streak: Rare Egg!" },
