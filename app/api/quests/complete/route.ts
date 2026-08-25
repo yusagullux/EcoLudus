@@ -8,6 +8,9 @@ import { getMissingVerifiedQuestProofIds, removeVerifiedQuestProofs } from "@/li
 import { grantProgression, type ProgressionUser } from "@/lib/progression";
 import { consumeBoostersForQuest } from "@/lib/boosters";
 import { computeVitals } from "@/lib/pet-vitals";
+import { BOOSTER_CATALOG, SEED_CATALOG } from "@/lib/catalog";
+import type { LevelUpReward as LevelUpRewardType } from "@/lib/level-system";
+import type { Rarity } from "@/components/game-ui";
 
 const completeQuestSchema = z.object({
   questIds: z.array(z.string().min(1)).min(1).max(5)
@@ -98,6 +101,68 @@ function addChest(chests: unknown, chest: ReturnType<typeof pickDailyClearChest>
   }
 
   return nextChests;
+}
+
+function rarityForLevelReward(level: number): Rarity {
+  if (level % 10 === 0) return "legendary";
+  if (level % 10 === 5) return "epic";
+  if (level % 10 >= 7) return "rare";
+  if (level % 10 >= 3) return "uncommon";
+  return "common";
+}
+
+function applyLevelUpRewards(
+  profile: Record<string, unknown>,
+  rewards: LevelUpRewardType[]
+): { patch: Record<string, unknown>; details: Array<{ label: string; icon: string }> } {
+  const patch: Record<string, unknown> = {};
+  const details: Array<{ label: string; icon: string }> = [];
+
+  for (const reward of rewards) {
+    if (reward.rewardType === "garden_item") {
+      const rarity = rarityForLevelReward(reward.level);
+      const pool = SEED_CATALOG.filter((s) => s.rarity === rarity);
+      const seed = pool[reward.level % Math.max(pool.length, 1)] ?? SEED_CATALOG[0];
+      if (seed) {
+        const seeds = asArray(profile.seeds).map((entry) => ({ ...(entry as Record<string, unknown>) }));
+        const idx = seeds.findIndex((s) => s.name === seed.name);
+        const awardedAt = new Date().toISOString();
+        if (idx >= 0) {
+          seeds[idx] = { ...seeds[idx], count: Number(seeds[idx].count ?? 1) + 1, awardedAt };
+        } else {
+          seeds.push({ id: seed.id, name: seed.name, rarity: seed.rarity, image: seed.image, count: 1, awardedAt });
+        }
+        patch.seeds = seeds;
+        details.push({ label: `${seed.name}`, icon: "🌱" });
+      }
+    } else if (reward.rewardType === "team_boost") {
+      const def = BOOSTER_CATALOG.find((b) => b.id === "booster-xp-2") ?? BOOSTER_CATALOG[0];
+      if (def) {
+        const boosters = asArray(profile.boosters).map((entry) => ({ ...(entry as Record<string, unknown>) }));
+        const idx = boosters.findIndex((b) => String(b.id) === def.id);
+        if (idx >= 0) {
+          boosters[idx] = { ...boosters[idx], charges: Number(boosters[idx].charges ?? 0) + def.charges };
+        } else {
+          boosters.push({
+            id: def.id,
+            kind: def.kind,
+            multiplier: def.multiplier,
+            charges: def.charges,
+            name: def.name,
+            rarity: def.rarity,
+            emoji: def.emoji,
+            obtainedAt: new Date().toISOString()
+          });
+        }
+        patch.boosters = boosters;
+        details.push({ label: `${def.name} (+${def.charges} charges)`, icon: def.emoji });
+      }
+    } else {
+      details.push({ label: `Level ${reward.level} reached`, icon: "⭐" });
+    }
+  }
+
+  return { patch, details };
 }
 
 function applyCompanionProgress(
@@ -303,8 +368,8 @@ export async function POST(request: Request) {
         currentDailyQuests.length > 0 &&
         currentDailyQuests.every((questId) => dailyQuestsCompleted.includes(questId));
       const canRollDailyChest = didClearAllDailyQuests && !wasAlreadyClear && !dailyClearChestRewards[todayKey];
-      const bonusChest = canRollDailyChest && Math.random() < DAILY_CLEAR_CHEST_CHANCE
-        ? pickDailyClearChest()
+      const bonusChest = canRollDailyChest
+        ? (Math.random() < DAILY_CLEAR_CHEST_CHANCE ? pickDailyClearChest() : DAILY_CLEAR_CHEST_POOL[0])
         : null;
 
       if (canRollDailyChest) {
@@ -358,10 +423,18 @@ export async function POST(request: Request) {
         tx: { query, user }
       });
 
+      // Apply concrete rewards for any level thresholds crossed. The spine returns
+      // the labels; here we mint the actual seed / booster items inside the same
+      // locked transaction so the client cannot forge level-up drops.
+      const levelUpRewardDetails = granted && granted.levelUpRewards.length > 0
+        ? applyLevelUpRewards({ ...profile, ...patch, xp: granted.xp, level: granted.level, ecoPoints: granted.ecoPoints, carbonReduced: granted.carbonReduced }, granted.levelUpRewards)
+        : { patch: {}, details: [] };
+
       const nextProfile = granted
         ? {
             ...profile,
             ...patch,
+            ...levelUpRewardDetails.patch,
             xp: granted.xp,
             level: granted.level,
             ecoPoints: granted.ecoPoints,
@@ -392,6 +465,8 @@ export async function POST(request: Request) {
           carbonReduced: Math.round(carbonReward * 100) / 100
         },
         bonusChest,
+        levelUpRewards: granted?.levelUpRewards ?? [],
+        levelUpRewardDetails: levelUpRewardDetails.details,
         companion: companionProgress.companion,
         booster: {
           xpMul: boosterResult.xpMul,

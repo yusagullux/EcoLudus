@@ -12,6 +12,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { requiredXP } from "@/lib/level-system";
+import { STREAK_MILESTONES } from "@/lib/streak";
 import { StaggerContainer, StaggerItem, FadeIn } from "@/lib/animations";
 
 const CATEGORIES = [
@@ -227,10 +228,11 @@ export default function DashboardPage() {
   // and milestone rewards surface through the Streak Reward popup below.
   const currentStreak = Number(profile?.currentStreak ?? 0);
   const longestStreak = Number(profile?.longestStreak ?? currentStreak);
-  const streakMilestones = [3, 7, 14, 30];
+  const streakMilestones = STREAK_MILESTONES.map((m) => m.day);
   const nextStreakMilestone = streakMilestones.find((day) => day > currentStreak) ?? currentStreak + 7;
   const previousStreakMilestone = streakMilestones.filter((day) => day <= currentStreak).slice(-1)[0] ?? 0;
   const streakProgress = Math.min(100, Math.max(0, Math.round(((currentStreak - previousStreakMilestone) / Math.max(1, nextStreakMilestone - previousStreakMilestone)) * 100)));
+  const nextStreakReward = STREAK_MILESTONES.find((m) => m.day === nextStreakMilestone);
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
   const activePetId = profile?.activePet || profileAnimals.find((pet: any) => pet.active)?.id;
   const activePet = profileAnimals.find((pet: any) => pet.id === activePetId) || null;
@@ -423,7 +425,10 @@ export default function DashboardPage() {
       const bonusChestLine = result.bonusChest?.name
         ? ` Daily clear bonus: ${result.bonusChest.name} added to your Collection.`
         : "";
-      setCompletedPopup(`Mission complete! ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"} finished: ${completedTitles}.${companionLine}${bonusChestLine}`);
+      const levelUpLine = Array.isArray(result.levelUpRewardDetails) && result.levelUpRewardDetails.length > 0
+        ? ` Level up rewards: ${result.levelUpRewardDetails.map((r: any) => `${r.icon || "🎁"} ${r.label}`).join(", ")}.`
+        : "";
+      setCompletedPopup(`Mission complete! ${selectedQuests.length} mission${selectedQuests.length === 1 ? "" : "s"} finished: ${completedTitles}.${companionLine}${bonusChestLine}${levelUpLine}`);
       toast.success(
         result.bonusChest?.name
           ? `Daily clear bonus: ${result.bonusChest.name} found!`
@@ -515,7 +520,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-white/75">
-                <span>{nextStreakMilestone - currentStreak} days to next reward</span>
+                <span>{nextStreakReward ? `${nextStreakReward.label} · ${nextStreakMilestone - currentStreak} days away` : `${nextStreakMilestone - currentStreak} days to next reward`}</span>
                 <span>{streakProgress}%</span>
               </div>
             </div>
@@ -557,7 +562,7 @@ export default function DashboardPage() {
                   {currentStreak}-day streak
                 </p>
                 <p className="mt-0.5 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
-                  {nextStreakMilestone - currentStreak} days to your next reward
+                  {nextStreakReward ? `${nextStreakReward.label} · ${nextStreakMilestone - currentStreak} days away` : `${nextStreakMilestone - currentStreak} days to your next reward`}
                 </p>
               </div>
             </div>
