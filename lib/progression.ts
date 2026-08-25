@@ -1,5 +1,5 @@
 import { sql, transaction, type DbQuery } from "./db";
-import { calculateLevel } from "./level-system";
+import { calculateLevel, getLevelUpRewards, type LevelUpReward } from "./level-system";
 
 /**
  * Progression engine for EcoLudus.
@@ -48,6 +48,7 @@ export type GrantProgressionResult = {
   leveledUp: boolean;
   ecoPoints: number;
   carbonReduced: number;
+  levelUpRewards: LevelUpReward[];
 };
 
 type UserRecord = {
@@ -89,6 +90,7 @@ export async function grantProgression(input: GrantProgressionInput): Promise<Gr
     const previousLevel = Math.max(1, Math.floor(Number(payload.level ?? user.level ?? calculateLevel(previousXp)) || 0) || 1);
     const nextXp = previousXp + baseXp;
     const nextLevel = calculateLevel(nextXp);
+    const levelUpRewards = getLevelUpRewards(previousLevel, nextLevel);
 
     const previousEco = Math.max(0, Math.floor(Number(payload.ecoPoints ?? 0) || 0));
     const nextEco = Math.max(0, previousEco + eco);
@@ -124,7 +126,8 @@ export async function grantProgression(input: GrantProgressionInput): Promise<Gr
       previousLevel,
       leveledUp: nextLevel > previousLevel,
       ecoPoints: nextEco,
-      carbonReduced: nextCarbon
+      carbonReduced: nextCarbon,
+      levelUpRewards
     };
   };
 
