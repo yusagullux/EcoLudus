@@ -7,6 +7,9 @@ export type Theme = "light" | "dark" | "liquid" | "dawn" | "bloom" | "aurora";
 const STORAGE_KEY = "ecoludus.theme";
 const DEFAULT_THEME: Theme = "light";
 
+// How long the broad CSS transition class stays on <html> after a theme change.
+const TRANSITION_MS = 520;
+
 type ThemeContextValue = {
   theme: Theme;
   setTheme: (t: Theme) => void;
@@ -33,6 +36,22 @@ function getStoredTheme(): Theme {
   return DEFAULT_THEME;
 }
 
+let transitionTimeout: number | undefined;
+
+function enableThemeTransition() {
+  if (typeof window === "undefined") return;
+  // Respect reduced-motion preferences: don't force a long cross-fade.
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const html = document.documentElement;
+  html.classList.add("theme-transitioning");
+  if (transitionTimeout) window.clearTimeout(transitionTimeout);
+  transitionTimeout = window.setTimeout(() => {
+    html.classList.remove("theme-transitioning");
+    transitionTimeout = undefined;
+  }, TRANSITION_MS);
+}
+
 const listeners = new Set<() => void>();
 function emitThemeChange() {
   listeners.forEach((l) => l());
@@ -43,7 +62,10 @@ function subscribeTheme(callback: () => void) {
 
   // Keep in sync when the same theme is changed from another tab.
   const onStorage = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY) emitThemeChange();
+    if (event.key !== STORAGE_KEY) return;
+    // Smoothly transition in this tab too, then notify React to update state.
+    enableThemeTransition();
+    emitThemeChange();
   };
   window.addEventListener("storage", onStorage);
 
@@ -75,6 +97,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
+    enableThemeTransition();
     emitThemeChange();
   }, []);
 

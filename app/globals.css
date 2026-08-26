@@ -434,12 +434,29 @@ html, body {
 
 body {
   background: var(--bg-page);
+  background-color: var(--bg-page-solid);
   color: var(--text-primary);
   /* Open Sans for all body/paragraph text */
   font-family: var(--font-body-font);
   line-height: 1.6;
-  /* Smooth theme transitions */
-  transition: background 400ms ease, color 300ms ease;
+  /* Smooth theme transitions for the underlying solid tone; the gradient
+     background-image itself can't be interpolated between themes. */
+  transition: background-color 450ms cubic-bezier(0.22, 1, 0.36, 1),
+              color 350ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Briefly enable smooth transitions across all color/border/shadow properties
+   while switching themes. The class is toggled via JS only during the change
+   so hover transforms and motion animations aren't permanently slowed down.
+   Reduced-motion users skip the cross-fade (the media query below collapses
+   transition durations to 1 ms). */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition-property: background-color, color, border-color, outline-color, box-shadow, fill, stroke, opacity;
+  transition-duration: 450ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Baloo 2 for all heading elements */
@@ -696,6 +713,8 @@ html {
   background-color: var(--bg-page-solid);
   color: var(--text-primary);
   min-height: 100vh;
+  transition: background-color 450ms cubic-bezier(0.22, 1, 0.36, 1),
+              color 350ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root,
