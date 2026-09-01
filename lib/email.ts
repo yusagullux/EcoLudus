@@ -48,7 +48,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
     if (!response.ok) {
       // Log without the body (credentials/PII never logged).
-      logError(`Brevo send failed: ${response.status} ${response.statusText}`);
+      logError(`Brevo send failed: ${response.status} ${response.statusText}`, new Error(`Brevo HTTP ${response.status}`));
       return { ok: false };
     }
 

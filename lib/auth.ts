@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { sql } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
 const SESSION_COOKIE_NAME = "ecoquest_session";
@@ -9,6 +11,7 @@ const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 type SessionPayload = {
   sub: string;
   email: string;
+  tokenVersion: number;
 };
 
 function getSessionSecret() {
@@ -34,7 +37,7 @@ export async function verifyPassword(password: string, passwordHash: string) {
 }
 
 export async function createSessionToken(payload: SessionPayload) {
-  return new SignJWT({ email: payload.email })
+  return new SignJWT({ email: payload.email, token_version: payload.tokenVersion })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
@@ -66,7 +69,14 @@ export async function clearSessionCookie() {
   });
 }
 
-export async function getSession() {
+export type Session = {
+  userId: string;
+  email: string;
+  emailVerified: boolean;
+  tokenVersion: number;
+};
+
+export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
@@ -88,11 +98,47 @@ export async function getSession() {
       return null;
     }
 
+    // Claim vs DB check. Old cookies (pre-feature) carry no token_version —
+    // treat as 0, matching the DB default, so the deploy doesn't log everyone
+    // out. A mismatch (password changed / email verified on another device)
+    // revokes this session.
+    const claimVersion = typeof payload.token_version === "number" ? payload.token_version : 0;
+
+    const result = await sql<{ email_verified: boolean; token_version: number }>(
+      "select email_verified, token_version from users where id = $1 limit 1",
+      [payload.sub]
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+    if (Number(row.token_version) !== claimVersion) return null;
+
     return {
       userId: payload.sub,
-      email: payload.email
+      email: payload.email,
+      emailVerified: Boolean(row.email_verified),
+      tokenVersion: Number(row.token_version)
     };
   } catch {
     return null;
   }
+}
+
+// Server-side soft gate for reward/action routes. Returns the session when the
+// user is verified; otherwise a 401 response the route can return directly.
+export async function requireVerifiedUser(): Promise<Session | NextResponse> {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json(
+      { error: { code: "auth/unauthenticated", message: "Sign in to continue." } },
+      { status: 401 }
+    );
+  }
+  if (!session.emailVerified) {
+    return NextResponse.json(
+      { error: { code: "auth/email-not-verified", message: "Please verify your email to continue." } },
+      { status: 401 }
+    );
+  }
+  return session;
 }
