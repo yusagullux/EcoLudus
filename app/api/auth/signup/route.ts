@@ -136,7 +136,8 @@ export async function POST(request: Request) {
 
     await setSessionCookie({
       sub: userId,
-      email
+      email,
+      tokenVersion: 0
     });
 
     return NextResponse.json({

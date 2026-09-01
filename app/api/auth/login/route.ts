@@ -72,7 +72,8 @@ export async function POST(request: Request) {
 
     await setSessionCookie({
       sub: user.id,
-      email: user.email
+      email: user.email,
+      tokenVersion: 0
     });
 
     // No streak write here. Applying the daily streak was an unlocked full-payload
