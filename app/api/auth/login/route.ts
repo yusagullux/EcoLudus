@@ -46,9 +46,11 @@ export async function POST(request: Request) {
       id: string;
       email: string;
       password_hash: string;
+      email_verified: boolean;
+      token_version: number;
       payload: Record<string, unknown>;
     }>(
-      "select id, email, password_hash, payload from users where email = $1 limit 1",
+      "select id, email, password_hash, email_verified, token_version, payload from users where email = $1 limit 1",
       [email]
     );
 
@@ -73,20 +75,26 @@ export async function POST(request: Request) {
     await setSessionCookie({
       sub: user.id,
       email: user.email,
-      tokenVersion: 0
+      tokenVersion: Number(user.token_version)
     });
 
-    // No streak write here. Applying the daily streak was an unlocked full-payload
-    // overwrite (lost-update class, audit H6) that raced with concurrent reward
-    // grants. The streak counter + milestone rewards are now persisted atomically
-    // under a row lock by POST /api/streak/apply, which the dashboard calls on
-    // mount — so login just authenticates and reports identity.
+    // Unverified: cookie is set (soft gate — browse OK), but we return the
+    // not-verified code so the client can prompt to resend. Timing is already
+    // equalized by the bcrypt compare above, so this branch adds no oracle.
+    if (!user.email_verified) {
+      return NextResponse.json(
+        { error: { code: "auth/email-not-verified", message: "Please verify your email to continue." } },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json({
       user: {
         uid: user.id,
         email: user.email,
         displayName: String(user.payload?.displayName ?? user.email.split("@")[0])
-      }
+      },
+      emailVerified: true
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
