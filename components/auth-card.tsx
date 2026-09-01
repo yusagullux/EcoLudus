@@ -43,8 +43,6 @@ function formatClientError(message: string) {
   const mapped: Record<string, string> = {
     "auth/email-already-in-use": "This email is already in use. Try logging in instead.",
     "auth/invalid-credentials": "Incorrect email or password. Please try again.",
-    "auth/user-not-found": "No profile found for that email.",
-    "auth/wrong-password": "Incorrect password. Please try again.",
     "auth/invalid-input": "Please check your details and try again.",
     "auth/database-not-configured": "EcoLudus needs its production database configured before login will work.",
     "auth/captcha-failed": "Please complete the security check and try again.",

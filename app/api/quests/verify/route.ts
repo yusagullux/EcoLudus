@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import { requireVerifiedUser } from "@/lib/auth";
 import { getQuestDefinition } from "@/lib/carbon-calc";
 import { MAX_PHOTO_BYTES, MIN_PHOTO_BYTES, isValidBase64ImagePayload, verifyTextProofWithGemini, verifyImageWithProvider, GEMINI_SUPPORTED_IMAGE_MIME_TYPES } from "@/lib/photo-verification";
 import { markQuestProofVerified } from "@/lib/quest-proof";
@@ -21,14 +21,8 @@ const verifySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json(
-      { error: { code: "auth/unauthenticated", message: "You must be signed in to verify quest proof." } },
-      { status: 401 }
-    );
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   try {
     const parsed = verifySchema.parse(await request.json());

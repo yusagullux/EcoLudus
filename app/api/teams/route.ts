@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID, randomBytes } from "crypto";
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import { getSession, requireVerifiedUser } from "@/lib/auth";
 import { sql, transaction, selectTeamActiveMissionForUpdate, selectUserForUpdate } from "@/lib/db";
 import { verifyImageWithProvider, verifyTextProofWithGemini, parsePhotoProof, createImageHash, getExistingPhotoHash, savePhotoHash } from "@/lib/photo-verification";
 import { grantProgression } from "@/lib/progression";
@@ -175,11 +175,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   try {
     let body: z.infer<typeof teamPostSchema>;

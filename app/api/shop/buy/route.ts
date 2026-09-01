@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import { requireVerifiedUser } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { getShopItem, getDailyDeals } from "@/lib/catalog-server";
 import { logError } from "@/lib/logger";
@@ -26,10 +26,8 @@ const buySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session?.userId) {
-    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   let parsed: z.infer<typeof buySchema>;
   try {

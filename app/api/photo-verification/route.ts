@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireVerifiedUser } from "@/lib/auth";
 import {
   createImageHash,
   GEMINI_SUPPORTED_IMAGE_MIME_TYPES,
@@ -14,14 +14,8 @@ import { rateLimit } from "@/lib/rate-limit";
 const VALID_TYPES = new Set([...GEMINI_SUPPORTED_IMAGE_MIME_TYPES, "image/jpg"]);
 
 export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json(
-      { error: { code: "auth/unauthenticated", message: "You must be signed in to verify photos." } },
-      { status: 401 }
-    );
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   const limit = rateLimit(request, `photo-verification:${session.userId}`, 12, 10 * 60_000);
   if (!limit.allowed) {

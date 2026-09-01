@@ -9,20 +9,29 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return;
+    setError("");
     setPending(true);
     try {
-      await fetch("/api/auth/forgot-password", {
+      const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email: email.trim().toLowerCase(), captchaToken })
       });
-      // Anti-enumeration: same message regardless of whether the email exists.
+      const data = await res.json().catch(() => ({}));
+      // Surface captcha failure specifically — the only non-success path that
+      // reveals an error. For all other responses (200, 400 invalid input, etc.)
+      // keep the anti-enumeration behavior: never reveal whether the email exists.
+      if (!res.ok && data?.error?.code === "auth/captcha-failed") {
+        setError("Please complete the security check and try again.");
+        return;
+      }
       setSent(true);
     } finally {
       setPending(false);
@@ -42,6 +51,9 @@ export default function ForgotPasswordPage() {
         </p>
       ) : (
         <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
+          {error && (
+            <p className="text-sm font-semibold text-rose-600">{error}</p>
+          )}
           <input
             type="email"
             required
