@@ -15,6 +15,8 @@ type UserRow = {
   id: string;
   email: string;
   password_hash: string;
+  email_verified: boolean;
+  token_version: number;
   payload: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -42,6 +44,23 @@ type MissionLogRow = {
   id: string;
   user_id: string;
   payload: Record<string, unknown>;
+  created_at: string;
+};
+
+type VerificationTokenRow = {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  expires_at: string;
+  created_at: string;
+};
+
+type PasswordResetTokenRow = {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  expires_at: string;
+  used_at: string | null;
   created_at: string;
 };
 
@@ -130,6 +149,8 @@ type FileStore = {
   impact_events: Array<Record<string, unknown>>;
   catalog_items: CatalogItemRow[];
   team_mission_templates: TeamTemplateRow[];
+  verification_tokens: VerificationTokenRow[];
+  password_reset_tokens: PasswordResetTokenRow[];
 };
 
 declare global {
@@ -210,7 +231,9 @@ const EMPTY_STORE: FileStore = {
     eco: row.eco,
     needed: row.needed,
     sort_order: index
-  }))
+  })),
+  verification_tokens: [],
+  password_reset_tokens: []
 };
 
 function nowIso() {
@@ -386,10 +409,14 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result(row ? ([{ id: row.id }] as unknown as T[]) : []);
   }
 
-  if (normalized === "select id, email, password_hash, payload from users where email = $1 limit 1") {
+  if (normalized === "select id, email, password_hash, email_verified, token_version, payload from users where email = $1 limit 1") {
     const email = String(params[0] ?? "");
     const row = store.users.find((user) => user.email === email);
-    return result(row ? ([clone(row)] as unknown as T[]) : []);
+    return result(
+      row
+        ? ([{ id: row.id, email: row.email, password_hash: row.password_hash, email_verified: row.email_verified, token_version: row.token_version, payload: clone(row.payload) }] as unknown as T[])
+        : []
+    );
   }
 
   if (normalized === "select id, email, payload from users where id = $1 limit 1") {
@@ -863,6 +890,8 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         id: String(id),
         email: String(email),
         password_hash: String(passwordHash),
+        email_verified: false,
+        token_version: 0,
         payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
         created_at: nowIso(),
         updated_at: nowIso()
@@ -887,6 +916,8 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         id: String(id),
         email: String(email),
         password_hash: "",
+        email_verified: false,
+        token_version: 0,
         payload: parseJsonObject(payloadRaw) as Record<string, unknown>,
         created_at: nowIso(),
         updated_at: nowIso()
@@ -917,6 +948,8 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
         id: String(id),
         email: String(email),
         password_hash: "",
+        email_verified: false,
+        token_version: 0,
         payload: nextPayload,
         created_at: nowIso(),
         updated_at: nowIso()
@@ -1058,6 +1091,19 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
   if (normalized === "delete from users where id = $1") {
     const id = String(params[0] ?? "");
     store.users = store.users.filter((user) => user.id !== id);
+    store.mission_logs = store.mission_logs.filter((entry) => entry.user_id !== id);
+    store.mission_submissions = store.mission_submissions.filter((entry) => entry.user_id !== id);
+    store.private_mission_logs = store.private_mission_logs.filter((entry) => entry.user_id !== id);
+    store.xp_transactions = store.xp_transactions.filter((entry) => (entry as any).user_id !== id);
+    store.trust_history = store.trust_history.filter((entry) => (entry as any).user_id !== id);
+    store.impact_events = store.impact_events.filter((entry) => entry.user_id !== id);
+    store.team_progress = store.team_progress.filter((entry) => (entry as any).user_id !== id);
+    store.photo_hashes = store.photo_hashes.filter((entry) => entry.user_id !== id);
+    store.team_active_missions = store.team_active_missions.filter((entry) => String((entry.payload as any)?.user_id ?? "") !== id);
+    store.verification_tokens = store.verification_tokens.filter((entry) => entry.user_id !== id);
+    store.password_reset_tokens = store.password_reset_tokens.filter((entry) => entry.user_id !== id);
+    // teams.created_by → set null (mirrors on delete set null)
+    store.teams = store.teams.map((team) => (team.created_by === id ? { ...team, created_by: null } : team));
     await persistStore();
     return result([], "DELETE");
   }
@@ -1463,6 +1509,100 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result(row ? ([{ ...row }] as unknown as T[]) : []);
   }
 
+  if (normalized === "select email_verified, token_version from users where id = $1 limit 1") {
+    const id = String(params[0] ?? "");
+    const row = store.users.find((user) => user.id === id);
+    return result(
+      row
+        ? ([{ email_verified: row.email_verified, token_version: row.token_version }] as unknown as T[])
+        : []
+    );
+  }
+
+  if (normalized === "insert into verification_tokens (id, user_id, token_hash, expires_at) values ($1, $2, $3, $4)") {
+    const [id, userId, tokenHash, expiresAt] = params;
+    // Replace any previous unused token for this user (one outstanding verify token).
+    store.verification_tokens = store.verification_tokens.filter((entry) => entry.user_id !== String(userId));
+    store.verification_tokens.push({
+      id: String(id),
+      user_id: String(userId),
+      token_hash: String(tokenHash),
+      expires_at: String(expiresAt),
+      created_at: nowIso()
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (normalized === "select user_id, expires_at from verification_tokens where token_hash = $1 limit 1") {
+    const tokenHash = String(params[0] ?? "");
+    const row = store.verification_tokens.find((entry) => entry.token_hash === tokenHash);
+    return result(row ? ([{ user_id: row.user_id, expires_at: row.expires_at }] as unknown as T[]) : []);
+  }
+
+  if (normalized === "delete from verification_tokens where token_hash = $1") {
+    const tokenHash = String(params[0] ?? "");
+    store.verification_tokens = store.verification_tokens.filter((entry) => entry.token_hash !== tokenHash);
+    await persistStore();
+    return result([], "DELETE");
+  }
+
+  if (normalized === "insert into password_reset_tokens (id, user_id, token_hash, expires_at) values ($1, $2, $3, $4)") {
+    const [id, userId, tokenHash, expiresAt] = params;
+    // One outstanding reset token per user.
+    store.password_reset_tokens = store.password_reset_tokens.filter((entry) => entry.user_id !== String(userId));
+    store.password_reset_tokens.push({
+      id: String(id),
+      user_id: String(userId),
+      token_hash: String(tokenHash),
+      expires_at: String(expiresAt),
+      used_at: null,
+      created_at: nowIso()
+    });
+    await persistStore();
+    return result([], "INSERT");
+  }
+
+  if (normalized === "select user_id, expires_at, used_at from password_reset_tokens where token_hash = $1 limit 1") {
+    const tokenHash = String(params[0] ?? "");
+    const row = store.password_reset_tokens.find((entry) => entry.token_hash === tokenHash);
+    return result(
+      row ? ([{ user_id: row.user_id, expires_at: row.expires_at, used_at: row.used_at }] as unknown as T[]) : []
+    );
+  }
+
+  if (normalized === "update password_reset_tokens set used_at = now() where token_hash = $1") {
+    const tokenHash = String(params[0] ?? "");
+    const row = store.password_reset_tokens.find((entry) => entry.token_hash === tokenHash);
+    if (row) row.used_at = nowIso();
+    await persistStore();
+    return result([], "UPDATE");
+  }
+
+  if (normalized === "update users set email_verified = true, token_version = token_version + 1 where id = $1") {
+    const id = String(params[0] ?? "");
+    const row = store.users.find((user) => user.id === id);
+    if (row) {
+      row.email_verified = true;
+      row.token_version = row.token_version + 1;
+      row.updated_at = nowIso();
+    }
+    await persistStore();
+    return result([], "UPDATE");
+  }
+
+  if (normalized === "update users set password_hash = $1, token_version = token_version + 1 where id = $2") {
+    const [passwordHash, id] = [String(params[0] ?? ""), String(params[1] ?? "")];
+    const row = store.users.find((user) => user.id === id);
+    if (row) {
+      row.password_hash = passwordHash;
+      row.token_version = row.token_version + 1;
+      row.updated_at = nowIso();
+    }
+    await persistStore();
+    return result([], "UPDATE");
+  }
+
   throw new Error(`Unsupported file database query: ${text}`);
 }
 
@@ -1787,6 +1927,37 @@ create index if not exists idx_ai_verification_results_status on ai_verification
 create index if not exists idx_team_progress_team_created on team_progress(team_id, created_at desc);
 create index if not exists idx_xp_transactions_user_created on xp_transactions(user_id, created_at desc);
 create index if not exists idx_trust_history_user_created on trust_history(user_id, created_at desc);
+
+-- Auth & account management: email verification + password reset tokens,
+-- plus email_verified / token_version on users. Mirrored in
+-- db/migrations/007_auth_account_management.sql. Backfill: existing rows get
+-- email_verified=true by adding the column with default true, then flipping the
+-- default to false for new signups. token_version starts at 0 for everyone.
+alter table users
+  add column if not exists email_verified boolean not null default true,
+  add column if not exists token_version integer not null default 0;
+alter table users alter column email_verified set default false;
+
+create table if not exists verification_tokens (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_verification_tokens_hash on verification_tokens(token_hash);
+create index if not exists idx_verification_tokens_user on verification_tokens(user_id);
+
+create table if not exists password_reset_tokens (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  token_hash text not null unique,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_password_reset_tokens_hash on password_reset_tokens(token_hash);
+create index if not exists idx_password_reset_tokens_user on password_reset_tokens(user_id);
   `;
 
   migrationPromise = poolInstance.query(migrationSql).then(() => {
