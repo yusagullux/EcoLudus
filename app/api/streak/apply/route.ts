@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireVerifiedUser } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { applyDailyStreak, applyStreakRewards, type StreakReward } from "@/lib/streak";
 import { grantProgression, type ProgressionUser } from "@/lib/progression";
@@ -20,10 +20,8 @@ type StreakApplyResponse = {
 };
 
 export async function POST() {
-  const session = await getSession();
-  if (!session?.userId) {
-    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   try {
     return await transaction(async (query) => {

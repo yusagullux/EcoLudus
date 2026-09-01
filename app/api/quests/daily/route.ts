@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireVerifiedUser } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { getAllQuestDefinitions, getQuestCatalogVersion } from "@/lib/carbon-calc";
 
@@ -52,10 +52,8 @@ function seededShuffle<T>(items: T[], seed: string): T[] {
 }
 
 export async function POST() {
-  const session = await getSession();
-  if (!session?.userId) {
-    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   try {
     const allQuests = await getAllQuestDefinitions();

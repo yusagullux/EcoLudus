@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireVerifiedUser } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import {
   GARDEN_MAX_TILES,
@@ -21,10 +21,8 @@ import {
 // returns inside the callback still commit (empty tx) cleanly.
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session?.userId) {
-    return NextResponse.json({ error: { code: "auth/unauthenticated" } }, { status: 401 });
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   // No body to parse, but accept an empty json body gracefully.
   try {

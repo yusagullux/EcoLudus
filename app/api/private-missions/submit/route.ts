@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { getSession } from "@/lib/auth";
+import { requireVerifiedUser } from "@/lib/auth";
 import { privateMissionSubmissionSchema, submitPrivateMission } from "@/lib/private-missions";
 
 function getClientIp(request: Request) {
@@ -10,14 +10,8 @@ function getClientIp(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json(
-      { error: { code: "auth/unauthenticated", message: "Sign in before submitting a private mission." } },
-      { status: 401 }
-    );
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   try {
     const body = privateMissionSubmissionSchema.parse(await request.json());

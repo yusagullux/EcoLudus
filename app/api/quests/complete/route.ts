@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import { requireVerifiedUser } from "@/lib/auth";
 import { getQuestCarbonReduction, getQuestDefinition } from "@/lib/carbon-calc";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { getMissingVerifiedQuestProofIds, removeVerifiedQuestProofs } from "@/lib/quest-proof";
@@ -235,14 +235,8 @@ function applyCompanionProgress(
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session) {
-    return NextResponse.json(
-      { error: { code: "auth/unauthenticated" } },
-      { status: 401 }
-    );
-  }
+  const session = await requireVerifiedUser();
+  if (session instanceof NextResponse) return session;
 
   try {
     const payload = completeQuestSchema.parse(await request.json());

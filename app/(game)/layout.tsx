@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { ThemeProvider } from "@/lib/useTheme";
 import { ToastProvider } from "@/lib/toast";
@@ -9,7 +11,8 @@ import { PageTransition } from "@/lib/animations";
 export default function GameLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, emailVerified } = useAuth();
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   if (loading) {
     // Skeleton shell that mirrors the authenticated layout (mobile top bar +
@@ -94,6 +97,37 @@ export default function GameLayout({
 
         {/* ── Page wrapper ── */}
         <div className="app-main-bg min-h-screen">
+          {user && !emailVerified && !bannerDismissed && (
+            <div
+              role="status"
+              className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5 md:ml-[240px] md:px-8"
+              style={{
+                background: "var(--bg-panel-alt)",
+                borderBottom: "1px solid var(--border-default)",
+                color: "var(--text-secondary)"
+              }}
+            >
+              <p className="text-sm font-semibold">
+                Please verify your email to unlock quests and rewards.{" "}
+                <Link
+                  href="/resend-verification"
+                  className="font-bold underline underline-offset-2"
+                  style={{ color: "var(--text-accent)" }}
+                >
+                  Resend verification email →
+                </Link>
+              </p>
+              <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={() => setBannerDismissed(true)}
+                className="shrink-0 rounded-md px-2 py-0.5 text-lg leading-none transition hover:opacity-70"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                ×
+              </button>
+            </div>
+          )}
           <main
             className={[
               /* Mobile: offset below top bar only (no bottom nav) */
