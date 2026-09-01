@@ -18,7 +18,7 @@ npm run test:photo-proof # Standalone photo-verification test script
 
 `scripts/setup-dev.ps1` / `setup-dev.cmd` wipe `.next`/`node_modules`, reinstall, and start the dev server (interactive).
 
-There is no test runner — `test:photo-proof` is a one-off `scripts/test-photo-verification.ts`, and `scripts/test-*.ts` are ad-hoc tsx scripts, not a suite.
+`npm test` runs **vitest** (config in `vitest.config.ts`; repo global env is jsdom, so jose-based tests use a `// @vitest-environment node` pragma). `test:photo-proof` is a one-off `scripts/test-photo-verification.ts`, and the other `scripts/test-*.ts` are ad-hoc tsx scripts, not part of the vitest suite.
 
 ## Environment
 
@@ -29,6 +29,7 @@ Copy `.env.example` to `.env.local`. Key variables:
 - `LOCAL_DB_MODE=postgres` — force Postgres instead of the file fallback.
 - `CRON_SECRET` — bearer token authenticating the `/api/cron/*` jobs.
 - Optional integrations: `CLIMATIQ_API_KEY` (carbon estimates), `GEMINI_API_KEY`/`GEMINI_MODEL` (AI photo/mission verification), `ECOLOGI_API_KEY` (real tree planting), `SENDGRID_API_KEY`/`SENDGRID_FROM` (weekly emails).
+- `BREVO_API_KEY`/`BREVO_FROM` (transactional auth emails: signup verification + password reset — Brevo only, distinct from SendGrid weekly reports). `APP_URL` builds the absolute verify/reset links (defaults to `http://localhost:3000`).
 
 ## Architecture
 
@@ -43,9 +44,11 @@ Next.js App Router. Two route layers:
 
 ### Auth
 
-`lib/auth.ts`: passwords hashed with `bcrypt` (cost 12), sessions are **JWT signed with `jose`** stored in an `httpOnly` `ecoquest_session` cookie (14-day TTL). `getSession()` verifies the cookie and returns `{ userId, email }` — call this at the top of any authenticated API route. API routes return Firebase-style error codes as `{ error: { code: "auth/unauthenticated" } }` with appropriate HTTP status.
+`lib/auth.ts`: passwords hashed with `bcrypt` (cost 12), sessions are **JWT signed with `jose`** stored in an `httpOnly` `ecoquest_session` cookie (14-day TTL). The JWT carries a `token_version` claim; `getSession()` verifies the cookie, reads the user's `email_verified` + `token_version` from Postgres, and returns `{ userId, email, emailVerified, tokenVersion } | null` — returning null if the claim mismatches the DB (revocation). Bumping `token_version` (on password change or email verification) invalidates all existing cookies for that user without a server-side session table. `requireVerifiedUser()` is the gate for reward/action routes: it returns the session or a 401 `auth/unauthenticated` (no session) / 401 `auth/email-not-verified` (session exists but email unverified). Call one of these at the top of any authenticated API route. API routes return Firebase-style error codes as `{ error: { code: "auth/…" } }` with appropriate HTTP status.
 
-`lib/useAuth.ts` (client hook) bootstraps via `GET /api/auth/me`, then reads/writes the user profile through the `/api/firestore` RPC (see below). Unauthenticated users visiting a game route are redirected to `/login`. `lib/auth-persistence.ts` handles "remember me" localStorage.
+**Email verification + account management** (design spec: `docs/superpowers/specs/2026-09-01-auth-account-management-design.md`): signup creates an unverified user, sets a session cookie (soft gate — unverified users can browse game routes but reward/action routes return 401 `auth/email-not-verified`), and emails a verification link. Auth routes: `/api/auth/signup`, `/api/auth/login` (401 `auth/email-not-verified` for unverified users, cookie still set), `/api/auth/me`, `/api/auth/verify-email` (GET, token is credential), `/api/auth/resend-verification`, `/api/auth/forgot-password` (anti-enumeration: always 200), `/api/auth/reset-password`, `/api/auth/delete-account` (re-auth: password + typing "DELETE" + hCaptcha; cascade hard-delete). Tokens are randomUUID stored as **SHA-256 hashes** in `verification_tokens` / `password_reset_tokens` (raw token only in the email link); `lib/auth-tokens.ts` handles create/consume. Emails sent via Brevo through `lib/email.ts` (failures swallowed, never surface provider errors to the client). hCaptcha on signup/forgot/delete; `rateLimit()` on all auth routes. New pages under root `app/`: `verify-email`, `resend-verification`, `forgot-password`, `reset-password`, `delete-account`. Existing users were backfilled `email_verified=true` via the `add column default true` then `alter set default false` migration trick (no mass logout on deploy).
+
+`lib/useAuth.ts` (client hook) bootstraps via `GET /api/auth/me` (which returns `{ user, profile, emailVerified }`), then reads/writes the user profile through the `/api/firestore` RPC (see below). Unauthenticated users visiting a game route are redirected to `/login`. `lib/auth-persistence.ts` handles "remember me" localStorage.
 
 ### Data layer — dual-mode Postgres / file store
 
