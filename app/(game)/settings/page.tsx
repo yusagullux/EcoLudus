@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useTheme, type Theme } from "@/lib/useTheme";
 import { PageHero, Panel, primaryButton, inputClass, heroAccents } from "@/components/game-ui";
@@ -58,11 +59,12 @@ type SettingsFormProps = {
   user: ReturnType<typeof useAuth>["user"];
   profile: ReturnType<typeof useAuth>["profile"];
   refreshProfile: ReturnType<typeof useAuth>["refreshProfile"];
+  emailVerified: boolean;
   theme: Theme;
   setTheme: (t: Theme) => void;
 };
 
-function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: SettingsFormProps) {
+function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, setTheme }: SettingsFormProps) {
   // Profile fields are initialized from the profile prop. The parent remounts
   // this component with a key derived from the relevant profile fields, so we
   // never need a setState-in-effect to sync form state.
@@ -410,7 +412,8 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
         <div className="flex flex-col gap-2">
           {[
             { label: "User ID", value: user?.uid ?? "—", mono: true },
-            { label: "Email", value: user?.email ?? "—", mono: false }
+            { label: "Email", value: user?.email ?? "—", mono: false },
+            { label: "Email verified", value: emailVerified ? "Yes" : "No — action required", mono: false }
           ].map(({ label, value, mono }) => (
             <div
               key={label}
@@ -431,6 +434,33 @@ function SettingsForm({ user, profile, refreshProfile, theme, setTheme }: Settin
         </div>
       </Panel>
       </StaggerItem>
+
+      {/* ── Danger zone ── */}
+      <StaggerItem as="div">
+      <Panel eyebrow="Danger Zone" title="Delete Account">
+        <div className="flex flex-col gap-3">
+          <p className="text-sm leading-6" style={{ color: "var(--text-secondary)" }}>
+            Permanently delete your account and all associated data. This cannot be undone.
+          </p>
+          {!emailVerified && (
+            <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+              Your email isn&apos;t verified yet — you can still resend the verification link below.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {!emailVerified && (
+              <Link href="/resend-verification" className={primaryButton}>Resend verification</Link>
+            )}
+            <Link
+              href="/delete-account"
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-rose-600 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-white transition hover:opacity-90"
+            >
+              Delete account
+            </Link>
+          </div>
+        </div>
+      </Panel>
+      </StaggerItem>
     </StaggerContainer>
   );
 }
@@ -444,7 +474,7 @@ function profileFormKey(profile: SettingsFormProps["profile"], user: SettingsFor
 }
 
 export default function SettingsPage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, emailVerified } = useAuth();
   const { theme, setTheme } = useTheme();
 
   return (
@@ -453,6 +483,7 @@ export default function SettingsPage() {
       user={user}
       profile={profile}
       refreshProfile={refreshProfile}
+      emailVerified={emailVerified}
       theme={theme}
       setTheme={setTheme}
     />
