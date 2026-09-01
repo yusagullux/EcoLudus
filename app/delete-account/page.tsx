@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inputClass, primaryButton } from "@/components/game-ui";
+import { inputClass } from "@/components/game-ui";
 import { HCaptchaWidget } from "@/components/hcaptcha-widget";
 import { useAuth } from "@/lib/useAuth";
 

@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { primaryButton } from "@/components/game-ui";
 import { useAuth } from "@/lib/useAuth";
 
 export default function ResendVerificationPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
