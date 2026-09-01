@@ -3,7 +3,6 @@ import { getSession } from "@/lib/auth";
 import { createVerificationToken } from "@/lib/auth-tokens";
 import { sendEmail, appUrl } from "@/lib/email";
 import { buildVerificationEmailHtml, buildVerificationEmailText } from "@/lib/email-templates/auth-emails";
-import { sql } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 
 // POST — session-gated. If already verified, 200 noop. Otherwise create a new
