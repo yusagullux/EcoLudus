@@ -1088,6 +1088,12 @@ async function fileSql<T extends QueryResultRow = QueryResultRow>(
     return result([], "INSERT");
   }
 
+  if (normalized === "select password_hash from users where id = $1 limit 1") {
+    const id = String(params[0] ?? "");
+    const row = store.users.find((user) => user.id === id);
+    return result(row ? ([{ password_hash: row.password_hash }] as unknown as T[]) : []);
+  }
+
   if (normalized === "delete from users where id = $1") {
     const id = String(params[0] ?? "");
     store.users = store.users.filter((user) => user.id !== id);

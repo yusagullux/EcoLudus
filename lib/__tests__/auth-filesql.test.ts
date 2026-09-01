@@ -31,7 +31,8 @@ const AUTH_QUERIES = [
   "update users set email_verified = true, token_version = token_version + 1 where id = $1",
   "update users set password_hash = $1, token_version = token_version + 1 where id = $2",
   "delete from team_active_missions where payload->>'user_id' = $1",
-  "delete from users where id = $1"
+  "delete from users where id = $1",
+  "select password_hash from users where id = $1 limit 1"
 ];
 
 describe("auth fileSql contract", () => {
