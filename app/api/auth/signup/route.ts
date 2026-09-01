@@ -5,6 +5,9 @@ import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { isDatabaseSetupError, sql } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { verifyHCaptcha } from "@/lib/hcaptcha";
+import { createVerificationToken } from "@/lib/auth-tokens";
+import { sendEmail, appUrl } from "@/lib/email";
+import { buildVerificationEmailHtml, buildVerificationEmailText } from "@/lib/email-templates/auth-emails";
 
 const signUpSchema = z.object({
   email: z.string().email(),
@@ -134,18 +137,33 @@ export async function POST(request: Request) {
       );
     }
 
-    await setSessionCookie({
-      sub: userId,
-      email,
-      tokenVersion: 0
+    // Email verification: create a token (hashed in DB) and email the raw
+    // token in the link. Email failure is swallowed — signup still succeeds
+    // and the user can resend from the app.
+    const rawToken = await createVerificationToken(userId);
+    const verifyUrl = `${appUrl()}/api/auth/verify-email?token=${encodeURIComponent(rawToken)}`;
+    const displayName = profile.displayName;
+    await sendEmail({
+      to: email,
+      toName: displayName,
+      subject: "Verify your email — EcoLudus",
+      html: buildVerificationEmailHtml({ displayName, email, verifyUrl }),
+      text: buildVerificationEmailText({ displayName, email, verifyUrl })
     });
+
+    // Soft gate: cookie is set so the user can browse, but reward/action
+    // routes return 401 auth/email-not-verified until they verify. New users
+    // start at token_version 0.
+    await setSessionCookie({ sub: userId, email, tokenVersion: 0 });
 
     return NextResponse.json({
       user: {
         uid: userId,
         email,
         displayName: profile.displayName
-      }
+      },
+      emailVerified: false,
+      message: "Check your email to verify your account."
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

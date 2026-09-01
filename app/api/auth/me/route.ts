@@ -34,6 +34,7 @@ export async function GET() {
         email: user.email,
         displayName: String(user.payload?.displayName ?? user.email.split("@")[0])
       },
+      emailVerified: session.emailVerified,
       profile: user.payload ?? {}
     });
   } catch (error) {
