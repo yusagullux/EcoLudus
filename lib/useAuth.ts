@@ -22,16 +22,17 @@ type AuthUser = {
 
 const SESSION_KEY = "/api/auth/me";
 
-async function fetchSession(): Promise<{ user: AuthUser | null; profile: Record<string, unknown> | null }> {
+async function fetchSession(): Promise<{ user: AuthUser | null; profile: Record<string, unknown> | null; emailVerified: boolean }> {
   // Profile data changes after purchases, quest rewards, care actions, and
   // garden actions. Keep the session read out of the browser/Next fetch cache
   // so a navigation never restores a stale empty inventory.
   const res = await fetch(SESSION_KEY, { credentials: "include", cache: "no-store" });
-  if (!res.ok) return { user: null, profile: null };
+  if (!res.ok) return { user: null, profile: null, emailVerified: false };
   const payload = await res.json().catch(() => ({}));
-  return { 
+  return {
     user: (payload as any).user ?? null,
-    profile: (payload as any).profile ?? null
+    profile: (payload as any).profile ?? null,
+    emailVerified: Boolean((payload as any).emailVerified)
   };
 }
 
@@ -47,6 +48,7 @@ export function useAuth() {
   
   const user = data?.user ?? null;
   const profile = data?.profile ?? null;
+  const emailVerified = data?.emailVerified ?? false;
 
   // Redirect unauthenticated visitors away from game routes once the session
   // settles. Also persists/clears the "remember me" localStorage mirror.
@@ -68,10 +70,11 @@ export function useAuth() {
   return {
     user,
     profile,
+    emailVerified,
     setProfile: (next: Record<string, unknown> | null) => {
       if (user) {
         // Optimistic cache update without triggering a revalidation
-        void mutateSession({ user, profile: next }, false);
+        void mutateSession({ user, profile: next, emailVerified }, false);
       }
     },
     refreshProfile: (): Promise<void> => {

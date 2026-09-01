@@ -49,7 +49,8 @@ function formatClientError(message: string) {
     "auth/database-not-configured": "EcoLudus needs its production database configured before login will work.",
     "auth/captcha-failed": "Please complete the security check and try again.",
     "auth/internal-error": "Something went wrong on the server. Please try again.",
-    "auth/network-request-failed": "We could not reach EcoLudus. Check your connection and try again."
+    "auth/network-request-failed": "We could not reach EcoLudus. Check your connection and try again.",
+    "auth/email-not-verified": "Please verify your email to continue."
   };
   return mapped[message] ?? "Something went wrong. Please try again.";
 }
@@ -61,6 +62,7 @@ export function AuthCard({ mode }: AuthCardProps) {
   const [displayName, setDisplayName] = useState("");
   const [rememberMe, setRememberMe] = useState(mode === "login");
   const [error, setError] = useState("");
+  const [lastErrorCode, setLastErrorCode] = useState("");
   const [pending, setPending] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   // Tracks fields the user has interacted with, so inline validation only
@@ -117,6 +119,7 @@ export function AuthCard({ mode }: AuthCardProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setLastErrorCode("");
     // Client-side guard: if the fields are invalid, surface the inline errors
     // (by marking them touched) and bail before hitting the network.
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -150,12 +153,13 @@ export function AuthCard({ mode }: AuthCardProps) {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      const message = err instanceof TypeError
+      const code = err instanceof TypeError
         ? "auth/network-request-failed"
         : err instanceof Error
           ? err.message
           : "auth/internal-error";
-      setError(formatClientError(message));
+      setLastErrorCode(code);
+      setError(formatClientError(code));
       setPending(false);
     }
   }
@@ -278,18 +282,29 @@ export function AuthCard({ mode }: AuthCardProps) {
             </div>
 
             {mode === "login" && (
-              <label className="flex items-center gap-3 text-sm font-bold" style={{ color: "var(--text-secondary)" }}>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(event) => setRememberMe(event.target.checked)}
-                  className="h-4 w-4 rounded accent-[var(--text-accent)]"
-                />
-                Remember me on this browser
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-3 text-sm font-bold" style={{ color: "var(--text-secondary)" }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(event) => setRememberMe(event.target.checked)}
+                    className="h-4 w-4 rounded accent-[var(--text-accent)]"
+                  />
+                  Remember me
+                </label>
+                <Link href="/forgot-password" className="text-xs font-bold transition" style={{ color: "var(--text-muted)" }}>
+                  Forgot password?
+                </Link>
+              </div>
             )}
 
             {error && <ErrorBanner>{error}</ErrorBanner>}
+
+            {error && lastErrorCode === "auth/email-not-verified" && (
+              <Link href="/resend-verification" className="text-xs font-bold" style={{ color: "var(--text-accent)" }}>
+                Resend verification email →
+              </Link>
+            )}
 
             <HCaptchaWidget onToken={setCaptchaToken} onExpired={() => setCaptchaToken("")} />
 
