@@ -14,8 +14,12 @@ const deleteSchema = z.object({
 // POST — permanent account deletion. Requires re-auth (password + typing
 // "DELETE" + hCaptcha). Hard-deletes the user row (FK on delete cascade cleans
 // mission_logs, mission_submissions, xp_transactions, etc.); team_active_missions
-// has no user FK (user_id is in payload), so it's removed explicitly. Idempotent:
-// a second request finds no row and still returns 200. Rate-limited 3/hr.
+// has no user FK (user_id is in payload), so it's removed explicitly. A second
+// request (retry after the cookie is cleared) finds no session and returns 401
+// `auth/unauthenticated` — with stateless JWT auth a post-delete retry is
+// indistinguishable from an unauthenticated probe, so 401 is the safe response
+// (the spec's "200 idempotent" assumed a same-user retry stateless auth can't
+// identify). Rate-limited 3/hr.
 export async function POST(request: Request) {
   const limit = rateLimit(request, "auth-delete", 3, 60 * 60_000);
   if (!limit.allowed) {
