@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { inputClass, primaryButton } from "@/components/game-ui";
+import { MarketingShell } from "@/components/marketing-shell";
+import { AuthStatusCard, Icons } from "@/components/auth-status-card";
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { inputClass, primaryButton, secondaryButton } from "@/components/game-ui";
 import { HCaptchaWidget } from "@/components/hcaptcha-widget";
 
 export default function ForgotPasswordPage() {
@@ -38,41 +41,67 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  return (
-    <main className="mx-auto flex min-h-[calc(100vh-96px)] w-full max-w-sm flex-col justify-center px-5 py-12">
-      <h1 className="font-serif text-3xl font-extrabold" style={{ color: "var(--text-primary)" }}>Reset your password</h1>
-      <p className="mt-3 text-sm leading-6" style={{ color: "var(--text-secondary)" }}>
-        Enter your email and we&apos;ll send you a link to reset your password.
-      </p>
+  if (sent) {
+    return (
+      <MarketingShell>
+        <AuthStatusCard
+          tone="success"
+          icon={Icons.check}
+          eyebrow="Check your email"
+          title="Reset link sent."
+          body={
+            <>
+              If an account exists for{" "}
+              <span className="font-bold" style={{ color: "var(--text-primary)" }}>
+                {email.trim().toLowerCase()}
+              </span>
+              , a password reset link is on its way. It expires in 60 minutes.
+            </>
+          }
+        >
+          <Link href="/login" className={`w-full ${secondaryButton}`}>
+            Back to log in
+          </Link>
+        </AuthStatusCard>
+      </MarketingShell>
+    );
+  }
 
-      {sent ? (
-        <p className="mt-6 text-sm font-semibold" style={{ color: "var(--text-accent)" }}>
-          If the email exists, a reset link was sent.
-        </p>
-      ) : (
-        <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
-          {error && (
-            <p className="text-sm font-semibold text-rose-600">{error}</p>
-          )}
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className={inputClass}
-          />
+  return (
+    <MarketingShell>
+      <AuthStatusCard
+        tone="accent"
+        icon={Icons.lock}
+        eyebrow="Forgot password"
+        title="Reset your password."
+        body="Enter your email and we'll send you a secure link to choose a new password."
+      >
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="email" className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-secondary)" }}>
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className={inputClass}
+            />
+          </div>
+          {error && <ErrorBanner>{error}</ErrorBanner>}
           <HCaptchaWidget onToken={setCaptchaToken} onExpired={() => setCaptchaToken("")} />
-          <button type="submit" disabled={pending} className={primaryButton}>
+          <button type="submit" disabled={pending} className={`w-full ${primaryButton}`}>
             {pending ? "Sending…" : "Send reset link"}
           </button>
         </form>
-      )}
-
-      <div className="mt-6">
-        <Link href="/login" className="text-sm font-bold" style={{ color: "var(--text-muted)" }}>Back to log in</Link>
-      </div>
-    </main>
+        <Link href="/login" className={`w-full ${secondaryButton}`}>
+          Back to log in
+        </Link>
+      </AuthStatusCard>
+    </MarketingShell>
   );
 }

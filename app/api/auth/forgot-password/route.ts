@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createResetToken } from "@/lib/auth-tokens";
-import { sendEmail, appUrl } from "@/lib/email";
+import { sendEmail, appUrl, logDevAuthLink } from "@/lib/email";
 import { buildPasswordResetEmailHtml, buildPasswordResetEmailText } from "@/lib/email-templates/auth-emails";
 import { sql } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
@@ -45,13 +45,14 @@ export async function POST(request: Request) {
       const rawToken = await createResetToken(user.id);
       const resetUrl = `${appUrl()}/reset-password?token=${encodeURIComponent(rawToken)}`;
       const displayName = String(user.payload?.displayName ?? email.split("@")[0]);
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: email,
         toName: displayName,
         subject: "Reset your password — EcoLudus",
         html: buildPasswordResetEmailHtml({ displayName, email, resetUrl }),
         text: buildPasswordResetEmailText({ displayName, email, resetUrl })
       });
+      logDevAuthLink("Password reset", resetUrl, emailResult);
     }
 
     // Same response whether or not the email exists.

@@ -27,7 +27,7 @@ describe("GET /api/users/[id]", () => {
   });
 
   it("returns 400 when the id parameter is missing", async () => {
-    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com" });
+    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com", emailVerified: true, tokenVersion: 0 });
 
     const res = await GET(new Request("http://localhost/api/users/"), { params: Promise.resolve({ id: "" }) });
     expect(res.status).toBe(400);
@@ -36,7 +36,7 @@ describe("GET /api/users/[id]", () => {
   });
 
   it("returns 404 when the user does not exist", async () => {
-    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com" });
+    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com", emailVerified: true, tokenVersion: 0 });
     vi.mocked(sql).mockResolvedValue({ rows: [], rowCount: 0 } as any);
 
     const res = await GET(new Request("http://localhost/api/users/u1"), { params: Promise.resolve({ id: "u1" }) });
@@ -46,7 +46,7 @@ describe("GET /api/users/[id]", () => {
   });
 
   it("returns a curated public profile for an existing user", async () => {
-    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com" });
+    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com", emailVerified: true, tokenVersion: 0 });
     vi.mocked(sql).mockResolvedValue({
       rows: [{
         id: "u1",
@@ -109,7 +109,7 @@ describe("GET /api/users/[id]", () => {
   });
 
   it("returns defaults for a user with an empty payload", async () => {
-    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com" });
+    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com", emailVerified: true, tokenVersion: 0 });
     vi.mocked(sql).mockResolvedValue({
       rows: [{ id: "u1", email: "u1@example.com", payload: {} }],
       rowCount: 1
@@ -140,7 +140,7 @@ describe("GET /api/users/[id]", () => {
   });
 
   it("returns 500 and logs on database error", async () => {
-    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com" });
+    vi.mocked(getSession).mockResolvedValue({ userId: "u2", email: "u2@example.com", emailVerified: true, tokenVersion: 0 });
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(sql).mockRejectedValue(new Error("connection failed"));
 

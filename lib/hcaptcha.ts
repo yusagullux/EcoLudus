@@ -7,6 +7,23 @@ export function isHCaptchaConfigured() {
   );
 }
 
+// Dev bypass: hCaptcha's widget misbehaves on localhost (emits a
+// "localhost detected" error that can clear the token before submit), and
+// local dev doesn't need bot protection. Skip siteverify for localhost
+// requests outside production. NEVER active in production — production keeps
+// the full siteverify check.
+function isLocalDevRequest(request: Request): boolean {
+  if (process.env.NODE_ENV === "production") return false;
+  const host = (request.headers.get("host") ?? "").toLowerCase();
+  if (host.startsWith("localhost") || host.startsWith("127.0.0.1")) return true;
+  try {
+    const hostname = new URL(request.url).hostname;
+    return hostname === "localhost" || hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
 export async function verifyHCaptcha(token: string | undefined, request: Request) {
   const secret = process.env.HCAPTCHA_SECRET_KEY?.trim();
   const siteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY?.trim();
@@ -16,6 +33,11 @@ export async function verifyHCaptcha(token: string | undefined, request: Request
   // only HCAPTCHA_SECRET_KEY set renders no widget but would otherwise reject
   // every login and signup request with captcha-failed.
   if (!secret || !siteKey) {
+    return true;
+  }
+
+  // Local dev: no bot protection needed, and the widget errors on localhost.
+  if (isLocalDevRequest(request)) {
     return true;
   }
 
