@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, logDevAuthLink } from "@/lib/email";
 
 const originalFetch = global.fetch;
 
@@ -46,5 +46,31 @@ describe("sendEmail", () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("err", { status: 400 }));
     const res = await sendEmail({ to: "a@b.com", subject: "s", html: "<p/>", text: "t" });
     expect(res.ok).toBe(false);
+  });
+});
+
+describe("logDevAuthLink", () => {
+  it("logs the auth URL to the server terminal when send failed and not production", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    logDevAuthLink("Email verification", "http://localhost:3000/api/auth/verify-email?token=abc", { ok: false });
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const out = warnSpy.mock.calls[0][0] as string;
+    expect(out).toContain("http://localhost:3000/api/auth/verify-email?token=abc");
+    expect(out).toContain("Email verification");
+  });
+
+  it("is silent when the email actually sent (ok:true)", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    logDevAuthLink("Email verification", "http://localhost:3000/api/auth/verify-email?token=abc", { ok: true });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("never logs in production, even when the send failed", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    logDevAuthLink("Password reset", "http://localhost:3000/reset-password?token=abc", { ok: false });
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

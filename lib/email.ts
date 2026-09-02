@@ -59,6 +59,22 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   }
 }
 
+// Dev-only fallback: when an auth email can't be delivered (no/invalid Brevo
+// key, unverified sender, etc.) in non-production, print the verification /
+// reset link to the server terminal so local devs can complete the flow
+// end-to-end without a working mail provider. Never logs to the client and
+// never runs in production — respects the "swallow provider errors" contract.
+export function logDevAuthLink(label: string, url: string, sendResult: SendEmailResult): void {
+  if (sendResult.ok) return;
+  if (process.env.NODE_ENV === "production") return;
+  // Multi-line + box chars so it's easy to spot in a noisy dev terminal.
+  console.warn(
+    `\n┌─ ${label} (dev fallback — email delivery failed) ─────────────\n` +
+    `│  ${url}\n` +
+    `└──────────────────────────────────────────────────────────────\n`
+  );
+}
+
 // Build an absolute verify/reset URL from APP_URL (default localhost:3000).
 export function appUrl(): string {
   return (process.env.APP_URL?.trim().replace(/\/$/, "") || "http://localhost:3000");

@@ -6,7 +6,7 @@ import { isDatabaseSetupError, sql } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import { verifyHCaptcha } from "@/lib/hcaptcha";
 import { createVerificationToken } from "@/lib/auth-tokens";
-import { sendEmail, appUrl } from "@/lib/email";
+import { sendEmail, appUrl, logDevAuthLink } from "@/lib/email";
 import { buildVerificationEmailHtml, buildVerificationEmailText } from "@/lib/email-templates/auth-emails";
 
 const signUpSchema = z.object({
@@ -143,13 +143,14 @@ export async function POST(request: Request) {
     const rawToken = await createVerificationToken(userId);
     const verifyUrl = `${appUrl()}/api/auth/verify-email?token=${encodeURIComponent(rawToken)}`;
     const displayName = profile.displayName;
-    await sendEmail({
+    const emailResult = await sendEmail({
       to: email,
       toName: displayName,
       subject: "Verify your email — EcoLudus",
       html: buildVerificationEmailHtml({ displayName, email, verifyUrl }),
       text: buildVerificationEmailText({ displayName, email, verifyUrl })
     });
+    logDevAuthLink("Email verification", verifyUrl, emailResult);
 
     // Soft gate: cookie is set so the user can browse, but reward/action
     // routes return 401 auth/email-not-verified until they verify. New users

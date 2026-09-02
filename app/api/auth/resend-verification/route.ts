@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { createVerificationToken } from "@/lib/auth-tokens";
-import { sendEmail, appUrl } from "@/lib/email";
+import { sendEmail, appUrl, logDevAuthLink } from "@/lib/email";
 import { buildVerificationEmailHtml, buildVerificationEmailText } from "@/lib/email-templates/auth-emails";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -32,13 +32,14 @@ export async function POST(request: Request) {
     const rawToken = await createVerificationToken(session.userId);
     const verifyUrl = `${appUrl()}/api/auth/verify-email?token=${encodeURIComponent(rawToken)}`;
     const displayName = session.email.split("@")[0];
-    await sendEmail({
+    const emailResult = await sendEmail({
       to: session.email,
       toName: displayName,
       subject: "Verify your email — EcoLudus",
       html: buildVerificationEmailHtml({ displayName, email: session.email, verifyUrl }),
       text: buildVerificationEmailText({ displayName, email: session.email, verifyUrl })
     });
+    logDevAuthLink("Email verification", verifyUrl, emailResult);
 
     return NextResponse.json({ message: "Check your email to verify your account." });
   } catch (error) {

@@ -20,6 +20,14 @@ declare global {
 
 const SCRIPT_ID = "hcaptcha-script";
 
+// hCaptcha only accepts "light" | "dark" — "auto" is invalid and throws
+// "Cannot find theme with name: auto", which used to trip the error-callback
+// and wipe the solved token. Pick from the user's OS preference instead.
+function pickTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export function HCaptchaWidget({ onToken, onExpired }: HCaptchaWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<number | undefined>(undefined);
@@ -40,8 +48,17 @@ export function HCaptchaWidget({ onToken, onExpired }: HCaptchaWidgetProps) {
         sitekey: siteKey,
         callback: onToken,
         "expired-callback": onExpired,
-        "error-callback": onExpired,
-        theme: "auto"
+        // Non-destructive error handler. hCaptcha emits transient errors
+        // (e.g. "localhost detected" in dev) that previously aliased to
+        // onExpired and cleared a solved token, leaving submissions with an
+        // empty captchaToken -> 403 auth/captcha-failed. Log only; a genuinely
+        // invalid/expired token still surfaces at submit via the server check.
+        "error-callback": (error: unknown) => {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[hCaptcha] widget error:", error);
+          }
+        },
+        theme: pickTheme()
       });
     };
 
