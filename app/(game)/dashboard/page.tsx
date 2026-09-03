@@ -66,7 +66,7 @@ function isAfterMidnightUTC(lastResetTime: string | null): boolean {
 }
 
 export default function DashboardPage() {
-  const { user, profile, loading, refreshProfile } = useAuth();
+  const { user, profile, loading, refreshProfile, emailVerified } = useAuth();
   const toast = useToast();
 
   const { quests: questsData } = useQuests();
@@ -124,6 +124,15 @@ export default function DashboardPage() {
     });
 
     const isResetNeeded = !lastReset || currentDailyQuestIds.length === 0 || isAfterMidnightUTC(lastReset);
+
+    // Unverified accounts are soft-gated: streak/apply and quests/daily return
+    // 401 auth/email-not-verified, so don't spam them — the unverified banner
+    // above explains what to do. Still map any already-selected daily quests.
+    if (isResetNeeded && !emailVerified) {
+      setQuests([]);
+      setLoadingQuests(false);
+      return;
+    }
 
     if (isResetNeeded) {
       async function resetDaily() {
@@ -317,6 +326,12 @@ export default function DashboardPage() {
 
   const handleVerifyProof = async () => {
     if (!activeTextVerifyQuest || verifyingText) return;
+
+    // Unverified accounts can't submit proof — /api/quests/verify would 401.
+    if (!emailVerified) {
+      setVerificationError("Verify your email first, then submit proof again.");
+      return;
+    }
 
     // Validate based on proof type
     if (proofType === "text" && textProof.trim().length < 8) return;
