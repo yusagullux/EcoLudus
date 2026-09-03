@@ -446,8 +446,9 @@ body {
 }
 
 /* Briefly enable smooth transitions across all color/border/shadow properties
-   while switching themes. The class is toggled via JS only during the change
-   so hover transforms and motion animations aren't permanently slowed down.
+   while switching themes (legacy fallback for browsers without the View
+   Transitions API). The class is toggled via JS only during the change so hover
+   transforms and motion animations aren't permanently slowed down.
    Reduced-motion users skip the cross-fade (the media query below collapses
    transition durations to 1 ms). */
 html.theme-transitioning,
@@ -457,6 +458,25 @@ html.theme-transitioning *::after {
   transition-property: background-color, color, border-color, outline-color, box-shadow, fill, stroke, opacity;
   transition-duration: 450ms;
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* During the View Transitions swap the whole page cross-fades as one
+   composited snapshot pair, so per-element color transitions must be frozen:
+   they'd start under the new snapshot and get captured mid-fade (the new frame
+   would still show old colors, killing the cross-fade) and double-animate. */
+html.theme-swapping,
+html.theme-swapping *,
+html.theme-swapping *::before,
+html.theme-swapping *::after {
+  transition-property: none !important;
+}
+
+/* Stretch the default 250ms root cross-fade to match the legacy per-element
+   fade duration, so both paths feel the same speed. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Baloo 2 for all heading elements */

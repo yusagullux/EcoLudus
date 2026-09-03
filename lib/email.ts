@@ -23,11 +23,20 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return { ok: false };
   }
 
-  const from = process.env.BREVO_FROM?.trim() || "hello@ecoludus.com";
+  // BREVO_FROM must be a sender validated in the Brevo account — Brevo rejects
+  // the send ("sender is not valid") for anything else, and the request still
+  // consumes an API call. Warn loudly when we have to fall back so a missing
+  // env var on a new deployment is diagnosable instead of silently eaten.
+  const from = process.env.BREVO_FROM?.trim();
+  if (!from) {
+    logger.warn(
+      "BREVO_FROM is not set — falling back to hello@ecoludus.com, which will be rejected by Brevo until that sender is validated. Set BREVO_FROM to a validated sender."
+    );
+  }
   const fromName = process.env.BREVO_FROM_NAME?.trim() || "EcoLudus";
 
   const body = {
-    sender: { name: fromName, email: from },
+    sender: { name: fromName, email: from ?? "hello@ecoludus.com" },
     to: [{ email: input.to, name: input.toName ?? input.to }],
     subject: input.subject,
     htmlContent: input.html,
