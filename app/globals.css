@@ -445,6 +445,14 @@ body {
               color 350ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Theme cross-fade feel, shared by the legacy per-element fallback and the
+   View Transitions path so both stay in sync. The legacy timeout in
+   lib/useTheme.tsx (TRANSITION_MS) must match --theme-fade-duration. */
+:root {
+  --theme-fade-duration: 450ms;
+  --theme-fade-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* Briefly enable smooth transitions across all color/border/shadow properties
    while switching themes (legacy fallback for browsers without the View
    Transitions API). The class is toggled via JS only during the change so hover
@@ -456,8 +464,8 @@ html.theme-transitioning *,
 html.theme-transitioning *::before,
 html.theme-transitioning *::after {
   transition-property: background-color, color, border-color, outline-color, box-shadow, fill, stroke, opacity;
-  transition-duration: 450ms;
-  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  transition-duration: var(--theme-fade-duration);
+  transition-timing-function: var(--theme-fade-ease);
 }
 
 /* During the View Transitions swap the whole page cross-fades as one
@@ -475,8 +483,8 @@ html.theme-swapping *::after {
    fade duration, so both paths feel the same speed. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 450ms;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-duration: var(--theme-fade-duration);
+  animation-timing-function: var(--theme-fade-ease);
 }
 
 /* Baloo 2 for all heading elements */

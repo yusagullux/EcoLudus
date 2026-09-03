@@ -2,6 +2,10 @@ import { logger, logError } from "@/lib/logger";
 
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
+// Sender used when BREVO_FROM is unset. It is not validated in the Brevo
+// account, so sends from it are rejected — hence the loud warn below.
+const FALLBACK_FROM_EMAIL = "hello@ecoludus.com";
+
 export type SendEmailInput = {
   to: string;
   toName?: string;
@@ -27,16 +31,16 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   // the send ("sender is not valid") for anything else, and the request still
   // consumes an API call. Warn loudly when we have to fall back so a missing
   // env var on a new deployment is diagnosable instead of silently eaten.
-  const from = process.env.BREVO_FROM?.trim();
-  if (!from) {
+  const from = process.env.BREVO_FROM?.trim() || FALLBACK_FROM_EMAIL;
+  if (from === FALLBACK_FROM_EMAIL) {
     logger.warn(
-      "BREVO_FROM is not set — falling back to hello@ecoludus.com, which will be rejected by Brevo until that sender is validated. Set BREVO_FROM to a validated sender."
+      `BREVO_FROM is not set — falling back to ${FALLBACK_FROM_EMAIL}, which will be rejected by Brevo until that sender is validated. Set BREVO_FROM to a validated sender.`
     );
   }
   const fromName = process.env.BREVO_FROM_NAME?.trim() || "EcoLudus";
 
   const body = {
-    sender: { name: fromName, email: from ?? "hello@ecoludus.com" },
+    sender: { name: fromName, email: from },
     to: [{ email: input.to, name: input.toName ?? input.to }],
     subject: input.subject,
     htmlContent: input.html,
