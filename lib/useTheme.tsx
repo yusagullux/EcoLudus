@@ -8,13 +8,8 @@ const STORAGE_KEY = "ecoludus.theme";
 const DEFAULT_THEME: Theme = "light";
 
 // How long the broad CSS transition class stays on <html> after a theme change.
-const TRANSITION_MS = 520;
-
-type DocumentWithViewTransitions = Document & {
-  startViewTransition?: (
-    updateCallback?: () => void | Promise<void>
-  ) => { finished: Promise<void>; ready: Promise<void> };
-};
+// Must match --theme-fade-duration in app/globals.css.
+const TRANSITION_MS = 450;
 
 type ThemeContextValue = {
   theme: Theme;
@@ -51,12 +46,11 @@ function applyThemeAnimated(t: Theme) {
     return;
   }
 
-  const doc = document as DocumentWithViewTransitions;
-  if (typeof doc.startViewTransition === "function") {
+  if (typeof document.startViewTransition === "function") {
     // Freeze per-element transitions during the swap so the new snapshot
     // captures final colors instead of mid-fade ones (no double animation).
     html.classList.add("theme-swapping");
-    doc.startViewTransition(() => {
+    document.startViewTransition(() => {
       applyTheme(t);
     }).finished.finally(() => {
       html.classList.remove("theme-swapping");

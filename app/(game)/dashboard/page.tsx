@@ -104,6 +104,18 @@ export default function DashboardPage() {
     const currentDailyQuestIds = (profile.currentDailyQuests || []) as string[];
     const dailyQuestsCompleted = (profile.dailyQuestsCompleted || []) as string[];
 
+    const isResetNeeded = !lastReset || currentDailyQuestIds.length === 0 || isAfterMidnightUTC(lastReset);
+
+    // Unverified accounts are soft-gated: streak/apply and quests/daily return
+    // 401 auth/email-not-verified, so don't call them — the unverified banner
+    // above explains what to do. (When no reset is needed, the mapping below
+    // still renders any already-selected daily quests.)
+    if (isResetNeeded && !emailVerified) {
+      setQuests([]);
+      setLoadingQuests(false);
+      return;
+    }
+
     // Flatten all quests from quests.json categories
     const allMappedQuests: any[] = [];
     questsData.categories.forEach((category: any) => {
@@ -122,17 +134,6 @@ export default function DashboardPage() {
         });
       });
     });
-
-    const isResetNeeded = !lastReset || currentDailyQuestIds.length === 0 || isAfterMidnightUTC(lastReset);
-
-    // Unverified accounts are soft-gated: streak/apply and quests/daily return
-    // 401 auth/email-not-verified, so don't spam them — the unverified banner
-    // above explains what to do. Still map any already-selected daily quests.
-    if (isResetNeeded && !emailVerified) {
-      setQuests([]);
-      setLoadingQuests(false);
-      return;
-    }
 
     if (isResetNeeded) {
       async function resetDaily() {
