@@ -342,7 +342,12 @@ function createPool() {
   return new Pool({
     connectionString: normalizeConnectionString(connectionString),
     ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-    max: isHostedRuntime() ? 1 : 10
+    max: isHostedRuntime() ? 1 : 10,
+    // Fail fast instead of queueing forever. With max:1 on the hosted runtime,
+    // any code path that waits on a second connection while one is checked out
+    // (e.g. a global sql() call inside a transaction callback) would otherwise
+    // hang until the platform timeout — better to surface it as an error.
+    connectionTimeoutMillis: 10_000
   });
 }
 

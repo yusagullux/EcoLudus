@@ -242,6 +242,32 @@ export async function POST(request: Request) {
     const payload = completeQuestSchema.parse(await request.json());
     const requestedQuestIds = Array.from(new Set(payload.questIds));
 
+    // Resolve quest definitions and carbon values BEFORE the transaction. In
+    // the hosted runtime the pool is capped at max:1, and transaction() holds
+    // that sole connection for the whole callback — any global sql() call made
+    // inside it (getQuestCarbonReduction reads carbon_cache; with a
+    // CLIMATIQ_API_KEY it also fetches Climatiq and writes the cache) would
+    // queue on the connection the request itself is holding and deadlock until
+    // the function timeout, freezing every other DB request on the instance.
+    // Carbon values are per-quest catalog data (30-day cache), not
+    // user-dependent, so precomputing them outside the lock is safe.
+    const questDefs = new Map<string, NonNullable<Awaited<ReturnType<typeof getQuestDefinition>>>>();
+    for (const questId of requestedQuestIds) {
+      const quest = await getQuestDefinition(questId);
+      if (!quest) {
+        return NextResponse.json(
+          { error: { code: "quests/not-found", questId } },
+          { status: 400 }
+        );
+      }
+      questDefs.set(questId, quest);
+    }
+
+    const carbonByQuestId = new Map<string, Awaited<ReturnType<typeof getQuestCarbonReduction>>>();
+    for (const questId of requestedQuestIds) {
+      carbonByQuestId.set(questId, await getQuestCarbonReduction(questDefs.get(questId)!));
+    }
+
     // Wrap the read→compute→grant→mission_logs in one transaction with a row
     // lock on the user row, so concurrent quest completions on the same user
     // cannot both pass the "already completed today" check against a stale read
@@ -249,10 +275,11 @@ export async function POST(request: Request) {
     // lost-update / double-grant class from the 2026-07-25 audit). grantImpact
     // shares the lock via `tx` (no second read, no nested transaction), and the
     // mission_logs inserts run on the same `query` so they commit atomically
-    // with the user write. The quest-definition / carbon lookups use the global
-    // pool (not the locked client), so they only serialize same-user
-    // completions — the desired behavior — and don't block cross-user traffic.
-    // Early 400/404/422 returns inside the callback commit (empty tx) cleanly.
+    // with the user write. ONLY the tx-bound `query` is used inside the
+    // callback — the definition/carbon lookups above are hoisted out because a
+    // global sql() call inside the transaction would deadlock on the max:1
+    // hosted pool. Early 400/404/422 returns inside the callback commit (empty
+    // tx) cleanly.
     let questSucceeded = false;
     const result = await transaction(async (query) => {
       const userResult = await selectUserForUpdate<ProgressionUser>(query, session.userId!);
@@ -281,23 +308,12 @@ export async function POST(request: Request) {
         );
       }
 
-      // Fetch every selected quest's definition up front. We need them for the
-      // carbon lookup regardless, and resolving them now lets us skip the
-      // verified-proof check for honor-system quests (requiresProof === false),
-      // which are trivial "invisible action" quests (turn off lights, unplug
-      // chargers, etc.) that have no checkable artifact and complete on trust.
-      const questDefs = new Map<string, NonNullable<Awaited<ReturnType<typeof getQuestDefinition>>>>();
-      for (const questId of questIds) {
-        const quest = await getQuestDefinition(questId);
-        if (!quest) {
-          return NextResponse.json(
-            { error: { code: "quests/not-found", questId } },
-            { status: 400 }
-          );
-        }
-        questDefs.set(questId, quest);
-      }
-
+      // questDefs was resolved (and any unknown-quest id rejected) BEFORE the
+      // transaction — see the hoisted block above. Resolving them now lets us
+      // skip the verified-proof check for honor-system quests
+      // (requiresProof === false), which are trivial "invisible action" quests
+      // (turn off lights, unplug chargers, etc.) that have no checkable
+      // artifact and complete on trust.
       const proofRequiredIds = questIds.filter((id) => questDefs.get(id)?.requiresProof !== false);
       const missingVerifiedProofIds = getMissingVerifiedQuestProofIds(profile, proofRequiredIds);
       if (missingVerifiedProofIds.length > 0) {
@@ -320,7 +336,10 @@ export async function POST(request: Request) {
       for (const questId of questIds) {
         const quest = questDefs.get(questId)!;
 
-        const carbon = await getQuestCarbonReduction(quest);
+        // Precomputed before the transaction — a global sql() call here would
+        // deadlock on the max:1 hosted pool (the tx already holds that sole
+        // connection).
+        const carbon = carbonByQuestId.get(questId)!;
         completionRecords.push({
           id: randomUUID(),
           questId: quest.id,
