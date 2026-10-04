@@ -20,9 +20,9 @@ const copy = {
   login: {
     eyebrow: "Account Access",
     title: "Return to your daily eco rhythm.",
-    subtitle: "Open your missions, team progress, collection, and impact dashboard.",
+    subtitle: "Open your missions, team progress, collection, and impact log.",
     submit: "Log In",
-    pending: "Opening dashboard...",
+    pending: "Opening your garden...",
     altPrompt: "New here?",
     altLabel: "Create a profile",
     altHref: "/signup"
@@ -164,55 +164,55 @@ export function AuthCard({ mode }: AuthCardProps) {
 
   return (
     <section className="mx-auto grid min-h-[calc(100vh-96px)] w-full max-w-6xl px-5 pb-14 pt-6 sm:px-8 lg:grid-cols-[0.92fr_1fr] lg:px-0">
-      <aside className="hidden flex-col justify-between rounded-l-[28px] bg-[linear-gradient(145deg,#102016_0%,#203b29_58%,#5f7c52_100%)] p-12 text-cream-100 shadow-[0_30px_90px_rgba(0,0,0,0.2)] lg:flex">
+      <aside className="mk-hero hidden flex-col justify-between rounded-l-dialog p-12 shadow-elev-3 lg:flex">
         <div>
-          <span className="inline-flex rounded-full border border-white/12 bg-white/8 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.24em] text-moss-200">
+          <span className="inline-flex rounded-full border border-ink-inverse/15 bg-ink-inverse/10 px-4 py-2 text-overline text-ink-inverse">
             Forest Edition
           </span>
-          <h2 className="mt-8 max-w-xl text-balance font-serif text-5xl font-extrabold leading-[1.04] text-cream-100">
-            A focused operating room for sustainable habits.
+          <h2 className="mt-8 max-w-xl text-balance font-serif text-5xl font-extrabold leading-[1.04] text-ink-inverse">
+            Small actions. A living garden. Real impact.
           </h2>
-          <p className="mt-6 max-w-md text-base leading-7 text-cream-100/68">
-            Quiet surfaces, strong hierarchy, and measured contrast keep the product useful while giving it a more distinctive identity.
+          <p className="mt-6 max-w-md text-base leading-7 text-ink-inverse/70">
+            Take on a daily eco mission, verify it with a quick photo check, and watch it grow into XP, EcoPoints, and rare species for your garden. Every verified mission is logged as real CO₂ saved, building a personal record of the difference you make.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {[
-            ["Missions", "Daily actions"],
-            ["Teams", "Shared progress"],
-            ["Rewards", "EcoPoints"]
+            ["Missions", "Daily quests with real proof"],
+            ["Teams", "Progress shared with friends"],
+            ["Rewards", "XP, EcoPoints, and species"]
           ].map(([title, text]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              <h3 className="font-serif text-lg font-extrabold text-cream-100">{title}</h3>
-              <p className="mt-1 text-xs font-semibold text-cream-100/58">{text}</p>
+            <div key={title} className="rounded-card border border-ink-inverse/12 bg-ink-inverse/8 p-4">
+              <h3 className="font-serif text-lg font-extrabold text-ink-inverse">{title}</h3>
+              <p className="mt-1 text-xs font-semibold text-ink-inverse/60">{text}</p>
             </div>
           ))}
         </div>
       </aside>
 
-      <div className="flex items-center justify-center rounded-[28px] border px-6 py-12 shadow-[0_24px_70px_rgba(0,0,0,0.1)] backdrop-blur lg:rounded-l-none lg:px-14" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}>
+      <div className="flex items-center justify-center rounded-dialog border border-line bg-surface px-6 py-12 shadow-elev-2 lg:rounded-l-none lg:px-14">
         <div className="w-full max-w-sm">
           {/* Compact branded header — visible only on mobile/tablet where the
               full aside panel is hidden, so auth isn't a bare card. */}
           <div className="mb-7 flex items-center gap-3 lg:hidden">
-            <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-white shadow-[0_12px_28px_rgba(0,0,0,0.16)] ring-1 ring-[var(--border-default)]">
+            <div className="relative h-10 w-10 overflow-hidden rounded-input bg-surface shadow-elev-2 ring-1 ring-line">
               <Image src="/images/logo.png" alt="EcoLudus logo" fill sizes="40px" className="object-cover" />
             </div>
             <div className="leading-none">
-              <div className="font-serif text-xl font-semibold tracking-wide" style={{ color: "var(--text-primary)" }}>EcoLudus</div>
-              <div className="mt-1 text-[10px] uppercase tracking-[0.24em]" style={{ color: "var(--text-muted)" }}>Forest Edition</div>
+              <div className="font-serif text-xl font-semibold tracking-wide text-ink">EcoLudus</div>
+              <div className="mt-1 text-overline text-ink-muted">Forest Edition</div>
             </div>
           </div>
 
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.24em]" style={{ color: "var(--text-muted)" }}>{content.eyebrow}</p>
-          <h1 className="mt-3 text-balance font-serif text-3xl font-extrabold leading-tight sm:text-4xl" style={{ color: "var(--text-primary)" }}>{content.title}</h1>
-          <p className="mt-3 text-sm leading-6" style={{ color: "var(--text-secondary)" }}>{content.subtitle}</p>
+          <p className="text-overline text-ink-muted">{content.eyebrow}</p>
+          <h1 className="mt-3 text-balance font-serif text-3xl font-extrabold leading-tight text-ink sm:text-4xl">{content.title}</h1>
+          <p className="mt-3 text-sm leading-6 text-ink-soft">{content.subtitle}</p>
 
           <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
             {mode === "signup" && (
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="displayName" className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-secondary)" }}>
-                  Display name <span className="font-bold normal-case tracking-normal" style={{ color: "var(--text-muted)" }}>(optional)</span>
+                <label htmlFor="displayName" className="text-overline text-ink-soft">
+                  Display name <span className="font-bold normal-case tracking-normal text-ink-muted">(optional)</span>
                 </label>
                 <input
                   id="displayName"
@@ -224,14 +224,14 @@ export function AuthCard({ mode }: AuthCardProps) {
                   placeholder="e.g. Eco Explorer"
                   className={inputClass}
                 />
-                <p className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>
+                <p className="text-xs font-semibold text-ink-muted">
                   Shown on your profile, sidebar, and leaderboard. Leave blank to use your email prefix.
                 </p>
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-secondary)" }}>
+              <label htmlFor="email" className="text-overline text-ink-soft">
                 Email
               </label>
               <input
@@ -248,14 +248,14 @@ export function AuthCard({ mode }: AuthCardProps) {
                 className={inputClass}
               />
               {emailInvalid && (
-                <p id="email-error" className="text-[11px] font-semibold text-rose-600">
+                <p id="email-error" className="text-xs font-semibold text-status-danger">
                   Enter a valid email address.
                 </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className="text-xs font-extrabold uppercase tracking-[0.14em]" style={{ color: "var(--text-secondary)" }}>
+              <label htmlFor="password" className="text-overline text-ink-soft">
                 Password
               </label>
               <input
@@ -273,7 +273,7 @@ export function AuthCard({ mode }: AuthCardProps) {
                 className={inputClass}
               />
               {passwordInvalid && (
-                <p id="password-error" className="text-[11px] font-semibold text-rose-600">
+                <p id="password-error" className="text-xs font-semibold text-status-danger">
                   Password must be at least 6 characters.
                 </p>
               )}
@@ -281,16 +281,16 @@ export function AuthCard({ mode }: AuthCardProps) {
 
             {mode === "login" && (
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-3 text-sm font-bold" style={{ color: "var(--text-secondary)" }}>
+                <label className="flex min-h-11 items-center gap-3 text-sm font-bold text-ink-soft">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(event) => setRememberMe(event.target.checked)}
-                    className="h-4 w-4 rounded accent-[var(--text-accent)]"
+                    className="h-5 w-5 rounded accent-[var(--text-accent)]"
                   />
                   Remember me
                 </label>
-                <Link href="/forgot-password" className="text-xs font-bold transition" style={{ color: "var(--text-muted)" }}>
+                <Link href="/forgot-password" className="inline-flex min-h-11 items-center px-1 text-xs font-bold text-ink-muted transition-colors hover:text-ink">
                   Forgot password?
                 </Link>
               </div>
@@ -299,8 +299,8 @@ export function AuthCard({ mode }: AuthCardProps) {
             {error && <ErrorBanner>{error}</ErrorBanner>}
 
             {error && lastErrorCode === "auth/email-not-verified" && (
-              <Link href="/resend-verification" className="text-xs font-bold" style={{ color: "var(--text-accent)" }}>
-                Resend verification email →
+              <Link href="/resend-verification" className="text-xs font-bold text-accent transition-colors hover:text-ink">
+                Resend verification email
               </Link>
             )}
 
@@ -311,9 +311,9 @@ export function AuthCard({ mode }: AuthCardProps) {
             </button>
           </form>
 
-          <div className="mt-6 flex items-center justify-between border-t pt-5 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>
+          <div className="mt-6 flex items-center justify-between border-t border-line-soft pt-5 text-sm text-ink-muted">
             <span>{content.altPrompt}</span>
-            <Link href={content.altHref} className="font-extrabold transition" style={{ color: "var(--text-primary)" }}>
+            <Link href={content.altHref} className="font-extrabold text-ink transition-colors hover:text-accent">
               {content.altLabel}
             </Link>
           </div>

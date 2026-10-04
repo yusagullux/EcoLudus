@@ -2,9 +2,10 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { useTheme, type Theme } from "@/lib/useTheme";
-import { PageHero, Panel, primaryButton, inputClass, heroAccents } from "@/components/game-ui";
+import { PageHeader, Panel, primaryButton, secondaryButton, dangerButton, inputClass } from "@/components/game-ui";
 import { StaggerContainer, StaggerItem } from "@/lib/animations";
 import { Avatar } from "@/components/avatar";
 import { useToast } from "@/lib/toast";
@@ -59,12 +60,13 @@ type SettingsFormProps = {
   user: ReturnType<typeof useAuth>["user"];
   profile: ReturnType<typeof useAuth>["profile"];
   refreshProfile: ReturnType<typeof useAuth>["refreshProfile"];
-  emailVerified: boolean;
-  theme: Theme;
-  setTheme: (t: Theme) => void;
 };
 
-function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, setTheme }: SettingsFormProps) {
+// The keyed remount unit. Deliberately kept SMALL: only the panels that own
+// form state derived from the profile (Profile + Notifications). Static
+// panels (theme, account details, danger zone) live in the unkeyed outer
+// render, so a save-triggered remount cannot replay the page entrance.
+function SettingsForm({ user, profile, refreshProfile }: SettingsFormProps) {
   // Profile fields are initialized from the profile prop. The parent remounts
   // this component with a key derived from the relevant profile fields, so we
   // never need a setState-in-effect to sync form state.
@@ -81,25 +83,20 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
   const profileImage = typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null;
   const avatarName = displayName || user?.email?.split("@")[0] || "Explorer";
 
-  async function handleSaveProfile() {
+  // Shared POST — the server accepts partial bodies, so each panel sends only
+  // what it owns. The notifications panel must never depend on the display
+  // name: users are allowed to sign up with a blank name (email-prefix
+  // fallback), so gating preferences on name length would lock them out of
+  // saving entirely.
+  async function persistSettings(body: Record<string, unknown>) {
     if (!user?.uid || savingProfile) return;
-    const name = displayName.trim();
-    if (!name || name.length < 2) {
-      toast.error("Name must be at least 2 characters.");
-      return;
-    }
-    if (name.length > 32) {
-      toast.error("Name must be 32 characters or fewer.");
-      return;
-    }
-
     setSavingProfile(true);
     try {
       const res = await fetch("/api/users/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ displayName: name, emailWeeklyReport: weeklyReport })
+        body: JSON.stringify(body)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Save failed");
@@ -110,6 +107,24 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
     } finally {
       setSavingProfile(false);
     }
+  }
+
+  async function handleSaveProfile() {
+    const name = displayName.trim();
+    if (!name || name.length < 2) {
+      toast.error("Name must be at least 2 characters.");
+      return;
+    }
+    if (name.length > 32) {
+      toast.error("Name must be 32 characters or fewer.");
+      return;
+    }
+    await persistSettings({ displayName: name, emailWeeklyReport: weeklyReport });
+  }
+
+  // Preferences-only save (no name validation) — used by the notifications panel.
+  async function handleSavePreferences() {
+    await persistSettings({ emailWeeklyReport: weeklyReport });
   }
 
   // Resize the chosen image to 256×256 on a canvas and upload it as a JPEG,
@@ -163,18 +178,8 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
   }
 
   return (
-    <StaggerContainer className="flex flex-col gap-5" as="div">
-      <StaggerItem as="div">
-      <PageHero
-        eyebrow="Account"
-        title="Settings"
-        description="Update your profile, choose a theme, and manage notifications."
-        accent={heroAccents.settings}
-      />
-      </StaggerItem>
-
+    <>
       {/* ── Profile ── */}
-      <StaggerItem as="div">
       <Panel eyebrow="Profile" title="Your Info">
         <div className="flex flex-col gap-4">
           {/* Profile picture */}
@@ -195,14 +200,13 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
                     type="button"
                     onClick={handleRemovePicture}
                     disabled={uploadingPicture}
-                    className="inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] transition hover:opacity-80"
-                    style={{ background: "var(--bg-panel-alt)", color: "var(--text-muted)" }}
+                    className={secondaryButton}
                   >
-                    Remove
+                    Remove picture
                   </button>
                 )}
               </div>
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              <p className="text-xs text-ink-muted">
                 PNG, JPEG, or WebP. We resize it to a square automatically.
               </p>
               <input
@@ -216,11 +220,7 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
           </div>
 
           <div>
-            <label
-              htmlFor="display-name"
-              className="mb-1.5 block text-[11px] font-extrabold uppercase tracking-[0.14em]"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <label htmlFor="display-name" className="mb-1.5 block text-overline text-ink-muted">
               Display name
             </label>
             <input
@@ -232,19 +232,9 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
               maxLength={32}
               className={inputClass}
             />
-            <p className="mt-1 text-right text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>
+            <p className="mt-1 text-right text-micro text-ink-muted">
               {displayName.trim().length}/32
             </p>
-          </div>
-
-          <div
-            className="flex items-center justify-between rounded-xl px-4 py-3"
-            style={{ background: "var(--bg-panel-alt)" }}
-          >
-            <p className="text-xs font-extrabold uppercase tracking-[0.12em]" style={{ color: "var(--text-muted)" }}>
-              Email
-            </p>
-            <p className="max-w-[60%] truncate text-sm font-bold" style={{ color: "var(--text-primary)" }}>{user?.email ?? "—"}</p>
           </div>
 
           <button
@@ -257,36 +247,144 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
           </button>
         </div>
       </Panel>
+
+      {/* ── Notifications ── */}
+      <Panel eyebrow="Notifications" title="Email Preferences">
+        {/* Whole row is a single role="switch" button so the entire target is
+            clickable and keyboard-accessible. The previous markup nested this
+            <button> inside a <label>, which is invalid HTML (a <label> cannot
+            wrap interactive content) and caused a double-toggle: a native
+            <button> already activates on Space/Enter, and the manual onKeyDown
+            handler fired a second toggle, leaving the state unchanged. The name
+            comes from the visible title via aria-labelledby and the description
+            via aria-describedby. Focus styling comes from the theme-aware
+            :focus-visible outline in globals.css. */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={weeklyReport}
+          aria-labelledby="weekly-report-label"
+          aria-describedby="weekly-report-desc"
+          onClick={() => setWeeklyReport((v) => !v)}
+          className="flex w-full cursor-pointer items-start gap-4 rounded-input p-3 text-left transition-colors hover:bg-surface-alt"
+        >
+          <span
+            className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${weeklyReport ? "bg-accent" : ""}`}
+            style={
+              weeklyReport
+                ? undefined
+                : {
+                    // ON keeps the solid accent; OFF uses a faint accent tint
+                    // over the panel so the track never disappears into the
+                    // page background on dark themes (bg-line does).
+                    background: "color-mix(in srgb, var(--text-accent) 10%, var(--bg-panel-alt))"
+                  }
+            }
+            aria-hidden="true"
+          >
+            {/* Knob: 16px in a 36px track with 2px padding either side → 16px
+                travel. Positioned with `transform` (not `left`) so
+                `transition-transform` actually animates the slide — the old
+                `left`-based version jumped because `transition-transform`
+                can't animate the `left` property. Symmetric 2px inset on
+                all sides. The hairline inset border keeps an ink-inverse knob
+                legible on light tracks too. */}
+            <span
+              className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-ink-inverse transition-transform duration-200 ease-out"
+              style={{
+                boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 35%, transparent)",
+                transform: weeklyReport ? "translateX(16px)" : "translateX(0)"
+              }}
+            />
+          </span>
+          <span className="flex flex-col">
+            <span id="weekly-report-label" className="text-sm font-extrabold text-ink">
+              Weekly Impact Report
+            </span>
+            <span id="weekly-report-desc" className="mt-0.5 text-xs leading-relaxed text-ink-muted">
+              A personalised email every Monday with your XP, CO₂ reduced, trees planted, and rank movement.
+            </span>
+          </span>
+        </button>
+
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={handleSavePreferences}
+            disabled={savingProfile}
+            className={primaryButton}
+          >
+            {savingProfile ? "Saving…" : "Save preferences"}
+          </button>
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+function profileFormKey(profile: SettingsFormProps["profile"], user: SettingsFormProps["user"]): string {
+  // Remount the form whenever the server-side profile fields we edit change,
+  // so the form stays in sync without a setState-in-effect anti-pattern.
+  if (!profile) return "settings-loading";
+  const displayName = String(profile.displayName || user?.email?.split("@")[0] || "");
+  return `settings-${user?.uid || "anon"}-${displayName}-${String(profile.emailWeeklyReport)}-${typeof profile.profileImage}`;
+}
+
+export default function SettingsPage() {
+  const { user, profile, refreshProfile, emailVerified } = useAuth();
+  const { theme, setTheme } = useTheme();
+
+  return (
+    // Page-level stagger lives OUTSIDE the keyed SettingsForm, so a
+    // save-triggered remount (avatar upload, name save) replays nothing —
+    // only the state-owning panels inside the keyed unit re-render.
+    <StaggerContainer className="flex flex-col gap-5" as="div">
+      <StaggerItem as="div">
+        <PageHeader
+          title="Settings"
+          description="Update your name, picture, theme, and which emails we send you."
+        />
+      </StaggerItem>
+
+      {/* Keyed remount boundary stays BELOW the page stagger. */}
+      <StaggerItem as="div" className="flex flex-col gap-5">
+        <SettingsForm
+          key={profileFormKey(profile, user)}
+          user={user}
+          profile={profile}
+          refreshProfile={refreshProfile}
+        />
       </StaggerItem>
 
       {/* ── Theme ── */}
       <StaggerItem as="div">
       <Panel eyebrow="Appearance" title="Theme">
-        <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3" as="div">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {THEMES.map((t) => {
             const active = theme === t.value;
             return (
-              <StaggerItem key={t.value} as="div" className="h-full">
               <button
+                key={t.value}
                 type="button"
                 onClick={() => setTheme(t.value)}
-                className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border-2 text-left transition hover:-translate-y-0.5"
-                style={{
-                  borderColor: active ? "var(--text-accent, #43653f)" : "var(--border-default)",
-                  background: "var(--bg-panel)",
-                  boxShadow: active
-                    ? "0 10px 26px color-mix(in srgb, var(--text-accent, #43653f) 28%, transparent)"
-                    : "var(--shadow-card)"
-                }}
+                className={`group relative flex h-full w-full flex-col overflow-hidden rounded-[1.25rem] border-2 bg-surface text-left transition hover:-translate-y-0.5 active:scale-[0.98] ${active ? "border-accent" : "border-line shadow-elev-1"}`}
+                style={active ? {
+                  // Sanctioned color-mix: a soft accent ring + lift halo on the
+                  // chosen theme card — friendlier than the old drop-shadow box.
+                  boxShadow: "0 0 0 3px color-mix(in srgb, var(--text-accent) 26%, transparent), 0 12px 28px color-mix(in srgb, var(--text-accent) 18%, transparent)"
+                } : undefined}
                 aria-pressed={active}
               >
                 {active && (
                   <span
-                    className="absolute right-2.5 top-2.5 z-10 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black shadow-sm"
-                    style={{ background: "var(--text-accent, #43653f)", color: "var(--text-inverse)" }}
+                    className="absolute right-2.5 top-2.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-accent shadow-sm"
                     aria-hidden="true"
                   >
-                    ✓
+                    <Check
+                      className="h-3 w-3"
+                      strokeWidth={3.2}
+                      style={{ color: "var(--text-sidebar)" }}
+                    />
                   </span>
                 )}
 
@@ -319,89 +417,18 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
                 </div>
 
                 <div className="flex flex-1 flex-col p-3">
-                  <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
+                  <p className="text-sm font-extrabold text-ink">
                     {t.label}
                   </p>
                   {/* Reserve exactly two lines so short and long descriptions
                       occupy the same space → every card is the same height. */}
-                  <p
-                    className="mt-0.5 line-clamp-2 min-h-[2rem] text-[11px] font-semibold leading-snug"
-                    style={{ color: "var(--text-muted)" }}
-                  >
+                  <p className="mt-0.5 line-clamp-2 min-h-[2rem] text-xs font-semibold leading-snug text-ink-muted">
                     {t.desc}
                   </p>
                 </div>
               </button>
-              </StaggerItem>
             );
           })}
-        </StaggerContainer>
-      </Panel>
-      </StaggerItem>
-
-      {/* ── Notifications ── */}
-      <StaggerItem as="div">
-      <Panel eyebrow="Notifications" title="Email Preferences">
-        {/* Whole row is a single role="switch" button so the entire target is
-            clickable and keyboard-accessible. The previous markup nested this
-            <button> inside a <label>, which is invalid HTML (a <label> cannot
-            wrap interactive content) and caused a double-toggle: a native
-            <button> already activates on Space/Enter, and the manual onKeyDown
-            handler fired a second toggle, leaving the state unchanged. The name
-            comes from the visible title via aria-labelledby and the description
-            via aria-describedby. */}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={weeklyReport}
-          aria-labelledby="weekly-report-label"
-          aria-describedby="weekly-report-desc"
-          onClick={() => setWeeklyReport((v) => !v)}
-          className="flex w-full cursor-pointer items-start gap-4 rounded-xl p-3 text-left transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-          style={{
-            background: "transparent",
-            // @ts-expect-error CSS custom property for ring offset color
-            "--tw-ring-offset-color": "var(--bg-panel)"
-          }}
-        >
-          <span
-            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200"
-            style={{ background: weeklyReport ? "var(--text-accent, #43653f)" : "var(--border-default)" }}
-            aria-hidden="true"
-          >
-            {/* Knob: 16px in a 36px track with 2px padding either side → 16px
-                travel. Positioned with `transform` (not `left`) so
-                `transition-transform` actually animates the slide — the old
-                `left`-based version jumped because `transition-transform`
-                can't animate the `left` property. Symmetric 2px inset on
-                all sides. */}
-            <span
-              className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full shadow transition-transform duration-200 ease-out"
-              style={{
-                background: "var(--text-inverse)",
-                transform: weeklyReport ? "translateX(16px)" : "translateX(0)"
-              }}
-            />
-          </span>
-          <span className="flex flex-col">
-            <span id="weekly-report-label" className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
-              Weekly Impact Report
-            </span>
-            <span id="weekly-report-desc" className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-              A personalised email every Monday with your XP, CO₂ reduced, trees planted, and rank movement.
-            </span>
-          </span>
-        </button>
-
-        <div className="mt-3">
-          <button
-            type="button"
-            onClick={handleSaveProfile}
-            disabled={savingProfile}
-            className={primaryButton}
-          >
-            {savingProfile ? "Saving…" : "Save preferences"}
-          </button>
         </div>
       </Panel>
       </StaggerItem>
@@ -417,16 +444,12 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
           ].map(({ label, value, mono }) => (
             <div
               key={label}
-              className="flex items-center justify-between rounded-xl px-4 py-3"
-              style={{ background: "var(--bg-panel-alt)" }}
+              className="flex items-center justify-between rounded-input bg-surface-alt px-4 py-3"
             >
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "var(--text-muted)" }}>
+              <p className="text-micro text-ink-muted">
                 {label}
               </p>
-              <p
-                className={`max-w-[200px] truncate text-sm font-bold ${mono ? "font-mono text-[11px]" : ""}`}
-                style={{ color: "var(--text-secondary)" }}
-              >
+              <p className={`max-w-[200px] truncate text-sm font-bold text-ink-soft ${mono ? "font-mono text-xs" : ""}`}>
                 {value}
               </p>
             </div>
@@ -437,24 +460,29 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
 
       {/* ── Danger zone ── */}
       <StaggerItem as="div">
-      <Panel eyebrow="Danger Zone" title="Delete Account">
-        <div className="flex flex-col gap-3">
-          <p className="text-sm leading-6" style={{ color: "var(--text-secondary)" }}>
-            Permanently delete your account and all associated data. This cannot be undone.
+      <Panel eyebrow="Danger zone" title="Delete account">
+        <div
+          className="flex flex-col gap-3 rounded-input border p-4"
+          style={{
+            // Quiet red: a 5% wash over the panel + a softened edge. Present
+            // enough to signal severity, calm enough not to shout.
+            background: "color-mix(in srgb, var(--text-error) 5%, var(--bg-panel))",
+            borderColor: "color-mix(in srgb, var(--text-error) 20%, var(--border-default))"
+          }}
+        >
+          <p className="text-sm leading-6 text-ink-soft">
+            Permanently delete your account and all your garden data. This cannot be undone.
           </p>
           {!emailVerified && (
-            <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+            <p className="text-xs font-semibold text-ink-muted">
               Your email isn&apos;t verified yet — you can still resend the verification link below.
             </p>
           )}
           <div className="flex flex-wrap gap-2">
             {!emailVerified && (
-              <Link href="/resend-verification" className={primaryButton}>Resend verification</Link>
+              <Link href="/resend-verification" className={secondaryButton}>Resend verification</Link>
             )}
-            <Link
-              href="/delete-account"
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-rose-600 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-white transition hover:opacity-90"
-            >
+            <Link href="/delete-account" className={dangerButton}>
               Delete account
             </Link>
           </div>
@@ -462,30 +490,5 @@ function SettingsForm({ user, profile, refreshProfile, emailVerified, theme, set
       </Panel>
       </StaggerItem>
     </StaggerContainer>
-  );
-}
-
-function profileFormKey(profile: SettingsFormProps["profile"], user: SettingsFormProps["user"]): string {
-  // Remount the form whenever the server-side profile fields we edit change,
-  // so the form stays in sync without a setState-in-effect anti-pattern.
-  if (!profile) return "settings-loading";
-  const displayName = String(profile.displayName || user?.email?.split("@")[0] || "");
-  return `settings-${user?.uid || "anon"}-${displayName}-${String(profile.emailWeeklyReport)}-${typeof profile.profileImage}`;
-}
-
-export default function SettingsPage() {
-  const { user, profile, refreshProfile, emailVerified } = useAuth();
-  const { theme, setTheme } = useTheme();
-
-  return (
-    <SettingsForm
-      key={profileFormKey(profile, user)}
-      user={user}
-      profile={profile}
-      refreshProfile={refreshProfile}
-      emailVerified={emailVerified}
-      theme={theme}
-      setTheme={setTheme}
-    />
   );
 }

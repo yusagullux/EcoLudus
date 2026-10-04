@@ -119,7 +119,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
   if (verified) {
     return (
       <Panel eyebrow="Proof submitted" title={`"${questTitle}" photo verified`} action={<Pill active>Verified</Pill>}>
-        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>This quest has been verified with a photo proof upload and is ready for completion.</p>
+        <p className="text-sm text-ink-soft">This quest has been verified with a photo proof upload and is ready for completion.</p>
       </Panel>
     );
   }
@@ -128,7 +128,7 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
     <Panel eyebrow="Quest verification" title={`Verify proof for: ${questTitle}`}>
       <div className="grid gap-4">
         <div className="grid gap-2">
-          <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Photo proof</p>
+          <p className="text-sm font-semibold text-ink">Photo proof</p>
           <div className="grid gap-2 sm:grid-cols-2">
             <button
               type="button"
@@ -163,36 +163,36 @@ export default function PhotoVerification({ questId, questTitle, verified, onVer
         </div>
 
         {selectedFile && (
-          <div className="rounded-2xl border px-4 py-3 text-sm" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)", color: "var(--text-secondary)" }}>
+          <div className="rounded-card border border-line bg-surface-alt px-4 py-3 text-sm text-ink-soft">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="min-w-[88px] rounded-2xl p-2 shadow-sm" style={{ background: "var(--bg-panel)" }}>
+              <div className="min-w-[88px] rounded-input bg-surface p-2 shadow-elev-1">
                 {previewUrl ? (
-                  <div className="relative h-20 w-20 rounded-2xl overflow-hidden">
+                  <div className="relative h-20 w-20 overflow-hidden rounded-input">
                     <Image
                       src={previewUrl}
                       alt="Photo proof preview"
                       fill
                       sizes="80px"
                       unoptimized
-                      className="rounded-2xl object-cover"
+                      className="rounded-input object-cover"
                     />
                   </div>
                 ) : (
-                  <div className="h-20 w-20 rounded-2xl" style={{ background: "var(--bg-panel-alt)" }} />
+                  <div className="h-20 w-20 rounded-input bg-surface-alt" />
                 )}
               </div>
               <div>
-                <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{selectedFile.name}</p>
-                <p className="text-[13px]" style={{ color: "var(--text-secondary)" }}>{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                <p className="font-semibold text-ink">{selectedFile.name}</p>
+                <p className="text-sm text-ink-soft">{(selectedFile.size / 1024).toFixed(1)} KB</p>
               </div>
             </div>
           </div>
         )}
 
-        {status && <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{status}</p>}
-        {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
+        {status && <p className="text-sm text-ink-soft">{status}</p>}
+        {error && <p className="text-sm font-semibold text-status-danger">{error}</p>}
         {warnings.length > 0 && (
-          <div className="rounded-2xl border border-amber-300/60 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
+          <div className="chip-warning rounded-input border px-4 py-3 text-sm">
             <p className="font-bold">Verification notes:</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
               {warnings.map((warning, index) => (

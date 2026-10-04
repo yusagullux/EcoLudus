@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect, type ElementType, type ReactNode } from "react";
+import { useState, useEffect, type CSSProperties, type ElementType, type ReactNode } from "react";
 import Link from "next/link";
+import { User, Users } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
-import { PageHero, Panel, Pill, heroAccents } from "@/components/game-ui";
+import { PageHeader, Panel, Pill, RankMedallion } from "@/components/game-ui";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { RowListSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/avatar";
 import { StaggerContainer, StaggerItem, TabPanel } from "@/lib/animations";
 
-const medalLabel = ["1st", "2nd", "3rd"];
-const medalColors = ["var(--text-warning)", "var(--text-accent)", "var(--text-warning)"];
+// RankMedallion comes from the kit — its "row"/"podium" size aliases replace
+// this page's former local copy (podium = 44px).
 
 // Responsive grid-column templates for the ranking tables. Each template is
 // used twice (header row + every data row) so keeping them as named constants
@@ -22,16 +23,34 @@ const medalColors = ["var(--text-warning)", "var(--text-accent)", "var(--text-wa
 const INDIV_COLS = "grid-cols-[40px_1fr_auto] gap-3 sm:grid-cols-[56px_1fr_100px_130px] sm:gap-4";
 const TEAM_COLS = "grid-cols-[40px_1fr_auto] gap-3 sm:grid-cols-[56px_1fr_100px_120px_100px] sm:gap-4";
 
+// Gold halo behind the #1 podium card (sanctioned color-mix — the amber glow
+// rings the medallion seat rather than washing the whole card).
+const GOLD_HALO: CSSProperties = {
+  borderColor: "color-mix(in srgb, var(--accent-gold) 35%, var(--border-default))",
+  boxShadow:
+    "var(--shadow-lift), 0 0 0 2px color-mix(in srgb, var(--accent-gold) 22%, transparent), 0 0 36px color-mix(in srgb, var(--accent-gold) 16%, transparent)"
+};
+
+// Mobile podium ordering: cards render in DOM order 2-1-3 (desktop staircase),
+// but stacked phones should read 1-2-3 top-down. Desktop resets to source
+// order so the staircase (and the gold card's -mt lift) is preserved.
+const PODIUM_ORDER: Record<number, string> = {
+  1: "order-1 sm:order-none",
+  2: "order-2 sm:order-none",
+  3: "order-3"
+};
+
 // Shared top-3 podium card. Individual and team leaderboards render the same
-// medal-bordered shell — only the body (avatar vs. team emoji + name line) and
+// medal-stamped shell — only the body (avatar vs. team crest + name line) and
 // the wrapper element (Link vs. div) differ, so those are passed in. Collapses
-// two near-identical ~30-line cards into one.
+// two near-identical cards into one.
 function PodiumCard({
   rank,
   xp,
   as: Tag = "div",
   href,
   hover = false,
+  className = "",
   children
 }: {
   rank: number;
@@ -39,24 +58,22 @@ function PodiumCard({
   as?: ElementType;
   href?: string;
   hover?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   const isGold = rank === 1;
   return (
     <Tag
       {...(href ? { href } : {})}
-      className={`flex flex-col items-center gap-3 rounded-[20px] border p-5 text-center transition ${isGold ? "sm:-mt-3 sm:pb-7 sm:pt-7" : ""} ${hover ? "hover:-translate-y-0.5" : ""}`}
-      style={{
-        borderColor: isGold ? "var(--text-warning)" : "var(--border-default)",
-        background: "var(--bg-panel)",
-        boxShadow: isGold ? "var(--shadow-lift), 0 0 0 2px color-mix(in srgb, var(--text-warning) 18%, transparent)" : "var(--shadow-card)"
-      }}
+      className={`relative flex flex-col items-center gap-3 rounded-[1.25rem] border bg-surface p-5 text-center transition ${isGold ? "shadow-elev-2 sm:-mt-3 sm:pb-7 sm:pt-7" : "border-line shadow-elev-1"} ${hover ? "hover:-translate-y-0.5" : ""} ${className}`}
+      style={isGold ? GOLD_HALO : undefined}
     >
-      <span className="font-serif text-3xl font-extrabold" style={{ color: medalColors[rank - 1] }}>
-        {medalLabel[rank - 1]}
-      </span>
+      <RankMedallion rank={rank} size="podium" />
       {children}
-      <p className="font-serif text-xl font-extrabold" style={{ color: medalColors[rank - 1] }}>
+      <p
+        className="font-serif text-xl font-extrabold"
+        style={{ color: isGold ? "var(--accent-gold-text)" : "var(--text-accent)" }}
+      >
         {xp.toLocaleString()} XP
       </p>
     </Tag>
@@ -85,6 +102,9 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
   const sorted = [...users].sort((a, b) => b.xp - a.xp);
   const podium = [sorted[1], sorted[0], sorted[2]];
   const podiumRank = [2, 1, 3];
+  // Spec keeps your row highlighted rather than pinned; when you sit outside
+  // the visible top-3, this chip scrolls to your row below.
+  const myRank = currentUserId ? sorted.findIndex((p) => p.id === currentUserId) + 1 : 0;
 
   if (sorted.length === 0) {
     return (
@@ -96,6 +116,15 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
 
   return (
     <>
+      {myRank > 3 && (
+        <a
+          href="#your-row"
+          className="w-fit rounded-full transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+        >
+          <Pill active>You&rsquo;re #{myRank}</Pill>
+        </a>
+      )}
+
       {/* Podium */}
       {sorted.length >= 1 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -103,14 +132,23 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
             if (!player) return <div key={index} />;
             const rank = podiumRank[index];
             return (
-              <PodiumCard key={player.id} as={Link} href={`/profile/${player.id}`} hover rank={rank} xp={player.xp}>
-                <Avatar name={player.displayName} src={player.profileImage} size={64} className="shadow-sm" />
+              <PodiumCard key={player.id} as={Link} href={`/profile/${player.id}`} hover rank={rank} xp={player.xp} className={PODIUM_ORDER[rank]}>
+                <div className="relative">
+                  <Avatar name={player.displayName} src={player.profileImage} size={72} className="shadow-sm" />
+                  {rank === 1 && (
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -inset-2 rounded-full"
+                      style={{ background: "color-mix(in srgb, var(--accent-gold) 14%, transparent)" }}
+                    />
+                  )}
+                </div>
                 <div>
-                  <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "var(--text-primary)" }}>
+                  <p className="font-serif text-lg font-extrabold leading-snug text-ink">
                     {player.displayName}
                   </p>
-                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
-                    Lvl {player.level}
+                  <p className="text-xs font-semibold text-ink-muted">
+                    Lv {player.level}
                   </p>
                 </div>
               </PodiumCard>
@@ -128,51 +166,62 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
       >
         <div className="-mx-5 -my-5 overflow-x-auto sm:-mx-6 sm:-my-6">
           <div className="sm:min-w-[580px]">
-            <div className={`grid ${INDIV_COLS} border-b px-5 py-3`} style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>#</span>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Player</span>
-              <span className="hidden text-right text-[10px] font-extrabold uppercase tracking-[0.16em] sm:block" style={{ color: "var(--text-muted)" }}>Level</span>
-              <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>XP</span>
+            <div className={`grid ${INDIV_COLS} border-b border-line-soft bg-surface-alt px-5 py-3`}>
+              <span className="text-micro font-semibold text-ink-muted">Rank</span>
+              <span className="text-micro font-semibold text-ink-muted">Player</span>
+              <span className="hidden text-right text-micro font-semibold text-ink-muted sm:block">Level</span>
+              <span className="text-right text-micro font-semibold text-ink-muted">XP</span>
             </div>
 
             {sorted.map((player, index) => {
               const rank = index + 1;
               const isCurrentUser = currentUserId && player.id === currentUserId;
-              const isTop3 = rank <= 3;
               return (
                 <Link
                   key={player.id}
+                  id={isCurrentUser ? "your-row" : undefined}
                   href={`/profile/${player.id}`}
-                  className={`grid ${INDIV_COLS} items-center border-b px-5 py-4 last:border-0 transition hover:opacity-80`}
-                  style={{
-                    borderColor: "var(--border-subtle)",
-                    background: isCurrentUser ? "var(--sidebar-active-bg)" : "var(--bg-panel)"
-                  }}
+                  className={`grid ${INDIV_COLS} items-center border-b border-line-soft px-5 py-4 last:border-0 transition hover:bg-surface-alt ${isCurrentUser ? "scroll-mt-24" : ""}`}
+                  style={
+                    isCurrentUser
+                      ? {
+                          background: "color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel))",
+                          boxShadow: "inset 3px 0 0 var(--text-accent)"
+                        }
+                      : undefined
+                  }
                 >
-                  <div
-                    className="text-center font-serif text-xl font-extrabold"
-                    style={{ color: isTop3 ? medalColors[rank - 1] : "var(--text-muted)" }}
-                  >
-                    {rank}
-                  </div>
+                  <RankMedallion rank={rank} />
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar name={player.displayName} src={player.profileImage} size={44} />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
-                        {player.displayName}
-                        {isCurrentUser ? " (You)" : ""}
+                      <p className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm font-extrabold text-ink">{player.displayName}</span>
+                        {isCurrentUser && (
+                          <span
+                            className="shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem] font-bold leading-none"
+                            style={{
+                              background: "color-mix(in srgb, var(--text-accent) 14%, var(--bg-panel))",
+                              color: "var(--text-accent)"
+                            }}
+                          >
+                            You
+                          </span>
+                        )}
                       </p>
-                      <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Lvl {player.level}</p>
+                      {/* Level lives in the Level column at sm+; this line shows
+                          the other tracked stat so it isn't a duplicate. */}
+                      <p className="text-xs font-semibold text-ink-muted">{(player.ecoPoints || 0).toLocaleString()} Eco</p>
                     </div>
                   </div>
                   <div className="hidden text-right sm:block">
                     <Pill>Lv {player.level}</Pill>
                   </div>
                   <div className="text-right">
-                    <p className="font-serif text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>
+                    <p className="font-serif text-lg font-extrabold text-ink">
                       {player.xp.toLocaleString()}
                     </p>
-                    <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>XP</p>
+                    <p className="text-micro text-ink-muted">XP</p>
                   </div>
                 </Link>
               );
@@ -190,7 +239,6 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
       <Panel>
         <EmptyState
           variant="plain"
-          icon="🌿"
           title="No teams yet."
           description="Create or join a team to compete here."
         />
@@ -211,13 +259,24 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
             if (!team) return <div key={index} />;
             const rank = teamPodiumRank[index];
             return (
-              <PodiumCard key={team.id} rank={rank} xp={team.totalXP}>
-                <span className="text-4xl" aria-hidden>🌿</span>
+              <PodiumCard key={team.id} rank={rank} xp={team.totalXP} className={PODIUM_ORDER[rank]}>
+                {/* Team crest roundel on the podium seat */}
+                <span
+                  className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-[1.25rem]"
+                  style={{
+                    background: "color-mix(in srgb, var(--accent-green) 14%, var(--bg-panel))",
+                    border: "1px solid color-mix(in srgb, var(--accent-green) 30%, var(--border-default))",
+                    color: "var(--accent-green-text)"
+                  }}
+                  aria-hidden="true"
+                >
+                  <Users className="h-7 w-7" strokeWidth={2.2} />
+                </span>
                 <div>
-                  <p className="font-serif text-lg font-extrabold leading-snug" style={{ color: "var(--text-primary)" }}>
+                  <p className="font-serif text-lg font-extrabold leading-snug text-ink">
                     {team.name}
                   </p>
-                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                  <p className="text-xs font-semibold text-ink-muted">
                     {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
                   </p>
                 </div>
@@ -229,52 +288,46 @@ function TeamLeaderboard({ teams }: { teams: Team[] }) {
 
       <Panel
         eyebrow="Team competition"
-        title="Team Rankings"
+        title="Team rankings"
         action={<Pill>{sorted.length} teams</Pill>}
         className="overflow-hidden"
       >
       <div className="-mx-5 -my-5 overflow-x-auto sm:-mx-6 sm:-my-6">
         <div className="sm:min-w-[600px]">
-          <div className={`grid ${TEAM_COLS} border-b px-5 py-3`} style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>#</span>
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Team</span>
-            <span className="hidden text-right text-[10px] font-extrabold uppercase tracking-[0.16em] sm:block" style={{ color: "var(--text-muted)" }}>Members</span>
-            <span className="hidden text-right text-[10px] font-extrabold uppercase tracking-[0.16em] sm:block" style={{ color: "var(--text-muted)" }}>Missions</span>
-            <span className="text-right text-[10px] font-extrabold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>Team XP</span>
+          <div className={`grid ${TEAM_COLS} border-b border-line-soft bg-surface-alt px-5 py-3`}>
+            <span className="text-micro font-semibold text-ink-muted">Rank</span>
+            <span className="text-micro font-semibold text-ink-muted">Team</span>
+            <span className="hidden text-right text-micro font-semibold text-ink-muted sm:block">Members</span>
+            <span className="hidden text-right text-micro font-semibold text-ink-muted sm:block">Missions</span>
+            <span className="text-right text-micro font-semibold text-ink-muted">Team XP</span>
           </div>
 
           {sorted.map((team, index) => {
             const rank = index + 1;
-            const isTop3 = rank <= 3;
+            // Team rows are display-only (not links) — no hover treatment.
             return (
               <div
                 key={team.id}
-                className={`grid ${TEAM_COLS} items-center border-b px-5 py-4 last:border-0 transition`}
-                style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel)" }}
+                className={`grid ${TEAM_COLS} items-center border-b border-line-soft px-5 py-4 last:border-0`}
               >
-                <div
-                  className="text-center font-serif text-xl font-extrabold"
-                  style={{ color: isTop3 ? medalColors[rank - 1] : "var(--text-muted)" }}
-                >
-                  {rank}
-                </div>
+                <RankMedallion rank={rank} />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{team.name}</p>
-                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                  <p className="truncate text-sm font-extrabold text-ink">{team.name}</p>
+                  <p className="text-xs font-semibold text-ink-muted">
                     {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
                   </p>
                 </div>
                 <div className="hidden text-right sm:block">
-                  <p className="text-sm font-extrabold" style={{ color: "var(--text-secondary)" }}>{team.memberCount}</p>
+                  <p className="text-sm font-extrabold text-ink-soft">{team.memberCount}</p>
                 </div>
                 <div className="hidden text-right sm:block">
-                  <p className="text-sm font-extrabold" style={{ color: "var(--text-secondary)" }}>{team.missionsCompleted}</p>
+                  <p className="text-sm font-extrabold text-ink-soft">{team.missionsCompleted}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-serif text-base font-extrabold" style={{ color: "var(--text-primary)" }}>
+                  <p className="font-serif text-base font-extrabold text-ink">
                     {team.totalXP.toLocaleString()}
                   </p>
-                  <p className="text-[10px] font-bold" style={{ color: "var(--text-muted)" }}>XP</p>
+                  <p className="text-micro text-ink-muted">XP</p>
                 </div>
               </div>
             );
@@ -343,39 +396,55 @@ export default function LeaderboardPage() {
   return (
     <StaggerContainer className="flex flex-col gap-5" as="div">
       <StaggerItem as="div">
-      <PageHero
-        eyebrow="Global rankings"
-        title="Leaderboard"
-        description="Top EcoLudus players and teams ranked by XP earned and missions completed."
-        accent={heroAccents.leaderboard}
-      />
+        <PageHeader
+          title="Leaderboard"
+          description="Top players and teams, ranked by XP earned and missions completed."
+        />
       </StaggerItem>
 
       {/* Tab selector */}
       <StaggerItem as="div">
-      <SegmentedControl
-        ariaLabel="Leaderboard view"
-        value={tab}
-        onChange={(v) => setTab(v as "individual" | "team")}
-        options={[
-          { value: "individual", label: "👤 Individual" },
-          { value: "team", label: "🌿 Team" }
-        ]}
-      />
+        <SegmentedControl
+          ariaLabel="Leaderboard view"
+          value={tab}
+          onChange={(v) => setTab(v as "individual" | "team")}
+          options={[
+            {
+              value: "individual",
+              label: (
+                <span className="flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden="true" /> Players
+                </span>
+              )
+            },
+            {
+              value: "team",
+              label: (
+                <span className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden="true" /> Teams
+                </span>
+              )
+            }
+          ]}
+        />
       </StaggerItem>
 
       <StaggerItem as="div">
-      <TabPanel activeKey={isLoading ? "loading" : tab}>
-      {isLoading ? (
-        <Panel>
-          <RowListSkeleton rows={8} variant="row" />
-        </Panel>
-      ) : tab === "individual" ? (
-        <IndividualLeaderboard users={users} currentUserId={user?.uid} />
-      ) : (
-        <TeamLeaderboard teams={teams} />
-      )}
-      </TabPanel>
+        <TabPanel activeKey={isLoading ? "loading" : tab}>
+          {isLoading ? (
+            <Panel>
+              <RowListSkeleton rows={8} variant="row" />
+            </Panel>
+          ) : tab === "individual" ? (
+            <div className="flex flex-col gap-5">
+              <IndividualLeaderboard users={users} currentUserId={user?.uid} />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-5">
+              <TeamLeaderboard teams={teams} />
+            </div>
+          )}
+        </TabPanel>
       </StaggerItem>
     </StaggerContainer>
   );

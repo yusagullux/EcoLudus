@@ -3,10 +3,12 @@
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
+import { Egg } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { computeVitals, getBondTier, getMood } from "@/lib/pet-vitals";
-import { HeroMetric, PageHero, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
+import { PageHeader, Panel, Pill, ProgressBar, primaryButton, secondaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 import { PET_EMOJI } from "@/lib/ui-shared";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StaggerContainer, StaggerItem } from "@/lib/animations";
@@ -18,7 +20,7 @@ function getPetImage(pet: any) {
 
 // Pet card image. `fit="cover"` (default) fills the frame like the shop/collection
 // tiles for a uniform grid; `fit="contain"` letterboxes the whole creature and is
-// used for the showcase portrait where cropping the art would look wrong.
+// used for the habitat portrait where cropping the art would look wrong.
 function PetImage({
   pet,
   fit = "cover",
@@ -64,16 +66,102 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getPetMood(happiness: number, energy: number, bond: number) {
-  const score = Math.round((happiness + energy + bond) / 3);
-  if (score >= 85) return "Radiant";
-  if (score >= 65) return "Adventurous";
-  if (score >= 45) return "Content";
-  return "Needs care";
-}
-
 function getBondLevel(bond: number) {
   return Math.max(1, Math.min(10, Math.floor(bond / 10) + 1));
+}
+
+// Mood → habitat accent. Keys match `getMood()` labels so the backdrop tint is
+// driven straight from the drifted vitals, not hand-derived values.
+const MOOD_ACCENT: Record<string, string> = {
+  Ecstatic: "var(--accent-gold)",
+  Happy: "var(--accent-green)",
+  Neutral: "var(--accent-sage)",
+  Exhausted: "var(--accent-slate)",
+  Sad: "var(--accent-violet)"
+};
+
+// ── RingGauge (local) ──────────────────────────────────────────
+// Small SVG ring for the three vitals (Happiness/Energy/Bond): track = border
+// subtlety, sweep = a theme accent, center = font-serif percentage. Same
+// strokeDashoffset tween the kit's LevelProgressRing uses, honoring reduced
+// motion. Chosen instead of progress bars: three 56–64px rings sit in one row
+// even at 390px and read as "vitals at a glance", without a third wall of bars
+// on this page (the picker already uses bars).
+function RingGauge({
+  label,
+  value,
+  color,
+  size = 60
+}: {
+  label: string;
+  value: number;
+  color: string;
+  size?: number;
+}) {
+  const reduced = useReducedMotion();
+  const stroke = 5;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, Math.round(value)));
+  const targetOffset = circumference * (1 - clamped / 100);
+
+  return (
+    <div
+      className="inline-flex flex-col items-center"
+      role="img"
+      aria-label={`${label} ${clamped}%`}
+    >
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            strokeWidth={stroke}
+            style={{ stroke: "var(--border-subtle)" }}
+          />
+          {reduced ? (
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              style={{
+                stroke: color,
+                strokeDasharray: circumference,
+                strokeDashoffset: targetOffset
+              }}
+            />
+          ) : (
+            <motion.circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              style={{ stroke: color, strokeDasharray: circumference }}
+              initial={{ strokeDashoffset: circumference }}
+              animate={{ strokeDashoffset: targetOffset }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            />
+          )}
+        </svg>
+        <span
+          className="absolute inset-0 flex items-center justify-center font-serif font-bold leading-none text-ink"
+          style={{ fontSize: Math.max(12, Math.round(size * 0.26)) }}
+        >
+          {clamped}%
+        </span>
+      </div>
+      <span className="mt-1 text-center text-micro text-ink-muted">{label}</span>
+    </div>
+  );
 }
 
 // Apply time-based vitality drift (happiness decay / energy regen) to the
@@ -101,6 +189,9 @@ export default function PetsPage() {
   const toast = useToast();
   // Prevents concurrent care-action submissions (double-click / button spam).
   const isProcessing = useRef(false);
+  // Reflected copy of `isProcessing` so the UI can show disabled/loading states
+  // while a care request is in flight (the ref stays the hard re-entrancy guard).
+  const [busy, setBusy] = useState(false);
 
   const pets = useMemo(() => Array.isArray(profile?.animals) ? profile.animals.map(normalizePet) : [], [profile]);
 
@@ -152,6 +243,7 @@ export default function PetsPage() {
     if (!user?.uid || !profile || !selectedPet) return;
     if (isProcessing.current) return;
     isProcessing.current = true;
+    setBusy(true);
     try {
       emitHearts();
       const res = await fetch("/api/pets/care", {
@@ -179,6 +271,7 @@ export default function PetsPage() {
       await refreshProfile();
     } finally {
       isProcessing.current = false;
+      setBusy(false);
     }
   };
 
@@ -187,6 +280,7 @@ export default function PetsPage() {
     // Hard re-entrancy guard — prevents spamming before the async round-trip finishes.
     if (isProcessing.current) return;
     isProcessing.current = true;
+    setBusy(true);
 
     try {
       emitHearts();
@@ -213,18 +307,15 @@ export default function PetsPage() {
       toast.success(`${action.label}: +${action.xp} XP${ecoGained ? `, +${ecoGained} Eco` : ""}.`);
     } finally {
       isProcessing.current = false;
+      setBusy(false);
     }
   };
 
   const totalPets = pets.reduce((sum, pet) => sum + Number(pet.count ?? 1), 0);
-  const avgHappiness = pets.length
-    ? Math.round(pets.reduce((sum, pet) => sum + Number(pet.happiness ?? 50), 0) / pets.length)
-    : 0;
   const selectedHappiness = Number(selectedPet?.happiness ?? 50);
   const selectedEnergy = Number(selectedPet?.energy ?? 50);
   const selectedBond = Number(selectedPet?.bond ?? 10);
   const selectedPetsGiven = Number(selectedPet?.petsGiven ?? 0);
-  const selectedMood = getPetMood(selectedHappiness, selectedEnergy, selectedBond);
   // `selectedPet` is already drifted by `normalizePet`, so build the PetVitals
   // shape from the derived stats directly — re-running computeVitals would
   // apply a second round of decay/regen from the same anchor (double drift).
@@ -243,20 +334,27 @@ export default function PetsPage() {
   const ecoActionsToday = isNewCareDay ? 0 : careActionsToday;
   const ecoCapReached = ecoActionsToday >= MAX_ECO_ACTIONS_PER_DAY;
 
+  // Habitat backdrop tint — straight from the (already-drifted) vitals mood.
+  const moodAccent = MOOD_ACCENT[vitalsMood.label] ?? "var(--text-accent)";
+  // Rarity chip styling shared with the picker cards below.
+  const selectedRarityStyle =
+    rarityStyle[(selectedPet?.rarity as Rarity) ?? "common"] ?? rarityStyle.common;
+  // Mix a theme var into the panel color — the one sanctioned tint recipe.
+  const wash = (color: string, pct: number) =>
+    `color-mix(in srgb, ${color} ${pct}%, var(--bg-panel))`;
+  const tint = (color: string, pct: number) =>
+    `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+
   return (
     <StaggerContainer className="flex flex-col gap-5" as="div">
       <StaggerItem as="div">
-      <PageHero eyebrow="Companion care" title="Pets" description="Train, feed, and bond with companions to earn small daily rewards and make them stronger travel partners." accent={heroAccents.pets}>
-        <div className="flex flex-wrap gap-3">
-          <HeroMetric label="Pets" value={totalPets} />
-          <HeroMetric label="Happy" value={`${avgHappiness}%`} hint="Average happiness across all your companions." />
-          <HeroMetric
-            label="Bond"
-            value={selectedPet ? `Lv ${selectedBondLevel}` : "-"}
-            hint="Bond level grows as you train, feed, and spend time with a companion. Higher bond makes them stronger travel partners."
-          />
-        </div>
-      </PageHero>
+        <PageHeader
+          title="Your companions"
+          description="Train, feed, and bond with pets to earn small daily rewards and make them stronger travel partners."
+          action={selectedPet ? (
+            <Pill>{totalPets} companion{totalPets === 1 ? "" : "s"} raised</Pill>
+          ) : undefined}
+        />
       </StaggerItem>
 
       <StaggerItem as="div">
@@ -264,7 +362,7 @@ export default function PetsPage() {
         <Panel>
           <EmptyState
             variant="card"
-            icon="🥚"
+            icon={<Egg className="h-8 w-8" strokeWidth={2} aria-hidden="true" />}
             title="No companions yet"
             description="Hatch eggs from your collection to unlock pets, then train and feed them to grow your bond."
             action={<Link href="/collection" className={primaryButton}>Browse your eggs</Link>}
@@ -272,24 +370,40 @@ export default function PetsPage() {
         </Panel>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-          <Panel eyebrow="Active companion" title={selectedPet.name} action={
-            <div className="flex gap-2">
-              <Pill active>{selectedPet.rarity || "common"}</Pill>
-              <Pill>{vitalsMood.emoji} {vitalsMood.label}</Pill>
+          {/* ── Habitat scene ──────────────────────────────────── */}
+          <section className="rounded-card shadow-elev-1 border border-line p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-bold leading-tight text-accent">Active companion</p>
+                <h2 className="mt-0.5 truncate font-serif text-lg font-bold leading-tight text-ink">
+                  {selectedPet.name}
+                </h2>
+              </div>
+              <div className="flex gap-2">
+                <span className={`rounded-full px-2 py-0.5 text-micro ${selectedRarityStyle.chip}`}>
+                  {selectedPet.rarity || "common"}
+                </span>
+                <Pill>{vitalsMood.emoji} {vitalsMood.label}</Pill>
+              </div>
             </div>
-          }>
-            <div className="flex flex-col items-center gap-4 text-center">
+
+            <div className="mt-4 flex flex-col items-center gap-4 text-center">
+              {/* Tap-to-pet habitat: mood-tinted sky + ground glow over the
+                  panel-alt base, rarity ring as the frame. Kept heart-burst
+                  particle animation and its --dx/--dy CSS vars untouched. */}
               <button
                 type="button"
                 onClick={petTheAnimal}
+                disabled={busy}
+                aria-busy={busy}
                 aria-label={`Pet ${selectedPet.name}`}
-                className="relative flex aspect-square w-full max-w-[280px] items-center justify-center overflow-hidden rounded-[24px] border transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                className="relative flex aspect-[5/4] w-full max-w-[380px] items-center justify-center overflow-hidden rounded-dialog border-2 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 disabled:hover:scale-[1]"
                 style={{
                   borderColor: rarityBorder[selectedPet.rarity as Rarity] ?? "var(--border-default)",
-                  background: `radial-gradient(circle at 50% 35%, color-mix(in srgb, ${rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "var(--text-accent)"} 13%, transparent), transparent 58%), var(--bg-panel-alt)`
+                  background: `radial-gradient(circle at 50% 30%, ${tint(moodAccent, 16)}, transparent 62%), radial-gradient(85% 45% at 50% 108%, ${tint(moodAccent, 10)}, transparent 70%), var(--bg-panel-alt)`
                 }}
               >
-                <PetImage pet={selectedPet} fit="contain" sizes="(max-width: 640px) 80vw, 280px" />
+                <PetImage pet={selectedPet} fit="contain" sizes="(max-width: 640px) 85vw, 320px" />
                 {hearts.map((heart) => (
                   <span
                     key={heart.id}
@@ -300,27 +414,18 @@ export default function PetsPage() {
                   </span>
                 ))}
               </button>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: "var(--text-muted)" }}>
+              <p className="text-micro text-ink-muted">
                 Tap portrait to pet · free · +2 XP
               </p>
 
-              <div className="flex w-full max-w-[360px] flex-col gap-2.5">
-                {[
-                  { label: "Happiness", value: selectedHappiness, color: rarityStyle[selectedPet.rarity as Rarity]?.accent ?? "var(--text-accent)" },
-                  { label: "Energy", value: selectedEnergy, color: "var(--text-accent)" },
-                  { label: "Bond", value: selectedBond, color: "var(--text-warning)" }
-                ].map((stat) => (
-                  <div key={stat.label}>
-                    <div className="mb-2 flex items-center justify-between text-xs font-bold" style={{ color: "var(--text-muted)" }}>
-                      <span>{stat.label}</span>
-                      <span>{stat.value}%</span>
-                    </div>
-                    <ProgressBar value={stat.value} color={stat.color} />
-                  </div>
-                ))}
+              {/* Vitals as three small ring gauges (Happiness/Energy/Bond). */}
+              <div className="flex w-full max-w-[380px] items-start justify-between gap-2 sm:justify-center sm:gap-6">
+                <RingGauge label="Happiness" value={selectedHappiness} color="var(--accent-green)" />
+                <RingGauge label="Energy" value={selectedEnergy} color="var(--accent-blue)" />
+                <RingGauge label="Bond" value={selectedBond} color="var(--accent-gold)" />
               </div>
 
-              <div className="grid w-full max-w-[360px] gap-3 sm:grid-cols-3">
+              <div className="grid w-full max-w-[420px] gap-3 sm:grid-cols-3">
                 {CARE_ACTIONS.map((action) => {
                   // `train` is server-rejected when energy < 10 — disable it
                   // upfront so the user isn't told via a toast after clicking.
@@ -334,8 +439,9 @@ export default function PetsPage() {
                       key={action.id}
                       type="button"
                       onClick={() => runCareAction(action)}
-                      disabled={blocked}
-                      className={`${primaryButton} disabled:opacity-50 disabled:cursor-not-allowed`}
+                      disabled={busy || blocked}
+                      aria-busy={busy}
+                      className={`${primaryButton} w-full disabled:opacity-50 disabled:cursor-not-allowed`}
                       title={blocked ? blockTitle : undefined}
                     >
                       {action.label}
@@ -348,7 +454,7 @@ export default function PetsPage() {
               </div>
 
               {ecoCapReached && (
-                <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                <p className="text-xs font-semibold text-ink-muted">
                   Daily eco reward limit reached ({MAX_ECO_ACTIONS_PER_DAY}/{MAX_ECO_ACTIONS_PER_DAY}). Resets tomorrow.
                 </p>
               )}
@@ -358,44 +464,55 @@ export default function PetsPage() {
                   {selectedPet.active || activePetId === selectedPet.id ? "Active Pet" : "Make Active"}
                 </button>
               </div>
-
-              <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
-                {ecoActionsToday}/{MAX_ECO_ACTIONS_PER_DAY} eco actions today. Lifetime care: {selectedPetsGiven.toLocaleString()}.
-              </p>
             </div>
-          </Panel>
+          </section>
 
-          <Panel eyebrow="Companion stats" title="Care Notes">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{bondTier.emoji}</span>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>Bond Status</p>
-                    <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{bondTier.label}</p>
-                  </div>
+          {/* ── Care notes ─────────────────────────────────────── */}
+          <Panel eyebrow="Companion" title="Care notes">
+            <div className="flex flex-col gap-4">
+              {/* Bond tier — the hero row of the card. */}
+              <div
+                className="flex items-center justify-between rounded-card border border-line-soft p-4"
+                style={{
+                  background: bondTier.label === "Soulmate" ? wash("var(--accent-gold)", 12) : wash("var(--accent-sage)", 10)
+                }}
+              >
+                <div>
+                  <p className="text-micro text-ink-muted">Bond tier</p>
+                  <p className="text-sm font-bold text-ink">{bondTier.label}</p>
                 </div>
                 <Pill active>{selectedBond}%</Pill>
               </div>
-              <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Mood</p>
-                <p className="mt-1 font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  {selectedMood}
+
+              {/* One expressive line: the mood as the headline, with bond level
+                  and care streak as supporting facts (no uniform sub-card wall). */}
+              <div className="rounded-card border border-line bg-surface-alt p-4">
+                <p className="text-micro text-ink-muted">Mood</p>
+                <p className="mt-1 font-serif text-2xl font-bold text-ink">
+                  {vitalsMood.label}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-semibold text-ink-muted">
+                  <span>Bond level {selectedBondLevel}</span>
+                  <span
+                    aria-hidden="true"
+                    className="h-1 w-1 rounded-full"
+                    style={{ background: "var(--border-default)" }}
+                  />
+                  <span>
+                    Care streak {Number(selectedPet.careStreak ?? 0)} day{Number(selectedPet.careStreak ?? 0) === 1 ? "" : "s"}
+                  </span>
+                </div>
               </div>
-              <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Bond Level</p>
-                <p className="mt-1 font-serif text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  Level {selectedBondLevel}
+
+              {/* Footer meta — the quiet facts, one small sentence pair. */}
+              <div className="border-t border-line-soft pt-3">
+                <p className="text-xs font-semibold text-ink">
+                  {selectedPet.lastPettedAt
+                    ? `Last petted ${new Date(selectedPet.lastPettedAt).toLocaleString()}`
+                    : "Not petted yet"}
                 </p>
-                <p className="mt-1 text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
-                  Care streak {Number(selectedPet.careStreak ?? 0)} day{Number(selectedPet.careStreak ?? 0) === 1 ? "" : "s"}
-                </p>
-              </div>
-              <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--text-muted)" }}>Last petted</p>
-                <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  {selectedPet.lastPettedAt ? new Date(selectedPet.lastPettedAt).toLocaleString() : "Not yet"}
+                <p className="mt-0.5 text-micro text-ink-muted">
+                  {ecoActionsToday} of {MAX_ECO_ACTIONS_PER_DAY} eco actions today. Lifetime care: {selectedPetsGiven.toLocaleString()}.
                 </p>
               </div>
             </div>
@@ -406,7 +523,7 @@ export default function PetsPage() {
 
       {pets.length > 0 && (
         <StaggerItem as="section">
-          <Panel eyebrow="Inventory" title="Choose a Pet">
+          <Panel eyebrow="Your menagerie" title="Choose a pet">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
               {pets.map((pet) => {
                 const isSelected = selectedPet?.id === pet.id;
@@ -419,20 +536,19 @@ export default function PetsPage() {
                     key={pet.id}
                     type="button"
                     onClick={() => setSelectedId(pet.id)}
-                    className="reveal-card group overflow-hidden rounded-[20px] border text-left transition duration-300 hover:-translate-y-1"
+                    className="reveal-card group t-card-hover overflow-hidden rounded-card border bg-card text-left active:scale-[0.98]"
                     style={{
                       borderColor: border,
-                      background: "var(--bg-card)",
                       ...(isSelected ? { boxShadow: `0 10px 28px color-mix(in srgb, ${accent} 20%, transparent)` } : {})
                     }}
                   >
                     <span className="relative block aspect-square overflow-hidden" style={{ background: `color-mix(in srgb, ${accent} 12%, var(--bg-card))` }}>
                       <PetImage pet={pet} fit="cover" />
                       {isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
-                      <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${style.chip}`}>{pet.rarity}</span>
+                      <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-micro ${style.chip}`}>{pet.rarity}</span>
                     </span>
                     <span className="block p-3">
-                      <span className="block truncate font-serif text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{pet.name}</span>
+                      <span className="block truncate font-serif text-sm font-extrabold text-ink">{pet.name}</span>
                       <span className="mt-2 block">
                         <ProgressBar value={Number(pet.happiness ?? 50)} color={accent} />
                       </span>

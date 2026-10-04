@@ -4,151 +4,102 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import {
+  ClipboardCheck,
+  LayoutGrid,
+  LogOut,
+  Menu,
+  Package,
+  PawPrint,
+  Settings as SettingsIcon,
+  ShoppingBag,
+  Sprout,
+  TrendingUp,
+  UserRound,
+  CircleUserRound,
+  Users,
+  UsersRound,
+  X as XIcon
+} from "lucide-react";
 import { logOut } from "@/lib/auth-client";
 import { Avatar } from "@/components/avatar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NotificationBell } from "@/components/notification-bell";
+import type { CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
 
 type SidebarProps = { user: any; profile: any };
 
-type NavItem = { name: string; href: string; icon: React.ReactNode };
+type NavItem = { name: string; href: string; icon: LucideIcon };
 type NavGroup = { label: string; items: NavItem[] };
+
+// Shared sizing for every nav icon — colour comes from the wrapping span
+// (active accent mix vs muted sidebar tokens).
+const navIcon = (Icon: LucideIcon) => <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />;
+
+// Friendlier active state: a filled rounded tile tinted with the category
+// accent, inked with a lime-warmed sidebar text. The nav surface is the
+// always-dark `--bg-sidebar` ink in every theme, so this one recipe reads in
+// all six palettes (accent fills are theme-independent and never shift hue).
+const ACTIVE_STYLE: CSSProperties = {
+  background: "color-mix(in srgb, var(--accent-green) 32%, var(--bg-sidebar))",
+  color: "color-mix(in srgb, var(--accent-lime) 70%, var(--text-sidebar))"
+};
+const activeInk = (isActive: boolean): string =>
+  isActive
+    ? "color-mix(in srgb, var(--accent-lime) 70%, var(--text-sidebar))"
+    : "var(--text-sidebar-muted)";
 
 const navGroups: NavGroup[] = [
   {
     label: "Overview",
     items: [
-      {
-        name: "Dashboard",
-        href: "/dashboard",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-          </svg>
-        )
-      },
-      {
-        name: "Insights",
-        href: "/insights",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a3 3 0 013-3h4V6m4 12v-4m-4 4V9m8 9V4" />
-          </svg>
-        )
-      },
-      {
-        name: "Leaderboard",
-        href: "/leaderboard",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 21V10M12 21V4M16 21v-7" />
-          </svg>
-        )
-      }
+      { name: "Home", href: "/dashboard", icon: LayoutGrid },
+      { name: "Insights", href: "/insights", icon: TrendingUp },
+      { name: "Leaderboard", href: "/leaderboard", icon: Users }
     ]
   },
   {
     label: "Play",
     items: [
-      {
-        name: "Habits",
-        href: "/habits",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-        )
-      },
-      {
-        name: "Team",
-        href: "/team",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87M12 12a4 4 0 100-8 4 4 0 000 8zm6 8v-2a4 4 0 00-3-3.87" />
-          </svg>
-        )
-      },
+      { name: "Habits", href: "/habits", icon: ClipboardCheck },
+      { name: "Team", href: "/team", icon: UsersRound }
     ]
   },
   {
     label: "Collection",
     items: [
-      {
-        name: "Shop",
-        href: "/shop",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
-        )
-      },
-      {
-        name: "Collection",
-        href: "/collection",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-          </svg>
-        )
-      },
-      {
-        name: "Pets",
-        href: "/pets",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M7 12.5c-1.2 0-2-1-2-2.2S5.8 8 7 8s2 1 2 2.3-.8 2.2-2 2.2Zm10 0c-1.2 0-2-1-2-2.2S15.8 8 17 8s2 1 2 2.3-.8 2.2-2 2.2ZM9.5 17.5c0-1.9 1.2-3.5 2.5-3.5s2.5 1.6 2.5 3.5c0 1.1-.8 1.8-2.5 1.8s-2.5-.7-2.5-1.8ZM9 5.5c0 1.1-.7 2-1.6 2s-1.6-.9-1.6-2 .7-2 1.6-2S9 4.4 9 5.5Zm9.2 0c0 1.1-.7 2-1.6 2s-1.6-.9-1.6-2 .7-2 1.6-2 1.6.9 1.6 2Z" />
-          </svg>
-        )
-      },
-      {
-        name: "Garden",
-        href: "/garden",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 22V12m0 0C12 7 8 4 4 5c0 4 3 7 8 7zm0 0c0-5 4-8 8-7-1 4-4 7-8 7z" />
-          </svg>
-        )
-      }
+      { name: "Shop", href: "/shop", icon: ShoppingBag },
+      { name: "Collection", href: "/collection", icon: Package },
+      { name: "Pets", href: "/pets", icon: PawPrint },
+      { name: "Garden", href: "/garden", icon: Sprout }
     ]
   },
   {
     label: "Social",
     items: [
-      {
-        name: "Friends",
-        href: "/friends",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 11a3 3 0 100-6 3 3 0 000 6Zm8 0a3 3 0 100-6 3 3 0 000 6ZM3.5 20a4.5 4.5 0 019 0M11.5 20a4.5 4.5 0 019 0" />
-          </svg>
-        )
-      },
-      {
-        name: "Profile",
-        href: "/profile",
-        icon: (
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        )
-      }
+      { name: "Friends", href: "/friends", icon: UserRound },
+      { name: "Profile", href: "/profile", icon: CircleUserRound }
     ]
   }
 ];
 
 const bottomItems: NavItem[] = [
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: (
-      <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    )
-  }
+  { name: "Settings", href: "/settings", icon: SettingsIcon }
 ];
+
+// fg-botlabel-style micro tag for group labels (0.625rem / 700 / uppercase /
+// wide tracking) — a quieter voice than the 0.8125rem links, per theme.
+function GroupLabel({ children }: { children: string }) {
+  return (
+    <p
+      className="px-3 pb-1.5 pt-3 text-[0.625rem] font-bold uppercase leading-none tracking-[0.14em]"
+      style={{ color: "var(--text-sidebar-muted)" }}
+    >
+      {children}
+    </p>
+  );
+}
 
 function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
   pathname: string;
@@ -165,48 +116,78 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* ── Logo + notification bell ── */}
+      {/* ── Logo lockup + notification bell ── */}
       <div className="flex items-center justify-between px-5 py-5 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-xl bg-white/10">
-            <Image src="/images/logo.png" alt="EcoLudus" fill className="object-cover" priority sizes="32px" />
+          {/* Growth-ring collar on the mark */}
+          <div
+            className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl"
+            style={{ boxShadow: "0 0 0 1.5px color-mix(in srgb, var(--accent-lime) 45%, transparent)" }}
+          >
+            <Image src="/images/logo.png" alt="EcoLudus" fill className="object-cover" priority sizes="36px" />
           </div>
           <div>
             <div className="font-serif text-[15px] font-extrabold leading-none tracking-wide" style={{ color: "var(--text-sidebar)" }}>EcoLudus</div>
-            <div className="mt-0.5 text-[8px] font-black uppercase tracking-[0.28em]" style={{ color: "var(--text-sidebar-muted)" }}>Forest Edition</div>
+            <div className="mt-1 text-[0.625rem] font-bold leading-none" style={{ color: "var(--text-sidebar-muted)" }}>Living garden</div>
           </div>
         </div>
-        <NotificationBell />
+        {/* The mobile top bar carries its own bell — skip it in the drawer
+            so the open drawer doesn't show two bells at once. */}
+        <div className="hidden md:block">
+          <NotificationBell />
+        </div>
       </div>
 
-      {/* ── User chip ── */}
+      {/* ── User chip — small card with the level-ring look ── */}
       {profile && (
         <div className="mx-3 mb-4 shrink-0">
-          <div className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: "var(--sidebar-active-bg)" }}>
-            <Avatar name={displayName} src={profileImage} size={28} className="shrink-0" style={{ boxShadow: "0 0 0 2px color-mix(in srgb, var(--text-sidebar) 10%, transparent)" }} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-bold leading-tight" style={{ color: "var(--text-sidebar)" }} title={displayName}>{displayName}</p>
-              <p className="mt-0.5 text-[9px]" style={{ color: "var(--text-sidebar-muted)" }}>Lv {level} · {xp.toLocaleString()} XP</p>
+          <div
+            className="rounded-xl px-3 py-3"
+            style={{
+              background: "color-mix(in srgb, var(--accent-green) 16%, var(--bg-sidebar))",
+              boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--accent-lime) 30%, transparent)"
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <Avatar
+                name={displayName}
+                src={profileImage}
+                size={34}
+                className="shrink-0"
+                style={{ boxShadow: "0 0 0 2px var(--bg-sidebar), 0 0 0 3.5px color-mix(in srgb, var(--accent-lime) 55%, transparent)" }}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[12px] font-extrabold leading-tight" style={{ color: "var(--text-sidebar)" }} title={displayName}>{displayName}</p>
+                <p className="mt-0.5 truncate text-[11px] font-semibold leading-tight" style={{ color: "var(--text-sidebar-muted)" }}>
+                  Lv {level} · {xp.toLocaleString()} XP
+                </p>
+              </div>
+            </div>
+            {/* EcoPoints quick stat, folded into the card */}
+            <div
+              className="mt-2.5 flex items-center justify-between pt-2.5"
+              style={{ borderTop: "1px dashed color-mix(in srgb, var(--text-sidebar) 14%, transparent)" }}
+            >
+              <span className="text-[0.625rem] font-bold uppercase leading-none tracking-[0.14em]" style={{ color: "var(--text-sidebar-muted)" }}>EcoPoints</span>
+              <span className="text-[12px] font-extrabold" style={{ color: "var(--text-sidebar)" }}>{ecoPoints.toLocaleString()}</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="mx-4 mb-3 h-px shrink-0" style={{ background: "color-mix(in srgb, var(--text-sidebar) 6%, transparent)" }} />
+      {!profile && <div className="mx-4 mb-3 h-px shrink-0" style={{ background: "color-mix(in srgb, var(--text-sidebar) 6%, transparent)" }} />}
 
       {/* ── Main nav ── */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-2" aria-label="Main navigation">
         {navGroups.map((group) => (
           <div key={group.label} className="mb-1">
-            <p
-              className="px-3 pb-1.5 pt-2 text-[8.5px] font-black uppercase tracking-[0.22em]"
-              style={{ color: "var(--text-sidebar-muted)" }}
-            >
-              {group.label}
-            </p>
+            <GroupLabel>{group.label}</GroupLabel>
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => {
-                const isActive = pathname === item.href;
+                // Same two-step match as the bottom nav so sub-routes keep
+                // the parent link highlighted in both shells.
+                const isActive =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <Link
                     key={item.href}
@@ -214,9 +195,10 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
                     onClick={onNavigate}
                     className={`t-sidebar-link${isActive ? " active" : ""}`}
                     aria-current={isActive ? "page" : undefined}
+                    style={isActive ? ACTIVE_STYLE : undefined}
                   >
-                    <span className="shrink-0" style={{ color: isActive ? "var(--text-sidebar)" : "var(--text-sidebar-muted)" }}>
-                      {item.icon}
+                    <span className="shrink-0" style={{ color: activeInk(isActive) }}>
+                      {navIcon(item.icon)}
                     </span>
                     <span className="flex-1 truncate">{item.name}</span>
                     {item.name === "Friends" && (
@@ -225,7 +207,7 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
                           ? profile.friendRequests.length
                           : 0;
                         return requestsCount > 0 ? (
-                          <span className="rounded-full px-1.5 py-0.5 text-[8.5px] font-black leading-none shrink-0" style={{ background: "var(--text-accent)", color: "var(--text-inverse)" }}>
+                          <span className="rounded-full px-1.5 py-0.5 text-micro leading-none shrink-0" style={{ background: "var(--text-accent)", color: "var(--text-inverse)" }}>
                             {requestsCount}
                           </span>
                         ) : null;
@@ -241,15 +223,9 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
 
       {/* ── Bottom section ── */}
       <div className="shrink-0 px-3 pb-4 pt-2" style={{ borderTop: "1px solid color-mix(in srgb, var(--text-sidebar) 6%, transparent)" }}>
-        {/* EcoPoints quick stat */}
-        {profile && (
-          <div className="mb-2 flex items-center justify-between rounded-xl px-3 py-2" style={{ background: "color-mix(in srgb, var(--text-sidebar) 4%, transparent)" }}>
-            <span className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--text-sidebar-muted)" }}>EcoPoints</span>
-            <span className="text-[12px] font-extrabold" style={{ color: "var(--text-sidebar)" }}>{ecoPoints.toLocaleString()}</span>
-          </div>
-        )}
         {bottomItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}
@@ -257,9 +233,10 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
               onClick={onNavigate}
               className={`t-sidebar-link${isActive ? " active" : ""}`}
               aria-current={isActive ? "page" : undefined}
+              style={isActive ? ACTIVE_STYLE : undefined}
             >
-              <span className="shrink-0" style={{ color: isActive ? "var(--text-sidebar)" : "var(--text-sidebar-muted)" }}>
-                {item.icon}
+              <span className="shrink-0" style={{ color: activeInk(isActive) }}>
+                {navIcon(item.icon)}
               </span>
               <span className="truncate">{item.name}</span>
             </Link>
@@ -271,9 +248,7 @@ function SidebarContent({ pathname, onNavigate, user, profile, onLogout }: {
           className="t-sidebar-link w-full text-left mt-0.5"
           style={{ color: "color-mix(in srgb, var(--text-error) 65%, transparent)" }}
         >
-          <svg className="h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
+          {navIcon(LogOut)}
           <span className="truncate">Sign Out</span>
         </button>
       </div>
@@ -365,30 +340,37 @@ export function Sidebar({ user, profile }: SidebarProps) {
         />
       </aside>
 
-      {/* ── Mobile top bar ── */}
+      {/* ── Mobile top bar (exactly 56px so the layout's pt-14 clears it) ── */}
       <header
-        className="md:hidden fixed left-0 right-0 top-0 z-40 flex items-center justify-between px-4 py-3 t-sidebar"
+        className="md:hidden fixed left-0 right-0 top-0 z-40 flex h-14 items-center justify-between px-4 t-sidebar"
         style={{ borderBottom: "1px solid color-mix(in srgb, var(--text-sidebar) 6%, transparent)" }}
       >
         <Link href="/dashboard" className="flex min-h-11 items-center gap-2.5">
-          <div className="relative h-8 w-8 overflow-hidden rounded-xl" style={{ background: "color-mix(in srgb, var(--text-sidebar) 10%, transparent)" }}>
+          <div
+            className="relative h-8 w-8 overflow-hidden rounded-xl"
+            style={{
+              background: "color-mix(in srgb, var(--text-sidebar) 10%, transparent)",
+              boxShadow: "0 0 0 1.5px color-mix(in srgb, var(--accent-lime) 40%, transparent)"
+            }}
+          >
             <Image src="/images/logo.png" alt="EcoLudus" fill className="object-cover" sizes="32px" />
           </div>
-          <div>
-            <span className="font-serif text-[15px] font-extrabold leading-none" style={{ color: "var(--text-sidebar)" }}>EcoLudus</span>
-          </div>
+          <span className="font-serif text-[15px] font-extrabold leading-none" style={{ color: "var(--text-sidebar)" }}>EcoLudus</span>
         </Link>
 
         <div className="flex items-center gap-2">
           <NotificationBell />
           {profile && (
-            <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5" style={{ background: "var(--sidebar-active-bg)" }}>
+            <div
+              className="flex h-9 items-center gap-1.5 rounded-lg px-2.5"
+              style={{ background: "color-mix(in srgb, var(--accent-green) 22%, var(--bg-sidebar))" }}
+            >
               <Avatar
                 name={String(profile?.displayName || user?.email?.split("@")[0] || "Eco Explorer")}
                 src={typeof profile?.profileImage === "string" ? (profile.profileImage as string) : null}
                 size={20}
               />
-              <span className="text-[11px] font-bold" style={{ color: "var(--text-sidebar)" }}>
+              <span className="text-xs font-bold" style={{ color: "var(--text-sidebar)" }}>
                 Lv {Number(profile.level) || 1}
               </span>
             </div>
@@ -396,19 +378,17 @@ export function Sidebar({ user, profile }: SidebarProps) {
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-xl"
+            className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform active:scale-95"
             style={{ background: "var(--sidebar-active-bg)", color: "var(--text-sidebar)" }}
             aria-label="Open menu"
             aria-expanded={mobileOpen}
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <Menu className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
       </header>
 
-      {/* ── Mobile drawer ── */}
+      {/* ── Mobile drawer — the "More" menu (5 bottom-nav tabs + everything else) ── */}
       {mobileOpen && (
         <>
           <div
@@ -422,7 +402,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
             aria-modal="true"
             aria-label="Navigation"
             className="md:hidden t-sidebar fixed left-0 top-0 z-50 h-full w-[280px] overflow-y-auto sheet-slide"
-            style={{ boxShadow: "4px 0 32px rgba(0,0,0,0.4)" }}
+            style={{ boxShadow: "var(--shadow-hero)" }}
           >
             <div className="flex justify-end p-3">
               <button
@@ -432,9 +412,7 @@ export function Sidebar({ user, profile }: SidebarProps) {
                 style={{ background: "var(--sidebar-active-bg)", color: "var(--text-sidebar)" }}
                 aria-label="Close menu"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XIcon className="h-4 w-4" strokeWidth={2.5} />
               </button>
             </div>
             <SidebarContent
@@ -447,7 +425,6 @@ export function Sidebar({ user, profile }: SidebarProps) {
           </div>
         </>
       )}
-      {/* NOTE: Mobile bottom nav removed — use hamburger menu instead */}
 
       {/* ── Sign-out confirmation (replaces native confirm()) ── */}
       <ConfirmDialog

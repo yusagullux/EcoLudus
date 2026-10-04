@@ -1,40 +1,147 @@
 "use client";
 
-import { useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { Coins, Flame, Sprout } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { useQuests } from "@/lib/useQuests";
-import { PageHero, Panel, Pill, ProgressBar, StatGrid, heroAccents } from "@/components/game-ui";
+import { PageHeader, Panel, Pill, LevelProgressRing } from "@/components/game-ui";
 import { StaggerContainer, StaggerItem } from "@/lib/animations";
-import { CategoryIcon } from "@/components/category-icon";
+import { getLevelProgress, requiredXP } from "@/lib/level-system";
+import { CategoryIcon, categoryToken } from "@/components/category-icon";
 
-const CATEGORIES_FALLBACK = [
-  { id: "recycling", name: "Recycling", image: "/images/forest.webp", color: "var(--text-accent)", done: 0, total: 1 },
-  { id: "energy_saving", name: "Energy Saving", image: "/images/background.webp", color: "var(--text-warning)", done: 0, total: 1 },
-  { id: "transportation", name: "Transportation", image: "/images/mountains.webp", color: "var(--text-accent)", done: 0, total: 1 },
-  { id: "water_saving", name: "Water Saving", image: "/images/nature.webp", color: "var(--text-accent)", done: 0, total: 1 },
-  { id: "cleanup_missions", name: "Clean-Up Missions", image: "/images/night.webp", color: "var(--text-accent)", done: 0, total: 1 },
-  { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "var(--text-accent)", done: 0, total: 1 },
-  { id: "sustainable_living", name: "Sustainable Living", image: "/images/plants/lotus.png", color: "var(--text-accent)", done: 0, total: 1 }
+// Ids/names only — the fill color for each category is resolved through the
+// shared token map in category-icon.tsx (single source for the palette).
+// color is derived (categoryToken) after this list is built, so it's omitted here.
+const CATEGORIES_FALLBACK: Omit<CategoryProgress, "color">[] = [
+  { id: "recycling", name: "Recycling", done: 0, total: 1 },
+  { id: "energy_saving", name: "Energy Saving", done: 0, total: 1 },
+  { id: "transportation", name: "Transportation", done: 0, total: 1 },
+  { id: "water_saving", name: "Water Saving", done: 0, total: 1 },
+  { id: "cleanup_missions", name: "Clean-Up Missions", done: 0, total: 1 },
+  { id: "gardening", name: "Gardening & Nature", done: 0, total: 1 },
+  { id: "sustainable_living", name: "Sustainable Living", done: 0, total: 1 }
 ];
-
-const categoryImages: Record<string, string> = {
-  recycling: "/images/forest.webp",
-  energy_saving: "/images/background.webp",
-  transportation: "/images/mountains.webp",
-  water_saving: "/images/nature.webp",
-  cleanup_missions: "/images/night.webp",
-  gardening: "/images/plants/bamboo.png",
-  sustainable_living: "/images/plants/lotus.png"
-};
 
 type CategoryProgress = {
   id: string;
   name: string;
-  image: string;
   color: string;
   done: number;
   total: number;
 };
+
+// Tint helper — mix any theme var into the current panel color.
+const wash = (color: string, pct: number) =>
+  `color-mix(in srgb, ${color} ${pct}%, var(--bg-panel))`;
+
+// ── Streak ring ──────────────────────────────────────────────
+// The hero medallion: progress-to-next-milestone ring in accent gold with the
+// streak count inside. Animates like the kit's LevelProgressRing (skipped under
+// reduced motion).
+function StreakRing({ streak, progress, longest }: { streak: number; progress: number; longest: number }) {
+  const reduced = useReducedMotion();
+  const size = 132;
+  const stroke = 8;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, progress));
+  const targetOffset = circumference * (1 - clamped / 100);
+
+  return (
+    <div
+      className="relative inline-flex items-center justify-center"
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label={`${streak}-day streak, best ${longest} days, ${clamped}% to the next milestone`}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          strokeWidth={stroke}
+          style={{ stroke: "var(--border-subtle)" }}
+        />
+        {reduced ? (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            style={{
+              stroke: "var(--accent-gold)",
+              strokeDasharray: circumference,
+              strokeDashoffset: targetOffset
+            }}
+          />
+        ) : (
+          <motion.circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            style={{ stroke: "var(--accent-gold)", strokeDasharray: circumference }}
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset: targetOffset }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          />
+        )}
+      </svg>
+      <span className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+        <Flame
+          className="h-6 w-6"
+          strokeWidth={2.4}
+          style={{ color: "var(--accent-gold)" }}
+          aria-hidden="true"
+        />
+        <span className="font-serif text-4xl font-black leading-none text-ink">
+          {streak}
+        </span>
+        <span className="text-[0.625rem] font-bold text-ink-muted">
+          day{streak === 1 ? "" : "s"}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+// ── 7-day stem chart ─────────────────────────────────────────
+// One column = one day: a thin stem whose height follows quests completed,
+// topped with a sprout that grows (size + ink depth) with the day's count.
+// Today's stem is the accent ink. Pure CSS/inline styles — no chart lib.
+function Stem({ count, max, isToday }: { count: number; max: number; isToday: boolean }) {
+  const heightPct = Math.max((count / max) * 100, 3);
+  const sprout = count === 0 ? 12 : Math.min(22, 12 + (count / max) * 12);
+  const ink = isToday
+    ? "var(--text-accent)"
+    : count === 0
+    ? "var(--border-default)"
+    : `color-mix(in srgb, var(--accent-green) ${35 + Math.round((count / max) * 65)}%, var(--bg-panel))`;
+
+  return (
+    <div className="flex flex-1 flex-col items-center gap-1">
+      <span className="text-micro font-bold text-ink-muted">{count}</span>
+      <div className="flex h-28 w-full flex-col items-center justify-end gap-0.5" aria-hidden="true">
+        <Sprout
+          className="shrink-0 transition-[height,width]"
+          style={{ height: sprout, width: sprout, color: ink }}
+          strokeWidth={2.2}
+        />
+        <span
+          className="w-2.5 rounded-full"
+          style={{ height: `${heightPct}%`, minHeight: "5px", background: ink }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function InsightsPage() {
   const { profile } = useAuth();
@@ -78,150 +185,214 @@ export default function InsightsPage() {
   const todayCount = dailyQuestsCompleted.length;
   const dailyTotal = currentDailyQuests.length;
 
-  // Compute category progress dynamically
-  const categoriesProgress: CategoryProgress[] = questsData
-    ? questsData.categories.map((c: any) => {
-        const done = c.quests.filter((q: any) => completedQuests.includes(q.id)).length;
-        const total = c.quests.length;
-        return {
+  // Compute category progress dynamically. Colors always resolve through
+  // categoryToken() — the shared category palette — never a per-page copy.
+  const categoriesProgress: CategoryProgress[] = (
+    questsData
+      ? questsData.categories.map((c: any) => ({
           id: c.id,
           name: c.name,
-          image: categoryImages[c.id] || "/images/forest.webp",
-          color: c.color ? `color-mix(in srgb, ${c.color} 80%, var(--text-accent))` : "var(--text-accent)",
-          done,
-          total
-        };
-      })
-    : CATEGORIES_FALLBACK;
+          done: c.quests.filter((q: any) => completedQuests.includes(q.id)).length,
+          total: c.quests.length
+        }))
+      : CATEGORIES_FALLBACK
+  ).map((c: Omit<CategoryProgress, "color">) => ({ ...c, color: categoryToken(c.id).hex }));
 
   const totalDone = categoriesProgress.reduce((sum, c) => sum + c.done, 0);
   const totalAll = categoriesProgress.reduce((sum, c) => sum + c.total, 0);
   const overallPct = totalAll > 0 ? Math.round((totalDone / totalAll) * 100) : 0;
 
-  const summaryCards = [
-    { label: "Today's quests", value: `${todayCount}/${dailyTotal}`, accent: "var(--text-accent)" },
-    { label: "Quests last 7 days", value: weeklyTotal, accent: "var(--text-accent)" },
-    { label: "Total missions cleared", value: missionsCompleted, accent: "var(--text-accent)" },
-    { label: "XP earned", value: xp.toLocaleString(), accent: "var(--text-accent)" },
-    { label: "EcoPoints", value: ecoPoints.toLocaleString(), accent: "var(--text-accent)" },
-    { label: "Overall progress", value: `${overallPct}%`, accent: "var(--text-accent)" }
-  ];
+  // Growth toward the next level — read from the REAL curve in level-system.
+  const levelProgress = getLevelProgress(xp);
+  const level = levelProgress.level;
+  const nextLevelAt = requiredXP(level);
 
   return (
     <StaggerContainer className="flex flex-col gap-5" as="div">
       <StaggerItem as="div">
-      <PageHero eyebrow="Weekly analytics" title="Insights" description="A dynamic view of quest completion, category balance, and reward growth." accent={heroAccents.insights} />
+        <PageHeader
+          title="Adventure almanac"
+          description="A living record of your quests, streaks, and growing rewards."
+          tint
+        />
       </StaggerItem>
 
-      <StaggerItem as="div">
-      <StatGrid className="grid-cols-2 gap-3 sm:grid-cols-3" items={summaryCards} />
-      </StaggerItem>
-
-      <StaggerItem as="div">
-      <Panel eyebrow="Keep the rhythm" title="Daily streak" action={<Pill active>{currentStreak} day{currentStreak === 1 ? "" : "s"}</Pill>}>
-        <div className="grid gap-5 sm:grid-cols-[auto_1fr] sm:items-center">
-          <div className="flex items-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border text-3xl font-black" style={{ borderColor: "color-mix(in srgb, var(--text-warning) 42%, transparent)", background: "color-mix(in srgb, var(--text-warning) 18%, var(--bg-panel-alt))", color: "var(--text-warning)" }} aria-hidden="true">✦</div>
-            <div>
-              <p className="font-serif text-3xl font-black" style={{ color: "var(--text-primary)" }}>{currentStreak}<span className="ml-1 text-sm font-bold" style={{ color: "var(--text-muted)" }}>days</span></p>
-              <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Best streak: {longestStreak} days</p>
+      {/* ── Journey hero: the streak ledger ── */}
+      <StaggerItem as="section">
+        <Panel
+          eyebrow="The journey so far"
+          title="Daily streak"
+          action={
+            <span className="fg-chip fg-chip-coins">
+              Next reward at {nextStreakMilestone} days
+            </span>
+          }
+        >
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-8">
+            <StreakRing streak={currentStreak} progress={streakProgress} longest={longestStreak} />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <span
+                  className="fg-chip"
+                  style={{
+                    background: wash("var(--accent-gold)", 12),
+                    borderColor: "color-mix(in srgb, var(--accent-gold) 28%, var(--border-default))",
+                    color: "var(--accent-gold-text)"
+                  }}
+                >
+                  Best streak: {longestStreak} days
+                </span>
+                <Pill>
+                  {nextStreakMilestone - currentStreak} day{nextStreakMilestone - currentStreak === 1 ? "" : "s"} to go
+                </Pill>
+              </div>
+              <div role="group" aria-label="Streak reward milestones" className="mt-3 grid grid-cols-4 gap-2">
+                {streakMilestones.map((milestone) => {
+                  const reached = currentStreak >= milestone;
+                  return <div
+                    key={milestone}
+                    className={`rounded-input border px-2 py-2 text-center ${reached ? "text-status-warning" : "text-ink-muted"}`}
+                    style={{
+                      borderColor: reached
+                        ? "color-mix(in srgb, var(--text-warning) 45%, transparent)"
+                        : "var(--border-subtle)",
+                      background: reached
+                        ? "color-mix(in srgb, var(--text-warning) 12%, var(--bg-panel-alt))"
+                        : "var(--bg-panel-alt)"
+                    }}
+                  ><span className="block text-xs font-black">{milestone}</span><span className="text-micro">days</span></div>;
+                })}
+              </div>
+              <p className="mt-2.5 text-center text-xs font-semibold text-ink-muted sm:text-left">
+                {streakProgress}% of the way to the {nextStreakMilestone}-day milestone.
+              </p>
             </div>
           </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between text-xs font-extrabold">
-              <span style={{ color: "var(--text-primary)" }}>Next reward at {nextStreakMilestone} days</span>
-              <span style={{ color: "var(--text-warning)" }}>{streakProgress}%</span>
-            </div>
-            <ProgressBar value={streakProgress} color="var(--text-warning)" />
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Streak reward milestones">
-              {streakMilestones.map((milestone) => {
-                const reached = currentStreak >= milestone;
-                return <div key={milestone} className="rounded-xl border px-2 py-2 text-center" style={{ borderColor: reached ? "color-mix(in srgb, var(--text-warning) 45%, transparent)" : "var(--border-subtle)", background: reached ? "color-mix(in srgb, var(--text-warning) 12%, var(--bg-panel-alt))" : "var(--bg-panel-alt)" }}><span className="block text-xs font-black" style={{ color: reached ? "var(--text-warning)" : "var(--text-muted)" }}>{milestone}</span><span className="text-[9px] font-bold" style={{ color: "var(--text-muted)" }}>days</span></div>;
+        </Panel>
+      </StaggerItem>
+
+      {/* ── 7-day trend as planted stems ── */}
+      <StaggerItem as="section">
+        <Panel
+          eyebrow="This week"
+          title="7-day forage trend"
+          action={<Pill active>{todayCount}/{dailyTotal} today</Pill>}
+        >
+          <div className="flex items-end gap-1.5 sm:gap-2.5">
+            {questsPerDay.map((count, index) => (
+              <div key={weekDays[index]} className="flex min-w-0 flex-1">
+                <Stem
+                  count={count}
+                  max={maxQPD}
+                  isToday={index === questsPerDay.length - 1}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="fg-trail mt-0.5" aria-hidden="true" />
+          <div className="mt-1 flex gap-1.5 sm:gap-2.5">
+            {weekDays.map((day, index) => {
+              const isToday = index === weekDays.length - 1;
+              return (
+                <span
+                  key={day}
+                  className={`flex-1 text-center text-micro font-bold ${isToday ? "text-accent" : "text-ink-muted"}`}
+                >
+                  {day}
+                </span>
+              );
+            })}
+          </div>
+        </Panel>
+      </StaggerItem>
+
+      {/* ── Category distribution as a planted bed ── */}
+      <StaggerItem as="section">
+        <Panel
+          eyebrow="Planted bed"
+          title="Category blooms"
+          action={<Pill>{totalDone}/{totalAll} quests</Pill>}
+        >
+          <div className="relative pb-6 pt-2">
+            <div className="relative z-10 flex flex-wrap items-end justify-center gap-x-3 gap-y-5 sm:gap-x-5">
+              {categoriesProgress.map(({ name, color, done, total }) => {
+                const share = totalDone > 0 ? done / totalDone : 0;
+                const size = done === 0 ? 38 : 44 + Math.round(share * 34);
+                return (
+                  <div
+                    key={name}
+                    className="flex w-[72px] flex-col items-center gap-1 text-center sm:w-20"
+                    title={`${name}: ${done} of ${total} quests`}
+                  >
+                    <span
+                      className="flex items-center justify-center rounded-full"
+                      style={{
+                        width: size,
+                        height: size,
+                        background: wash(color, 16),
+                        border: `1px solid color-mix(in srgb, ${color} 32%, var(--border-default))`,
+                        color
+                      }}
+                    >
+                      <CategoryIcon name={name} color={color} className="h-1/2 w-1/2" />
+                    </span>
+                    <span className="text-xs font-extrabold leading-none text-ink">
+                      {done}<span className="font-bold text-ink-muted">/{total}</span>
+                    </span>
+                    <span className="text-[0.625rem] font-bold leading-tight text-ink-muted">
+                      {name}
+                    </span>
+                  </div>
+                );
               })}
             </div>
+            {/* soil band the bed sits on */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-10"
+              style={{
+                background: wash("var(--accent-sage)", 9),
+                borderTop: `2px dashed color-mix(in srgb, var(--accent-sage) 35%, var(--border-subtle))`,
+                borderRadius: "0 0 var(--radius-card) var(--radius-card)"
+              }}
+              aria-hidden="true"
+            />
           </div>
-        </div>
-      </Panel>
+          <p className="mt-3 text-center text-xs font-semibold text-ink-muted">
+            {totalDone} of {totalAll} quests tended so far — {overallPct}% overall.
+          </p>
+        </Panel>
       </StaggerItem>
 
-      <StaggerItem as="div">
-      <Panel eyebrow="Activity" title="Quest Completion Trend" action={<Pill>7 days</Pill>}>
-        <StaggerContainer className="flex h-44 items-end gap-1.5 sm:gap-2.5" as="div">
-          {questsPerDay.map((count, index) => {
-            const height = (count / maxQPD) * 100;
-            const isToday = index === questsPerDay.length - 1;
-            return (
-              <StaggerItem key={weekDays[index]} as="div" className="flex flex-1 flex-col items-center gap-1.5">
-                <span className="text-[10px] font-extrabold" style={{ color: "var(--text-primary)" }}>{count}</span>
-                <div className="flex h-32 w-full items-end rounded-xl p-1" aria-hidden="true" style={{ background: "var(--bg-panel-alt)" }}>
-                  <div
-                    className="w-full rounded-lg transition-all duration-700"
-                    style={{
-                      height: `${Math.max(height, 4)}%`,
-                      minHeight: "6px",
-                      background: isToday ? "var(--text-primary)" : "var(--text-accent)",
-                      opacity: isToday ? 1 : 0.55
-                    }}
-                  />
-                </div>
-                <span className="text-[10px] font-extrabold" style={{ color: isToday ? "var(--text-primary)" : "var(--text-muted)" }}>{weekDays[index]}</span>
-              </StaggerItem>
-            );
-          })}
-        </StaggerContainer>
-      </Panel>
-      </StaggerItem>
-
-      <StaggerItem as="div">
-      <Panel eyebrow="Breakdown" title="Category Distribution">
-        <StaggerContainer className="flex flex-col gap-3" as="div">
-          {categoriesProgress.map(({ name, image, color, done, total }) => {
-            const pct = Math.round((done / total) * 100);
-            return (
-              <StaggerItem key={name} as="div" className="flex flex-col gap-1.5 rounded-xl px-2 py-1.5 transition sm:grid sm:grid-cols-[minmax(120px,160px)_1fr_44px_44px] sm:items-center sm:gap-3">
-                <div className="flex min-w-0 items-center justify-between gap-2 sm:contents">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: "var(--bg-panel-alt)" }}>
-                      <CategoryIcon name={name} color={color} className="h-5 w-5" />
-                    </span>
-                    <span className="truncate text-xs font-extrabold" style={{ color: "var(--text-primary)" }}>{name}</span>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2 sm:hidden">
-                    <span className="text-xs font-extrabold" style={{ color }}>{pct}%</span>
-                    <span className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{done}/{total}</span>
-                  </div>
-                </div>
-                <ProgressBar value={pct} color={color} />
-                <span className="hidden text-right text-xs font-extrabold sm:block" style={{ color }}>{pct}%</span>
-                <span className="hidden text-right text-xs font-semibold sm:block" style={{ color: "var(--text-muted)" }}>{done}/{total}</span>
-              </StaggerItem>
-            );
-          })}
-        </StaggerContainer>
-      </Panel>
-      </StaggerItem>
-
-      <StaggerItem as="div">
-      <Panel eyebrow="Growth" title="XP & EcoPoints Overview">
-        <div className="flex flex-col gap-5">
-          {[
-            { label: "Total XP", value: xp, color: "var(--text-accent)", max: 10000 },
-            { label: "EcoPoints", value: ecoPoints, color: "var(--text-accent)", max: 5000 }
-          ].map(({ label, value, color, max }) => {
-            const pct = Math.min(100, Math.round((value / max) * 100));
-            return (
-              <div key={label}>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>{label}</span>
-                  <span className="font-serif text-base font-extrabold" style={{ color }}>{value.toLocaleString()}</span>
-                </div>
-                <ProgressBar value={pct} color={color} />
-                <p className="mt-1.5 text-right text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{pct}% of milestone</p>
+      {/* ── XP & EcoPoints: growth arc to the next level ── */}
+      <StaggerItem as="section">
+        <Panel
+          eyebrow="Rewards earned"
+          title="Growing toward the next level"
+        >
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-8">
+            <LevelProgressRing level={level} xp={xp} size={112} />
+            <div className="min-w-0 flex-1">
+              <p className="text-center text-sm leading-relaxed text-ink-soft sm:text-left">
+                You are {levelProgress.xpIntoLevel.toLocaleString()} XP into level {level} —
+                {" "}{levelProgress.xpToNextLevel.toLocaleString()} XP more and level {level + 1} unlocks at{" "}
+                {nextLevelAt.toLocaleString()} total XP. The real curve, no shortcuts: growth quickens as you climb.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <span className="fg-chip fg-chip-coins text-sm">
+                  <Coins className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden="true" />
+                  {ecoPoints.toLocaleString()} EcoPoints
+                </span>
+                <Pill>
+                  {missionsCompleted} mission{missionsCompleted === 1 ? "" : "s"} cleared
+                </Pill>
+                <span className="fg-chip fg-chip-xp text-sm">{weeklyTotal} quests this week</span>
               </div>
-            );
-          })}
-        </div>
-      </Panel>
+              <p className="mt-2 text-center text-xs font-semibold text-ink-muted sm:text-left">
+                Spend EcoPoints in the Plant Shop — they never expire.
+              </p>
+            </div>
+          </div>
+        </Panel>
       </StaggerItem>
     </StaggerContainer>
   );

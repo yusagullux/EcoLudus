@@ -5,14 +5,15 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import { useAuth } from "@/lib/useAuth";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
-import { HeroMetric, PageHero, Panel, Pill, primaryButton, secondaryButton, PillFilterBar, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
+import { HeroMetric, PageHero, Panel, Pill, primaryButton, secondaryButton, PillFilterBar, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
 import { PillTabBar } from "@/components/ui/pill-tab-bar";
 import { useToast } from "@/lib/toast";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CollectionCardImage, CollectionCardLockedHint, CollectionCountBadge, CollectionRarityBadge } from "@/components/collection-card";
-import { StaggerContainer, StaggerItem, TabPanel, RewardGlow, AnimatedNumber } from "@/lib/animations";
+import { Egg, Flame, Leaf, Moon, Sparkles, Timer, Zap } from "lucide-react";
+import { StaggerContainer, StaggerItem, TabPanel, RewardGlow, AnimatedNumber, useReducedMotion } from "@/lib/animations";
 
 // Pokédex-style collection book. Each tab renders the FULL master list of
 // discoverable species (sourced from the catalog APIs), not just what the user
@@ -65,6 +66,7 @@ export default function CollectionPage() {
   const [mode, setMode] = useState<CollMode>("plants");
   const [filter, setFilter] = useState<"all" | Rarity>("all");
   const toast = useToast();
+  const prefersReducedMotion = useReducedMotion();
 
   // Master lists (the full discoverable universe per tab). SWR caches both
   // across navigations — the shop catalog is shared with the shop page.
@@ -349,7 +351,7 @@ export default function CollectionPage() {
       id: Date.now() + idx + Math.random(),
       dx: (Math.random() - 0.5) * 160,
       dy: (Math.random() - 0.5) * 160 - 80,
-      color: ["#aac487", "#eff3e8", "#9a6b1f", "#5dcfe0", "#f5f2eb"][Math.floor(Math.random() * 5)]
+      color: ["var(--accent-lime)", "var(--text-inverse)", "var(--accent-gold)", "var(--rarity-rare)", "var(--accent-green)"][Math.floor(Math.random() * 5)]
     }));
 
     setParticles((prev) => [...prev, ...newParticles]);
@@ -368,7 +370,7 @@ export default function CollectionPage() {
         id: Date.now() + idx + 100 + Math.random(),
         dx: (Math.random() - 0.5) * 360,
         dy: (Math.random() - 0.5) * 360 - 100,
-        color: ["#f5f2eb", "#fbf4df", "#4ade80", "#60a5fa", "#f43f5e", "#fbbf24", "#d946ef"][Math.floor(Math.random() * 7)]
+        color: ["var(--text-inverse)", "var(--accent-gold)", "var(--accent-green)", "var(--rarity-rare)", "var(--text-warning)", "var(--rarity-legendary)", "var(--rarity-epic)"][Math.floor(Math.random() * 7)]
       }));
       setParticles((prev) => [...prev, ...explosionParticles]);
     }
@@ -408,7 +410,7 @@ export default function CollectionPage() {
         id: Date.now() + idx + Math.random(),
         dx: (Math.random() - 0.5) * 80,
         dy: (Math.random() - 0.5) * 80 - 40,
-        color: ["#eab308", "#22c55e", "#3b82f6", "#ffffff"][Math.floor(Math.random() * 4)]
+        color: ["var(--accent-gold)", "var(--accent-green)", "var(--rarity-rare)", "var(--text-inverse)"][Math.floor(Math.random() * 4)]
       }));
       setChestParticles((prev) => [...prev, ...p]);
     }, 200);
@@ -451,7 +453,7 @@ export default function CollectionPage() {
         id: Date.now() + idx + 100 + Math.random(),
         dx: (Math.random() - 0.5) * 360,
         dy: (Math.random() - 0.5) * 360 - 80,
-        color: ["#fbbf24", "#34d399", "#60a5fa", "#f472b6", "#c084fc", "#ffffff"][Math.floor(Math.random() * 6)]
+        color: ["var(--accent-gold)", "var(--accent-green)", "var(--rarity-rare)", "var(--rarity-epic)", "var(--rarity-legendary)", "var(--text-inverse)"][Math.floor(Math.random() * 6)]
       }));
       setChestParticles((prev) => [...prev, ...burst]);
     }, 1200);
@@ -502,10 +504,14 @@ export default function CollectionPage() {
   // new account briefly renders the empty state before the catalog arrives.
   const catalogLoading = shopCat.isLoading || speciesCat.isLoading;
 
+  // Specimen-grid stagger — capped so the LAST card lands within ~0.6s even on
+  // the biggest tabs (a flat 0.04s/item meant a ~1.5s tail on large catalogs).
+  const specimenStagger = filtered.length > 1 ? Math.min(0.04, 0.6 / (filtered.length - 1)) : 0.04;
+
   return (
     <StaggerContainer className="flex flex-col gap-5" as="div">
       <StaggerItem as="div">
-        <PageHero eyebrow="Your nature collection" title="My Collection" description="Discover every species. Locked entries reveal as you earn them." accent={heroAccents.collection}>
+        <PageHero eyebrow="Your nature collection" title="My Collection" description="Discover every species. Locked entries reveal as you earn them.">
           <div className="flex flex-wrap gap-3">
             <HeroMetric label="Plants" value={`${stats.plants.found}/${stats.plants.total}`} />
             <HeroMetric label="Eggs" value={`${stats.eggs.found}/${stats.eggs.total}`} />
@@ -537,14 +543,22 @@ export default function CollectionPage() {
       </StaggerItem>
 
       <StaggerItem as="div">
-        <TabPanel activeKey={`${mode}-${filter}`}>
+        <TabPanel activeKey={`${mode}-${filter}`} className="flex flex-col gap-4">
           {/* ── Active Hatching Pods (Incubator Chamber) ── */}
           {mode === "eggs" && (
-        <Panel title="🥚 Hatching Chamber" eyebrow="Active Incubators (Max 3 Slots)">
+        <Panel
+          title={
+            <span className="flex items-center gap-2">
+              <Egg className="h-5 w-5" strokeWidth={2.2} style={{ color: "var(--text-accent)" }} aria-hidden="true" />
+              Hatching Chamber
+            </span>
+          }
+          eyebrow="Active Incubators (Max 3 Slots)"
+        >
           {profileHatchings.length === 0 ? (
             <EmptyState
               variant="plain"
-              icon="💤"
+              icon={<Moon className="h-7 w-7" strokeWidth={2.2} />}
               title="No eggs are currently incubating."
               description="Place an egg from your collection below into the chamber."
             />
@@ -608,8 +622,14 @@ export default function CollectionPage() {
                         <h4 className="font-serif text-sm font-extrabold leading-tight truncate">{hatching.name}</h4>
                         {!isReady ? (
                           <>
-                            <p className="mt-1 font-mono text-xs font-black" style={{ color: "var(--text-accent)" }}>
-                              ⏳ {timeString}
+                            <p className="mt-1 flex items-center gap-1 font-mono text-xs font-black" style={{ color: "var(--text-accent)" }}>
+                              <Timer className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} aria-hidden="true" />
+                              <span
+                                className="rounded-full px-2 py-0.5 font-mono tabular-nums"
+                                style={{ background: "var(--bg-panel-alt)", border: "1px solid var(--border-subtle)" }}
+                              >
+                                {timeString}
+                              </span>
                             </p>
                             <div className="mt-2 h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--border-subtle)" }}>
                               <div
@@ -619,8 +639,9 @@ export default function CollectionPage() {
                             </div>
                           </>
                         ) : (
-                          <p className="mt-1 text-xs font-extrabold uppercase tracking-wide animate-pulse" style={{ color: "var(--text-accent)" }}>
-                            ✨ Ready to hatch!
+                          <p className="mt-1 flex items-center gap-1 text-xs font-extrabold uppercase tracking-wide animate-pulse" style={{ color: "var(--text-accent)" }}>
+                            Ready to hatch!
+                            <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} aria-hidden="true" />
                           </p>
                         )}
                       </div>
@@ -633,9 +654,15 @@ export default function CollectionPage() {
                             type="button"
                             onClick={() => warmEgg(hatching)}
                             title="Warms the egg — costs 10 EcoPoints"
-                            className="flex-1 flex items-center justify-center gap-1.5 rounded-full border border-rose-300/60 bg-rose-500/10 py-2 text-[10px] font-black uppercase tracking-wider text-rose-600 transition hover:bg-rose-500/20"
+                            className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition hover:opacity-90 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-accent)] focus-visible:ring-offset-2"
+                            style={{
+                              background: "color-mix(in srgb, var(--accent-gold) 15%, var(--bg-panel))",
+                              color: "var(--accent-gold-text)",
+                              border: "1px solid color-mix(in srgb, var(--accent-gold) 32%, var(--border-default))"
+                            }}
                           >
-                            🔥 Warm (10 EP)
+                            <Flame className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} aria-hidden="true" />
+                            <span>Warm (10 EP)</span>
                           </button>
                           <button
                             type="button"
@@ -643,7 +670,8 @@ export default function CollectionPage() {
                             title={`Hatch instantly — costs ${instantCost} EcoPoints`}
                             className={`flex-1 ${primaryButton}`}
                           >
-                            ⚡ Hatch ({instantCost} EP)
+                            <Zap className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} aria-hidden="true" />
+                            <span>Hatch ({instantCost} EP)</span>
                           </button>
                         </>
                       ) : (
@@ -652,7 +680,8 @@ export default function CollectionPage() {
                           onClick={() => startHatchingReveal(hatching)}
                           className={`w-full ${primaryButton} animate-bounce`}
                         >
-                          🥚 Open Egg!
+                          <Egg className="h-4 w-4" strokeWidth={2.2} aria-hidden="true" />
+                          Open egg
                         </button>
                       )}
                     </div>
@@ -662,13 +691,6 @@ export default function CollectionPage() {
             </div>
           )}
         </Panel>
-      )}
-
-      {/* Per-tab discovered progress line */}
-      {!catalogLoading && (
-        <div className="px-1 text-sm font-extrabold" style={{ color: "var(--text-muted)" }}>
-          Discovered {discoveredCount}/{totalCount} {mode}
-        </div>
       )}
 
       {catalogLoading ? (
@@ -686,7 +708,7 @@ export default function CollectionPage() {
           </div>
         </Panel>
       ) : (
-        <StaggerContainer className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" as="div" staggerDelay={0.04}>
+        <StaggerContainer className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" as="div" staggerDelay={specimenStagger}>
           {filtered.map((entry, index) => {
             const owned = ownedByName.get(entry.name);
             const discovered = !!owned;
@@ -708,7 +730,20 @@ export default function CollectionPage() {
                 aria-label={discovered ? undefined : "Locked species — complete quests to unlock"}
               >
                 {discovered && isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
-                {!discovered && <span className="absolute left-2 top-2 z-10 text-base">🔒</span>}
+                {!discovered && (
+                  <span
+                    className="absolute left-2 top-2 z-10 flex h-6 w-6 flex-col items-center justify-center rounded-full"
+                    style={{
+                      background: "color-mix(in srgb, var(--accent-green) 16%, var(--bg-panel))",
+                      color: "var(--accent-green)",
+                      border: "1px solid color-mix(in srgb, var(--accent-green) 32%, var(--border-default))"
+                    }}
+                    aria-hidden="true"
+                  >
+                    <Leaf className="h-2.5 w-2.5" strokeWidth={2.4} />
+                    <span className="text-[0.5625rem] font-extrabold leading-[0.8]">?</span>
+                  </span>
+                )}
 
                 {/* Framed card image design - full bleed aspect ratio */}
                 <div
@@ -849,8 +884,8 @@ export default function CollectionPage() {
               <StaggerContainer className="flex flex-col items-center gap-6 py-6" staggerDelay={0.09} initialDelay={0.04}>
                 {hatchIsNew && (
                   <motion.div
-                    initial={{ scale: 0.4, opacity: 0, y: -6 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    initial={prefersReducedMotion ? { scale: 1, opacity: 1 } : { scale: 0.4, opacity: 0, y: -6 }}
+                    animate={prefersReducedMotion ? { scale: 1, opacity: 1 } : { scale: 1, opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 320, damping: 12, delay: 0.05 }}
                     className="rounded-full bg-[color-mix(in_srgb,var(--text-warning)_22%,transparent)] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-warning)] shadow-lg"
                   >
@@ -867,8 +902,8 @@ export default function CollectionPage() {
                 </StaggerItem>
 
                 <motion.div
-                  initial={{ scale: 0.4, opacity: 0, rotateY: -70 }}
-                  animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                  initial={prefersReducedMotion ? { scale: 1, opacity: 1 } : { scale: 0.4, opacity: 0, rotateY: -70 }}
+                  animate={prefersReducedMotion ? { scale: 1, opacity: 1 } : { scale: 1, opacity: 1, rotateY: 0 }}
                   transition={{ type: "spring", stiffness: 220, damping: 16, delay: 0.12 }}
                   className="relative flex h-52 w-52 items-center justify-center rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-panel-alt)] shadow-2xl p-6 overflow-hidden"
                   style={{ boxShadow: "0 20px 50px rgba(0,0,0,0.3)", transformStyle: "preserve-3d" }}
@@ -969,8 +1004,8 @@ export default function CollectionPage() {
               <StaggerContainer className="flex flex-col items-center gap-6 py-6" staggerDelay={0.09} initialDelay={0.04}>
                 {chestIsNew && (
                   <motion.div
-                    initial={{ scale: 0.4, opacity: 0, y: -6 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    initial={prefersReducedMotion ? { scale: 1, opacity: 1 } : { scale: 0.4, opacity: 0, y: -6 }}
+                    animate={prefersReducedMotion ? { scale: 1, opacity: 1 } : { scale: 1, opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 320, damping: 12, delay: 0.05 }}
                     className="rounded-full bg-[color-mix(in_srgb,var(--text-warning)_22%,transparent)] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-warning)] shadow-lg"
                   >
@@ -991,8 +1026,8 @@ export default function CollectionPage() {
                   {chestRewards.map((reward, i) => (
                     <StaggerItem key={i}>
                       <motion.div
-                        initial={{ scale: 0.4, opacity: 0, rotateY: -70 }}
-                        animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                        initial={prefersReducedMotion ? { scale: 1, opacity: 1 } : { scale: 0.4, opacity: 0, rotateY: -70 }}
+                        animate={prefersReducedMotion ? { scale: 1, opacity: 1 } : { scale: 1, opacity: 1, rotateY: 0 }}
                         transition={{ type: "spring", stiffness: 220, damping: 16 }}
                         className="relative flex flex-col h-32 w-full items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel-alt)] shadow-lg p-3 overflow-hidden text-center group"
                         style={{ transformStyle: "preserve-3d" }}
@@ -1016,9 +1051,12 @@ export default function CollectionPage() {
                               className="object-contain drop-shadow-md"
                             />
                           ) : (
-                            <div className="text-4xl select-none drop-shadow-md">
-                              {reward.emoji || (reward.kind === "points" ? "🪙" : reward.kind === "xp" ? "✨" : "🎁")}
-                            </div>
+                            <Sparkles
+                              className="h-8 w-8 select-none drop-shadow-md"
+                              strokeWidth={2}
+                              style={{ color: "var(--accent-gold)" }}
+                              aria-hidden="true"
+                            />
                           )}
                         </div>
                         
@@ -1026,9 +1064,11 @@ export default function CollectionPage() {
                           <p className="text-[11px] font-bold text-[var(--text-primary)] truncate" title={reward.name}>
                             {reward.amount ? `+${reward.amount} ` : ""}{reward.name}
                           </p>
-                          <span className={`inline-block mt-0.5 rounded px-1.5 py-[2px] text-[8px] font-black uppercase tracking-widest ${rarityStyle[reward.rarity as Rarity]?.chip}`}>
-                            {reward.rarity}
-                          </span>
+                          {reward.rarity && (
+                            <span className={`inline-block mt-0.5 rounded px-1.5 py-[2px] text-[8px] font-black uppercase tracking-widest ${rarityStyle[reward.rarity as Rarity]?.chip}`}>
+                              {reward.rarity}
+                            </span>
+                          )}
                         </div>
                       </motion.div>
                     </StaggerItem>

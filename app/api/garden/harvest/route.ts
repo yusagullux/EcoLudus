@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireVerifiedUser } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { grantProgression, type ProgressionUser } from "@/lib/progression";
+import { GROW_DURATION, HARVEST_COOLDOWN_MS, HARVEST_REWARDS } from "@/lib/garden-config";
+import type { Rarity } from "@/components/game-ui";
 
 // Server-validated garden harvest. The garden page used to compute XP/eco from
 // a tile's rarity and write it through `updateUserProfile`, which a client could
@@ -11,22 +13,14 @@ import { grantProgression, type ProgressionUser } from "@/lib/progression";
 // per-tile cooldown, recomputes rewards from rarity, and routes them through
 // the spine. `tileIds` omitted ⇒ harvest all currently-ready tiles.
 
-type Rarity = "common" | "rare" | "epic" | "legendary";
-
-const GROW_DURATION: Record<Rarity, number> = {
-  common: 8 * 60 * 60 * 1000,
-  rare: 24 * 60 * 60 * 1000,
-  epic: 72 * 60 * 60 * 1000,
-  legendary: 96 * 60 * 60 * 1000
+// Eco rewards + grow times come from lib/garden-config.ts (shared with the
+// garden page + dashboard teaser); XP is server-authoritative (no client copy).
+const HARVEST_XP: Record<Rarity, number> = {
+  common: 12, uncommon: 20, rare: 30, epic: 70, legendary: 150
 };
 
-const HARVEST_COOLDOWN_MS = 48 * 60 * 60 * 1000;
-
-const HARVEST_REWARDS: Record<Rarity, number> = { common: 8, rare: 22, epic: 55, legendary: 120 };
-const HARVEST_XP: Record<Rarity, number> = { common: 12, rare: 30, epic: 70, legendary: 150 };
-
 function normalizeRarity(value: unknown): Rarity {
-  return (["common", "rare", "epic", "legendary"] as Rarity[]).includes(value as Rarity)
+  return (["common", "uncommon", "rare", "epic", "legendary"] as Rarity[]).includes(value as Rarity)
     ? (value as Rarity)
     : "common";
 }

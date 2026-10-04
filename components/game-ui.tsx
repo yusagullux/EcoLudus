@@ -1,66 +1,121 @@
+"use client";
+
 import type { CSSProperties, ReactNode } from "react";
+import Image from "next/image";
+import { motion, useReducedMotion } from "motion/react";
+import { Camera, Check, Flame, Leaf, Plus, ShieldCheck } from "lucide-react";
 import { AnimatedNumber, AnimatedProgressBar } from "@/lib/animations";
+import { getXPProgress } from "@/lib/level-system";
+
+// "Friendly game card" design language (docs/superpowers/specs/2026-10-01-game-app-redesign.md):
+// generous radius (the --radius-card token, tuned to 1.25rem), soft shadows,
+// ≥44px touch targets, color exclusively through the `[data-theme]` vars
+// (tints via color-mix).
+const CARD = "rounded-card";
+
+// Tint helper — mix any theme var into the current panel color.
+const wash = (color: string, pct: number) =>
+  `color-mix(in srgb, ${color} ${pct}%, var(--bg-panel))`;
+
+const springPop = { type: "spring" as const, stiffness: 480, damping: 24 };
 
 // ── Shared rarity styles ──────────────────────────────────────
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+// Tokenized rarity system — colors live in the theme blocks of globals.css
+// (`--rarity-<r>` fill, `-text` ink, `-border` edge), so every consumer below
+// resolves per theme instead of hardcoding light-scheme hexes.
 export const rarityStyle: Record<Rarity, { chip: string; accent: string }> = {
-  common:    { chip: "bg-[#eef2e8] text-[#344534]",  accent: "#7c8b74" },
-  uncommon:  { chip: "bg-[#eaf5ec] text-[#2a5e3f]",  accent: "#3fa876" },
-  rare:      { chip: "bg-[#edf5f8] text-[#27556b]",  accent: "#2f5f86" },
-  epic:      { chip: "bg-[#f2eff7] text-[#594174]",  accent: "#62508f" },
-  legendary: { chip: "bg-[#fbf4df] text-[#76511a]",  accent: "#9a6b1f" }
+  common: {
+    chip: "rarity-common-chip",
+    accent: "var(--rarity-common)"
+  },
+  uncommon: {
+    chip: "rarity-uncommon-chip",
+    accent: "var(--rarity-uncommon)"
+  },
+  rare: {
+    chip: "rarity-rare-chip",
+    accent: "var(--rarity-rare)"
+  },
+  epic: {
+    chip: "rarity-epic-chip",
+    accent: "var(--rarity-epic)"
+  },
+  legendary: {
+    chip: "rarity-legendary-chip",
+    accent: "var(--rarity-legendary)"
+  }
 };
 export const rarityBorder: Record<Rarity, string> = {
-  common: "#d9e2d2", uncommon: "#c9e0cf", rare: "#bed0dd", epic: "#d2c9df", legendary: "#e6d3a6"
+  common: "var(--rarity-common-border)",
+  uncommon: "var(--rarity-uncommon-border)",
+  rare: "var(--rarity-rare-border)",
+  epic: "var(--rarity-epic-border)",
+  legendary: "var(--rarity-legendary-border)"
 };
 
 // ── PageHero ──────────────────────────────────────────────────
+// Soft-tinted page band: a flat ~6% accent wash over the panel color, no
+// gradient sweep (the boxed 12% diagonal hero is retired). The eyebrow is a
+// plain accent sentence-case line — all-caps micro eyebrows are retired with
+// the dashboard look.
 type PageHeroProps = {
   eyebrow: string;
   title: ReactNode;
   description: string;
   children?: ReactNode;
-  // Optional CSS background that overrides the default --bg-hero gradient so
-  // each section can carry its own accent color (blue for Insights, amber for
-  // Shop, purple for Team…). All accents in `heroAccents` below are dark
-  // gradients, so the white hero text stays readable across every theme.
-  accent?: string;
 };
 
-// Per-section hero accents. Dark, low-saturation gradients keyed by section so
-// the app's information hierarchy isn't a flat wall of identical forest-green
-// heroes. The default (no accent) keeps the theme's --bg-hero for the spine
-// pages (Dashboard, Impact, Profile).
-export const heroAccents = {
-  habits:      "linear-gradient(135deg, #0e1430 0%, #1a2a5a 55%, #2e4a8a 100%)",
-  shop:        "linear-gradient(135deg, #2e1d10 0%, #7b5832 55%, #b08d60 100%)",
-  collection:  "linear-gradient(135deg, #0a1f1f 0%, #0f3d3a 55%, #1e6b5e 100%)",
-  garden:      "linear-gradient(135deg, #0a1f10 0%, #115f2e 55%, #2e7a45 100%)",
-  pets:        "linear-gradient(135deg, #3a1525 0%, #6b2a45 55%, #a8456b 100%)",
-  insights:    "linear-gradient(135deg, #071828 0%, #0d3540 55%, #1e4a6b 100%)",
-  premium:     "linear-gradient(135deg, #2e2410 0%, #6b5215 55%, #b08d20 100%)",
-  team:        "linear-gradient(135deg, #2a1545 0%, #4a2a7a 55%, #7a4aa8 100%)",
-  friends:     "linear-gradient(135deg, #14203a 0%, #2a3a6b 55%, #4a6aa8 100%)",
-  leaderboard: "linear-gradient(135deg, #2e2410 0%, #6b5215 55%, #b08d20 100%)",
-  settings:    "linear-gradient(135deg, #0e1418 0%, #1e2a32 55%, #3a4a52 100%)"
-} as const;
-
-export function PageHero({ eyebrow, title, description, children, accent }: PageHeroProps) {
+export function PageHero({ eyebrow, title, description, children }: PageHeroProps) {
   return (
     <section
-      className="relative overflow-hidden rounded-[22px] border border-white/10 px-5 py-6 sm:px-8 sm:py-8"
-      style={{ background: accent ?? "var(--bg-hero)", boxShadow: "var(--shadow-hero)" }}
+      className={`relative overflow-hidden border border-line px-5 py-6 shadow-elev-1 sm:px-8 sm:py-8 ${CARD}`}
+      style={{
+        background: wash("var(--text-accent)", 6)
+      }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/20" />
-      <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-moss-300">{eyebrow}</p>
-          <h1 className="mt-2 text-balance font-serif text-2xl font-bold leading-tight text-white sm:text-3xl">
+          <p className="text-sm font-bold leading-snug text-accent">{eyebrow}</p>
+          <h1 className="mt-1.5 text-balance font-serif text-2xl font-bold leading-tight text-ink sm:text-3xl">
             {title}
           </h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/65">{description}</p>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">{description}</p>
         </div>
         {children && <div className="shrink-0">{children}</div>}
+      </div>
+    </section>
+  );
+}
+
+// ── PageHeader ────────────────────────────────────────────────
+// The light successor to the boxed hero: title + description + optional action,
+// NO panel by default. `tint` opts into the same soft 6% accent wash band
+// (rounded like every card). Use this on pages whose content immediately
+// follows — the panel look stays for pages that need a heavier announcement.
+type PageHeaderProps = {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  tint?: boolean;
+};
+
+export function PageHeader({ title, description, action, tint = false }: PageHeaderProps) {
+  return (
+    <section
+      className={tint ? `border border-line-soft px-5 py-5 sm:px-6 sm:py-6 ${CARD}` : ""}
+      style={tint ? { background: wash("var(--text-accent)", 6) } : undefined}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-balance font-serif text-2xl font-bold leading-tight text-ink sm:text-3xl">
+            {title}
+          </h1>
+          {description && (
+            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ink-soft">{description}</p>
+          )}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
       </div>
     </section>
   );
@@ -71,14 +126,14 @@ export function HeroMetric({ label, value, hint }: { label: string; value: React
   const numericValue = typeof value === "number" ? value : null;
   return (
     <div
-      className="relative min-w-[70px] rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-center"
+      className="relative min-w-[70px] rounded-input border border-line bg-surface-alt px-3 py-2.5 text-center"
       title={hint}
     >
-      <div className="flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-[0.18em] text-moss-300">
+      <div className="flex items-center justify-center gap-1 text-micro text-ink-muted">
         {label}
         {hint && (
           <span
-            className="inline-flex h-3 w-3 items-center justify-center rounded-full border border-white/25 text-[8px] text-white/70"
+            className="inline-flex h-3 w-3 items-center justify-center rounded-full border border-line text-micro text-ink-soft"
             aria-label="More info"
             role="img"
           >
@@ -86,7 +141,7 @@ export function HeroMetric({ label, value, hint }: { label: string; value: React
           </span>
         )}
       </div>
-      <div className="mt-1 font-serif text-xl font-bold leading-none text-white">
+      <div className="mt-1 font-serif text-xl font-bold leading-none text-ink">
         {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
       </div>
     </div>
@@ -94,28 +149,44 @@ export function HeroMetric({ label, value, hint }: { label: string; value: React
 }
 
 // ── MetricCard ────────────────────────────────────────────────
-type MetricCardProps = { label: string; value: ReactNode; accent?: string; wide?: boolean };
+// Optional `icon` slot: a small rounded tile tinted with the card's accent,
+// replacing the plain accent tick when present. Optional `hint` renders a
+// one-line explainer under the value. Both are additive — every existing call
+// site (label/value/accent/wide) keeps rendering exactly as before.
+type MetricCardProps = {
+  label: string;
+  value: ReactNode;
+  accent?: string;
+  wide?: boolean;
+  icon?: ReactNode;
+  hint?: string;
+};
 
-export function MetricCard({ label, value, accent = "#2f6b46", wide = false }: MetricCardProps) {
+export function MetricCard({ label, value, accent = "var(--text-accent)", wide = false, icon, hint }: MetricCardProps) {
   const numericValue = typeof value === "number" ? value : null;
   return (
-    <article
-      className={`t-panel rounded-[16px] p-4 transition hover:-translate-y-0.5 ${wide ? "sm:col-span-2" : ""}`}
-      style={{ boxShadow: "var(--shadow-card)" }}
-    >
-      <div className="mb-2 h-[3px] w-7 rounded-full" style={{ background: accent }} />
-      <p
-        className="min-h-[1.6rem] text-[10px] font-bold uppercase tracking-[0.14em]"
-        style={{ color: "var(--text-muted)" }}
-      >
-        {label}
-      </p>
-      <p
-        className="mt-1.5 min-h-[1.75rem] font-serif text-2xl font-bold leading-none"
-        style={{ color: "var(--text-primary)" }}
-      >
-        {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
-      </p>
+    <article className={`t-panel p-4 shadow-elev-1 ${CARD} ${wide ? "sm:col-span-2" : ""}`}>
+      <div className="flex items-start gap-3">
+        {icon && (
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base"
+            style={{ background: wash(accent, 12), color: accent }}
+            aria-hidden="true"
+          >
+            {icon}
+          </span>
+        )}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            {!icon && <span className="h-[3px] w-6 rounded-full" style={{ background: accent }} />}
+            <p className="text-xs font-bold leading-tight text-ink-muted">{label}</p>
+          </div>
+          <p className="mt-1.5 font-serif text-2xl font-bold leading-none text-ink">
+            {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
+          </p>
+          {hint && <p className="mt-1.5 text-xs leading-snug text-ink-muted">{hint}</p>}
+        </div>
+      </div>
     </article>
   );
 }
@@ -144,6 +215,8 @@ export function StatGrid({
 }
 
 // ── Panel ─────────────────────────────────────────────────────
+// Friendly paper card: 1.25rem radius + soft grounding shadow. Eyebrow is a
+// plain accent line (sentence case), not an all-caps micro label.
 type PanelProps = {
   eyebrow?: string;
   title?: ReactNode;
@@ -155,30 +228,13 @@ type PanelProps = {
 
 export function Panel({ eyebrow, title, action, children, className = "", id }: PanelProps) {
   return (
-    <section
-      id={id}
-      className={`t-panel rounded-[18px] ${className}`}
-      style={{ boxShadow: "var(--shadow-card)" }}
-    >
+    <section id={id} className={`t-panel shadow-elev-1 ${CARD} ${className}`}>
       {(eyebrow || title || action) && (
-        <div
-          className="flex flex-col gap-1.5 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
-          style={{ borderColor: "var(--border-subtle)" }}
-        >
+        <div className="flex flex-col gap-1.5 border-b border-line-soft px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
-            {eyebrow && (
-              <p
-                className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {eyebrow}
-              </p>
-            )}
+            {eyebrow && <p className="text-xs font-bold leading-tight text-accent">{eyebrow}</p>}
             {title && (
-              <h2
-                className="mt-0.5 font-serif text-lg font-bold leading-tight"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <h2 className={`font-serif text-lg font-bold leading-tight text-ink ${eyebrow ? "mt-0.5" : ""}`}>
                 {title}
               </h2>
             )}
@@ -192,16 +248,18 @@ export function Panel({ eyebrow, title, action, children, className = "", id }: 
 }
 
 // ── ProgressBar ───────────────────────────────────────────────
-export function ProgressBar({ value, color = "#2f6b46" }: { value: number; color?: string }) {
+// `className` merges onto the track so flex-item usages can size it (the track
+// defaults to w-full — as a bare flex child it otherwise collapses to 0px).
+export function ProgressBar({ value, color = "var(--text-accent)", className = "" }: { value: number; color?: string; className?: string }) {
   return (
     <div
-      className="h-1.5 overflow-hidden rounded-full"
+      className={`h-1.5 w-full overflow-hidden rounded-full ${className}`}
       style={{
-        background: "var(--border-subtle, #e7ecdf)",
+        background: "var(--border-subtle)",
         // Subtle inset edge so an empty (0%) bar is still visible — without it
         // the track and the panel behind it are too close in value and the bar
         // effectively disappears at 0%.
-        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--border-default, #dfe7d7) 70%, transparent)"
+        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--border-default) 70%, transparent)"
       }}
     >
       <AnimatedProgressBar value={value} color={color} />
@@ -210,20 +268,25 @@ export function ProgressBar({ value, color = "#2f6b46" }: { value: number; color
 }
 
 // ── Pill ──────────────────────────────────────────────────────
+// `size` scales the chip: "sm" is the original micro chip, "md" a roomier
+// badge (e.g. level chips, counters that sit beside 14px+ text).
 export function Pill({
   children,
   active = false,
+  size = "sm",
   className,
   style
 }: {
   children: ReactNode;
   active?: boolean;
+  size?: "sm" | "md";
   className?: string;
   style?: CSSProperties;
 }) {
+  const sizeCls = size === "md" ? "px-3 py-1 text-xs" : "px-2.5 py-0.5 text-micro";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${className ?? ""}`}
+      className={`inline-flex items-center rounded-full ${sizeCls} ${className ?? ""}`}
       style={{
         ...(active
           ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
@@ -264,7 +327,8 @@ export function PillFilterBar<T extends string>({
           type="button"
           key={opt}
           onClick={() => onChange(opt)}
-          className="shrink-0 min-h-11 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.08em] transition"
+          aria-pressed={value === opt}
+          className="shrink-0 min-h-11 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.08em] transition"
           style={
             value === opt
               ? { background: "var(--pill-active-bg)", color: "var(--pill-active-text)" }
@@ -278,43 +342,463 @@ export function PillFilterBar<T extends string>({
   );
 }
 
+// ── RankMedallion ─────────────────────────────────────────────
+// Circular rank roundel — medal-tinted disc for the top 3 (gold / silver /
+// bronze from theme accent tokens), quiet number chip beyond. Hoisted from the
+// team / friends / leaderboard pages, which carried identical copies.
+export const MEDAL_TONES = [
+  { fill: "var(--accent-gold)", ink: "var(--accent-gold-text)" },
+  { fill: "var(--accent-slate)", ink: "var(--accent-slate-text)" },
+  { fill: "var(--accent-orange)", ink: "var(--accent-orange-text)" }
+] as const;
+
+// `size` is px (default 36 = the list-row size); "podium" is the 44px seat
+// used by leaderboard podium cards, "row" is an alias for the default.
+export function RankMedallion({ rank, size = 36 }: { rank: number; size?: number | "row" | "podium" }) {
+  const px = size === "row" ? 36 : size === "podium" ? 44 : size;
+  const box = { width: px, height: px, fontSize: Math.round(px * 0.39) };
+  if (rank <= 3) {
+    const tone = MEDAL_TONES[rank - 1];
+    return (
+      <span
+        className="flex shrink-0 items-center justify-center rounded-full font-serif font-extrabold"
+        style={{
+          ...box,
+          background: `color-mix(in srgb, ${tone.fill} 16%, var(--bg-panel))`,
+          color: tone.ink,
+          border: `1px solid color-mix(in srgb, ${tone.fill} 32%, var(--border-default))`
+        }}
+        aria-label={`Rank ${rank}`}
+      >
+        {rank}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-full border border-line bg-surface-alt font-serif font-bold text-ink-muted"
+      style={box}
+      aria-label={`Rank ${rank}`}
+    >
+      {rank}
+    </span>
+  );
+}
+
 // ── Buttons ───────────────────────────────────────────────────
-// Labels render in their natural (sentence) case — the source strings are
-// already cased correctly, so we no longer CSS-uppercase them. Wide all-caps
-// tracking made longer labels ("Select missions to complete") hard to scan.
+// 48px friendly set. Primary is a FILLED accent-green pill (`.ap-btn-primary`
+// lives in globals.css — the color-mix hover can't ride a Tailwind arbitrary
+// class reliably); secondary is panel + default border; danger keeps its
+// quiet-red chip treatment. The fill/ink pair is theme-var based, so no hexes.
 export const buttonBase =
-  "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold tracking-[0.02em] transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+  "inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-bold transition active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-50 min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 export const primaryButton =
-  `${buttonBase} bg-forest-950 text-cream-100 shadow-[0_8px_24px_rgba(16,33,20,0.18)] hover:-translate-y-0.5 hover:bg-forest-800 focus-visible:ring-forest-600`;
+  `${buttonBase} ap-btn-primary min-h-12 px-6 shadow-elev-1 hover:-translate-y-0.5 active:scale-95`;
 
 export const secondaryButton =
-  `${buttonBase} border hover:-translate-y-0.5 focus-visible:ring-forest-600` +
-  " [border-color:var(--border-default)] [color:var(--text-primary)] [background:transparent] hover:[background:var(--bg-panel-alt)]";
+  `${buttonBase} min-h-12 border border-line bg-surface text-ink shadow-elev-1 hover:-translate-y-0.5 hover:bg-surface-alt active:scale-95`;
 
 export const dangerButton =
-  `${buttonBase} border border-rose-300 bg-rose-50 text-rose-700 hover:-translate-y-0.5 hover:bg-rose-100 focus-visible:ring-rose-400`;
+  `${buttonBase} min-h-12 chip-danger border hover:-translate-y-0.5 active:scale-95` +
+  " [border-color:color-mix(in_srgb,var(--text-error)_35%,var(--border-default))] focus-visible:ring-status-danger";
 
-export const inputClass =
-  "t-input w-full rounded-xl px-4 py-3 text-sm font-medium outline-none transition focus:shadow-[0_0_0_3px_rgba(67,101,63,0.14)]";
+export const inputClass = "t-input w-full rounded-input px-4 py-3 text-sm font-medium outline-none transition";
+
+// ── QuestCard ─────────────────────────────────────────────────
+// The daily-mission game card: category icon tile (12% tint of the category
+// accent), title + why-it-matters description, reward chips row, and a state
+// control on the right:
+//   idle     → round "not picked" ring (camera glyph when photo is required)
+//   selected → filled accent check, spring pop
+//   proof    → fg-stamp-style tappable "Add proof" tag
+//   verified → ShieldCheck on a green tint (visually distinct from done)
+//   done     → filled check with soft outer ring + pop
+// Whole card taps fire `onClick` unless `disabled`. Self-contained motion,
+// honors useReducedMotion.
+export type QuestCardState = "idle" | "selected" | "proof" | "verified" | "done";
+
+type QuestCardProps = {
+  title: ReactNode;
+  description?: string;
+  /** A `var(--accent-*)` value that drives the icon-tile tint + selected state. */
+  iconColor?: string;
+  /** Display-only category name (small caption next to the title). */
+  category?: string;
+  /** Glyph inside the category tile; falls back to a leaf. Pass the page's own
+   *  category lucide icon for stronger identity. */
+  categoryIcon?: ReactNode;
+  /** Reward chips row — pass fg-chip elements. */
+  rewards?: ReactNode;
+  state: QuestCardState;
+  /** Text for the proof stamp (default "Add proof"). */
+  proofLabel?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  /** Shows a tiny camera hint on the idle checkbox. */
+  requiresPhoto?: boolean;
+};
+
+export function QuestCard({
+  title,
+  description,
+  iconColor = "var(--text-accent)",
+  category,
+  categoryIcon,
+  rewards,
+  state,
+  proofLabel = "Add proof",
+  onClick,
+  disabled = false,
+  requiresPhoto = false
+}: QuestCardProps) {
+  const reduced = useReducedMotion();
+  const isFilled = state === "selected" || state === "done";
+  const background = isFilled || state === "verified"
+    ? wash(iconColor, state === "selected" ? 8 : 5)
+    : "var(--bg-panel)";
+  const border = state === "selected"
+    ? `color-mix(in srgb, ${iconColor} 45%, var(--border-default))`
+    : "var(--border-default)";
+
+  const content = (
+    <>
+      <span
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-input"
+        style={{ background: wash(iconColor, 12), color: iconColor }}
+        aria-hidden="true"
+      >
+        {categoryIcon ?? <Leaf className="h-5 w-5" strokeWidth={2.2} />}
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="flex min-w-0 items-baseline gap-2">
+          <span className="truncate font-serif text-[0.9375rem] font-bold leading-snug text-ink">{title}</span>
+          {category && (
+            <span className="shrink-0 text-[0.6875rem] font-bold text-ink-muted">{category}</span>
+          )}
+        </span>
+        {description && (
+          <span className="mt-0.5 block text-xs leading-snug text-ink-muted">{description}</span>
+        )}
+        {rewards && <span className="mt-1.5 flex flex-wrap items-center gap-1.5">{rewards}</span>}
+      </span>
+
+      <span className="shrink-0" aria-hidden="true">
+        {state === "idle" && (
+          <span
+            className="flex h-7 w-7 items-center justify-center rounded-full border-2 transition-colors"
+            style={{ borderColor: iconColor === "var(--text-accent)" ? "var(--border-default)" : wash(iconColor, 45) }}
+          >
+            {requiresPhoto && <Camera className="h-3 w-3 text-ink-muted" />}
+          </span>
+        )}
+        {state === "selected" && (
+          <motion.span
+            key="selected"
+            className="flex h-7 w-7 items-center justify-center rounded-full"
+            style={{ background: iconColor }}
+            initial={reduced ? { scale: 1 } : { scale: 0.4 }}
+            animate={{ scale: 1 }}
+            transition={springPop}
+          >
+            <Check className="h-4 w-4" strokeWidth={3.2} style={{ color: "var(--text-sidebar)" }} />
+          </motion.span>
+        )}
+        {state === "proof" && (
+          <motion.span
+            key="proof"
+            className="fg-stamp h-14 w-14 px-1 text-[0.5625rem] font-extrabold tracking-[0.08em]"
+            style={{ transform: "rotate(-6deg)" }}
+            initial={reduced ? { scale: 1 } : { scale: 0.7, rotate: -14 }}
+            animate={{ scale: 1, rotate: -6 }}
+            transition={springPop}
+          >
+            <Camera className="h-3.5 w-3.5" strokeWidth={2.4} />
+            {proofLabel}
+          </motion.span>
+        )}
+        {state === "verified" && (
+          <span
+            className="flex h-9 w-9 items-center justify-center rounded-full"
+            style={{ background: wash("var(--accent-green)", 14), color: "var(--accent-green-text)" }}
+          >
+            <ShieldCheck className="h-4.5 w-4.5" strokeWidth={2.2} />
+          </span>
+        )}
+        {state === "done" && (
+          <motion.span
+            key="done"
+            className="flex h-7 w-7 items-center justify-center rounded-full"
+            style={{ background: "var(--accent-green)", boxShadow: `0 0 0 3px ${wash("var(--accent-green)", 18)}` }}
+            initial={reduced ? { scale: 1 } : { scale: 0.4 }}
+            animate={{ scale: 1 }}
+            transition={springPop}
+          >
+            <Check className="h-4 w-4" strokeWidth={3.2} style={{ color: "var(--text-sidebar)" }} />
+          </motion.span>
+        )}
+      </span>
+    </>
+  );
+
+  const shell = `flex w-full items-center gap-3 p-3.5 text-left ${CARD} transition-[background-color,border-color,box-shadow,transform] active:scale-[0.985]`;
+  const surface = { background, border: `1px solid ${border}` };
+
+  if (typeof onClick === "function") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-pressed={state === "selected" || state === "done"}
+        className={`${shell} shadow-elev-1 ${disabled ? "cursor-not-allowed opacity-60" : "hover:shadow-elev-2"}`}
+        style={surface}
+      >
+        {content}
+      </button>
+    );
+  }
+  return (
+    <div className={`${shell} shadow-elev-1 ${disabled ? "opacity-60" : ""}`} style={surface}>
+      {content}
+    </div>
+  );
+}
+
+// ── StreakFlame ───────────────────────────────────────────────
+// Compact streak medallion: gold flame disc + "N-day streak" + 7 day dots.
+// `days` (last 7 days of { done }) wins over the streak-derived fill so the
+// dashboard and profile can show gaps honestly.
+type StreakFlameProps = {
+  streak: number;
+  longest?: number;
+  days?: { done: boolean }[];
+};
+
+export function StreakFlame({ streak, longest, days }: StreakFlameProps) {
+  const pattern = days
+    ? days.slice(0, 7)
+    : Array.from({ length: 7 }, (_, i) => ({ done: i < Math.min(Math.max(streak, 0), 7) }));
+
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+        style={{
+          background: wash("var(--accent-gold)", 14),
+          border: `1px solid color-mix(in srgb, var(--accent-gold) 28%, var(--border-default))`,
+          color: "var(--accent-gold-text)"
+        }}
+        aria-hidden="true"
+      >
+        <Flame className="h-5 w-5" strokeWidth={2.2} />
+      </span>
+      <div className="min-w-0">
+        <p className="font-serif text-sm font-bold leading-tight text-ink">
+          {streak}-day streak
+        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="flex gap-1" aria-hidden="true">
+            {pattern.map((d, i) => (
+              <span
+                key={i}
+                className="h-1.5 w-1.5 rounded-full"
+                style={
+                  d.done
+                    ? { background: "var(--accent-gold)" }
+                    : { border: "1px solid var(--border-default)" }
+                }
+              />
+            ))}
+          </span>
+          {typeof longest === "number" && (
+            <span className="text-xs font-semibold text-ink-muted">Best {longest}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── LevelProgressRing ─────────────────────────────────────────
+// SVG XP ring around a font-serif level number. Progress comes from the REAL
+// curve via `getXPProgress` (@/lib/level-system) — never recalculated here.
+// Stroke = text-accent, track = border-subtle; the sweep animates via a
+// strokeDashoffset tween (skipped under reduced motion).
+type LevelProgressRingProps = {
+  level: number;
+  xp: number;
+  size?: number;
+  showLabel?: boolean;
+};
+
+export function LevelProgressRing({ level, xp, size = 64, showLabel = true }: LevelProgressRingProps) {
+  const reduced = useReducedMotion();
+  const { current, required, percentage } = getXPProgress(xp);
+  const stroke = 6;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const targetOffset = circumference * (1 - Math.max(0, Math.min(100, percentage)) / 100);
+  const fontSize = Math.max(13, Math.round(size * 0.28));
+  const xpToNext = Math.max(0, required - current);
+
+  return (
+    <div
+      className="inline-flex flex-col items-center"
+      style={{ width: size }}
+      role="img"
+      aria-label={`Level ${level}, ${xpToNext} XP to next level`}
+    >
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            strokeWidth={stroke}
+            style={{ stroke: "var(--border-subtle)" }}
+          />
+          {reduced ? (
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              style={{
+                stroke: "var(--text-accent)",
+                strokeDasharray: circumference,
+                strokeDashoffset: targetOffset
+              }}
+            />
+          ) : (
+            <motion.circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              style={{ stroke: "var(--text-accent)", strokeDasharray: circumference }}
+              initial={{ strokeDashoffset: circumference }}
+              animate={{ strokeDashoffset: targetOffset }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            />
+          )}
+        </svg>
+        <span
+          className="absolute inset-0 flex items-center justify-center font-serif font-bold leading-none text-ink"
+          style={{ fontSize }}
+        >
+          {level}
+        </span>
+      </div>
+      {showLabel && (
+        <p className="mt-1 text-center text-[0.6875rem] font-semibold leading-tight text-ink-muted">
+          {xpToNext} XP to next
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── MiniShelf ─────────────────────────────────────────────────
+// Horizontal collectible strip (no scrollbar): square rounded image tiles with
+// optional per-tile ring + count badge, a trailing "+" tile when `children`
+// given, and a dashed empty tile when the shelf is bare.
+type MiniShelfItem = {
+  src: string;
+  alt: string;
+  count?: number;
+  /** Any theme var (e.g. `var(--rarity-rare)`); renders as a soft outer ring. */
+  ringColor?: string;
+};
+
+type MiniShelfProps = {
+  items: MiniShelfItem[];
+  /** Square tile side, px (image + tile). */
+  maxHeight?: number;
+  /** Shown as a dashed empty tile when `items` is empty. */
+  emptyHint?: string;
+  /** Content of the trailing "more" tile (icon/label). */
+  children?: ReactNode;
+};
+
+export function MiniShelf({ items, maxHeight = 56, emptyHint, children }: MiniShelfProps) {
+  const t = Math.round(maxHeight * 1.25);
+
+  if (items.length === 0 && !emptyHint) return null;
+
+  return (
+    <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-0.5">
+      {items.map((item, i) => (
+        <span
+          key={`${item.src}-${i}`}
+          className="relative shrink-0 overflow-hidden rounded-2xl border bg-surface-alt"
+          style={{
+            width: t,
+            height: t,
+            borderColor: item.ringColor ?? "var(--border-default)",
+            boxShadow: item.ringColor
+              ? `0 0 0 2px color-mix(in srgb, ${item.ringColor} 40%, transparent)`
+              : undefined
+          }}
+        >
+          <Image
+            src={item.src}
+            alt={item.alt}
+            width={t}
+            height={t}
+            sizes={`${t}px`}
+            className="h-full w-full object-cover"
+          />
+          {typeof item.count === "number" && (
+            <span
+              className="absolute bottom-0.5 right-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[0.625rem] font-bold leading-none text-ink"
+              style={{ background: "var(--bg-panel)", border: "1px solid var(--border-default)" }}
+              aria-label={`${item.alt}: owned ${item.count}`}
+            >
+              ×{item.count}
+            </span>
+          )}
+        </span>
+      ))}
+
+      {items.length === 0 && emptyHint && (
+        <span
+          className="flex shrink-0 items-center justify-center rounded-2xl border border-dashed border-line-soft px-3 text-center text-xs font-semibold leading-snug text-ink-muted"
+          style={{ width: t, height: t }}
+          aria-hidden="true"
+        >
+          {emptyHint}
+        </span>
+      )}
+
+      {children && (
+        <span
+          className="flex shrink-0 items-center justify-center gap-1 rounded-2xl border border-dashed border-line px-2 text-ink-muted"
+          style={{ width: t, height: t, background: "var(--bg-panel-alt)" }}
+        >
+          <Plus className="h-4 w-4" strokeWidth={2.4} aria-hidden="true" />
+          {children}
+        </span>
+      )}
+    </div>
+  );
+}
 
 // ── StatRow helper ────────────────────────────────────────────
 // Renders a simple label+value row inside a Panel
 export function StatRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div
-      className="flex items-center justify-between rounded-xl px-4 py-3"
-      style={{ background: "var(--bg-panel-alt)" }}
-    >
-      <span
-        className="text-[11px] font-bold uppercase tracking-[0.12em]"
-        style={{ color: "var(--text-muted)" }}
-      >
-        {label}
-      </span>
-      <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-        {value}
-      </span>
+    <div className="flex items-center justify-between rounded-input bg-surface-alt px-4 py-3">
+      <span className="text-overline text-ink-muted">{label}</span>
+      <span className="text-sm font-semibold text-ink">{value}</span>
     </div>
   );
 }

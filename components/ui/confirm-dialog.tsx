@@ -97,7 +97,7 @@ export function ConfirmDialog({
       }
     >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 shrink-0 leading-none" aria-hidden="true" style={{ color: danger ? "var(--text-danger, var(--text-accent))" : "var(--text-muted)" }}>
+        <span className="mt-0.5 shrink-0 leading-none" aria-hidden="true" style={{ color: danger ? "var(--text-error)" : "var(--text-muted)" }}>
           {danger ? (
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 9v4M12 17h.01" />

@@ -25,13 +25,16 @@ export function CollectionCardImage({
   discovered,
   mode,
   priority = false,
-  eager = false
+  eager = false,
+  sizes = "(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
 }: {
   entry: CollectionEntry;
   discovered: boolean;
   mode: CollectionMode;
   priority?: boolean;
   eager?: boolean;
+  /** Responsive srcset hints — collection grid tiles default; the shop's ~340px cards pass their own. */
+  sizes?: string;
 }) {
   const [imgError, setImgError] = useState(false);
 
@@ -41,7 +44,7 @@ export function CollectionCardImage({
         src={entry.image}
         alt="Locked species — not yet discovered"
         fill
-        sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
+        sizes={sizes}
         priority={priority}
         loading={priority || eager ? "eager" : undefined}
         onError={() => setImgError(true)}
@@ -64,7 +67,7 @@ export function CollectionCardImage({
       src={entry.image}
       alt={entry.name}
       fill
-      sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 220px"
+      sizes={sizes}
       priority={priority}
       loading={priority || eager ? "eager" : undefined}
       onError={() => setImgError(true)}
@@ -76,8 +79,8 @@ export function CollectionCardImage({
 export function CollectionCardLockedHint() {
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-10 translate-y-full px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wide opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100"
-      style={{ background: "color-mix(in srgb, var(--text-primary) 70%, transparent)", color: "var(--text-inverse)" }}
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-10 translate-y-full px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wide opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100"
+      style={{ background: "color-mix(in srgb, var(--text-primary) 85%, transparent)", color: "var(--text-inverse)" }}
     >
       Complete quests to unlock
     </div>

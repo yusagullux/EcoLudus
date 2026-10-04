@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { useShopCatalog } from "@/lib/useCatalog";
-import { HeroMetric, PageHero, primaryButton, rarityStyle, rarityBorder, heroAccents, type Rarity } from "@/components/game-ui";
+import { AnimatedNumber } from "@/lib/animations";
+import { PageHeader, HeroMetric, primaryButton, rarityStyle, rarityBorder, type Rarity } from "@/components/game-ui";
+import { Clock, Coins, Store } from "lucide-react";
 import { CardGridSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CollectionCardImage, type CollectionMode } from "@/components/collection-card";
@@ -105,21 +107,19 @@ export default function ShopPage() {
   return (
     <StaggerContainer className="flex flex-col gap-6" as="div">
       <StaggerItem as="div">
-        <PageHero eyebrow="Market" title="Shop" description="A rotating selection of plants, eggs, and chests — refreshed daily, with a few deals mixed in." accent={heroAccents.shop}>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-            <HeroMetric label="EcoPoints" value={ecoPoints} />
-            <div
-              className="self-start rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-widest sm:self-end"
-              style={{
-                color: "var(--text-warning)",
-                background: "color-mix(in srgb, var(--text-warning) 15%, transparent)",
-                borderColor: "color-mix(in srgb, var(--text-warning) 30%, transparent)"
-              }}
-            >
-              Resets in {timeLeft}
+        <PageHeader
+          title="Daily market"
+          description="A rotating selection of plants, eggs, and chests — refreshed daily, with a few deals mixed in."
+          tint
+          action={
+            <div className="flex flex-col gap-2 sm:items-end">
+              <HeroMetric label="EcoPoints" value={ecoPoints} />
+              <div className="chip-warning self-start rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] sm:self-end">
+                Resets in {timeLeft}
+              </div>
             </div>
-          </div>
-        </PageHero>
+          }
+        />
       </StaggerItem>
 
       <StaggerItem as="div">
@@ -128,7 +128,7 @@ export default function ShopPage() {
         ) : sortedDailyDeals.length === 0 ? (
           <EmptyState
             variant="plain"
-            icon="🏪"
+            icon={<Store className="h-7 w-7" strokeWidth={2.2} />}
             title="Shop is closed"
             description="The daily deals are currently unavailable."
           />
@@ -147,28 +147,32 @@ export default function ShopPage() {
                 <StaggerItem
                   key={deal.dealId}
                   as="article"
-                  className="group flex flex-col overflow-hidden rounded-[22px] border transition-all duration-300 hover:-translate-y-1 shadow-sm hover:shadow-xl"
-                  style={{ borderColor: border, background: "var(--bg-card)" }}
+                  className="t-card-hover group flex flex-col overflow-hidden rounded-dialog border shadow-elev-1"
+                  style={{ borderColor: border }}
                 >
                   <div
                     className="relative flex aspect-square w-full items-center justify-center overflow-hidden"
                     style={{ background: `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${style.accent} 18%, var(--bg-card)), var(--bg-panel))` }}
                   >
-                    <span className={`absolute right-3 top-3 z-20 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${style.chip}`}>
+                    <span className={`absolute right-3 top-3 z-20 rounded-full px-2.5 py-1 text-micro shadow-sm ${style.chip}`}>
                       {deal.rarity}
                     </span>
 
                     {isDeal && (
-                      <span className="absolute left-3 top-3 z-20 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-950 shadow-sm">
+                      <span
+                        className="absolute left-3 top-3 z-20 -rotate-6 rounded-full px-2.5 py-1 text-micro shadow-elev-1"
+                        style={{
+                          background: "color-mix(in srgb, var(--text-warning) 18%, var(--bg-panel))",
+                          color: "var(--text-warning)",
+                          border: "1px solid color-mix(in srgb, var(--text-warning) 30%, var(--border-default))"
+                        }}
+                      >
                         −{deal.discountPct}%
                       </span>
                     )}
 
-                    <span
-                      className="absolute bottom-3 left-3 z-20 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm"
-                      style={{ background: "color-mix(in srgb, var(--bg-card) 82%, transparent)", color: "var(--text-muted)" }}
-                    >
-                      {deal.emoji} {kindLabel}
+                    <span className="absolute bottom-3 left-3 z-20 rounded-full bg-card/85 px-2.5 py-1 text-micro tracking-[0.06em] text-ink-soft shadow-sm">
+                      {kindLabel}
                     </span>
 
                     <CollectionCardImage
@@ -176,35 +180,34 @@ export default function ShopPage() {
                       discovered={true}
                       mode={KIND_TO_MODE[deal.kind] ?? "plants"}
                       priority={index === 0}
+                      sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 340px"
                     />
                   </div>
 
-                  <div className="flex flex-1 flex-col gap-3 border-t p-4 sm:p-5" style={{ borderColor: "var(--border-subtle)" }}>
+                  <div className="flex flex-1 flex-col gap-3 border-t border-line-soft p-4 sm:p-5">
                     <div>
-                      <p className="font-serif text-[17px] font-bold leading-tight" style={{ color: "var(--text-primary)" }}>{deal.name}</p>
-                      {deal.description && <p className="mt-1 text-xs font-medium leading-relaxed line-clamp-2" style={{ color: "var(--text-muted)" }}>{deal.description}</p>}
+                      <p className="font-serif text-[0.9375rem] font-bold leading-tight text-ink">{deal.name}</p>
+                      {deal.description && <p className="mt-1 text-xs font-medium leading-relaxed line-clamp-2 text-ink-muted">{deal.description}</p>}
                     </div>
 
                     <div className="mt-auto flex items-end justify-between gap-3 pt-1">
                       <div className="min-w-0 flex flex-col">
                         {isDeal && (
-                          <span className="text-[11px] font-bold line-through" style={{ color: "var(--text-muted)" }}>{deal.originalPrice} EP</span>
+                          <span className="text-xs font-bold line-through text-ink-muted">{deal.originalPrice} EP</span>
                         )}
                         <div className="flex items-baseline gap-1">
-                          <span
-                            className="font-serif text-2xl font-black"
-                            style={{ color: isDeal ? "var(--text-warning)" : "var(--text-primary)" }}
-                          >
+                          <span className={`font-serif text-2xl font-black ${isDeal ? "text-status-warning" : "text-ink"}`}>
                             {deal.dealPrice}
                           </span>
-                          <span className="text-[10px] font-black uppercase" style={{ color: isDeal ? "var(--text-warning)" : "var(--text-muted)" }}>EP</span>
+                          <span className={`text-micro ${isDeal ? "text-status-warning" : "text-ink-muted"}`}>EP</span>
                         </div>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => handleBuy(deal)}
-                        disabled={isBuying}
+                        disabled={!!buyingId}
+                        aria-disabled={!!buyingId}
                         aria-busy={isBuying}
                         aria-label={
                           isBuying
@@ -213,8 +216,7 @@ export default function ShopPage() {
                               ? `Buy ${deal.name} for ${deal.dealPrice} EcoPoints`
                               : `Need ${shortfall} more EcoPoints to buy ${deal.name}`
                         }
-                        className={`shrink-0 ${canAfford ? primaryButton : "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold tracking-[0.02em] transition hover:opacity-90"}`}
-                        style={!canAfford ? { background: "var(--bg-panel-alt)", color: "var(--text-muted)" } : undefined}
+                        className={`shrink-0 disabled:cursor-not-allowed disabled:opacity-60 ${canAfford ? primaryButton : "inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface-alt px-4 py-2.5 text-xs font-bold text-ink-muted transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"}`}
                       >
                         {isBuying ? "Buying…" : canAfford ? "Buy" : `+${shortfall} EP`}
                       </button>

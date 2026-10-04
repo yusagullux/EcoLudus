@@ -44,6 +44,12 @@
   --color-earth-800: #462f1a;
   --color-earth-900: #2e1d10;
 
+  /* Radius scale — cards/dialogs share the 20px radius the game kit's card
+     language uses everywhere; inputs stay 12px. Pills stay rounded-full. */
+  --radius-card: 1.25rem;
+  --radius-dialog: 1.25rem;
+  --radius-input: 0.75rem;
+
   @keyframes wiggle {
     0%, 100% { transform: rotate(-3deg); }
     50% { transform: rotate(3deg); }
@@ -73,6 +79,101 @@
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
   }
+}
+
+/* Semantic utility colors mapped onto the per-theme runtime vars above. The
+   `inline` modifier makes the generated utilities (bg-surface, text-ink,
+   border-line, shadow-elev-2, …) reference the runtime vars directly, so each
+   usage resolves to whichever [data-theme] scope it renders in — one class
+   definition, six themes, no per-theme repair rules. */
+@theme inline {
+  /* Elevation — one language everywhere: flat (no shadow class), card (elev-1,
+     a near-flat grounding shadow), lift (elev-2, popovers/hover), hero
+     (elev-3, dialogs/drawers/podium/mkt hero). */
+  --shadow-elev-1: var(--shadow-card);
+  --shadow-elev-2: var(--shadow-lift);
+  --shadow-elev-3: var(--shadow-hero);
+
+  /* Surfaces + lines */
+  --color-surface: var(--bg-panel);
+  --color-surface-alt: var(--bg-panel-alt);
+  --color-surface-input: var(--bg-input);
+  --color-card: var(--bg-card);
+  --color-page-solid: var(--bg-page-solid);
+
+  --color-line: var(--border-default);
+  --color-line-soft: var(--border-subtle);
+  --color-line-input: var(--border-input);
+
+  /* Ink + semantic status */
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-ink-inverse: var(--text-inverse);
+  --color-accent: var(--text-accent);
+  --color-status-danger: var(--text-error);
+  --color-status-warning: var(--text-warning);
+  --color-status-success: var(--text-success);
+
+  /* Category accent palette — `bg-cat-<f>` / `text-cat-<f>` (fill) and
+     `text-cat-<f>-ink` (text on tinted surfaces) for the recurring category
+     colorways (habits, missions, insights charts, …). Runtime fills/inks are
+     declared in the theme-scoped accent block below. */
+  --color-cat-green: var(--accent-green);
+  --color-cat-lime: var(--accent-lime);
+  --color-cat-blue: var(--accent-blue);
+  --color-cat-gold: var(--accent-gold);
+  --color-cat-teal: var(--accent-teal);
+  --color-cat-sage: var(--accent-sage);
+  --color-cat-violet: var(--accent-violet);
+  --color-cat-slate: var(--accent-slate);
+  --color-cat-orange: var(--accent-orange);
+
+  --color-cat-green-ink: var(--accent-green-text);
+  --color-cat-lime-ink: var(--accent-lime-text);
+  --color-cat-blue-ink: var(--accent-blue-text);
+  --color-cat-gold-ink: var(--accent-gold-text);
+  --color-cat-teal-ink: var(--accent-teal-text);
+  --color-cat-sage-ink: var(--accent-sage-text);
+  --color-cat-violet-ink: var(--accent-violet-text);
+  --color-cat-slate-ink: var(--accent-slate-text);
+  --color-cat-orange-ink: var(--accent-orange-text);
+}
+
+/* Micro-typography utilities — replaces the handful of one-off
+   text-[mumblepx]/tracking-[...] combos so labels use one consistent scale. */
+@utility text-overline {
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+@utility text-micro {
+  font-size: 0.625rem;
+  line-height: 1.2;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Status chips — a tint of the semantic status color over the panel, so the
+   chip harmonises with whatever theme it renders in (replaces the
+   bg-rose-50/bg-emerald-50 light-hex chips that broke on dark themes). */
+@utility chip-danger {
+  background: color-mix(in srgb, var(--text-error) 12%, var(--bg-panel));
+  color: var(--text-error);
+}
+
+@utility chip-success {
+  background: color-mix(in srgb, var(--text-success) 12%, var(--bg-panel));
+  color: var(--text-success);
+}
+
+@utility chip-warning {
+  background: color-mix(in srgb, var(--text-warning) 12%, var(--bg-panel));
+  color: var(--text-warning);
 }
 
 /* ── THEME VARIABLES ────────────────────────────────────── */
@@ -124,9 +225,11 @@
   --pill-active-bg: #102016;
   --pill-active-text: #fcf9f2;
 
-  /* Shared shadows — neutral so every light theme (incl. dawn/bloom) looks cohesive */
-  --shadow-card:  0 8px 32px rgba(0,0,0,0.08);
-  --shadow-lift:  0 18px 44px rgba(0,0,0,0.14);
+  /* Shared shadows — neutral so every light theme (incl. dawn/bloom) looks cohesive.
+     Elevation comes from borders/ink; shadows only ground the card (elev-1) or
+     separate a lifted popover (elev-2). Big soft "floating card" glows are gone. */
+  --shadow-card:  0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lift:  0 8px 24px rgba(0,0,0,0.10);
   --shadow-hero:  0 20px 60px rgba(0,0,0,0.22);
 }
 
@@ -163,9 +266,9 @@
   --pill-active-bg: #e8f0e4;
   --pill-active-text: #102016;
 
-  /* Dark themes use stronger black shadows (forest tint is invisible) */
-  --shadow-card:  0 8px 32px rgba(0,0,0,0.28);
-  --shadow-lift:  0 18px 44px rgba(0,0,0,0.4);
+  /* Dark themes use stronger black shadows (tinted shadows are invisible) */
+  --shadow-card:  0 1px 2px rgba(0,0,0,0.2);
+  --shadow-lift:  0 8px 24px rgba(0,0,0,0.28);
   --shadow-hero:  0 20px 60px rgba(0,0,0,0.5);
 }
 
@@ -189,7 +292,7 @@
   --text-muted:     rgba(228,244,255,0.5);
   --text-inverse:   #071828;
   --text-sidebar:   #e4f4ff;
-  --text-sidebar-muted: rgba(228,244,255,0.4);
+  --text-sidebar-muted: rgba(228,244,255,0.55);
   --text-accent:    #5dcfe0;
 
   --sidebar-active-bg:   rgba(93,207,224,0.15);
@@ -202,8 +305,8 @@
   --pill-active-bg: rgba(93,207,224,0.2);
   --pill-active-text: #e4f4ff;
 
-  --shadow-card:  0 8px 32px rgba(0,0,0,0.3);
-  --shadow-lift:  0 18px 44px rgba(0,0,0,0.42);
+  --shadow-card:  0 1px 2px rgba(0,0,0,0.2);
+  --shadow-lift:  0 8px 24px rgba(0,0,0,0.28);
   --shadow-hero:  0 20px 60px rgba(0,0,0,0.5);
 }
 
@@ -302,7 +405,7 @@
   --text-muted:     rgba(154,180,232,0.55);
   --text-inverse:   #0a0f2e;
   --text-sidebar:   #e6ecff;
-  --text-sidebar-muted: rgba(230,236,255,0.45);
+  --text-sidebar-muted: rgba(230,236,255,0.55);
   --text-accent:    #4ad8c0;
 
   --sidebar-active-bg:   rgba(74,216,192,0.15);
@@ -315,8 +418,8 @@
   --pill-active-bg: rgba(74,216,192,0.2);
   --pill-active-text: #e6ecff;
 
-  --shadow-card:  0 8px 32px rgba(0,0,0,0.3);
-  --shadow-lift:  0 18px 44px rgba(0,0,0,0.42);
+  --shadow-card:  0 1px 2px rgba(0,0,0,0.2);
+  --shadow-lift:  0 8px 24px rgba(0,0,0,0.28);
   --shadow-hero:  0 20px 60px rgba(0,0,0,0.5);
 }
 
@@ -327,11 +430,13 @@
 [data-theme="dawn"],
 [data-theme="bloom"] {
   --rarity-common:    #4ade80;
+  --rarity-uncommon:  #34d399;
   --rarity-rare:      #38bdf8;
   --rarity-epic:      #a78bfa;
   --rarity-legendary: #fbbf24;
 
   --rarity-common-text:    #166534;
+  --rarity-uncommon-text:  #065f46;
   --rarity-rare-text:      #075985;
   --rarity-epic-text:      #5b21b6;
   --rarity-legendary-text: #92400e;
@@ -341,6 +446,7 @@
 [data-theme="liquid"],
 [data-theme="aurora"] {
   --rarity-common-text:    #86efac;
+  --rarity-uncommon-text:  #6ee7b7;
   --rarity-rare-text:      #7dd3fc;
   --rarity-epic-text:      #c4b5fd;
   --rarity-legendary-text: #fcd34d;
@@ -352,6 +458,7 @@
 [data-theme="bloom"] {
   --text-error:   #be123c;
   --text-warning: #9a5a0a;
+  --text-success: #1f6b46;
 }
 
 [data-theme="dawn"] {
@@ -377,15 +484,66 @@
   --text-warning: #73e0c2;
 }
 
+/* Success text — flips to a bright green on dark themes (green reads
+   universally on dark surfaces regardless of each dark theme's accent hue). */
+[data-theme="dark"],
+[data-theme="liquid"],
+[data-theme="aurora"] {
+  --text-success: #86efac;
+}
+
+/* ── CATEGORY ACCENT PALETTE ───────────────────────────────
+   One fill + ink pair per accent family, replacing the per-page hex palettes.
+   Fills match across themes so a category keeps its identity; ink values lift
+   to a bright family tint on dark themes so category-colored text stays
+   readable on dark panels (replacing the per-page repair patches).
+   ────────────────────────────────────────────────────────── */
+:root {
+  /* Fills are identical in every theme — category identity doesn't shift. */
+  --accent-green:  #2f6b46;
+  --accent-lime:   #2f9e54;
+  --accent-sage:   #4c7a3b;
+  --accent-gold:   #c98a0e;
+  --accent-blue:   #2f5f86;
+  --accent-teal:   #237482;
+  --accent-violet: #62508f;
+  --accent-slate:  #5d6f7a;
+  --accent-orange: #db5a36;
+}
+
+:root,
+[data-theme="light"],
+[data-theme="dawn"],
+[data-theme="bloom"] {
+  --accent-green-text:  #2f6b46;
+  --accent-lime-text:   #2f9e54;
+  --accent-sage-text:   #4c7a3b;
+  --accent-gold-text:   #9a6b1f;
+  --accent-blue-text:   #2f5f86;
+  --accent-teal-text:   #237482;
+  --accent-violet-text: #62508f;
+  --accent-slate-text:  #5d6f7a;
+  --accent-orange-text: #c04a28;
+}
+
+[data-theme="dark"],
+[data-theme="liquid"],
+[data-theme="aurora"] {
+  --accent-green-text:  #6ee7b7;
+  --accent-lime-text:   #86efac;
+  --accent-sage-text:   #6ee7b7;
+  --accent-gold-text:   var(--text-warning);
+  --accent-blue-text:   #7dd3fc;
+  --accent-teal-text:   #5eead4;
+  --accent-violet-text: #c4b5fd;
+  --accent-slate-text:  #cbd5e1;
+  --accent-orange-text: var(--text-warning);
+}
+
 /* Streak badge text — brighter than --text-warning so it stays legible on the
    15%-warning-tinted badge background, without forcing every theme to use
    the same orange accent. */
 .streak-badge-text {
-  color: var(--text-warning);
-}
-[data-theme="dark"] .streak-badge-text,
-[data-theme="liquid"] .streak-badge-text,
-[data-theme="aurora"] .streak-badge-text {
   color: var(--text-warning);
 }
 
@@ -565,7 +723,7 @@ a, button, input, textarea, select {
 .reveal-card:nth-child(2) { animation-delay: 35ms; }
 .reveal-card:nth-child(3) { animation-delay: 70ms; }
 .reveal-card:nth-child(4) { animation-delay: 105ms; }
-.reveal-card:nth-child(5) { animation-delay: 140ms; }
+.reveal-card:nth-child(n + 5) { animation-delay: 140ms; }
 
 /* Hide scrollbars on horizontal chip rows so they read as a single contained
    strip (Shop/Collection filter bars) while staying touch-scrollable. */
@@ -594,6 +752,29 @@ a, button, input, textarea, select {
   color: var(--text-primary);
 }
 
+/* Card primitive — same tokens as .t-panel with the shared card radius. Use
+   .t-card for panels (static, no interaction) and add .t-card-hover when the
+   card is clickable. Hover brightens border/background only — cards do not
+   translate on hover (translate is reserved for buttons and the podium). */
+.t-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  color: var(--text-primary);
+}
+
+.t-card-hover {
+  transition:
+    border-color 220ms ease,
+    background-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.t-card-hover:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--text-accent) 30%, var(--border-default));
+  background: color-mix(in srgb, var(--text-accent) 4%, var(--bg-panel));
+}
+
 .t-panel-alt {
   background: var(--bg-panel-alt);
   color: var(--text-primary);
@@ -603,10 +784,6 @@ a, button, input, textarea, select {
    this cascades into every component that doesn't override */
 html {
   color: var(--text-primary);
-}
-
-.t-panel-alt {
-  background: var(--bg-panel-alt);
 }
 
 .t-input {
@@ -657,16 +834,11 @@ html {
   color: var(--sidebar-active-text);
 }
 
-/* Liquid theme glass panels */
+/* Liquid theme panels: the glass blur is retired with the app redesign
+   (backdrop-blur is banned on app surfaces) — keep the raised liquid look via
+   shadow + an inset light edge only. */
 [data-theme="liquid"] .t-panel {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 4px 32px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-
-[data-theme="liquid"] .t-panel-alt {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 /* ── DARK THEME: invert forest color scale ───────────────────
@@ -835,8 +1007,6 @@ html {
   background: color-mix(in srgb, var(--bg-panel) 80%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-default) 70%, transparent);
   color: var(--text-primary);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
 }
 .mk-surface-solid {
   background: var(--bg-panel);
@@ -860,11 +1030,9 @@ html {
   background: color-mix(in srgb, var(--text-accent) 28%, var(--bg-sidebar));
 }
 .mk-btn-ghost {
-  background: color-mix(in srgb, var(--bg-panel) 70%, transparent);
+  background: var(--bg-panel);
   border: 1px solid var(--border-default);
   color: var(--text-primary);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
   transition: background 0.2s ease, transform 0.2s ease;
 }
 .mk-btn-ghost:hover {
@@ -882,9 +1050,92 @@ html {
 .mk-bd-subtle  { border-color: var(--border-subtle); }
 .mk-bg-alt     { background: var(--bg-panel-alt); }
 
+/* ── LANDING: SEED-PACKET FIELD-GUIDE SYSTEM ──────────────
+   The public landing page's visual language: solid paper panels,
+   botanical specimen labels, stamps and reward chips. Design
+   direction lives in docs/superpowers/specs/2026-10-01-landing-visual-redesign.md.
+   Colors route through theme vars so every [data-theme] renders
+   correctly; the light Forest theme is the canonical look.
+   ────────────────────────────────────────────────────────── */
+
+.fg-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.fg-panel-alt {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.fg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.fg-chip-coins {
+  background: color-mix(in srgb, var(--accent-gold) 12%, var(--bg-panel));
+  color: var(--accent-gold-text);
+  border-color: color-mix(in srgb, var(--accent-gold) 28%, var(--border-default));
+}
+
+.fg-chip-xp {
+  background: color-mix(in srgb, var(--accent-green) 12%, var(--bg-panel));
+  color: var(--accent-green-text);
+  border-color: color-mix(in srgb, var(--accent-green) 28%, var(--border-default));
+}
+
+.fg-chip-carbon {
+  background: color-mix(in srgb, var(--accent-teal) 12%, var(--bg-panel));
+  color: var(--accent-teal-text);
+  border-color: color-mix(in srgb, var(--accent-teal) 28%, var(--border-default));
+}
+
+/* Botanical specimen tag — only for genuine specimen/label artifacts */
+.fg-botlabel {
+  font-size: 0.625rem;
+  line-height: 1.3;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+/* Circular verified stamp */
+.fg-stamp {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  border: 2px solid var(--text-accent);
+  color: var(--text-accent);
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+}
+
+/* Dashed trail connector */
+.fg-trail {
+  border-top: 2px dashed color-mix(in srgb, var(--text-accent) 35%, var(--border-default));
+}
+
 /* Rarity chips/borders (game-ui.tsx). Background blends with the panel;
    border blends with the default border. Text color flips for dark themes. */
 .rarity-common-chip    { background: color-mix(in srgb, var(--rarity-common) 14%, var(--bg-panel));    color: var(--rarity-common-text); }
+.rarity-uncommon-chip  { background: color-mix(in srgb, var(--rarity-uncommon) 14%, var(--bg-panel));  color: var(--rarity-uncommon-text); }
 .rarity-rare-chip      { background: color-mix(in srgb, var(--rarity-rare) 14%, var(--bg-panel));      color: var(--rarity-rare-text); }
 .rarity-epic-chip      { background: color-mix(in srgb, var(--rarity-epic) 14%, var(--bg-panel));      color: var(--rarity-epic-text); }
 .rarity-legendary-chip { background: color-mix(in srgb, var(--rarity-legendary) 14%, var(--bg-panel)); color: var(--rarity-legendary-text); }
@@ -894,9 +1145,24 @@ html {
 [data-theme="dawn"],
 [data-theme="bloom"] {
   --rarity-common-border:    color-mix(in srgb, var(--rarity-common) 35%, var(--border-default));
+  --rarity-uncommon-border:  color-mix(in srgb, var(--rarity-uncommon) 35%, var(--border-default));
   --rarity-rare-border:      color-mix(in srgb, var(--rarity-rare) 35%, var(--border-default));
   --rarity-epic-border:      color-mix(in srgb, var(--rarity-epic) 35%, var(--border-default));
   --rarity-legendary-border: color-mix(in srgb, var(--rarity-legendary) 35%, var(--border-default));
+}
+
+/* Dark themes mix rarity into the border at a stronger share — the default
+   border is much darker there, so 35% vanishes. Without these definitions
+   every `--rarity-*-border` consumer falls back to `currentColor` (bright
+   ink-colored rings instead of rarity identity). */
+[data-theme="dark"],
+[data-theme="liquid"],
+[data-theme="aurora"] {
+  --rarity-common-border:    color-mix(in srgb, var(--rarity-common) 45%, var(--border-default));
+  --rarity-uncommon-border:  color-mix(in srgb, var(--rarity-uncommon) 45%, var(--border-default));
+  --rarity-rare-border:      color-mix(in srgb, var(--rarity-rare) 45%, var(--border-default));
+  --rarity-epic-border:      color-mix(in srgb, var(--rarity-epic) 45%, var(--border-default));
+  --rarity-legendary-border: color-mix(in srgb, var(--rarity-legendary) 45%, var(--border-default));
 }
 
 /* ── REDUCED MOTION ──────────────────────────────────────── */
@@ -1138,11 +1404,11 @@ html {
 
 @keyframes heat-pulse {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--text-error) 20%, transparent);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 25px color-mix(in srgb, var(--text-error) 50%, transparent);
     transform: scale(1.03);
   }
 }
@@ -1189,8 +1455,8 @@ html {
 }
 
 @keyframes chest-glow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(251,191,36,0.35)); }
-  50% { filter: drop-shadow(0 0 28px rgba(251,191,36,0.85)); }
+  0%, 100% { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-gold) 35%, transparent)); }
+  50% { filter: drop-shadow(0 0 28px color-mix(in srgb, var(--accent-gold) 85%, transparent)); }
 }
 
 .animate-chest-glow {
@@ -1207,3 +1473,18 @@ html {
   animation: heart-pop 1s ease-out forwards;
 }
 
+
+/* ── GAME-APP DESIGN-SYSTEM KIT (append-only, kit agent 2026-10-01) ──
+   Additions for components/game-ui.tsx's "friendly game card" language
+   (docs/superpowers/specs/2026-10-01-game-app-redesign.md). Only what
+   Tailwind arbitrary values can't hold lives here — the color-mix hover
+   on the filled primary button. Everything else stays token-based and
+   resolves per [data-theme]. */
+
+.ap-btn-primary {
+  background: var(--accent-green);
+  color: var(--text-sidebar);
+}
+.ap-btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bg-sidebar) 15%, var(--accent-green));
+}

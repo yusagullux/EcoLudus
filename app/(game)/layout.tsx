@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { X } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { ThemeProvider } from "@/lib/useTheme";
 import { ToastProvider } from "@/lib/toast";
 import { Sidebar } from "@/components/sidebar";
+import { BottomNav } from "@/components/bottom-nav";
 import { PageTransition } from "@/lib/animations";
+import { HeroSkeleton, MetricGridSkeleton, PanelSkeleton } from "@/components/ui/skeleton";
 
 export default function GameLayout({
   children
@@ -18,120 +21,95 @@ export default function GameLayout({
     // Skeleton shell that mirrors the authenticated layout (mobile top bar +
     // desktop sidebar + content area) so the first paint reserves the same
     // space as the real app — no centered spinner, no layout shift once
-    // useAuth resolves. Theme CSS vars keep it coherent across all palettes.
+    // useAuth resolves. Shared token-based skeletons keep it coherent across
+    // all six themes.
     return (
       <div className="app-main-bg min-h-screen" aria-busy="true" role="status" aria-live="polite">
         <span className="sr-only">Loading EcoLudus…</span>
 
         {/* Mobile top bar skeleton */}
-        <div
-          className="flex h-[56px] items-center gap-3 px-4 md:hidden"
-          style={{ background: "var(--bg-sidebar, #1c2e21)", borderBottom: "1px solid var(--border-subtle)" }}
-        >
-          <div className="h-8 w-8 animate-pulse rounded-lg bg-white/15" />
-          <div className="h-3 w-24 animate-pulse rounded bg-white/15" />
-        </div>
+        <div className="t-sidebar flex h-[56px] items-center gap-3 px-4 md:hidden" />
 
         {/* Desktop sidebar skeleton */}
-        <div
-          className="fixed inset-y-0 left-0 hidden w-[240px] flex-col gap-2 p-4 md:flex"
-          style={{ background: "var(--bg-sidebar, #1c2e21)" }}
-        >
-          <div className="h-10 w-10 animate-pulse rounded-2xl bg-white/15" />
+        <div className="t-sidebar fixed inset-y-0 left-0 hidden w-[240px] flex-col gap-2 p-4 md:flex">
+          {/* Same white-mix tint as the real sidebar's hover tint — black/10
+              vanishes on the always-dark --bg-sidebar surface. */}
+          <div className="h-9 w-9 shrink-0 animate-pulse rounded-xl bg-white/10" />
           <div className="mt-4 flex flex-col gap-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-9 w-full animate-pulse rounded-lg bg-white/10" />
+              <div key={i} className="h-9 w-full animate-pulse rounded-card bg-white/10" />
+            ))}
+          </div>
+        </div>
+
+        {/* Mobile bottom-nav skeleton (clearance reservation) */}
+        <div
+          className="t-sidebar fixed bottom-0 left-0 right-0 z-40 md:hidden"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="flex items-stretch justify-around gap-2 px-1 pt-1.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+                <div className="h-8 w-8 animate-pulse rounded-lg bg-white/10" />
+                <div className="mb-1 h-2 w-8 animate-pulse rounded bg-white/10" />
+              </div>
             ))}
           </div>
         </div>
 
         {/* Content skeleton */}
-        <main className="pt-[56px] pb-6 px-4 sm:px-5 md:ml-[240px] md:pt-7 md:pb-8 md:px-8">
+        <main className="pt-14 pb-[calc(5rem+env(safe-area-inset-bottom))] px-4 sm:px-5 md:ml-[240px] md:pt-7 md:pb-8 md:px-8">
           <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-5">
-            {/* Hero skeleton */}
-            <div className="rounded-[22px] p-6 sm:p-8" style={{ background: "var(--bg-hero)" }}>
-              <div className="h-3 w-24 animate-pulse rounded-full bg-white/25" />
-              <div className="mt-4 h-8 w-2/3 animate-pulse rounded-lg bg-white/25" />
-              <div className="mt-4 h-4 w-full max-w-xl animate-pulse rounded bg-white/15" />
-              <div className="mt-5 flex flex-wrap gap-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-14 w-20 animate-pulse rounded-xl bg-white/15" />
-                ))}
-              </div>
-            </div>
-            {/* Metric grid skeleton */}
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-[18px] p-5"
-                  style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)" }}
-                >
-                  <div className="h-3 w-20 animate-pulse rounded bg-[var(--bg-panel-alt)]" />
-                  <div className="mt-3 h-6 w-16 animate-pulse rounded bg-[var(--bg-panel-alt)]" />
-                </div>
-              ))}
-            </div>
-            {/* Panel skeleton */}
-            <div
-              className="rounded-[18px] p-6"
-              style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)" }}
-            >
-              <div className="h-4 w-32 animate-pulse rounded bg-[var(--bg-panel-alt)]" />
-              <div className="mt-5 flex flex-col gap-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-16 w-full animate-pulse rounded-xl bg-[var(--bg-panel-alt)]" />
-                ))}
-              </div>
-            </div>
+            <HeroSkeleton chips={5} />
+            <MetricGridSkeleton count={4} cols="grid-cols-2 lg:grid-cols-4" />
+            <PanelSkeleton rows={4} />
           </div>
         </main>
       </div>
     );
   }
 
+  // Unverified users get a persistent banner; `main` lets the banner own the
+  // top-bar clearance whenever it's visible.
+  const showBanner = Boolean(user) && !emailVerified && !bannerDismissed;
+
   return (
     <ThemeProvider>
       <ToastProvider>
         <Sidebar user={user} profile={profile} />
+        <BottomNav />
 
         {/* ── Page wrapper ── */}
         <div className="app-main-bg min-h-screen">
-          {user && !emailVerified && !bannerDismissed && (
+          {showBanner && (
             <div
               role="status"
-              className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5 md:ml-[240px] md:px-8"
-              style={{
-                background: "var(--bg-panel-alt)",
-                borderBottom: "1px solid var(--border-default)",
-                color: "var(--text-secondary)"
-              }}
+              className="mt-14 flex items-center justify-between gap-3 border-b border-line bg-surface-alt px-4 py-3 text-ink-soft sm:px-5 md:ml-[240px] md:px-8 md:mt-0"
             >
               <p className="text-sm font-semibold">
                 Please verify your email to unlock quests and rewards.{" "}
                 <Link
                   href="/resend-verification"
-                  className="font-bold underline underline-offset-2"
-                  style={{ color: "var(--text-accent)" }}
+                  className="font-bold text-accent underline underline-offset-2"
                 >
-                  Resend verification email →
+                  Resend verification email
                 </Link>
               </p>
               <button
                 type="button"
                 aria-label="Dismiss"
                 onClick={() => setBannerDismissed(true)}
-                className="shrink-0 rounded-md px-2 py-0.5 text-lg leading-none transition hover:opacity-70"
-                style={{ color: "var(--text-secondary)" }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm transition hover:opacity-70 active:scale-95"
               >
-                ×
+                <X className="h-4 w-4" strokeWidth={2.5} />
               </button>
             </div>
           )}
           <main
             className={[
-              /* Mobile: offset below top bar only (no bottom nav) */
-              "min-w-0 pt-[56px] pb-6 px-4 sm:px-5",
+              /* Mobile: the banner owns the top-bar clearance when it shows,
+                 otherwise main clears the 56px fixed bar itself */
+              `min-w-0 ${showBanner ? "pt-0" : "pt-14"} pb-[calc(5rem+env(safe-area-inset-bottom))] px-4 sm:px-5`,
               /* Desktop: offset for 240px sidebar, full available width */
               "md:ml-[240px] md:pt-7 md:pb-8 md:px-8",
             ].join(" ")}

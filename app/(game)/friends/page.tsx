@@ -1,19 +1,37 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
+import { Check, Heart, HeartHandshake, Sparkles, UserMinus, UserPlus, Users, X } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { getAllUsers } from "@/lib/auth-client";
-import { HeroMetric, PageHero, Panel, Pill, StatGrid, primaryButton, secondaryButton, dangerButton, inputClass, heroAccents } from "@/components/game-ui";
+import { PageHeader, Panel, Pill, ProgressBar, RankMedallion, primaryButton, secondaryButton, inputClass } from "@/components/game-ui";
 import { RowListSkeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Avatar } from "@/components/avatar";
-import { StaggerContainer, StaggerItem } from "@/lib/animations";
+import { StaggerContainer, StaggerItem, AnimatedNumber } from "@/lib/animations";
 
 function friendKey(friend: any) {
   return friend?.id || friend?.uid || friend?.email;
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getClaimedSocialRewards(profile: any) {
+  return Array.isArray(profile?.claimedSocialRewards) ? profile.claimedSocialRewards : [];
+}
+
+function getSocialStats(profile: any) {
+  return {
+    cheersGiven: Number(profile?.socialStats?.cheersGiven ?? 0),
+    cheersToday: Number(profile?.socialStats?.cheersToday ?? 0),
+    lastCheerDate: String(profile?.socialStats?.lastCheerDate ?? "")
+  };
 }
 
 const SOCIAL_QUESTS = [
@@ -46,20 +64,132 @@ const SOCIAL_QUESTS = [
   }
 ];
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+// Friendly glyph per challenge card (display-only — progress math is unchanged).
+const CHALLENGE_ICONS: Record<string, typeof UserPlus> = {
+  first_friend: UserPlus,
+  give_three_cheers: HeartHandshake,
+  squad_of_five: Users
+};
+
+// One-page shared ghost button: quiet text on hover, keeps 44px target.
+// Accept stays the filled primary — the pair must read as distinct actions.
+const ghostButton =
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-transparent px-4 text-sm font-bold text-ink-muted transition hover:bg-surface-alt hover:text-ink active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent";
+
+// Heart-burst cheer button: a round 44px icon button that pops when a cheer
+// goes out. Cap spent → spent wash, no pop (display only; the cap itself is
+// owned by the server + the existing cheerFriend handler).
+function CheerButton({
+  onCheer,
+  name = "friend",
+  disabled = false,
+  active = false
+}: {
+  onCheer: () => void;
+  /** Friend name for the accessible label. */
+  name?: string;
+  disabled?: boolean;
+  active?: boolean;
+}) {
+  const reduced = useReducedMotion();
+  const bursting = active && !reduced;
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onCheer}
+      animate={bursting ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+      whileTap={disabled ? undefined : { scale: 0.88 }}
+      transition={{ type: "spring", stiffness: 420, damping: 26 }}
+      disabled={disabled}
+      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent ${disabled ? "cursor-not-allowed" : "cursor-pointer"} ${active ? "animate-pulse" : ""}`}
+      style={
+        disabled
+          ? { background: "var(--bg-panel-alt)", border: "1px solid var(--border-subtle)" }
+          : {
+              background: "color-mix(in srgb, var(--accent-gold) 14%, var(--bg-panel))",
+              border: "1px solid color-mix(in srgb, var(--accent-gold) 30%, var(--border-default))"
+            }
+      }
+      aria-label={disabled ? `Daily cheer limit reached — no cheers left for ${name}` : `Cheer ${name}`}
+      title={disabled ? "Daily cheer limit reached" : "Send a cheer"}
+    >
+      <Heart
+        className={`h-[1.15rem] w-[1.15rem] ${disabled ? "" : "fill-current"}`}
+        strokeWidth={2.2}
+        style={{ color: disabled ? "var(--text-muted)" : "var(--accent-gold-text)" }}
+      />
+    </motion.button>
+  );
 }
 
-function getClaimedSocialRewards(profile: any) {
-  return Array.isArray(profile?.claimedSocialRewards) ? profile.claimedSocialRewards : [];
+// Friendly small character card for a (candidate) player row.
+function PlayerStrip({
+  id,
+  name,
+  image,
+  level,
+  xp,
+  caption,
+  action
+}: {
+  id: string;
+  name: string;
+  image?: string | null;
+  level?: number;
+  xp?: number;
+  caption?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <article className="flex items-center gap-3 rounded-[1rem] border border-line bg-surface-alt p-3.5">
+      <Link href={`/profile/${id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+        <div className="relative shrink-0">
+          <Avatar name={name || "Eco Explorer"} src={image} size={44} />
+          {typeof level === "number" && level > 0 && (
+            <span
+              className="absolute -bottom-1 -right-1 flex h-5 items-center justify-center rounded-full px-1 font-serif text-[0.625rem] font-extrabold leading-none text-ink"
+              style={{ background: "var(--bg-panel)", border: "1px solid var(--border-default)" }}
+              aria-label={`Level ${level}`}
+            >
+              {level}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0">
+          <p
+            className="truncate font-serif text-[0.9375rem] font-bold text-ink transition-colors group-hover:text-accent"
+            title={name}
+          >
+            {name}
+          </p>
+          {caption && <p className="truncate text-xs font-semibold text-ink-muted">{caption}</p>}
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {typeof level === "number" && level > 0 && (
+              <span className="fg-chip fg-chip-xp">Lv {level}</span>
+            )}
+            {typeof xp === "number" && xp > 0 && (
+              <Pill>{xp.toLocaleString()} XP</Pill>
+            )}
+          </div>
+        </div>
+      </Link>
+      {action && <div className="shrink-0">{action}</div>}
+    </article>
+  );
 }
 
-function getSocialStats(profile: any) {
-  return {
-    cheersGiven: Number(profile?.socialStats?.cheersGiven ?? 0),
-    cheersToday: Number(profile?.socialStats?.cheersToday ?? 0),
-    lastCheerDate: String(profile?.socialStats?.lastCheerDate ?? "")
-  };
+// Compact meta strip cell (the page's only stat row — 3 max before content).
+// Module-scope so React reconciles instead of remounting these cells on every
+// parent re-render (component-body declaration restarted their AnimatedNumber
+// count-up on each search keystroke).
+function MetaStat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
+  return (
+    <div className="min-w-0 px-1 text-center sm:text-left" title={hint}>
+      <p className="text-micro leading-tight text-ink-muted">{label}</p>
+      <p className="mt-0.5 font-serif text-xl font-bold leading-none text-ink">{value}</p>
+    </div>
+  );
 }
 
 export default function FriendsPage() {
@@ -348,240 +478,307 @@ export default function FriendsPage() {
   return (
     <StaggerContainer className="flex flex-col gap-5 overflow-x-hidden" as="div">
       <StaggerItem as="div">
-      <PageHero eyebrow="Social garden" title="Friends" description="Add players, send cheers, and complete social quests that turn encouragement into progress." accent={heroAccents.friends}>
-        <div className="flex flex-wrap gap-3">
-          <HeroMetric label="Friends" value={friends.length} />
-          <HeroMetric label="Your Level" value={myLevel} />
-          <HeroMetric label="Cheers" value={socialStats.cheersGiven} />
-        </div>
-      </PageHero>
+        <PageHeader
+          title="Friends"
+          description="Add players, send cheers, and complete social challenges that turn encouragement into progress."
+        />
       </StaggerItem>
 
+      {/* One compact meta strip (replaces the old stat wall) */}
       <StaggerItem as="div">
-      <StatGrid
-        items={[
-          { label: "Your XP", value: myXp.toLocaleString(), accent: "var(--text-accent)" },
-          { label: "Your EcoPoints", value: myEcoPoints.toLocaleString(), accent: "var(--text-accent)" },
-          { label: "Friends Added", value: friends.length, accent: "var(--text-accent)" },
-          { label: "Cheers Today", value: `${cheersTodayDisplay}/5`, accent: "var(--text-accent)" }
-        ]}
-      />
+        <div className="flex items-center justify-between gap-2 rounded-[1.25rem] border border-line-soft bg-surface-alt px-4 py-4 sm:px-6">
+          <MetaStat label="Friends" value={<AnimatedNumber value={friends.length} />} />
+          <div className="h-8 w-px bg-line-soft" aria-hidden="true" />
+          <MetaStat label="Cheers given" value={<AnimatedNumber value={socialStats.cheersGiven} />} />
+          <div className="h-8 w-px bg-line-soft" aria-hidden="true" />
+          <MetaStat
+            label="Cheers today"
+            value={<AnimatedNumber value={cheersTodayDisplay} />}
+            hint={`${cheersTodayDisplay} of 5 daily cheers used`}
+          />
+          <div className="hidden sm:block sm:h-8 sm:w-px sm:bg-line-soft" aria-hidden="true" />
+          {/* 4th cell folds away on phones — keeps the strip under 3 stats above the fold */}
+          <div className="hidden sm:block min-w-0">
+            <MetaStat label="Your level" value={myLevel} hint={`Level ${myLevel} — ahead of an average friend level of ${averageFriendLevel}`} />
+          </div>
+        </div>
       </StaggerItem>
 
       <StaggerItem as="section">
-      <Panel eyebrow="Social quests" title="Friend Challenges">
-        <div className="grid gap-3 lg:grid-cols-3">
-          {SOCIAL_QUESTS.map((quest) => {
-            const progress = quest.metric === "friends" ? friends.length : socialStats.cheersGiven;
-            const pct = Math.min(100, Math.round((progress / quest.target) * 100));
-            const claimed = claimedSocialRewards.includes(quest.id);
-            const ready = progress >= quest.target && !claimed;
-            return (
-              <article key={quest.id} className="rounded-2xl border p-4" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-serif text-base font-bold" style={{ color: "var(--text-primary)" }}>{quest.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{quest.description}</p>
+        <Panel eyebrow="Social quests" title="Friend challenges">
+          <div className="grid gap-3 lg:grid-cols-3">
+            {SOCIAL_QUESTS.map((quest) => {
+              const progress = quest.metric === "friends" ? friends.length : socialStats.cheersGiven;
+              const pct = Math.min(100, Math.round((progress / quest.target) * 100));
+              const claimed = claimedSocialRewards.includes(quest.id);
+              const ready = progress >= quest.target && !claimed;
+              const Icon = CHALLENGE_ICONS[quest.id] ?? Sparkles;
+              return (
+                <article key={quest.id} className="relative flex flex-col rounded-[1.25rem] border border-line bg-surface-alt p-4">
+                  {claimed && (
+                    <span
+                      className="fg-stamp absolute right-3 top-3 h-11 w-11 text-[0.55rem]"
+                      style={{
+                        transform: "rotate(-10deg)",
+                        borderColor: "color-mix(in srgb, var(--accent-green) 55%, var(--border-default))",
+                        color: "var(--accent-green-text)"
+                      }}
+                      aria-hidden="true"
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                      Claimed
+                    </span>
+                  )}
+                  <div className="flex items-start gap-3 pe-14">
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.875rem]"
+                      style={{
+                        background: "color-mix(in srgb, var(--accent-violet) 14%, var(--bg-panel))",
+                        color: "var(--accent-violet-text)"
+                      }}
+                      aria-hidden="true"
+                    >
+                      <Icon className="h-5 w-5" strokeWidth={2.2} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-serif text-base font-extrabold leading-tight text-ink">{quest.title}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-ink-muted">{quest.description}</p>
+                    </div>
                   </div>
-                  <Pill active={ready || claimed}>{claimed ? "Claimed" : `${progress}/${quest.target}`}</Pill>
-                </div>
-                <div className="mt-4 h-2 overflow-hidden rounded-full" style={{ background: "var(--border-subtle)" }}>
-                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: ready ? "var(--text-accent)" : "var(--text-muted)" }} />
-                </div>
-                <button
-                  type="button"
-                  disabled={!ready}
-                  onClick={() => claimSocialQuest(quest, progress)}
-                  className={`mt-4 w-full ${ready ? primaryButton : secondaryButton}`}
-                >
-                  {claimed ? "Reward Claimed" : ready ? `Claim +${quest.xp} XP` : `Reward: +${quest.xp} XP`}
-                </button>
-              </article>
-            );
-          })}
-        </div>
-      </Panel>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <ProgressBar value={pct} color={claimed ? "var(--accent-green)" : "var(--text-accent)"} />
+                    </div>
+                    <span className="shrink-0 text-xs text-ink-muted">
+                      <span className="font-serif text-sm font-extrabold text-ink">{Math.min(progress, quest.target)}</span>
+                      /{quest.target}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!ready}
+                    onClick={() => claimSocialQuest(quest, progress)}
+                    className={`mt-4 w-full ${ready ? primaryButton : secondaryButton}`}
+                  >
+                    {claimed ? "Reward claimed" : ready ? `Claim +${quest.xp} XP` : `Reward: +${quest.xp} XP`}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </Panel>
       </StaggerItem>
 
       {friendRequests.length > 0 && (
         <StaggerItem as="section">
-        <Panel eyebrow="Pending connections" title="Friend Requests">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {friendRequests.map((req: any) => (
-              <article key={req.id || req.uid} className="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                <Link href={`/profile/${req.id || req.uid}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
-                  <Avatar name={req.displayName || "Anonymous"} src={req.profileImage} size={44} />
-                  <div className="min-w-0">
-                    <p className="truncate font-serif text-base font-bold" title={req.displayName || "Anonymous"} style={{ color: "var(--text-primary)" }}>{req.displayName || "Anonymous"}</p>
-                    <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>Wants to add you</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Pill>Lv {req.level || 1}</Pill>
-                      <Pill>{Number(req.xp || 0).toLocaleString()} XP</Pill>
+          <Panel eyebrow="Pending connections" title="Friend requests">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {friendRequests.map((req: any) => (
+                <article
+                  key={req.id || req.uid}
+                  className="flex flex-col gap-3 rounded-[1rem] border border-line bg-surface-alt p-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                >
+                  <Link href={`/profile/${req.id || req.uid}`} className="group flex min-w-0 flex-1 items-center gap-3">
+                    <Avatar name={req.displayName || "Anonymous"} src={req.profileImage} size={44} />
+                    <div className="min-w-0">
+                      <p
+                        className="truncate font-serif text-[0.9375rem] font-bold text-ink transition-colors group-hover:text-accent"
+                        title={req.displayName || "Anonymous"}
+                      >
+                        {req.displayName || "Anonymous"}
+                      </p>
+                      <p className="text-xs font-semibold text-ink-muted">Wants to add you</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <span className="fg-chip fg-chip-xp">Lv {req.level || 1}</span>
+                        <Pill>{Number(req.xp || 0).toLocaleString()} XP</Pill>
+                      </div>
                     </div>
+                  </Link>
+                  <div className="grid grid-cols-2 gap-2 shrink-0 sm:flex sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => acceptFriendRequest(req)}
+                      disabled={busyId === (req.id || req.uid)}
+                      className={`w-full sm:w-auto ${primaryButton}`}
+                    >
+                      {busyId === (req.id || req.uid) ? "Accepting…" : "Accept"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => declineFriendRequest(req)}
+                      disabled={busyId === (req.id || req.uid)}
+                      className={`w-full sm:w-auto ${ghostButton}`}
+                    >
+                      {busyId === (req.id || req.uid) ? "Declining…" : "Decline"}
+                    </button>
                   </div>
-                </Link>
-                <div className="grid grid-cols-2 gap-2 shrink-0 sm:flex sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => acceptFriendRequest(req)}
-                    disabled={busyId === (req.id || req.uid)}
-                    className={`w-full sm:w-auto ${primaryButton}`}
-                  >
-                    {busyId === (req.id || req.uid) ? "Accepting…" : "Accept"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => declineFriendRequest(req)}
-                    disabled={busyId === (req.id || req.uid)}
-                    className={`w-full sm:w-auto ${secondaryButton}`}
-                  >
-                    {busyId === (req.id || req.uid) ? "Declining…" : "Decline"}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </Panel>
+                </article>
+              ))}
+            </div>
+          </Panel>
         </StaggerItem>
       )}
 
       <StaggerItem as="section">
-      <Panel id="find-players" eyebrow={query.trim() ? "Search results" : "Recommended"} title="Find Players">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className={`${inputClass} pr-10`}
-              placeholder="Search by name or email"
-              aria-label="Search by name or email"
-            />
-            {query.trim() && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-sm transition hover:opacity-70"
-                style={{ color: "var(--text-muted)" }}
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                ✕
-              </button>
+        <Panel id="find-players" eyebrow={query.trim() ? "Search results" : "Recommended"} title="Find players">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className={`${inputClass} pr-12`}
+                placeholder="Search by name or email"
+                aria-label="Search by name or email"
+              />
+              {query.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-ink-muted transition hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <X className="h-4 w-4" strokeWidth={2.2} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {loading ? (
+              <div className="col-span-full"><RowListSkeleton rows={4} variant="avatar" /></div>
+            ) : candidates.length > 0 ? (
+              candidates.map((player) => {
+                const isSent = sentRequestsSet.has(player.id);
+                const isIncoming = friendRequestsSet.has(player.id);
+
+                return (
+                  <PlayerStrip
+                    key={player.id}
+                    id={player.id}
+                    name={player.displayName || "Eco Explorer"}
+                    image={player.profileImage}
+                    level={Number(player.level || 1)}
+                    xp={Number(player.xp || 0)}
+                    caption="EcoLudus player"
+                    action={
+                      isSent ? (
+                        <button type="button" disabled className={secondaryButton}>
+                          <span className="inline-flex items-center gap-1.5">
+                            <Check className="h-4 w-4" strokeWidth={2.6} aria-hidden="true" /> Sent
+                          </span>
+                        </button>
+                      ) : isIncoming ? (
+                        <button
+                          type="button"
+                          onClick={() => acceptFriendRequest(player)}
+                          disabled={busyId === player.id}
+                          className={primaryButton}
+                        >
+                          {busyId === player.id ? "Accepting…" : "Accept"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => sendFriendRequest(player)}
+                          disabled={busyId === player.id}
+                          className={primaryButton}
+                        >
+                          {busyId === player.id ? "Sending…" : "Add"}
+                        </button>
+                      )
+                    }
+                  />
+                );
+              })
+            ) : (
+              <div className="col-span-full">
+                <EmptyState
+                  variant="plain"
+                  title={query.trim() ? "No matching players found." : "No other players to recommend yet — check back soon!"}
+                />
+              </div>
             )}
           </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {loading ? (
-            <div className="col-span-full"><RowListSkeleton rows={4} variant="avatar" /></div>
-          ) : candidates.length > 0 ? (
-            candidates.map((player) => {
-              const isSent = sentRequestsSet.has(player.id);
-              const isIncoming = friendRequestsSet.has(player.id);
-
-              return (
-                <article key={player.id} className="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3" style={{ borderColor: "var(--border-default)", background: "var(--bg-panel-alt)" }}>
-                  <Link href={`/profile/${player.id}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
-                    <Avatar name={player.displayName} src={player.profileImage} size={44} />
-                    <div className="min-w-0">
-                      <p className="truncate font-serif text-base font-bold" title={player.displayName} style={{ color: "var(--text-primary)" }}>{player.displayName}</p>
-                      <p className="truncate text-xs" style={{ color: "var(--text-muted)" }}>EcoLudus player</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Pill>Lv {player.level || 1}</Pill>
-                        <Pill>{Number(player.xp || 0).toLocaleString()} XP</Pill>
-                      </div>
-                    </div>
-                  </Link>
-                  <div className="shrink-0 sm:self-center">
-                    {isSent ? (
-                      <button type="button" disabled className={`w-full sm:w-auto ${secondaryButton}`}>
-                        Sent
-                      </button>
-                    ) : isIncoming ? (
-                      <button
-                        type="button"
-                        onClick={() => acceptFriendRequest(player)}
-                        disabled={busyId === player.id}
-                        className={`w-full sm:w-auto ${primaryButton}`}
-                      >
-                        {busyId === player.id ? "Accepting…" : "Accept"}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => sendFriendRequest(player)}
-                        disabled={busyId === player.id}
-                        className={`w-full sm:w-auto ${primaryButton}`}
-                      >
-                        {busyId === player.id ? "Sending…" : "Add"}
-                      </button>
-                    )}
-                  </div>
-                </article>
-              );
-            })
-          ) : (
-            <p className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
-              {query.trim() ? "No matching players found." : "No other players to recommend yet — check back soon!"}
-            </p>
-          )}
-        </div>
-      </Panel>
+        </Panel>
       </StaggerItem>
 
       <StaggerItem as="section">
-      <Panel eyebrow="Compare stats" title="Friend Board">
-        {friends.length === 0 ? (
-          <EmptyState
-            variant="card"
-            icon="🌱"
-            title="No friends yet"
-            description="Add fellow players to compare stats, send cheers, and complete social quests together."
-            action={<Link href="/friends#find-players" className={primaryButton}>Find players to add</Link>}
-          />
-        ) : (
-          <div className="flex flex-col divide-y overflow-hidden rounded-2xl border" style={{ borderColor: "var(--border-default)" }}>
-            {friends
-              .slice()
-              .sort((a, b) => Number(b.xp || 0) - Number(a.xp || 0))
-              .map((friend, index) => (
-                <div key={friendKey(friend)} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "var(--border-subtle)", background: "var(--bg-panel-alt)" }}>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-serif text-lg font-black" style={{ background: "var(--bg-panel)", color: "var(--text-primary)" }}>
-                      #{index + 1}
-                    </span>
-                    <Link href={`/profile/${friendKey(friend)}`} className="flex min-w-0 items-center gap-3 hover:opacity-80">
-                      <Avatar name={friend.displayName || friend.email || "Eco Explorer"} src={friend.profileImage} size={40} />
-                      <div className="min-w-0">
-                        <p className="truncate font-serif text-base font-bold" style={{ color: "var(--text-primary)" }} title={friend.displayName || friend.email}>{friend.displayName || friend.email}</p>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          <Pill>Lv {friend.level || 1}</Pill>
-                          <Pill>{Number(friend.xp || 0).toLocaleString()} XP</Pill>
-                          <Pill>{Number(friend.cheers || 0)} cheer{Number(friend.cheers || 0) === 1 ? "" : "s"}</Pill>
-                          <Pill active={Number(friend.xp || 0) <= myXp}>{Number(friend.xp || 0) <= myXp ? "You lead" : "Ahead"}</Pill>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                  <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => cheerFriend(friend)}
-                      disabled={cheersTodayDisplay >= 5 || cheeringId !== null}
-                      className={`flex-1 sm:flex-none ${cheersTodayDisplay >= 5 ? secondaryButton : primaryButton}`}
-                      title={cheersTodayDisplay >= 5 ? "Daily cheer limit reached" : undefined}
+        <Panel eyebrow="Your circle" title="Friend board">
+          {friends.length === 0 ? (
+            <EmptyState
+              variant="card"
+              icon={<UserPlus className="h-8 w-8" strokeWidth={2} />}
+              title="No friends yet"
+              description="Add fellow players to compare stats, send cheers, and complete social quests together."
+              action={<Link href="/friends#find-players" className={primaryButton}>Find players to add</Link>}
+            />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {friends
+                .slice()
+                .sort((a, b) => Number(b.xp || 0) - Number(a.xp || 0))
+                .map((friend, index) => {
+                  const cheers = Number(friend.cheers || 0);
+                  return (
+                    <article
+                      key={friendKey(friend)}
+                      className="flex flex-col gap-3 rounded-[1.25rem] border border-line bg-surface-alt p-4"
                     >
-                      {cheersTodayDisplay >= 5 ? "Limit reached" : cheeringId === friendKey(friend) ? "Sending…" : "Cheer"}
-                    </button>
-                    <button type="button" onClick={() => setFriendToRemove(friend)} className={`flex-1 sm:flex-none ${secondaryButton}`}>
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
-      </Panel>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <RankMedallion rank={index + 1} size={36} />
+                        <Link href={`/profile/${friendKey(friend)}`} className="group flex min-w-0 flex-1 items-center gap-3">
+                          <Avatar
+                            name={friend.displayName || friend.email || "Eco Explorer"}
+                            src={friend.profileImage}
+                            size={44}
+                          />
+                          <div className="min-w-0">
+                            <p
+                              className="truncate font-serif text-[0.9375rem] font-bold text-ink transition-colors group-hover:text-accent"
+                              title={friend.displayName || friend.email}
+                            >
+                              {friend.displayName || friend.email}
+                            </p>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span className="fg-chip fg-chip-xp">Lv {friend.level || 1}</span>
+                              <Pill>{Number(friend.xp || 0).toLocaleString()} XP</Pill>
+                              {cheers > 0 && (
+                                <Pill>
+                                  {cheers} cheer{cheers === 1 ? "" : "s"}
+                                </Pill>
+                              )}
+                            </div>
+                            <p className="mt-1 text-[0.6875rem] font-semibold text-ink-muted">
+                              {Number(friend.xp || 0) <= myXp ? "You lead" : "Ahead of you"}
+                            </p>
+                          </div>
+                        </Link>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 ps-9">
+                        <CheerButton
+                          onCheer={() => cheerFriend(friend)}
+                          name={friend.displayName || friend.email || "friend"}
+                          disabled={cheersTodayDisplay >= 5 || cheeringId !== null}
+                          active={cheeringId === friendKey(friend)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFriendToRemove(friend)}
+                          className={ghostButton}
+                          aria-label={`Remove ${(friend.displayName || friend.email || "friend") as string}`}
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            <UserMinus className="h-4 w-4" strokeWidth={2.2} aria-hidden="true" /> Remove
+                          </span>
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+            </div>
+          )}
+        </Panel>
       </StaggerItem>
 
       <ConfirmDialog

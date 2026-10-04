@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   motion,
   AnimatePresence,
+  useInView,
   useReducedMotion,
   type Transition,
   type Variants
@@ -174,24 +175,30 @@ export function StaggerItem({ children, className = "", as = "div", id, style, t
 }
 
 // ── AnimatedNumber ──────────────────────────────────────────────
-function useAnimatedNumber(value: number, duration = 700) {
+function useAnimatedNumber(
+  value: number,
+  duration = 700,
+  /** When `armed` is false the counter holds at `startAt` until it flips. */
+  opts: { startAt?: number; armed?: boolean } = {}
+) {
+  const { startAt = value, armed = true } = opts;
   const prefersReducedMotion = useReducedMotion();
-  const [display, setDisplay] = useState(value);
+  const [display, setDisplay] = useState(startAt);
   // Mirror of `display` so the animation effect can read the latest animated
   // value as its start point WITHOUT depending on `display` (which would
   // re-run the effect every animation frame). The ref is written inside an
   // effect — the recommended place for ref writes — not during render.
-  const displayRef = useRef(value);
+  const displayRef = useRef(startAt);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    displayRef.current = display;
-  }, [display]);
+    displayRef.current = armed ? display : startAt;
+  }, [display, armed, startAt]);
 
   useEffect(() => {
     // Reduced motion: no animation. The hook returns `value` directly below, so
     // there's no need to setState here (which would be a cascading render).
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion || !armed) return;
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const startValue = displayRef.current;
@@ -212,7 +219,7 @@ function useAnimatedNumber(value: number, duration = 700) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [value, duration, prefersReducedMotion]);
+  }, [value, duration, prefersReducedMotion, armed]);
 
   // When reduced motion is on, show the target value immediately — no animated
   // intermediate, no setState-in-effect.
@@ -224,17 +231,27 @@ type AnimatedNumberProps = {
   duration?: number;
   formatter?: (n: number) => string;
   className?: string;
+  /** Opt-in count-up on first scroll-in: hold at this value until the number
+      enters the viewport, then animate to `value`. Omit for the default
+      mount-time behavior (start already at `value`). */
+  startFrom?: number;
 };
 
 export function AnimatedNumber({
   value,
   duration = 700,
   formatter,
-  className = ""
+  className = "",
+  startFrom
 }: AnimatedNumberProps) {
-  const display = useAnimatedNumber(value, duration);
+  const ref = useRef<HTMLSpanElement>(null);
+  // Only subscribe to viewport when a startFrom is requested, so existing
+  // consumers (game stat chips) keep animating on mount unconditionally.
+  const inView = useInView(ref, { once: true, amount: 0.6 });
+  const armed = startFrom === undefined ? true : inView;
+  const display = useAnimatedNumber(value, duration, { startAt: startFrom ?? value, armed });
   const formatted = formatter ? formatter(display) : Math.round(display).toLocaleString();
-  return <span className={className}>{formatted}</span>;
+  return <span ref={ref} className={className}>{formatted}</span>;
 }
 
 // ── AnimatedProgressBar ─────────────────────────────────────────
@@ -350,12 +367,14 @@ export function MotionPresence({ children, className = "", style }: MotionPresen
 //
 // Used by the collection page's chest-opening and egg-hatching reveals to give
 // the "you unlocked something" moment ambient, rarity-tinted light.
+// Color source: the `--rarity-<r>` theme vars (single rarity system — see
+// globals.css). The fallback is the legendary glow, keyed for unknown rarities.
 const RARITY_GLOW: Record<string, string> = {
-  common: "#4ade80",
-  uncommon: "#34d399",
-  rare: "#60a5fa",
-  epic: "#c084fc",
-  legendary: "#fbbf24"
+  common: "var(--rarity-common)",
+  uncommon: "var(--rarity-uncommon)",
+  rare: "var(--rarity-rare)",
+  epic: "var(--rarity-epic)",
+  legendary: "var(--rarity-legendary)"
 };
 
 type RewardGlowProps = {
@@ -365,14 +384,17 @@ type RewardGlowProps = {
 
 export function RewardGlow({ rarity, className = "" }: RewardGlowProps) {
   const prefersReducedMotion = useReducedMotion();
-  const color = RARITY_GLOW[rarity ?? ""] ?? "#fbbf24";
+  // Tints mix the rarity token against transparent (`color-mix`) because the
+  // token is a var() — bare hex alpha suffixes wouldn't resolve here.
+  const color = RARITY_GLOW[rarity ?? ""] ?? "var(--rarity-legendary)";
+  const tintAlpha = (p: number) => `color-mix(in srgb, ${color} ${p}%, transparent)`;
 
   return (
     <div aria-hidden className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
       {/* Pulsing halo */}
       <motion.div
         className="absolute left-1/2 top-1/2 h-[150%] w-[150%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl"
-        style={{ background: `radial-gradient(circle, ${color}55 0%, transparent 60%)` }}
+        style={{ background: `radial-gradient(circle, ${tintAlpha(33)} 0%, transparent 60%)` }}
         animate={prefersReducedMotion ? { opacity: 0.5 } : { opacity: [0.5, 0.22, 0.5], scale: [1, 1.08, 1] }}
         transition={{ duration: 2.4, repeat: prefersReducedMotion ? 0 : Infinity, ease: "easeInOut" }}
       />
@@ -380,7 +402,7 @@ export function RewardGlow({ rarity, className = "" }: RewardGlowProps) {
       <motion.div
         className="absolute left-1/2 top-1/2 h-[130%] w-[130%] -translate-x-1/2 -translate-y-1/2 opacity-40"
         style={{
-          background: `conic-gradient(from 0deg, transparent 0deg, ${color}66 25deg, transparent 50deg, transparent 90deg, ${color}66 115deg, transparent 140deg, transparent 180deg, ${color}66 205deg, transparent 230deg, transparent 270deg, ${color}66 295deg, transparent 320deg, transparent 360deg)`,
+          background: `conic-gradient(from 0deg, transparent 0deg, ${tintAlpha(40)} 25deg, transparent 50deg, transparent 90deg, ${tintAlpha(40)} 115deg, transparent 140deg, transparent 180deg, ${tintAlpha(40)} 205deg, transparent 230deg, transparent 270deg, ${tintAlpha(40)} 295deg, transparent 320deg, transparent 360deg)`,
           maskImage: "radial-gradient(circle, black 0%, transparent 68%)",
           WebkitMaskImage: "radial-gradient(circle, black 0%, transparent 68%)"
         }}

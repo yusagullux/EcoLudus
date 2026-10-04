@@ -137,12 +137,14 @@ export function Dialog({
 
   if (!open) return null;
 
+  // No backdrop-blur — banned on app surfaces (redesign spec); the dim alone
+  // separates the modal.
   return (
     <MotionBackdrop
       initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6"
       onClick={disableBackdropClose ? undefined : onClose}
       role="presentation"
     >
@@ -156,8 +158,12 @@ export function Dialog({
         initial={prefersReducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.94, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 28 }}
-        className={`relative flex max-h-[90vh] w-full ${SIZE_MAX[size]} flex-col overflow-hidden rounded-[24px] border p-6 shadow-[0_24px_70px_rgba(0,0,0,0.25)] outline-none ${className}`}
-        style={{ borderColor: "var(--border-default)", background: "var(--bg-panel)" }}
+        className={`relative flex max-h-[90vh] w-full ${SIZE_MAX[size]} flex-col overflow-hidden border p-6 shadow-elev-3 outline-none ${className}`}
+        style={{
+          borderColor: "var(--border-default)",
+          background: "var(--bg-panel)",
+          borderRadius: "var(--radius-dialog)"
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
@@ -178,7 +184,7 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full transition hover:opacity-80 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             style={{
               background: "var(--bg-panel-alt)",
               color: "var(--text-muted)",

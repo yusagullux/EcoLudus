@@ -19,7 +19,7 @@ import type { Rarity } from "@/components/game-ui";
 
 type PlantTile = Record<string, unknown>;
 
-const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary"];
+const RARITIES: Rarity[] = ["common", "uncommon", "rare", "epic", "legendary"];
 
 const plantSchema = z.object({
   tileId: z.number().int().min(0),

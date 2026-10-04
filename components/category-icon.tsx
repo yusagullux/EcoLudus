@@ -1,6 +1,19 @@
-// @ts-nocheck
-import type { CSSProperties } from "react";
-import type { SVGProps } from "react";
+import type { CSSProperties, SVGProps } from "react";
+
+// Category accent tokens — the single source for the category palette that five
+// pages used to each hand-copied (dashboard, insights, habits, collection,
+// profile). `hex` is the theme-invariant fill token; `chip`/`ink` are prebuilt
+// Tailwind class names generated from the same tokens.
+export const CATEGORY_TOKEN: Record<Exclude<IconKey, "default">, { hex: string; chip: string; ink: string }> = {
+  recycling:  { hex: "var(--accent-green)",  chip: "bg-cat-green",  ink: "text-cat-green-ink" },
+  energy:     { hex: "var(--accent-gold)",   chip: "bg-cat-gold",   ink: "text-cat-gold-ink" },
+  transport:  { hex: "var(--accent-blue)",   chip: "bg-cat-blue",   ink: "text-cat-blue-ink" },
+  water:      { hex: "var(--accent-teal)",   chip: "bg-cat-teal",   ink: "text-cat-teal-ink" },
+  cleanup:    { hex: "var(--accent-slate)",  chip: "bg-cat-slate",  ink: "text-cat-slate-ink" },
+  gardening:  { hex: "var(--accent-sage)",   chip: "bg-cat-sage",   ink: "text-cat-sage-ink" },
+  sustainable:{ hex: "var(--accent-lime)",   chip: "bg-cat-lime",   ink: "text-cat-lime-ink" }
+};
+const DEFAULT_CATEGORY_TOKEN = CATEGORY_TOKEN.gardening;
 
 /**
  * Hand-coded SVG category icons (no external/stock images).
@@ -18,7 +31,7 @@ type IconKey =
   | "sustainable"
   | "default";
 
-const stroke: SVGProps<SVGGElement> = {
+const stroke: Pick<SVGProps<SVGElement>, "fill" | "stroke" | "strokeWidth" | "strokeLinecap" | "strokeLinejoin"> = {
   fill: "none",
   stroke: "currentColor",
   strokeWidth: 1.8,
@@ -113,6 +126,13 @@ function Icon({ k }: { k: IconKey }) {
 
 export function categoryIconKey(idOrName: string): IconKey {
   return normalizeKey(idOrName);
+}
+
+/** Resolved accent token for a category id/name — normalized to `default`. */
+export function categoryToken(idOrName: string): { hex: string; chip: string; ink: string } {
+  const key = normalizeKey(idOrName);
+  if (key === "default") return DEFAULT_CATEGORY_TOKEN;
+  return CATEGORY_TOKEN[key];
 }
 
 type CategoryIconProps = {

@@ -1,9 +1,36 @@
-// Garden tile economy — shared by the garden page and the server-validated
-// /api/garden/buy-tile route so the client and server always agree on the
-// unlocked-tile count and the price of the next tile.
+// Garden tile economy — shared by the garden page, the dashboard's readiness
+// teaser, and the server-validated /api/garden routes so the client and server
+// always agree on the unlocked-tile count, the price of the next tile, grow
+// times, and harvest rewards.
+
+import type { Rarity } from "@/components/game-ui";
 
 export const GARDEN_START_TILES = 4;
 export const GARDEN_MAX_TILES = 16;
+
+// Time from planting to first bloom, per rarity. One home — the garden page
+// timers, the dashboard "plots ready" teaser, and the harvest route's
+// isReady() check all read this map, so they can never drift apart.
+export const GROW_DURATION: Record<Rarity, number> = {
+  common: 8 * 60 * 60 * 1000,
+  uncommon: 14 * 60 * 60 * 1000,
+  rare: 24 * 60 * 60 * 1000,
+  epic: 72 * 60 * 60 * 1000,
+  legendary: 96 * 60 * 60 * 1000
+};
+
+// How long a bloomed plant must wait between harvests.
+export const HARVEST_COOLDOWN_MS = 48 * 60 * 60 * 1000;
+
+// EcoPoints granted per harvest, by rarity. Displayed by the garden page and
+// enforced by /api/garden/harvest (which adds the server-only XP table).
+export const HARVEST_REWARDS: Record<Rarity, number> = {
+  common: 8,
+  uncommon: 14,
+  rare: 22,
+  epic: 55,
+  legendary: 120
+};
 
 // Increasing cost per tile: the first extra tile (the 5th) costs the base,
 // and each subsequent tile costs `step` more. So tiles 5→16 cost
