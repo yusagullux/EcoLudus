@@ -50,3 +50,9 @@ scripts/test-exp.js
 scripts/exp-out/
 
 .vercel
+
+# Claude Code session scratch (screenshots, capture scripts, audit notes)
+.claude/*.png
+.claude/*.mjs
+.claude/audit/
+.claude/wave2-prompts.md
