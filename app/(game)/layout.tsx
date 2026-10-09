@@ -90,7 +90,7 @@ export default function GameLayout({
                 Please verify your email to unlock quests and rewards.{" "}
                 <Link
                   href="/resend-verification"
-                  className="font-bold text-accent underline underline-offset-2"
+                  className="-my-2 inline-block py-2 font-bold text-accent underline underline-offset-2"
                 >
                   Resend verification email
                 </Link>

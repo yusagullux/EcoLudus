@@ -71,17 +71,34 @@ export default function RootLayout({
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "EcoLudus",
-    "url": "https://ecoludus.com",
-    "description": "Gamified environmental sustainability platform. Turn eco-friendly habits into daily rewards.",
-    "applicationCategory": "LifestyleApplication",
-    "operatingSystem": "Web",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    }
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "EcoLudus",
+        "url": "https://ecoludus.com",
+        "description": "Gamified environmental sustainability platform. Turn eco-friendly habits into daily rewards.",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Web",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "url": "https://ecoludus.com",
+        "name": "EcoLudus",
+        "publisher": { "@id": "https://ecoludus.com/#org" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://ecoludus.com/#org",
+        "url": "https://ecoludus.com",
+        "name": "EcoLudus",
+        "logo": "https://ecoludus.com/favicon.png"
+      }
+    ]
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useToast } from "@/lib/toast";
 import { useShopCatalog } from "@/lib/useCatalog";
@@ -50,6 +50,7 @@ export default function ShopPage() {
   const { user, profile, refreshProfile } = useAuth();
   const ecoPoints = Number(profile?.ecoPoints ?? 0);
   const [buyingId, setBuyingId] = useState<string | null>(null);
+  const buyingRef = useRef(false);
   const toast = useToast();
   const shopCatalog = useShopCatalog();
   const dailyDeals = shopCatalog.dailyDeals as any[] || [];
@@ -73,7 +74,11 @@ export default function ShopPage() {
       toast.error("Please log in to purchase items.");
       return;
     }
-    if (buyingId) return;
+    // Ref guard, not just state: a rapid double-click lands both events before
+    // the buyingId re-render, so `if (buyingId) return` alone let both through
+    // (FEEDBACKS.md C1 — server also guards with shop/duplicate-purchase).
+    if (buyingRef.current || buyingId) return;
+    buyingRef.current = true;
 
     if (ecoPoints < deal.dealPrice) {
       toast.error(`Need ${deal.dealPrice} EcoPoints; you have ${ecoPoints}.`);
@@ -100,6 +105,7 @@ export default function ShopPage() {
       toast.success(`${deal.name} added to collection!`);
       void refreshProfile();
     } finally {
+      buyingRef.current = false;
       setBuyingId(null);
     }
   };
@@ -218,7 +224,7 @@ export default function ShopPage() {
                         }
                         className={`shrink-0 disabled:cursor-not-allowed disabled:opacity-60 ${canAfford ? primaryButton : "inline-flex min-h-11 items-center justify-center rounded-full border border-line bg-surface-alt px-4 py-2.5 text-xs font-bold text-ink-muted transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"}`}
                       >
-                        {isBuying ? "Buying…" : canAfford ? "Buy" : `+${shortfall} EP`}
+                        {isBuying ? "Buying…" : canAfford ? "Buy" : `Need ${shortfall} more`}
                       </button>
                     </div>
                   </div>

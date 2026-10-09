@@ -119,7 +119,7 @@ function IndividualLeaderboard({ users, currentUserId }: { users: Player[]; curr
       {myRank > 3 && (
         <a
           href="#your-row"
-          className="w-fit rounded-full transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+          className="-m-2 w-fit rounded-full p-2 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
         >
           <Pill active>You&rsquo;re #{myRank}</Pill>
         </a>

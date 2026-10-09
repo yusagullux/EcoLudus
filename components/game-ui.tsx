@@ -403,7 +403,9 @@ export const dangerButton =
   `${buttonBase} min-h-12 chip-danger border hover:-translate-y-0.5 active:scale-95` +
   " [border-color:color-mix(in_srgb,var(--text-error)_35%,var(--border-default))] focus-visible:ring-status-danger";
 
-export const inputClass = "t-input w-full rounded-input px-4 py-3 text-sm font-medium outline-none transition";
+// text-base (16px), not text-sm — inputs below 16px make iOS Safari auto-zoom
+// on focus, blowing the layout on every form.
+export const inputClass = "t-input w-full rounded-input px-4 py-3 text-base font-medium outline-none transition";
 
 // ── QuestCard ─────────────────────────────────────────────────
 // The daily-mission game card: category icon tile (12% tint of the category

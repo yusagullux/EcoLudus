@@ -60,7 +60,12 @@ const nextConfig: NextConfig = {
         source: "/favicon.ico",
         destination: "/favicon.png",
         permanent: true
-      }
+      },
+      // The real legal pages live under /legal/*; these legacy paths 404ed
+      // (FEEDBACKS.md B5). Redirect so external links / search drift never hit
+      // a 404.
+      { source: "/terms", destination: "/legal/terms", permanent: true },
+      { source: "/privacy", destination: "/legal/privacy", permanent: true }
     ];
   },
   async headers() {

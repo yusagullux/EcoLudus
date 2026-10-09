@@ -24,8 +24,9 @@ function getPetImage(pet: any) {
 function PetImage({
   pet,
   fit = "cover",
-  sizes = "(max-width: 640px) 45vw, 240px"
-}: { pet: any; fit?: "cover" | "contain"; sizes?: string }) {
+  sizes = "(max-width: 640px) 45vw, 240px",
+  eager = false
+}: { pet: any; fit?: "cover" | "contain"; sizes?: string; eager?: boolean }) {
   const [imgError, setImgError] = useState(false);
 
   if (imgError) {
@@ -46,6 +47,7 @@ function PetImage({
       alt={pet?.name || "pet"}
       fill
       sizes={sizes}
+      loading={eager ? "eager" : undefined}
       onError={() => setImgError(true)}
       className={fitClass}
     />
@@ -403,7 +405,7 @@ export default function PetsPage() {
                   background: `radial-gradient(circle at 50% 30%, ${tint(moodAccent, 16)}, transparent 62%), radial-gradient(85% 45% at 50% 108%, ${tint(moodAccent, 10)}, transparent 70%), var(--bg-panel-alt)`
                 }}
               >
-                <PetImage pet={selectedPet} fit="contain" sizes="(max-width: 640px) 85vw, 320px" />
+                <PetImage pet={selectedPet} fit="contain" eager sizes="(max-width: 640px) 85vw, 320px" />
                 {hearts.map((heart) => (
                   <span
                     key={heart.id}
@@ -525,7 +527,7 @@ export default function PetsPage() {
         <StaggerItem as="section">
           <Panel eyebrow="Your menagerie" title="Choose a pet">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-              {pets.map((pet) => {
+              {pets.map((pet, index) => {
                 const isSelected = selectedPet?.id === pet.id;
                 const isActive = pet.active || activePetId === pet.id;
                 const style = rarityStyle[pet.rarity as Rarity] ?? rarityStyle.common;
@@ -543,7 +545,7 @@ export default function PetsPage() {
                     }}
                   >
                     <span className="relative block aspect-square overflow-hidden" style={{ background: `color-mix(in srgb, ${accent} 12%, var(--bg-card))` }}>
-                      <PetImage pet={pet} fit="cover" />
+                      <PetImage pet={pet} fit="cover" eager={index === 0} />
                       {isActive && <span className="absolute left-2 top-2 z-10"><Pill active>Active</Pill></span>}
                       <span className={`absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-micro ${style.chip}`}>{pet.rarity}</span>
                     </span>

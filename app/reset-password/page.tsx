@@ -4,6 +4,8 @@ import { MarketingShell } from "@/components/marketing-shell";
 import { ResetPasswordForm } from "./reset-form";
 
 export const metadata: Metadata = {
+  // One-time token-credential page — never indexable.
+  robots: { index: false, follow: false },
   title: "Reset password · EcoLudus",
   description: "Choose a new password for your EcoLudus account."
 };

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useQuests } from "@/lib/useQuests";
+import { computeCategoryProgress } from "@/lib/quest-progress";
 import { useToast } from "@/lib/toast";
 import { Avatar } from "@/components/avatar";
 import { CategoryIcon, categoryToken } from "@/components/category-icon";
@@ -31,16 +32,6 @@ import { requiredXP } from "@/lib/level-system";
 import { GROW_DURATION, HARVEST_COOLDOWN_MS } from "@/lib/garden-config";
 import { PLANT_IMAGES } from "@/lib/ui-shared";
 import { AnimatedNumber, RewardGlow, StaggerContainer, StaggerItem } from "@/lib/animations";
-
-const CATEGORIES = [
-  { name: "Recycling" },
-  { name: "Energy Saving" },
-  { name: "Transportation" },
-  { name: "Water Saving" },
-  { name: "Clean-Up Missions" },
-  { name: "Gardening & Nature" },
-  { name: "Sustainable Living" }
-];
 
 // Category accents resolve through categoryToken() — the shared category
 // palette in components/category-icon.tsx — so the dashboard can never drift
@@ -148,7 +139,7 @@ export default function DashboardPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [verifyingText, setVerifyingText] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | string[] | null>(null);
   const [completedPopup, setCompletedPopup] = useState<string | null>(null);
   const [pendingCompletion, setPendingCompletion] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
@@ -318,7 +309,11 @@ export default function DashboardPage() {
   const currentStreak = Number(profile?.currentStreak ?? 0);
   const longestStreak = Number(profile?.longestStreak ?? currentStreak);
   const profileAnimals = Array.isArray(profile?.animals) ? profile.animals : [];
-  const activePetId = profile?.activePet || profileAnimals.find((pet: any) => pet.active)?.id;
+  // Fall back to the most recently acquired owned pet when neither an explicit
+  // activePet pointer nor an `active` flag exists (seed/legacy/imported data
+  // — FEEDBACKS.md B2: dashboard said "No companion yet" for an owner).
+  const activePetId =
+    profile?.activePet || profileAnimals.find((pet: any) => pet.active)?.id || profileAnimals[profileAnimals.length - 1]?.id;
   const activePet = profileAnimals.find((pet: any) => pet.id === activePetId) || null;
   const activePetBond = Number(activePet?.bond ?? 0);
 
@@ -382,15 +377,10 @@ export default function DashboardPage() {
     { xp: 0, eco: 0, carbon: 0 }
   );
 
-  // Calculate dynamic category progress using quests.json & user's completedQuests list
-  const categoryProgress = CATEGORIES.map((cat) => {
-    const jsonCategory = questsData?.categories?.find(
-      (c: any) => c.name === cat.name || c.id === cat.name.toLowerCase().replace(" ", "_")
-    );
-    const total = jsonCategory?.quests?.length || 1;
-    const done = jsonCategory?.quests?.filter((q: any) => completedQuests.includes(q.id)).length || 0;
-    return { ...cat, done, total };
-  });
+  // Category progress — shared module (lib/quest-progress.ts) derived from
+  // quests.json, the same source the Profile page's "Quest Category Progress"
+  // panel renders from, so the two pages can't drift (FEEDBACKS.md B1).
+  const categoryProgress = computeCategoryProgress(completedQuests);
 
   const handleProofPhotoSelected = (file: File | null) => {
     setVerificationError(null);
@@ -500,13 +490,16 @@ export default function DashboardPage() {
         // Show Gemini's reasoning if available, otherwise use a friendly message
         const reason = data?.error?.message;
         const isRejection = response.status === 422;
-        throw new Error(
-          reason
-            ? reason
-            : isRejection
-            ? "Proof not accepted. Please provide a more specific description of what you did."
+        // Lead with a one-line summary; Gemini's full reasoning rides along as
+        // the detail line below the summary in the error banner.
+        const fail = new Error(
+          isRejection
+            ? "Proof not accepted — it doesn't clearly show this mission."
             : "Verification failed. Please try again."
         );
+        (fail as & { detail?: string }).detail =
+          reason ?? "Please provide a more specific description or photo of what you did.";
+        throw fail;
       }
 
       const confidence = data.confidence ? ` (${data.confidence}% confidence)` : "";
@@ -518,7 +511,8 @@ export default function DashboardPage() {
       setPhotoPreview(null);
       setActiveTextVerifyQuest(null);
     } catch (err: any) {
-      setVerificationError(err.message || "An error occurred during verification.");
+      const message = err.message || "An error occurred during verification.";
+      setVerificationError(err.detail ? [message, err.detail] : message);
     } finally {
       setVerifyingText(false);
     }
@@ -664,12 +658,21 @@ export default function DashboardPage() {
               padding changes, update both together. */}
           {quests.length === 0 ? (
             <div className="-mx-5 -mt-5 sm:-mx-6 sm:-mt-6">
-              <EmptyState
-                variant="plain"
-                icon={<Sprout className="h-8 w-8" strokeWidth={1.8} />}
-                title="No missions today"
-                description="Fresh quests arrive with the daily reset — check back soon."
-              />
+              {emailVerified ? (
+                <EmptyState
+                  variant="plain"
+                  icon={<Sprout className="h-8 w-8" strokeWidth={1.8} />}
+                  title="No missions today"
+                  description="Fresh quests arrive with the daily reset — check back soon."
+                />
+              ) : (
+                <EmptyState
+                  variant="plain"
+                  icon={<Sprout className="h-8 w-8" strokeWidth={1.8} />}
+                  title="Verify your email to unlock today's missions"
+                  description="Your quests are waiting. Check your inbox for the verification link, then reload this page — or resend it from the banner above."
+                />
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
@@ -697,7 +700,10 @@ export default function DashboardPage() {
                     iconColor={accent}
                     state={state}
                     requiresPhoto={Boolean(quest.requiresPhoto)}
-                    proofLabel={quest.requiresPhoto ? "Photo proof" : "Add proof"}
+                    // The stamp shows exactly when clicking opens the verify
+                    // modal (state === "proof"), so the label states the
+                    // action; the stamp's camera icon keeps the photo hint.
+                    proofLabel="Tap to verify"
                     onClick={quest.done || pendingCompletion ? undefined : () => toggleSelection(quest)}
                     disabled={quest.done || pendingCompletion}
                     rewards={
@@ -1152,7 +1158,11 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {verificationError && <ErrorBanner>{verificationError}</ErrorBanner>}
+            {verificationError && (
+              <ErrorBanner items={Array.isArray(verificationError) ? verificationError.slice(1) : undefined}>
+                {Array.isArray(verificationError) ? verificationError[0] : verificationError}
+              </ErrorBanner>
+            )}
           </div>
         </Dialog>
       )}

@@ -97,6 +97,7 @@ export function MissionsShowcase() {
                   src="/images/forest.webp"
                   alt="A sunlit forest — the outdoors where missions happen"
                   fill
+                  priority
                   sizes="(min-width: 1024px) 280px, (min-width: 640px) 240px, 100vw"
                   className="object-cover"
                 />
@@ -186,7 +187,7 @@ export function MissionsShowcase() {
           </p>
           <Link
             href="/dashboard"
-            className="text-sm font-bold text-accent underline-offset-4 transition hover:underline"
+            className="inline-block -my-1 py-1 text-sm font-bold text-accent underline-offset-4 transition hover:underline"
           >
             Browse all missions in the game
           </Link>

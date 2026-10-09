@@ -63,23 +63,44 @@ export function HCaptchaWidget({ onToken, onExpired }: HCaptchaWidgetProps) {
     };
 
     const existingScript = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+    const w = window as typeof window & { __onHCaptchaApiLoaded?: () => void };
+    let fallbackListener: (() => void) | null = null;
     if (window.hcaptcha) {
       renderWidget();
     } else if (existingScript) {
-      existingScript.addEventListener("load", renderWidget);
+      // The shared script is present but hasn't finished loading. Chain onto
+      // the onload hook another instance (or a previous mount of this one)
+      // registered, then fall back to rendering a beat after the script's load
+      // event if the hook never fires (widgetIdRef guards against double
+      // renders).
+      const prev = w.__onHCaptchaApiLoaded;
+      w.__onHCaptchaApiLoaded = () => {
+        prev?.();
+        renderWidget();
+      };
+      fallbackListener = () => setTimeout(renderWidget, 400);
+      existingScript.addEventListener("load", fallbackListener);
     } else {
+      // render=explicit must be paired with an onload callback, and the widget
+      // must render AFTER the onload callback fires — rendering from the
+      // script's load event logs "should not render before js api is fully
+      // loaded" on every auth page (FEEDBACKS.md B6).
+      w.__onHCaptchaApiLoaded = renderWidget;
       const script = document.createElement("script");
       script.id = SCRIPT_ID;
-      script.src = "https://js.hcaptcha.com/1/api.js?render=explicit";
+      script.src = "https://js.hcaptcha.com/1/api.js?render=explicit&onload=__onHCaptchaApiLoaded";
       script.async = true;
       script.defer = true;
-      script.addEventListener("load", renderWidget);
       document.head.appendChild(script);
     }
 
     return () => {
       cancelled = true;
-      existingScript?.removeEventListener("load", renderWidget);
+      // This instance's own fallback listener (if it registered one); the
+      // shared script element and the onload chain belong to every mounted
+      // widget, so they are left in place — renders are idempotent via
+      // widgetIdRef.
+      if (fallbackListener && existingScript) existingScript.removeEventListener("load", fallbackListener);
     };
   }, [onExpired, onToken, siteKey]);
 

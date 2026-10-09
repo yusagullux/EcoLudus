@@ -157,28 +157,28 @@ export function MarketingShell({
 
           <div>
             <BotanicalLabel>Explore</BotanicalLabel>
-            <nav className="mt-4 space-y-2">
-              <Link href="/#how-it-works" className="text-ink-soft block text-sm transition-colors hover:text-ink">How it works</Link>
-              <Link href="/#missions" className="text-ink-soft block text-sm transition-colors hover:text-ink">Missions</Link>
-              <Link href="/#garden" className="text-ink-soft block text-sm transition-colors hover:text-ink">Garden</Link>
-              <Link href="/#impact" className="text-ink-soft block text-sm transition-colors hover:text-ink">Impact</Link>
-              <a href="mailto:hello@ecoludus.com" className="text-ink-soft block text-sm transition-colors hover:text-ink">Contact</a>
+            <nav className="mt-4 space-y-1">
+              <Link href="/#how-it-works" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">How it works</Link>
+              <Link href="/#missions" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">Missions</Link>
+              <Link href="/#garden" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">Garden</Link>
+              <Link href="/#impact" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">Impact</Link>
+              <a href="mailto:hello@ecoludus.com" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">Contact</a>
             </nav>
           </div>
 
           <div>
             <BotanicalLabel>Account</BotanicalLabel>
-            <nav className="mt-4 space-y-2">
-              <Link href="/login" className="text-ink-soft block text-sm transition-colors hover:text-ink">Sign in</Link>
-              <Link href="/signup" className="text-ink-soft block text-sm transition-colors hover:text-ink">Create account</Link>
+            <nav className="mt-4 space-y-1">
+              <Link href="/login" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">Sign in</Link>
+              <Link href="/signup" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">Create account</Link>
             </nav>
           </div>
 
           <div>
             <BotanicalLabel>Legal</BotanicalLabel>
-            <nav className="mt-4 space-y-2">
-              <Link href="/legal/privacy" className="text-ink-soft block text-sm transition-colors hover:text-ink">Privacy Policy</Link>
-              <Link href="/legal/terms" className="text-ink-soft block text-sm transition-colors hover:text-ink">Terms of Service</Link>
+            <nav className="mt-4 space-y-1">
+              <Link href="/legal/privacy" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">Privacy Policy</Link>
+              <Link href="/legal/terms" className="text-ink-soft block py-2 text-sm transition-colors hover:text-ink">Terms of Service</Link>
             </nav>
           </div>
         </div>

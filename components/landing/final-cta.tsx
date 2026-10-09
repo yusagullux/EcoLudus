@@ -69,7 +69,7 @@ export function FinalCta() {
           </Link>
           <Link
             href="/login"
-            className="text-sm font-semibold underline-offset-4 hover:underline"
+            className="inline-block -my-1 py-1 text-sm font-semibold underline-offset-4 hover:underline"
             style={{ color: "var(--text-sidebar-muted)" }}
           >
             Already playing? Sign in

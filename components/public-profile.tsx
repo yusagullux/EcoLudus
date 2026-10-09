@@ -8,6 +8,7 @@ import { CategoryIcon } from "@/components/category-icon";
 import { Avatar } from "@/components/avatar";
 import { PillTabBar } from "@/components/ui/pill-tab-bar";
 import { useShopCatalog, useSpeciesCatalog } from "@/lib/useCatalog";
+import { computeCategoryProgress } from "@/lib/quest-progress";
 import { PLANT_IMAGES } from "@/lib/ui-shared";
 import { CollectionCardImage, CollectionCardLockedHint, CollectionCountBadge, CollectionRarityBadge } from "@/components/collection-card";
 import { secondaryButton } from "@/components/game-ui";
@@ -39,12 +40,13 @@ export type PublicProfile = {
 };
 
 const categories = [
-  { id: "recycling", name: "Recycling", image: "/images/forest.webp", color: "#2f6b46", maxCo2: 3.6, badge: "Recycler" },
-  { id: "energy", name: "Energy Saving", image: "/images/background.webp", color: "#9a6b1f", maxCo2: 2.1, badge: "Energy Saver" },
-  { id: "transportation", name: "Transportation", image: "/images/mountains.webp", color: "#2f5f86", maxCo2: 3.0, badge: "Eco Commuter" },
-  { id: "water", name: "Water Saving", image: "/images/nature.webp", color: "#237482", maxCo2: 0.5, badge: "Water Guardian" },
-  { id: "cleanup", name: "Clean-Up", image: "/images/night.webp", color: "#62508f", maxCo2: 2.4, badge: "Clean Earth" },
-  { id: "gardening", name: "Gardening & Nature", image: "/images/plants/bamboo.png", color: "#4c7a3b", maxCo2: 0.6, badge: "Green Thumb" }
+  "Recycling",
+  "Energy Saving",
+  "Transportation",
+  "Water Saving",
+  "Clean-Up Missions",
+  "Gardening & Nature",
+  "Sustainable Living"
 ];
 
 function getPlantImage(plant: any) {
@@ -56,23 +58,18 @@ function usePublicProfileUrl(profileId: string) {
   return `${window.location.origin}/profile/${encodeURIComponent(profileId)}`;
 }
 
-// Quest id prefixes that map to each category id in quests.json.
-const CATEGORY_QUEST_PREFIXES: Record<string, string[]> = {
-  recycling: ["recycling_"],
-  energy: ["energy_"],
-  transportation: ["transportation_"],
-  water: ["water_"],
-  cleanup: ["cleanup_"],
-  gardening: ["gardening_", "sustainable_"]
-};
-
-const CATEGORY_TOTALS: Record<string, number> = {
-  recycling: 10,
-  energy: 12,
-  transportation: 7,
-  water: 6,
-  cleanup: 6,
-  gardening: 10
+// Presentational metadata per quests.json category (badge + color). The
+// done/total numbers themselves come from the shared lib/quest-progress module
+// so this page can never drift from the dashboard's "Quest progress" chips
+// (FEEDBACKS.md B1).
+const CATEGORY_DISPLAY: Record<string, { image: string; color: string; badge: string }> = {
+  "Recycling": { image: "/images/forest.webp", color: "#2f6b46", badge: "Recycler" },
+  "Energy Saving": { image: "/images/background.webp", color: "#9a6b1f", badge: "Energy Saver" },
+  "Transportation": { image: "/images/mountains.webp", color: "#2f5f86", badge: "Eco Commuter" },
+  "Water Saving": { image: "/images/nature.webp", color: "#237482", badge: "Water Guardian" },
+  "Clean-Up Missions": { image: "/images/night.webp", color: "#62508f", badge: "Clean Earth" },
+  "Gardening & Nature": { image: "/images/plants/bamboo.png", color: "#4c7a3b", badge: "Green Thumb" },
+  "Sustainable Living": { image: "/images/nature.webp", color: "#23826b", badge: "Sustainable Star" }
 };
 
 type CollMode = "plants" | "eggs" | "animals" | "seeds" | "chests";
@@ -159,15 +156,10 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
     chests: { found: (shopCatalog.chests ?? []).filter((p) => profileChests.some((o: any) => o.name === p.name)).length, total: shopCatalog.chests?.length ?? 0 }
   };
 
-  const categoryProgress = categories.map(category => {
-    const prefixes = CATEGORY_QUEST_PREFIXES[category.id] ?? [`${category.id}_`];
-    const total = CATEGORY_TOTALS[category.id] ?? 6;
-    const done = completedQuests.filter(qid =>
-      prefixes.some(prefix => String(qid).startsWith(prefix))
-    ).length;
-    const co2 = total > 0 ? (done / total) * category.maxCo2 : 0;
-    return { ...category, done, total, co2 };
-  });
+  const categoryProgress = computeCategoryProgress(completedQuests).map(progress => ({
+    ...progress,
+    ...(CATEGORY_DISPLAY[progress.name] ?? { image: "/images/forest.webp", color: "#2f6b46", badge: "Category Complete" })
+  }));
 
   const statCards = [
     { label: "Level", value: level, accent: "var(--text-accent)" },
@@ -301,7 +293,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {masterList.map((entry) => {
+              {masterList.map((entry, index) => {
                 const owned = ownedByName.get(entry.name);
                 const discovered = !!owned;
                 const style = rarityStyle[entry.rarity] ?? rarityStyle.common;
@@ -327,7 +319,7 @@ export function PublicProfileView({ profile, isOwner }: { profile: PublicProfile
                         background: discovered ? `color-mix(in srgb, ${style.accent} 7%, var(--bg-card))` : "linear-gradient(160deg, var(--bg-panel-alt), color-mix(in srgb, var(--text-accent) 8%, var(--bg-panel-alt)))"
                       }}
                     >
-                      <CollectionCardImage entry={entry} discovered={discovered} mode={mode} />
+                      <CollectionCardImage entry={entry} discovered={discovered} mode={mode} priority={index === 0} eager={index < 8} />
                       {!discovered && <CollectionCardLockedHint />}
                       {discovered && <span className="absolute right-2 top-2 z-10"><CollectionRarityBadge rarity={entry.rarity} className={style.chip} /></span>}
                       {discovered && <CollectionCountBadge count={count} />}

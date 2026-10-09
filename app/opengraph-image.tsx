@@ -1,17 +1,25 @@
 import { ImageResponse } from "next/og";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
-// Dynamic Open Graph image (1200×630) for every route at/below the app root.
-// Next.js auto-injects the generated <meta property="og:image"> and
-// <meta name="twitter:image"> tags from this file, so the summary_large_image
-// Twitter card and OG previews render a real branded card instead of nothing.
-// Kept dependency-free (system fonts, flexbox only) so it renders fast in the
-// edge image runtime with no font fetch.
+// Social share card (og:image + twitter image) for the root segment — Next
+// wires this file into the metadata tree at build time, so `/` and the auth
+// pages get a real preview image without a hand-maintained binary in public/.
+// Styling follows the "Field Guide" identity: forest-dark panel, cream ink,
+// mission-chip row.
 
-export const alt = "EcoLudus — gamified sustainability. Play, protect, and grow a greener tomorrow.";
+export const alt = "EcoLudus — daily eco missions with real-world impact";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OpenGraphImage() {
+export default function OgImage() {
+  // Inlined as a data URI — satori can't read the filesystem itself, and
+  // bundler asset imports aren't supported inside ImageResponse.
+  const faviconPath = path.join(process.cwd(), "public", "favicon.png");
+  const faviconDataUri = `data:image/png;base64,${readFileSync(faviconPath).toString("base64")}`;
+
+  const chips = ["Daily quests", "Virtual garden", "Real impact"];
+
   return new ImageResponse(
     (
       <div
@@ -19,84 +27,131 @@ export default function OpenGraphImage() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "80px",
-          background: "linear-gradient(135deg, #102016 0%, #203b29 55%, #3d5d33 100%)",
-          color: "#f4f1ea",
-          fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-          position: "relative"
+          alignItems: "stretch",
+          backgroundColor: "#f0f4e8",
+          color: "#102016",
+          fontFamily: "sans-serif",
         }}
       >
-        {/* Ambient glow */}
+        {/* Text panel */}
         <div
           style={{
-            position: "absolute",
-            top: -120,
-            right: -120,
-            width: 480,
-            height: 480,
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(146,196,120,0.28), transparent 70%)",
-            display: "flex"
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: "76px 64px 76px 88px",
           }}
-        />
-
-        {/* Brand row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 18,
-              background: "rgba(255,255,255,0.10)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 40
-            }}
-          >
-            🌿
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: 1 }}>EcoLudus</div>
-            <div style={{ fontSize: 15, letterSpacing: 6, textTransform: "uppercase", color: "#b9c9a8" }}>
-              Forest Edition
-            </div>
-          </div>
-        </div>
-
-        {/* Headline */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 920 }}>
-          <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.02, letterSpacing: -1 }}>
-            Play, protect, and grow a greener tomorrow.
-          </div>
-          <div style={{ fontSize: 30, fontWeight: 500, color: "#d6e2c6", lineHeight: 1.3 }}>
-            Daily eco missions · virtual garden · real impact tracking.
-          </div>
-        </div>
-
-        {/* Footer stat row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 40 }}>
-          {["Free to join", "AI-verified proof", "Track your CO₂ savings"].map((t) => (
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <div
-              key={t}
               style={{
+                width: 64,
+                height: 64,
+                borderRadius: 18,
+                overflow: "hidden",
                 display: "flex",
-                alignItems: "center",
-                gap: 12,
-                fontSize: 24,
-                fontWeight: 600,
-                color: "#eef3e4"
               }}
             >
-              <span style={{ color: "#9bc478", fontSize: 28 }}>✓</span>
-              {t}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={faviconDataUri} width={64} height={64} alt="" />
             </div>
-          ))}
+            <div
+              style={{
+                fontSize: 42,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              EcoLudus
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: 48,
+              fontSize: 72,
+              fontWeight: 800,
+              lineHeight: 1.06,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Play. Protect. Grow.
+          </div>
+
+          <div
+            style={{
+              marginTop: 26,
+              fontSize: 28,
+              lineHeight: 1.4,
+              color: "#3f5347",
+              maxWidth: 560,
+            }}
+          >
+            Turn eco-friendly habits into a rewarding daily ritual — quests,
+            a garden that grows, and impact that counts.
+          </div>
+
+          <div style={{ display: "flex", gap: 14, marginTop: 44 }}>
+            {chips.map((label) => (
+              <div
+                key={label}
+                style={{
+                  display: "flex",
+                  padding: "12px 24px",
+                  border: "2px solid #d3ddc6",
+                  borderRadius: 999,
+                  fontSize: 24,
+                  fontWeight: 600,
+                  color: "#3f5347",
+                  backgroundColor: "#ffffff",
+                }}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Forest panel with the garden motif */}
+        <div
+          style={{
+            width: 400,
+            display: "flex",
+            backgroundColor: "#102016",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+            {[
+              { size: 150, color: "#8fd08f" },
+              { size: 108, color: "#5aa86b" },
+              { size: 78, color: "#c9e4b4" },
+            ].map((dot, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: i === 1 ? "flex-start" : "flex-end",
+                  marginLeft: i === 0 ? 40 : i === 1 ? -60 : 90,
+                  marginRight: i === 0 ? 0 : 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: dot.size,
+                    height: dot.size,
+                    borderRadius: dot.size / 2,
+                    backgroundColor: dot.color,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     ),
-    { ...size }
+    size
   );
 }

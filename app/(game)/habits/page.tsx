@@ -506,7 +506,7 @@ export default function HabitsPage() {
               {
                 icon: Star,
                 title: "Earn XP & trust",
-                desc: "Approved submissions give full XP. Trust score grows over time and unlocks multipliers."
+                desc: "Approved submissions earn XP that scales with your trust score — it starts at 40% and grows to full XP as your history builds."
               }
             ].map(({ icon: StepIcon, title, desc }) => (
               <div

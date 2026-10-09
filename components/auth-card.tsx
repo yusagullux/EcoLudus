@@ -299,7 +299,7 @@ export function AuthCard({ mode }: AuthCardProps) {
             {error && <ErrorBanner>{error}</ErrorBanner>}
 
             {error && lastErrorCode === "auth/email-not-verified" && (
-              <Link href="/resend-verification" className="text-xs font-bold text-accent transition-colors hover:text-ink">
+              <Link href="/resend-verification" className="-my-2 inline-block px-1 py-2 text-xs font-bold text-accent transition-colors hover:text-ink">
                 Resend verification email
               </Link>
             )}
@@ -313,7 +313,7 @@ export function AuthCard({ mode }: AuthCardProps) {
 
           <div className="mt-6 flex items-center justify-between border-t border-line-soft pt-5 text-sm text-ink-muted">
             <span>{content.altPrompt}</span>
-            <Link href={content.altHref} className="font-extrabold text-ink transition-colors hover:text-accent">
+            <Link href={content.altHref} className="-my-2 inline-block px-1 py-2 font-extrabold text-ink transition-colors hover:text-accent">
               {content.altLabel}
             </Link>
           </div>

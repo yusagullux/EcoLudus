@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireVerifiedUser } from "@/lib/auth";
 import { transaction, selectUserForUpdate } from "@/lib/db";
 import { getShopItem, getDailyDeals } from "@/lib/catalog-server";
+import { isDuplicatePurchase, purchaseKey } from "@/lib/shop-guard";
 import { logError } from "@/lib/logger";
 
 // Server-validated shop purchase. The shop page used to spend EcoPoints and
@@ -90,11 +91,24 @@ export async function POST(request: Request) {
         );
       }
 
+      // Double-click guard (FEEDBACKS.md C1): two rapid clicks fire two
+      // requests tens of ms apart and both row locks serialize but BOTH see a
+      // sufficient balance, so both complete. Reject a same-item retry inside
+      // a short window (key recorded below after a successful write).
+      const buyKey = purchaseKey({ mode: parsed.mode, itemId: parsed.itemId, dealId: parsed.dealId });
+      if (isDuplicatePurchase(profile, buyKey, Date.now())) {
+        return NextResponse.json(
+          { error: { code: "shop/duplicate-purchase", message: "Duplicate purchase — already processing this item." } },
+          { status: 409 }
+        );
+      }
+      let nextProfile: Record<string, unknown> = { ...profile, lastBuy: { key: buyKey, at: new Date().toISOString() } };
+
       const purchasedAt = new Date().toISOString();
       let inventoryKey = item!.kind + "s";
       if (item!.kind === "chest") inventoryKey = "chests";
-      
-      let nextProfile: Record<string, unknown> = { ...profile, ecoPoints: currentEco - item!.price };
+
+      nextProfile.ecoPoints = currentEco - item!.price;
 
       if (item!.kind === "cosmetic") {
         const cosmetics = (profile.cosmetics as any) || { equipped: {}, owned: [] };
